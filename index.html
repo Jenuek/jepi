@@ -2229,7 +2229,7 @@ const KEY_DEF={
   gmaps:{name:'Google 지도',sub:'해외 경로 자동 연결',ph:'AIza...',re:/^AIza/},
   kakao:{name:'카카오 지도',sub:'국내 경로 자동 연결 (REST API 키)',ph:'32자리 영문·숫자',re:/^[0-9a-f]{32}$/i}
 };
-const MODELS=Object.assign({heavy:'claude-sonnet-5-5',light:'claude-haiku-5-5',gemini:'gemini-flash-latest'},LS.get('jepi.models',{})||{});
+const MODELS=Object.assign({heavy:'claude-sonnet-5-5',light:'claude-haiku-5-5',gemini:'gemini-3.6-flash'},LS.get('jepi.models',{})||{});
 let keyMsg={}, keyBad={};
 function saveKeys(){LS.set('jepi.keys',KEYS)}
 const maskKey=k=>k?k.slice(0,6)+'••••••'+k.slice(-4):'';
@@ -2256,7 +2256,7 @@ async function callClaude(prompt,model,signal){
 let geminiNoThink=false;
 async function callGemini(prompt,signal,plain){
   const gc={responseMimeType:'application/json',temperature:0.6,maxOutputTokens:8192};
-  if(!plain&&!geminiNoThink) gc.thinkingConfig={thinkingBudget:0};
+  if(!plain&&!geminiNoThink) gc.thinkingConfig={thinkingLevel:'low'};
   let r;
   try{r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(MODELS.gemini)}:generateContent`,{method:'POST',signal,headers:{'content-type':'application/json','x-goog-api-key':KEYS.gemini},
     body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:gc})})}
@@ -2266,7 +2266,8 @@ async function callGemini(prompt,signal,plain){
     if(/API key|permission|PERMISSION/i.test(m)||r.status!==400){keyBad.gemini=true;throw aiErr('not_granted','Gemini 키가 맞지 않아요')}
     if(/model/i.test(m))throw aiErr('upstream_error','Gemini 모델 이름을 확인해 주세요 ('+MODELS.gemini+')');
     throw aiErr('upstream_error',m.slice(0,120))}
-  if(r.status===404)throw aiErr('upstream_error','Gemini 모델을 찾지 못했어요 ('+MODELS.gemini+') · 설정 → 고급에서 바꿔 주세요');
+  if(r.status===404){if(MODELS.gemini!=='gemini-flash-latest'&&!callGemini.fb){callGemini.fb=1;const was=MODELS.gemini;MODELS.gemini='gemini-flash-latest';try{return await callGemini(prompt,signal,plain)}catch(e){MODELS.gemini=was;throw e}}
+    throw aiErr('upstream_error','Gemini 모델을 찾지 못했어요 ('+MODELS.gemini+') · 설정 → 고급에서 바꿔 주세요')}
   if(r.status===429)throw aiErr('rate_limited');
   if(!r.ok)throw aiErr('upstream_error','Gemini 서버 오류 (HTTP '+r.status+')');
   const j=await r.json(); keyBad.gemini=false;
@@ -2418,7 +2419,7 @@ async function openMap(){
   try{await loadLeaflet()}catch(e){$('#mapMsg').textContent='지도를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.';return}
   if(!mapState.map){
     mapState.map=L.map(box,{zoomControl:true,attributionControl:true});
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd',attribution:'© OpenStreetMap · © CARTO'}).addTo(mapState.map);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> 기여자'}).addTo(mapState.map);
     mapState.layer=L.layerGroup().addTo(mapState.map);
   }
   mapState.on=true;
@@ -2689,7 +2690,7 @@ document.addEventListener('click',e=>{
     KEYS[k]=v;keyEdit=null;keysChanged();testKey(k);return}
   if(t.dataset.keydel){delete KEYS[t.dataset.keydel];keyMsg[t.dataset.keydel]='삭제했어요.';keysChanged();return}
   if(t.dataset.keytest){testKey(t.dataset.keytest);return}
-  if(t.id==='mSave'){MODELS.heavy=($('#mHeavy').value||'').trim()||'claude-sonnet-5-5';MODELS.light=($('#mLight').value||'').trim()||'claude-haiku-5-5';MODELS.gemini=($('#mGem').value||'').trim()||'gemini-flash-latest';LS.set('jepi.models',{heavy:MODELS.heavy,light:MODELS.light,gemini:MODELS.gemini});keysChanged();return}
+  if(t.id==='mSave'){MODELS.heavy=($('#mHeavy').value||'').trim()||'claude-sonnet-5-5';MODELS.light=($('#mLight').value||'').trim()||'claude-haiku-5-5';MODELS.gemini=($('#mGem').value||'').trim()||'gemini-3.6-flash';LS.set('jepi.models',{heavy:MODELS.heavy,light:MODELS.light,gemini:MODELS.gemini});keysChanged();return}
   if(t.id==='backupAll'){backupAll();return}
   if(t.dataset.mapday!=null){mapState.all=t.dataset.mapday==='all';document.querySelectorAll('[data-mapday]').forEach(b=>b.setAttribute('aria-pressed',String((b.dataset.mapday==='all')===mapState.all)));drawMap(true);return}
   if(t.id==='mapMe'){locateMe();return}
