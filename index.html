@@ -2146,9 +2146,9 @@ function openPlan(id){
 function newPlan(){
   const prevP=profile; snapshotCurrent(); curPlan='p'+Date.now().toString(36); savePlans();
   custom=[];placed=[];fmarks={};wish=[];meals={};done={};
-  loadPack(TOKYO_PACK); store.set('gp.pack','tokyo');
-  profile=clone(PROFILE_EXAMPLE); Object.assign(profile,{dest:'',pace:'normal',social:'some',breakfast:true,purpose:'',party:{type:'solo',adults:1,kids:0},flightSet:false,staySet:false,dateSet:false,nightsSet:false,dateUnknown:false,startDate:isoPlus(30)});
-  carryTaste(prevP,profile); applyPlanData({profile,pack:'tokyo'}); tab='timeline'; renderTabs(); openOnb();
+  loadPack(blankPack()); savePack();
+  profile=clone(PROFILE_EXAMPLE); Object.assign(profile,{stays:[{name:'숙소',area:'center',checkin:'15:00',checkout:'11:00',from:0,to:3}],events:[],dest:'',pace:'normal',social:'some',breakfast:true,purpose:'',party:{type:'solo',adults:1,kids:0},flightSet:false,staySet:false,dateSet:false,nightsSet:false,dateUnknown:false,startDate:isoPlus(30)});
+  carryTaste(prevP,profile); applyPlanData({profile,pack:blankPack()}); tab='timeline'; renderTabs(); openOnb();
 }
 function dupPlan(id){snapshotCurrent();const d=store.get('gp.plan.'+id,null),src=plans.find(x=>x.id===id);if(!d||!src)return;
   const nid='p'+Date.now().toString(36);store.set('gp.plan.'+nid,d);const p=Object.assign({},src,{id:nid,name:src.name+' (복사본)',custom_name:true,updated:Date.now()});plans.unshift(p);savePlans();cloudSave(p);planMsg='복사본을 만들었어요.';renderPlans()}
@@ -2309,6 +2309,7 @@ async function kakaoDiag(){
 }
 function keysChanged(){saveKeys();keyBad={};if(STANDALONE){sample=makeSample()}renderAll();renderSettings();if(!$('#onb').hidden)renderOnb()}
 
+function blankPack(){return Object.assign(manualPack('새 여행'),{areas:[{key:'center',name:'시내',lat:37.5665,lng:126.978,zone:'center'}]})}
 // ---------- routes: Google Routes (abroad) / Kakao (Korea), cached on this device ----------
 let RC=LS.get('jepi.routes',{})||{};
 let rcT=0; function rcSave(){clearTimeout(rcT);rcT=setTimeout(()=>{const ks=Object.keys(RC);if(ks.length>700)ks.sort((a,b)=>(RC[a].t||0)-(RC[b].t||0)).slice(0,ks.length-600).forEach(k=>delete RC[k]);LS.set('jepi.routes',RC)},800)}
@@ -3156,8 +3157,8 @@ function wipeAll(){
   ['profile','pack','placed3','custom','kw','meal2','done','fmarks','wish','coach','dice','jp'].forEach(k=>{try{localStorage.removeItem('gp.'+k)}catch(_){}});
   plans.forEach(p=>{try{localStorage.removeItem('gp.plan.'+p.id)}catch(_){}cloudDelete(p.id)}); plans=[]; curPlan='p'+Date.now().toString(36); savePlans();
   custom=[]; placed=[]; fmarks={}; wish=[]; kws=[]; meals={}; done={}; chat=[]; undoSnap=null; aiState=null; selected=null; hVibe=null; wipeArm=false;
-  loadPack(TOKYO_PACK);
-  profile=clone(PROFILE_EXAMPLE); Object.assign(profile,{dest:'',pace:'normal',social:'some',breakfast:true,purpose:'',party:{type:'solo',adults:1,kids:0},flightSet:false,staySet:false,dateSet:false,nightsSet:false,dateUnknown:false,startDate:isoPlus(30)}); profile.stays[0].name='숙소';
+  loadPack(blankPack()); savePack();
+  profile=clone(PROFILE_EXAMPLE); Object.assign(profile,{stays:[{name:'숙소',area:'center',checkin:'15:00',checkout:'11:00',from:0,to:3}],events:[],dest:'',pace:'normal',social:'some',breakfast:true,purpose:'',party:{type:'solo',adults:1,kids:0},flightSet:false,staySet:false,dateSet:false,nightsSet:false,dateUnknown:false,startDate:isoPlus(30)}); profile.stays[0].name='숙소';
   buildDays(); day=0; tab='timeline'; $('#helper').hidden=true; closeSheet(); renderAll(); openOnb();
 }
 // ---------- first-use guide ----------
