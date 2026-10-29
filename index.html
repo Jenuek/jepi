@@ -2284,10 +2284,28 @@ async function testKey(k){
     if(k==='anthropic'){await callClaude('Reply with only this JSON: {"ok":true}',MODELS.light);}
     else if(k==='gemini'){await callGemini('Reply with only this JSON: {"ok":true}');}
     else if(k==='gmaps'){const v=await fetchRoute({m:'walk',a:[35.6812,139.7671],b:[35.6852,139.7528],pv:'google'});if(!v)throw aiErr('upstream_error','경로를 받지 못했어요');}
-    else if(k==='kakao'){const v=await fetchRoute({m:'walk',a:[37.5663,126.9779],b:[37.5700,126.9769],pv:'kakao'});if(!v)throw aiErr('upstream_error','경로를 받지 못했어요');}
+    else if(k==='kakao'){keyMsg[k]=await kakaoDiag();keyBad.kakao=!/^✓/.test(keyMsg[k]);renderSettings();return}
     keyMsg[k]='✓ 연결됐어요';
-  }catch(e){keyMsg[k]=e.code==='not_granted'?'✕ 키가 맞지 않아요. 다시 확인해 주세요.':'✕ '+(e.message||'연결하지 못했어요')}
+    if(k==='gmaps')keyBad.google=false; else keyBad[k]=false;
+  }catch(e){if(k==='gmaps')keyBad.google=true;else keyBad[k]=true;
+    keyMsg[k]=e.code==='not_granted'?'✕ 키가 맞지 않거나 이 API가 꺼져 있어요. 다시 확인해 주세요.':e.code==='network'?'✕ 응답을 받지 못했어요. 키 제한(웹사이트 주소)과 API 사용 설정을 확인해 주세요.':'✕ '+(e.message||'연결하지 못했어요')}
   renderSettings();
+}
+
+async function kakaoDiag(){
+  const q='start_x=126.9779&start_y=37.5663&end_x=126.9769&end_y=37.5700', H={Authorization:'KakaoAK '+KEYS.kakao}, out=[];
+  for(const [ep,name] of [['walk','도보 경로'],['publictraffic','대중교통 경로']]){
+    let r;
+    try{r=await fetch(`https://dapi.kakao.com/v2/routing/${ep}?${q}`,{headers:H})}
+    catch(_){return `✕ ${name}: 카카오가 이 주소(${ORIGIN})의 요청을 막았어요. 카카오 디벨로퍼스 → 내 앱 → 플랫폼 → Web에 ${ORIGIN} 를 정확히(끝에 / 없이) 등록했는지, 카카오맵 사용 설정이 ON인지 확인해 주세요. 바꾼 뒤 몇 분 지나 다시 "확인"을 눌러 주세요.`}
+    let j={};try{j=await r.json()}catch(_){}
+    if(!r.ok){const m=j.msg||j.message||'';const c=j.code!=null?` (code ${j.code})`:'';
+      if(r.status===401)return `✕ ${name}: 키가 맞지 않아요. JavaScript 키가 아니라 REST API 키를 넣어 주세요.${c}`;
+      if(r.status===403)return `✕ ${name}: 카카오맵 사용 설정이 꺼져 있거나 권한이 없어요. 내 앱 → 카카오맵에서 ON으로 바꿔 주세요.${c}`;
+      out.push(`✕ ${name}: HTTP ${r.status}${c} ${m}`.trim());continue}
+    out.push(`✓ ${name}`);
+  }
+  return out.every(x=>x.startsWith('✓'))?'✓ 연결됐어요 (도보·대중교통 경로 모두 정상)':out.join(' · ');
 }
 function keysChanged(){saveKeys();keyBad={};if(STANDALONE){sample=makeSample()}renderAll();renderSettings();if(!$('#onb').hidden)renderOnb()}
 
