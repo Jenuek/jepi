@@ -676,6 +676,8 @@ body.mode-p .dice-fab{--cs:28px}
 .cf.top{transform:rotateX(90deg) translateZ(calc(var(--cs)/2))}
 .cf.bottom{transform:rotateX(-90deg) translateZ(calc(var(--cs)/2))}
 .cf.top,.cf.right{filter:brightness(.93)}
+.sb-steps{margin:4px 0 8px;padding-left:18px;font-size:13px}
+.sb-steps li{margin:2px 0}
 </style>
 </head>
 <body>
@@ -3383,8 +3385,11 @@ function syncHTML(){
     <label class="fg" style="display:block"><span class="hint">Project URL</span><input id="sbUrl" value="${esc(SYNC.url)}" placeholder="https://xxxx.supabase.co" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
     <label class="fg" style="display:block;margin-top:6px"><span class="hint">anon / publishable 키</span><input id="sbKey" type="password" value="" placeholder="${SYNC.key?'저장됨 · 바꿀 때만 입력':'eyJ… 또는 sb_publishable_…'}" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
     <div class="row" style="margin-top:8px"><button class="small-btn primary" type="button" id="sbSave">저장</button>${SYNC.url&&SYNC.key?'<button class="small-btn" type="button" id="sbCancel">취소</button>':''}</div>${syncErr?`<small class="kmsg">✕ ${esc(syncErr)}</small>`:''}</div>`;
-  if(!syncOn()) return `<div class="mgroup pad">${syncStep==='code'?`<p class="hint" style="margin-top:0">${esc(SYNC.email)}로 보낸 6자리 코드를 넣어 주세요.</p><div class="kin"><input id="sbCode" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="123456"><button class="small-btn primary" type="button" id="sbVerify">확인</button></div><div class="row"><button class="small-btn" type="button" id="sbBack">이메일 다시 입력</button></div>`
-      :`<p class="hint" style="margin-top:0">폰·아이패드 모두 같은 이메일로 로그인하면 계획이 자동으로 맞춰져요.</p><div class="kin"><input id="sbEmail" type="email" value="${esc(SYNC.email)}" placeholder="이메일" autocomplete="email"><button class="small-btn primary" type="button" id="sbSend">코드 받기</button></div>`}
+  if(!syncOn()) return `<div class="mgroup pad">${syncStep==='code'?`<p class="hint" style="margin-top:0"><b>${esc(SYNC.email)}</b>로 로그인 메일을 보냈어요.</p>
+      <ol class="sb-steps"><li>메일의 <b>Sign in</b> 링크를 <b>길게 눌러 "링크 주소 복사"</b></li><li>아래 칸에 붙여 넣고 <b>로그인</b></li></ol>
+      <div class="kin"><input id="sbCode" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://…supabase.co/auth/v1/verify?token=…"><button class="small-btn primary" type="button" id="sbVerify">로그인</button></div>
+      <p class="hint">이 기기에서 링크를 그냥 눌러도 돼요. 안드로이드는 대부분 바로 로그인돼요.</p><div class="row"><button class="small-btn" type="button" id="sbBack">이메일 다시 입력</button></div>`
+      :`<p class="hint" style="margin-top:0">폰·아이패드 모두 같은 이메일로 로그인하면 계획이 자동으로 맞춰져요.</p><div class="kin"><input id="sbEmail" type="email" value="${esc(SYNC.email)}" placeholder="이메일" autocomplete="email"><button class="small-btn primary" type="button" id="sbSend">로그인 메일 받기</button></div>`}
     ${syncErr?`<small class="kmsg">✕ ${esc(syncErr)}</small>`:''}<div class="row"><button class="small-btn" type="button" id="sbSetup">서버 주소 바꾸기</button></div></div>`;
   const t=SYNC.at?new Date(SYNC.at):null;
   return `<div class="mgroup pad"><div class="srow" style="margin:0"><span><b>☁️ ${esc(SYNC.sess.email||SYNC.email)}</b><br><small class="hint">${syncBusy?'맞추는 중…':syncErr?'✕ '+esc(syncErr):t?`마지막 동기화 ${t.getHours()}:${String(t.getMinutes()).padStart(2,'0')}`:'아직 동기화 전'}</small></span><span class="mchip ${syncErr?'warn':'ok'}">${syncErr?'확인 필요':'켜짐'}</span></div>
@@ -3399,13 +3404,39 @@ document.addEventListener('click',async e=>{const t=e.target.closest('button');i
     if(!k&&!SYNC.key){syncErr='키를 넣어 주세요.';renderSettings();return}
     if(u!==SYNC.url){SYNC.sess=null;SYNC.sent={};SYNC.lastPull=0} SYNC.url=u; if(k)SYNC.key=k; syncErr='';syncStep='';saveSync();renderSettings();return}
   if(t.id==='sbSend'){const em=(($('#sbEmail')||{}).value||'').trim();if(!/^\S+@\S+\.\S+$/.test(em)){syncErr='이메일을 확인해 주세요.';renderSettings();return}
-    SYNC.email=em;saveSync();t.disabled=true;try{await sbAuth('/auth/v1/otp',{email:em,create_user:true});syncStep='code';syncErr=''}catch(err){syncErr=err.message}renderSettings();setTimeout(()=>{const i=$('#sbCode');if(i)i.focus()},50);return}
+    SYNC.email=em;saveSync();t.disabled=true;try{const back=location.origin+location.pathname+'?sb='+encodeURIComponent(btoa(JSON.stringify({u:SYNC.url,k:SYNC.key,e:em})));await sbAuth('/auth/v1/otp?redirect_to='+encodeURIComponent(back),{email:em,create_user:true});syncStep='code';syncErr=''}catch(err){syncErr=err.message}renderSettings();return}
   if(t.id==='sbBack'){syncStep='';renderSettings();return}
-  if(t.id==='sbVerify'){const code=(($('#sbCode')||{}).value||'').replace(/\s/g,'');if(!code)return;t.disabled=true;
-    try{keepSess(await sbAuth('/auth/v1/verify',{type:'email',email:SYNC.email,token:code}));syncStep='';syncErr='';SYNC.sent={};SYNC.lastPull=0;saveSync();renderSettings();await syncNow();showToast('동기화를 켰어요')}catch(err){syncErr=err.message;renderSettings()}return}
+  if(t.id==='sbVerify'){const code=(($('#sbCode')||{}).value||'').trim();if(!code)return;t.disabled=true;
+    try{keepSess(await sbVerifyInput(code));syncStep='';syncErr='';SYNC.sent={};SYNC.lastPull=0;saveSync();renderSettings();await syncNow();showToast('동기화를 켰어요')}catch(err){syncErr=err.message;renderSettings()}return}
   if(t.id==='sbNow'){syncNow();renderSettings();return}
   if(t.id==='sbOut'){SYNC.sess=null;SYNC.sent={};SYNC.lastPull=0;saveSync();syncStep='';renderSettings();return}
 });
+
+async function sbVerifyInput(v){
+  let th=null, ty='email';
+  try{const u=new URL(v);th=u.searchParams.get('token')||u.searchParams.get('token_hash');ty=u.searchParams.get('type')||'magiclink'}catch(_){}
+  if(th){if(/^pkce_/.test(th))throw aiErr('auth','이 링크는 이 방식으로 쓸 수 없어요. 링크를 이 기기에서 직접 눌러 주세요.');
+    return sbAuth('/auth/v1/verify',{type:ty==='signup'?'signup':'magiclink',token_hash:th})}
+  const code=v.replace(/\s/g,''); if(!/^\d{6,10}$/.test(code)) throw aiErr('auth','메일의 Sign in 링크 주소를 통째로 붙여 넣어 주세요.');
+  return sbAuth('/auth/v1/verify',{type:'email',email:SYNC.email,token:code});
+}
+// a tapped login link comes back here: ?sb=<config>#access_token=…
+async function syncBoot(){
+  try{
+    const q=new URLSearchParams(location.search), sb=q.get('sb');
+    if(sb){try{const c=JSON.parse(atob(sb));if(c.u&&!SYNC.url)SYNC.url=c.u;if(c.k&&!SYNC.key)SYNC.key=c.k;if(c.e)SYNC.email=c.e;saveSync()}catch(_){}}
+    const h=new URLSearchParams((location.hash||'').replace(/^#/,''));
+    if(h.get('error_description')){syncErr=h.get('error_description').replace(/\+/g,' ');showToast('로그인 링크가 만료됐어요. 다시 받아 주세요.')}
+    if(h.get('access_token')&&SYNC.url&&SYNC.key){
+      const at=h.get('access_token');let user={};
+      try{const r=await fetch(SYNC.url+'/auth/v1/user',{headers:{apikey:SYNC.key,Authorization:'Bearer '+at}});user=await r.json()}catch(_){}
+      keepSess({access_token:at,refresh_token:h.get('refresh_token'),expires_in:+h.get('expires_in')||3600,user});SYNC.sent={};SYNC.lastPull=0;saveSync();syncStep='';
+      showToast('로그인했어요 · 동기화를 켰어요');
+    }
+    if(sb||h.get('access_token')||h.get('error_description')) history.replaceState(null,'',location.pathname);
+  }catch(_){}
+  setTimeout(syncNow,800);
+}
 
 // ---------- state ----------
 const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
@@ -4094,7 +4125,7 @@ setZoom(store.get('gp.zoom',60),true);
 setJP(store.get('gp.jp',profile.kind==='day'?'P':'J'),true);
 buildDays();
 renderAll();
-applyTheme(); introRun(); setTimeout(syncNow,1500);
+applyTheme(); introRun(); syncBoot();
 if(/[#&]s=/.test(location.hash)) openShared(); else if(firstRun) openOnb(); else {startupFocus(); maybeCoach();}
 diceFromUrl();
 // scroll to morning
