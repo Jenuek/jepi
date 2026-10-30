@@ -1,0 +1,26 @@
+/* 친구와 함께 · 가고 싶어요 · 알림 */
+.want{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 10px;font-size:12px;color:var(--ink);min-height:28px}
+.want[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600}
+.want-who{font-size:11.5px;color:var(--muted);margin-left:4px;align-self:center}
+.tag.usr{color:var(--c-walk);border-color:var(--c-walk)}
+.fr-list{margin:6px 0 10px;padding-left:18px;line-height:1.6}
+.mrow.static{cursor:default}
+.alert-row .hint{margin:0;align-self:center}
+#side-help details{border-bottom:1px solid var(--line);padding:10px 2px}
+#side-help details:last-child{border-bottom:0}
+#side-help summary{font-weight:600;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center}
+#side-help summary::after{content:'+';color:var(--muted);font-weight:400}
+#side-help details[open] summary::after{content:'–'}
+#side-help details p,#side-help details li{font-size:13.5px;line-height:1.6;color:var(--ink)}
+#side-help details ul{padding-left:18px;margin:6px 0}
+/* same place twice */
+.dup-card{border:1px solid var(--accent);border-radius:12px;padding:10px 12px;margin:0 0 10px;background:var(--accent-soft)}
+.dup-h{display:flex;justify-content:space-between;gap:8px;align-items:baseline;margin-bottom:6px}
+.dup-row{font-size:13px;margin:2px 0}
+.dup-suggest{margin:0 0 6px}
+.dup-pick{display:flex;flex-direction:column;align-items:flex-start;width:100%;min-height:44px;text-align:left;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);padding:6px 10px;margin:0 0 4px;font:inherit;cursor:pointer}
+/* one find screen */
+.find-form{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+.find-g{display:flex;flex-direction:column;gap:4px}
+.find-g .seg{display:flex;flex-wrap:wrap;gap:6px}
+.find-g select,.find-form input{min-height:44px;border:1px solid var(--line);border-radius:10px;padding:0 10px;font:inherit;font-size:16px;background:var(--surface);color:var(--ink)}
