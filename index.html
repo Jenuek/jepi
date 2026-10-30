@@ -565,6 +565,18 @@ body.placing .grid-wrap{outline:2px solid var(--accent);outline-offset:-2px}
 .cp-b{display:flex;gap:6px;flex-wrap:wrap}
 .cp-b .small-btn{min-height:36px}
 .cp-st{font-size:12px;color:var(--ok)}
+.dice-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--paper);border-radius:12px;padding:4px;margin-bottom:10px}
+.dice-tabs button{all:unset;box-sizing:border-box;text-align:center;min-height:40px;border-radius:9px;font-weight:600;font-size:14px;color:var(--muted);cursor:pointer}
+.dice-tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.dice-tabs button:focus-visible{outline:2px solid var(--accent)}
+.eat-bases{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+.eat-base{all:unset;box-sizing:border-box;flex:1 1 140px;display:flex;flex-direction:column;gap:1px;padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;cursor:pointer;font-weight:600;font-size:14px;background:var(--surface)}
+.eat-base small{font-weight:400;font-size:12px;color:var(--muted)}
+.eat-base[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.eat-base:focus-visible{outline:2px solid var(--accent)}
+.dice.eat .radio{flex-wrap:wrap}
+.myp-hits{display:grid}
+.home-box .row{flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -905,7 +917,7 @@ function buildDays(){
       fixed:[{id:'m0',name:'만나기',start:st,end:st+15,loc:'meet',note:'여기서 하루를 시작해요.'},{id:'m1',name:'헤어지기',start:en,end:Math.min(1440,en+15),loc:'meet',note:'오늘 코스 끝!'}]}];
     return}
   const pr=fixProfile(profile), n=pr.nights, M=pr.mode, intl=!!PACK.intl, carry=M!=='car'; homeMin=+pr.home.min||60;
-  LOC={home:{name:pr.home.area?`출발지 (${pr.home.area})`:'출발지',ll:[37.5665,126.9780]}}; LOC_AREA={home:'출발지'}; LOC_ZONE={home:'air'};
+  LOC={home:{name:pr.home.area?`출발지 (${pr.home.area})`:'출발지',ll:Array.isArray(pr.home.ll)?pr.home.ll:[37.5665,126.9780]}}; LOC_AREA={home:'출발지'}; LOC_ZONE={home:'air'};
   Object.entries(AIRPORTS).forEach(([k,g])=>{LOC[k]={name:g.name,ll:g.ll};LOC_AREA[k]=g.name;LOC_ZONE[k]='air'});
   pr.stays.forEach((s,i)=>{const a=AREAS[s.area];LOC['stay'+i]={name:s.name||'숙소',ll:[a[1],a[2]]};LOC_AREA['stay'+i]=a[0];LOC_ZONE['stay'+i]=AREA_ZONE[s.area]});
   pr.events.forEach((e,i)=>{const a=AREAS[e.area];LOC['ev'+i]={name:e.name||'예약한 일정',ll:[a[1],a[2]]};LOC_AREA['ev'+i]=a[0];LOC_ZONE['ev'+i]=AREA_ZONE[e.area]});
@@ -1973,16 +1985,16 @@ function moodOk(p){const tg=tagsOf(p.id).join(' ')+' '+p.name+' '+(p.note||'');
 function diceCands(g){
   const D=DAYS[day],wd=D.wd,used=new Set(placed.map(b=>b.id)),from=g.prev?g.prev.ll:LOC[D.startLoc].ll;
   const recent=new Set(diceLog.filter(x=>x.d&&D.iso&&x.d<D.iso&&x.d>=isoShift(D.iso,-5)).map(x=>norm(x.n)));
-  let s0=g.s,e0=g.e; if(dice.lunch){s0=Math.max(s0,690);e0=Math.min(e0,840);if(e0-s0<30)return []}
+  let s0=g.s,e0=g.e; if(dice.lunch){const mw=dice.meal==='dinner'?[1050,1260]:[690,840];s0=Math.max(s0,mw[0]);e0=Math.min(e0,mw[1]);if(e0-s0<30)return []}
   const out=[];
   for(const p of P){
     if(used.has(p.id)||p.drop||closedOn(p,wd)||outOfSeason(p,D.iso)) continue;
-    if(dice.lunch?(p.cat!=='food'||recent.has(norm(p.name))):!moodOk(p)) continue;
+    if(dice.lunch?(p.cat!=='food'||recent.has(norm(p.name))||!eatMoodOk(p)):!moodOk(p)) continue;
     const t=travel(from,p.ll), tm=t?t.min:0;
     if(dice.lunch&&t&&(t.mode!=='도보'||tm>dice.walk)) continue;
     const h=hoursFor(p,wd), ss=sunsetMin()||1050;
     let pref={morning:540,day:720,sunset:ss-45,evening:1080,night:ss+30}[p.best]||(p.cat==='food'?(s0<=720?720:s0):p.cat==='night'?1140:600);
-    if(dice.lunch) pref=720; if(h) pref=Math.max(pref,h[0]);
+    if(dice.lunch) pref=dice.meal==='dinner'?1110:720; if(h) pref=Math.max(pref,h[0]);
     let arr=Math.ceil(Math.max(s0+tm,Math.min(pref,e0-Math.min(p.dur,90)))/15)*15;
     if(h&&arr<h[0]) arr=Math.ceil(h[0]/15)*15;
     const dur=Math.min(p.dur,e0-arr); if(dur<30) continue;
@@ -2003,7 +2015,7 @@ function diceRoll(re){
   if(!g){dice.pick=null;dice.msg='이 날은 45분 이상 빈 시간이 없어요.';renderDice();return}
   if(re&&dice.rolls>=3) return; if(!re) dice.rolls=0;
   const prev=dice.pick, cs=diceCands(g).filter(c=>!prev||c.p.id!==prev.p.id);
-  if(!cs.length){dice.pick=null;dice.msg=dice.lunch?`걸어서 ${dice.walk}분 안에 점심 후보가 없어요. 시간을 늘리거나 AI에게 새 후보를 받아 보세요.`:'이 조건에 맞는 곳이 없어요. 기분이나 시간을 바꾸거나 AI에게 새 후보를 받아 보세요.';renderDice();return}
+  if(!cs.length){dice.pick=null;dice.msg=dice.lunch?`걸어서 ${dice.walk}분 안에 ${dice.meal==='dinner'?'저녁':'점심'} 후보가 없어요. 시간을 늘리거나 AI에게 새 후보를 받아 보세요.`:'이 조건에 맞는 곳이 없어요. 기분이나 시간을 바꾸거나 AI에게 새 후보를 받아 보세요.';renderDice();return}
   dice.rolls++;
   const fw=c=>c.w*(dice.fresh&&dice.fresh.includes(c.p.id)?8:1); const tot=cs.reduce((a,c)=>a+fw(c),0); let r=Math.random()*tot, pick=cs[cs.length-1]; for(const c of cs){r-=fw(c);if(r<=0){pick=c;break}}
   dice.pick=pick; dice.gap=g; dice.msg=''; dice.force=null; dice.rolling=!matchMedia('(prefers-reduced-motion:reduce)').matches; renderDice();
@@ -2016,7 +2028,7 @@ function diceFix(force){
   applyOpsCore(r.ops); save(); learnFrom(c.p); diceLog.push({n:c.p.name,d:DAYS[day].iso}); diceLog=diceLog.slice(-60); store.set('gp.dice',diceLog);
   closeSheet(); renderAll();
 }
-function renderDice(){
+function renderDiceDo(){
   if($('#sheet').dataset.uid!=='dice') return;
   const D=DAYS[day], gs=diceGaps(day), c=dice.pick, left=Math.max(0,3-dice.rolls);
   const reasons=c?[isWish(c.p.id)?'♥ 가고 싶은 곳':'',...matchKw(c.p.id).slice(0,2).map(k=>'#'+k),c.p.season?'🗓 '+c.p.season:'',recOf(c.p)?`👍 ${recOf(c.p)}`:'',c.tm?`${c.mode} ${c.tm}분`:'바로 옆'].filter(Boolean):[];
@@ -2024,10 +2036,6 @@ function renderDice(){
     <h3>🎲 DICE <span class="hint">· ${esc(D.date)} 빈 시간에서 굴려요</span></h3>
     ${gs.length?`<span class="hint">언제</span><div class="radio">${gs.map((g,i)=>`<button type="button" data-dicegap="${i}" aria-pressed="${i===dice.gapI}">${fmt(g.s)}–${fmt(g.e)}</button>`).join('')}</div>`:''}
     ${dice.lunch?'':`<span class="hint">지금 기분</span><div class="radio">${DICE_MOODS.map(([k,l])=>`<button type="button" data-dicemood="${k}" aria-pressed="${dice.mood===k}">${l}</button>`).join('')}</div>`}
-    <details class="dice-lunch"${dice.lunch?' open':''}><summary>🍱 점심 메뉴 굴리기${dice.lunch?' · 켜짐':''}</summary>
-      <label class="toggle"><input type="checkbox" id="diceLunch"${dice.lunch?' checked':''}> 점심 시간(11:30~14:00)에 식당만 굴리기</label>
-      ${dice.lunch?`<span class="hint">걸어서</span><div class="radio">${[5,10,15,20].map(m=>`<button type="button" data-dicewalk="${m}" aria-pressed="${dice.walk===m}">${m}분</button>`).join('')}</div>`:''}
-      <p class="hint">최근 5일 동안 DICE로 고른 곳은 빼고 굴려요.</p></details>
     <div class="dice-stage">${dice.rolling?`<div class="die spin" aria-hidden="true">${FACES[Math.floor(Math.random()*6)]}</div>`:c?`<div class="dice-card" style="--cc:var(--c-${c.p.cat})"><b>${esc(c.p.name)}</b><span class="mono hint">${fmt(c.arr)}–${fmt(c.arr+c.dur)} · ${esc(c.p.area)}</span><p>${esc(c.p.note||'')}</p><div class="tags">${reasons.map(x=>`<span class="tag">${esc(x)}</span>`).join('')}</div></div>`:`<div class="die" aria-hidden="true">⚄</div>`}</div>
     ${dice.msg?`<p class="hint" style="color:var(--warn)">${esc(dice.msg)}</p>`:''}
     <div class="row dice-acts">${c&&!dice.rolling?`<button type="button" class="small-btn primary" id="diceFix">이걸로 할래요</button>${dice.force?'<button type="button" class="small-btn" id="diceForce">그래도 넣기</button>':''}<button type="button" class="small-btn" id="diceAgain"${left?'':' disabled'}>다시 굴리기 (${left}번)</button>`:dice.rolling?'':`<button type="button" class="dice-go" id="diceGo">🎲 굴리기</button>`}</div>
@@ -2036,7 +2044,7 @@ function renderDice(){
 }
 async function diceAI(){
   const mood=(DICE_MOODS.find(m=>m[0]===dice.mood)||[])[1]||'';
-  const focus=dice.lunch?`점심 식사 (걸어서 ${dice.walk}분 안, 혼밥·빠른 식사도 좋음)`:dice.mood==='any'?'지금 빈 시간에 하기 좋은 곳':`지금 기분: ${mood}`;
+  const focus=dice.lunch?`${dice.meal==='dinner'?'저녁':'점심'} 식사 (걸어서 ${dice.walk}분 안${eat.mood!=='any'?', '+((EAT_MOODS.find(m=>m[0]===eat.mood)||[])[1]||''):''})`:dice.mood==='any'?'지금 빈 시간에 하기 좋은 곳':`지금 기분: ${mood}`;
   const n=await morePlaces(8,'st_dice',focus); if(n){dice.fresh=[...FRESH]; diceRoll(false)}
 }
 
@@ -2534,7 +2542,7 @@ function meRows(p){
   return [
     ['when','언제·어디',`${esc(PACK.city||p.dest||'미정')} · ${p.dateUnknown?'날짜 미정':`${esc(md(0))}–${esc(md(n))}`} (${n}박)`,()=>fDest(p)+fTrip(p)],
     ['who','누구와',who,()=>fParty(p)],
-    ['way','오가는 길',flightTxt,()=>fFlight(p)+fHome(p)],
+    ['way','오가는 길',flightTxt,()=>fFlight(p)+homeBoxHTML(p)+fHome(p)],
     ['stay','숙소',stayTxt,()=>(p.bookedStay===false?`<div class="row"><button class="small-btn primary" type="button" id="meHelper2">예약 도우미로 동네·숙소 찾기</button></div>`:'')+fStay(p)],
     ['bud','예산',b?`1인 ${Math.round(b.total/10000)}만원 <small>· 현지 하루 ${won(b.daily)}</small>`:'정하지 않음',()=>fBudget(p)],
     ['ev','예약한 일정',p.events.length?`${p.events.length}개`:'없음',()=>fEvents(p)]];
@@ -2585,6 +2593,7 @@ function renderSettings(){
     <div class="srow"><span>테마</span><div class="radio">${[['light','밝게'],['dark','어둡게'],['system','기기 설정']].map(([v,l])=>`<button type="button" data-theme-set="${v}" aria-pressed="${themePref===v}">${l}</button>`).join('')}</div></div>
     <div class="srow"><span>시간 간격</span><div class="radio"><button type="button" data-zoom="60" aria-pressed="${zoom!==100}">보통</button><button type="button" data-zoom="100" aria-pressed="${zoom===100}">넓게</button></div></div>
     <div class="row"><button class="small-btn" id="coachAgain">사용 안내 다시 보기</button></div></div></section>
+  <section class="sset"><h3>내 장소</h3>${mypHTML()}</section>
   <section class="sset"><h3>AI·지도 연결 <small>· 키는 이 기기에만 저장돼요</small></h3>${STANDALONE?`<div class="mgroup">${Object.keys(KEY_DEF).map(keyRow).join('')}</div>
     <p class="hint">무거운 작업(일정 짜기, 여행지 준비)은 Claude ${esc(MODELS.heavy)}, 가벼운 작업(키워드, 예약 내용 읽기)은 ${KEYS.gemini?'Gemini Flash':'Claude '+esc(MODELS.light)}가 맡아요. 경로는 국내는 카카오, 해외는 Google로 계산하고 한 번 계산한 구간은 이 기기에 저장해 다시 부르지 않아요${routeStats.ok?` (이번에 ${routeStats.ok}구간 계산)`:''}.</p>
     <details class="khelp"><summary>고급: 모델 이름</summary><div class="fg"><label>무거운 작업<input id="mHeavy" value="${esc(MODELS.heavy)}"></label><label>가벼운 작업 (Claude)<input id="mLight" value="${esc(MODELS.light)}"></label><label>Gemini<input id="mGem" value="${esc(MODELS.gemini)}"></label></div><div class="row"><button class="small-btn" type="button" id="mSave">모델 저장</button></div></details>`
@@ -2625,7 +2634,8 @@ async function unpackText(t){
 let lastLink='';
 async function shareLink(){
   snapshotCurrent(); const name=(plans.find(x=>x.id===curPlan)||{}).name||planName();
-  const t=await packText(JSON.stringify({n:name,d:planData()})); const url=location.origin+location.pathname+'#s='+t;
+  const pd=planData(); if(pd.profile&&pd.profile.home){pd.profile.home=Object.assign({},pd.profile.home,{area:''});delete pd.profile.home.ll}
+  const t=await packText(JSON.stringify({n:name,d:pd})); const url=location.origin+location.pathname+'#s='+t;
   if(url.length>60000){planMsg='계획이 커서 링크로 보내기 어려워요. "백업 파일 받기"로 파일을 보내 주세요.';renderPlans();return}
   lastLink=url;
   try{if(navigator.share){await navigator.share({title:'JEPI · '+name,text:`[JEPI] ${name}`,url});planMsg='공유했어요.';renderPlans();return}}catch(e){if(e&&e.name==='AbortError'){renderPlans();return}}
@@ -2763,6 +2773,185 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-cp]');if(!
   selected=id;o._c='pick';o._txt='일정표에서 넣을 시간을 탭하세요';tab='timeline';chatFolded=true;renderAll();renderChat();
   const g=document.getElementById('grid');if(g)g.scrollIntoView({block:'start',behavior:'smooth'});
 });
+
+// ================= 내 장소 (집·회사·…) — kept only on this device =================
+let MYP=LS.get('jepi.myplaces',null);
+if(!Array.isArray(MYP)) MYP=[{id:'home',name:'집',ll:null,addr:''},{id:'work',name:'회사',ll:null,addr:''}];
+const saveMYP=()=>LS.set('jepi.myplaces',MYP);
+const mypOf=id=>MYP.find(x=>x.id===id);
+let mypEdit=null, mypMsg='', mypHits=[];
+function getPos(maxAge){return new Promise((res,rej)=>{if(!navigator.geolocation)return rej(new Error('이 기기에서는 위치를 쓸 수 없어요'));
+  navigator.geolocation.getCurrentPosition(p=>res([+p.coords.latitude.toFixed(6),+p.coords.longitude.toFixed(6)]),e=>rej(new Error(e.code===1?'위치 권한이 꺼져 있어요. 브라우저 설정에서 허용해 주세요.':'지금 위치를 찾지 못했어요')),{enableHighAccuracy:true,timeout:10000,maximumAge:maxAge||60000})})}
+async function kakaoGet(path,params){if(!KEYS.kakao)throw aiErr('nokey','카카오 키가 필요해요');
+  let r;try{r=await fetch(`https://dapi.kakao.com${path}?${new URLSearchParams(params)}`,{headers:{Authorization:'KakaoAK '+KEYS.kakao}})}catch(_){throw aiErr('network','카카오에 연결하지 못했어요 (설정 → 카카오 지도 → 확인)')}
+  if(r.status===401||r.status===403)throw aiErr('not_granted','카카오 키나 카카오맵 사용 설정을 확인해 주세요');
+  if(!r.ok)throw aiErr('upstream_error','카카오 오류 (HTTP '+r.status+')'); return r.json()}
+async function addrOf(ll){try{const j=await kakaoGet('/v2/local/geo/coord2address.json',{x:ll[1],y:ll[0]});const d=(j.documents||[])[0];return d?((d.road_address&&d.road_address.address_name)||(d.address&&d.address.address_name)||''):''}catch(_){return ''}}
+function mypHTML(){
+  const pin=x=>x.ll?`<small class="mono">${esc(x.addr||`${x.ll[0].toFixed(4)}, ${x.ll[1].toFixed(4)}`)}</small>`:'<small>아직 등록 안 함</small>';
+  return `<div class="mgroup">${MYP.map(x=>mypEdit===x.id?`<div class="krow open"><div class="kh"><b>${esc(x.name)}</b>${pin(x)}</div>
+      ${x.id!=='home'&&x.id!=='work'?`<div class="kin"><input id="mypName" value="${esc(x.name)}" maxlength="12" placeholder="이름 (예: 본가, 헬스장)"></div>`:''}
+      <div class="row"><button class="small-btn primary" type="button" data-myphere="${x.id}">📍 지금 위치로 저장</button></div>
+      ${KEYS.kakao?`<div class="kin"><input id="mypQ" placeholder="주소나 건물 이름 검색 (예: 판교역로 235)" autocomplete="off"><button class="small-btn" type="button" data-mypsearch="${x.id}">찾기</button></div>
+      ${mypHits.length?`<div class="myp-hits">${mypHits.map((h,i)=>`<button class="mrow" type="button" data-myppick="${x.id}:${i}"><span class="mt"><b>${esc(h.name)}</b><small>${esc(h.addr)}</small></span></button>`).join('')}</div>`:''}`:'<p class="hint">카카오 지도 키를 연결하면 주소로도 찾을 수 있어요.</p>'}
+      <div class="row">${x.ll?`<button class="small-btn danger" type="button" data-mypclear="${x.id}">${x.id==='home'||x.id==='work'?'위치 지우기':'삭제'}</button>`:''}<button class="small-btn" type="button" id="mypDone">닫기</button></div>
+      ${mypMsg?`<small class="kmsg">${esc(mypMsg)}</small>`:''}</div>`
+    :`<div class="krow"><div class="kh"><b>${x.id==='home'?'🏠 ':x.id==='work'?'🏢 ':'📍 '}${esc(x.name)}</b>${pin(x)}</div><button class="small-btn${x.ll?'':' primary'}" type="button" data-mypedit="${x.id}">${x.ll?'바꾸기':'등록'}</button></div>`).join('')}
+    <div class="krow"><button class="small-btn" type="button" id="mypAdd">+ 장소 추가</button></div></div>
+  <p class="hint">"뭐 먹지?"에서 주변 식당을 찾는 기준과 여행 출발지로 써요. 이 기기에만 저장되고 공유 링크에는 들어가지 않아요.</p>`;
+}
+document.addEventListener('click',async e=>{const t=e.target.closest('button');if(!t)return;
+  if(t.dataset.mypedit){mypEdit=t.dataset.mypedit;mypMsg='';mypHits=[];renderSettings();return}
+  if(t.id==='mypDone'){const n=$('#mypName'),x=mypOf(mypEdit);if(n&&x&&n.value.trim())x.name=n.value.trim().slice(0,12);saveMYP();mypEdit=null;renderSettings();return}
+  if(t.id==='mypAdd'){const id='p'+Date.now().toString(36);MYP.push({id,name:'새 장소',ll:null,addr:''});saveMYP();mypEdit=id;mypMsg='';mypHits=[];renderSettings();return}
+  if(t.dataset.mypclear){const id=t.dataset.mypclear;if(id==='home'||id==='work'){const x=mypOf(id);x.ll=null;x.addr=''}else MYP=MYP.filter(x=>x.id!==id);saveMYP();mypEdit=null;renderSettings();return}
+  if(t.dataset.myphere){const x=mypOf(t.dataset.myphere);mypMsg='지금 위치를 찾는 중…';renderSettings();
+    try{const ll=await getPos(0);x.ll=ll;x.addr=await addrOf(ll);saveMYP();mypMsg=`저장했어요${x.addr?' · '+x.addr:''}`}catch(err){mypMsg=err.message}renderSettings();return}
+  if(t.dataset.mypsearch){const q=(($('#mypQ')||{}).value||'').trim();if(!q)return;mypMsg='찾는 중…';renderSettings();
+    try{const a=await kakaoGet('/v2/local/search/address.json',{query:q,size:5});let hits=(a.documents||[]).map(d=>({name:d.address_name,addr:(d.road_address&&d.road_address.address_name)||d.address_name,ll:[+d.y,+d.x]}));
+      if(!hits.length){const k=await kakaoGet('/v2/local/search/keyword.json',{query:q,size:5});hits=(k.documents||[]).map(d=>({name:d.place_name,addr:d.road_address_name||d.address_name,ll:[+d.y,+d.x]}))}
+      mypHits=hits;mypMsg=hits.length?'맞는 곳을 눌러 주세요.':'찾지 못했어요. 다르게 적어 보세요.'}catch(err){mypMsg=err.message}renderSettings();return}
+  if(t.dataset.myppick){const [id,i]=t.dataset.myppick.split(':'),x=mypOf(id),h=mypHits[+i];if(x&&h){x.ll=h.ll;x.addr=h.addr;saveMYP();mypHits=[];mypMsg='저장했어요 · '+h.addr}renderSettings();return}
+});
+
+// ================= DICE: 뭐 하지? / 뭐 먹지? =================
+const EAT_MOODS=[['any','상관없음',[]],['full','든든하게',['국밥','백반','덮밥','돈까스']],['light','가볍게',['샐러드','샌드위치','김밥','죽']],['soup','국물',['국밥','찌개','칼국수','쌀국수','라멘']],['noodle','면',['국수','라멘','우동','냉면','파스타']],['meat','고기',['고기','삼겹살','갈비','스테이크']],['solo','혼밥 편한 곳',['라멘','덮밥','김밥','국밥','분식']],['new','안 가 본 곳',[]],['cafe','카페·디저트',[]]];
+let eat=Object.assign({walk:10,mood:'any'},LS.get('jepi.eat',{}),{base:null,org:null,pick:null,rolls:0,list:null,key:'',msg:'',busy:false,ll:null,where:'',meal:null,src:''});
+const saveEat=()=>LS.set('jepi.eat',{walk:eat.walk,mood:eat.mood});
+const nowMin=()=>{const n=new Date();return n.getHours()*60+n.getMinutes()};
+const mealNow=()=>{const m=nowMin();return m>=630&&m<930?'lunch':m>=990&&m<1290?'dinner':'snack'};
+const MEAL_TXT={lunch:'점심',dinner:'저녁',snack:'간식·카페'};
+const planUsable=()=>DAYS.length&&PACK&&PACK.city&&PACK.city!=='새 여행';
+function eatDefaults(){
+  const ti=todayIdx(); eat.base=ti>=0&&planUsable()?'plan':'near';
+  if(eat.base==='plan') day=ti;
+  const n=new Date(), wkLunch=n.getDay()>0&&n.getDay()<6&&nowMin()>=630&&nowMin()<900;
+  eat.org=wkLunch&&mypOf('work')&&mypOf('work').ll?'work':'gps';
+  eat.meal=mealNow()==='dinner'?'dinner':'lunch'; eat.pick=null; eat.rolls=0; eat.msg='';
+}
+function diceTabsHTML(){return `<div class="dice-tabs" role="tablist"><button type="button" role="tab" data-dicetab="do" aria-selected="${dice.tab!=='eat'}">🎲 뭐 하지?</button><button type="button" role="tab" data-dicetab="eat" aria-selected="${dice.tab==='eat'}">🍚 뭐 먹지?</button></div>`}
+function renderDice(){
+  if($('#sheet').dataset.uid!=='dice') return;
+  if(dice.tab==='eat') return renderEat();
+  dice.lunch=false; renderDiceDo();
+  const d=$('#sheet .dice'); if(d) d.insertAdjacentHTML('afterbegin',diceTabsHTML());
+}
+function eatRecent(){const t=isoOf(new Date()),from=isoShift(t,-5);return new Set(diceLog.filter(x=>x.d&&x.d>=from&&x.d<=t).map(x=>norm(x.n)))}
+async function eatOrigin(){
+  if(eat.org==='gps'){const ll=await getPos(120000);eat.where='지금 위치';return ll}
+  const x=mypOf(eat.org); if(!x||!x.ll) throw aiErr('noplace',`${x?x.name:'이 장소'}를 아직 등록하지 않았어요. 더보기 → 설정 → 내 장소에서 등록해 주세요.`);
+  eat.where=x.name; return x.ll;
+}
+async function eatFetch(ll){
+  const R=Math.round(eat.walk*80), mood=EAT_MOODS.find(m=>m[0]===eat.mood)||EAT_MOODS[0];
+  const key=`${ll[0].toFixed(3)},${ll[1].toFixed(3)}|${R}|${eat.mood}`; if(eat.list&&eat.key===key&&Date.now()-eat.at<1800e3) return eat.list;
+  let out=[];
+  if(KEYS.kakao&&inKR(ll)){
+    const base={x:ll[1],y:ll[0],radius:R,sort:'distance',size:15};
+    const docs=[];
+    if(mood[0]==='cafe'){for(const page of [1,2]){const j=await kakaoGet('/v2/local/search/category.json',Object.assign({category_group_code:'CE7',page},base));docs.push(...(j.documents||[]));if(j.meta&&j.meta.is_end)break}}
+    else if(mood[2].length){for(const q of mood[2].slice(0,4)){const j=await kakaoGet('/v2/local/search/keyword.json',Object.assign({query:q,category_group_code:'FD6'},base));docs.push(...(j.documents||[]))}}
+    else{for(const page of [1,2,3]){const j=await kakaoGet('/v2/local/search/category.json',Object.assign({category_group_code:'FD6',page},base));docs.push(...(j.documents||[]));if(j.meta&&j.meta.is_end)break}}
+    const seen=new Set();
+    docs.forEach(d=>{if(seen.has(d.id))return;seen.add(d.id);const cat=String(d.category_name||'').split('>').map(s=>s.trim());
+      out.push({name:d.place_name,cat:cat[cat.length-1]||'음식점',full:d.category_name||'',dist:+d.distance||0,addr:d.road_address_name||d.address_name||'',url:d.place_url||`https://map.kakao.com/link/search/${encodeURIComponent(d.place_name)}`,ll:[+d.y,+d.x]})});
+    eat.src='카카오 지도';
+  } else if(sample){
+    const r=await sample.json(`List up to 14 real, currently operating ${eat.mood==='cafe'?'cafes or dessert places':'restaurants'} within about ${eat.walk} minutes walk of latitude ${ll[0]}, longitude ${ll[1]}${eat.mood!=='any'&&eat.mood!=='cafe'?` that fit this mood: ${mood[1]} (${mood[2].join(', ')})`:''}, good for ${MEAL_TXT[mealNow()]}. Only places you are confident exist there.
+Reply with only JSON: {"places":[{"name":"name as shown locally","nameKo":"Korean reading if different","category":"short Korean food type","walkMin":5,"address":"short address","lat":0.0,"lng":0.0}]}`,{modelTier:'quick',cache:false});
+    (Array.isArray(r&&r.places)?r.places:[]).forEach(p=>{if(!p||!p.name)return;const la=+p.lat,ln=+p.lng;const ok=isFinite(la)&&isFinite(ln)&&km(ll,[la,ln])<3;
+      out.push({name:p.nameKo&&p.nameKo!==p.name?`${p.nameKo} (${p.name})`:p.name,cat:p.category||'음식점',full:p.category||'',dist:ok?km(ll,[la,ln])*1000:(+p.walkMin||eat.walk)*80,addr:p.address||'',url:`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name+' '+(p.address||''))}`,ll:ok?[la,ln]:null,ai:true})});
+    eat.src='AI 추천 · 가기 전에 지도에서 확인하세요';
+  } else throw aiErr('nokey','주변 식당을 찾으려면 설정에서 카카오 지도 키나 AI를 연결해 주세요.');
+  if(mealNow()!=='dinner'&&eat.mood!=='cafe') out=out.filter(x=>!/술집|호프|바\b|포차/.test(x.full));
+  eat.list=out; eat.key=key; eat.at=Date.now(); return out;
+}
+async function eatRoll(again){
+  if(eat.busy) return;
+  if(eat.base==='plan'){
+    dice.lunch=true; dice.meal=eat.meal; dice.walk=eat.walk; dice.mood='any';
+    const gs=diceGaps(day), mw=eat.meal==='dinner'?[1050,1260]:[690,840];
+    const gi=gs.findIndex(g=>g.e>mw[0]&&g.s<mw[1]); if(gi>=0) dice.gapI=gi;
+    if(again&&dice.rolls>=3) return; diceRoll(!!again); return;
+  }
+  if(again&&eat.rolls>=3) return;
+  eat.busy=true; eat.msg=''; if(!again){eat.rolls=0} renderEat();
+  try{
+    const ll=await eatOrigin(); eat.ll=ll;
+    let list=await eatFetch(ll); const rec=eatRecent();
+    let cs=list.filter(x=>!rec.has(norm(x.name))&&(!eat.pick||x.name!==eat.pick.name));
+    if(eat.mood==='new'){const seen=new Set(diceLog.map(x=>norm(x.n)));cs=cs.filter(x=>!seen.has(norm(x.name)))}
+    if(!cs.length){eat.pick=null;eat.msg=`걸어서 ${eat.walk}분 안에 ${eat.mood==='any'?'':'이 조건에 맞는 '}후보가 없어요. 거리를 늘리거나 기분을 바꿔 보세요.`}
+    else{const R=eat.walk*80, w=x=>1+Math.max(0,1-x.dist/R); const tot=cs.reduce((a,x)=>a+w(x),0); let r=Math.random()*tot, pk=cs[cs.length-1]; for(const x of cs){r-=w(x);if(r<=0){pk=x;break}}
+      eat.pick=pk; eat.rolls++; dice.rolling=!matchMedia('(prefers-reduced-motion:reduce)').matches; if(dice.rolling)setTimeout(()=>{dice.rolling=false;renderEat()},650)}
+  }catch(err){eat.pick=null;eat.msg=err.message||'후보를 가져오지 못했어요.'}
+  eat.busy=false; renderEat();
+}
+function renderEat(){
+  if($('#sheet').dataset.uid!=='dice') return;
+  const meal=eat.base==='plan'?eat.meal:mealNow(), mt=MEAL_TXT[meal]||'점심', D=DAYS[day]||{};
+  const pills=(attr,cur,opts)=>`<div class="radio">${opts.map(([v,l])=>`<button type="button" data-${attr}="${v}" aria-pressed="${String(cur)===String(v)}">${l}</button>`).join('')}</div>`;
+  const orgs=[['gps','지금 위치'],...MYP.filter(x=>x.ll).map(x=>[x.id,x.name])];
+  const planChip=planUsable()?`<button type="button" class="eat-base" data-eatbase="plan" aria-pressed="${eat.base==='plan'}">🗓 ${esc(PACK.city)} Day ${day+1}<small>${esc(D.date||'')} ${MEAL_TXT[eat.meal]}</small></button>`:'';
+  const nearLbl=eat.org==='gps'?'지금 위치':(mypOf(eat.org)||{}).name||'지금 위치';
+  let stage='', acts='';
+  if(eat.base==='plan'){
+    const c=dice.pick;
+    stage=dice.rolling?`<div class="die spin" aria-hidden="true">${FACES[Math.floor(Math.random()*6)]}</div>`:c?`<div class="dice-card" style="--cc:var(--c-${c.p.cat})"><b>${esc(c.p.name)}</b><span class="mono hint">${fmt(c.arr)}–${fmt(c.arr+c.dur)} · ${esc(c.p.area)}${c.tm?` · ${esc(c.mode)} ${c.tm}분`:''}</span><p>${esc(c.p.note||'')}</p></div>`:`<div class="die" aria-hidden="true">🍚</div>`;
+    const left=Math.max(0,3-dice.rolls);
+    acts=c&&!dice.rolling?`<button type="button" class="small-btn primary" id="diceFix">이걸로! 일정에 넣기</button>${dice.force?'<button type="button" class="small-btn" id="diceForce">그래도 넣기</button>':''}<button type="button" class="small-btn" data-eatroll="again"${left?'':' disabled'}>다시 굴리기 (${left})</button>`:dice.rolling?'':`<button type="button" class="dice-go" data-eatroll="go">🍚 ${MEAL_TXT[eat.meal]} 굴리기</button>`;
+  } else {
+    const c=eat.pick, left=Math.max(0,3-eat.rolls);
+    stage=eat.busy?`<div class="die spin" aria-hidden="true">🍚</div><p class="hint">주변 식당을 찾는 중…</p>`:dice.rolling?`<div class="die spin" aria-hidden="true">${FACES[Math.floor(Math.random()*6)]}</div>`:c?`<div class="dice-card"><b>${esc(c.name)}</b><span class="mono hint">걸어서 약 ${Math.max(1,Math.round(c.dist/80))}분 · ${esc(c.cat)}</span>${c.addr?`<p>${esc(c.addr)}</p>`:''}<small class="hint">${esc(eat.where)} 기준 · ${esc(eat.src)}</small></div>`:`<div class="die" aria-hidden="true">🍚</div>`;
+    acts=c&&!eat.busy&&!dice.rolling?(eat.chosen===c.name?`<span class="ai-status">맛있게 드세요! 🍚</span><a class="small-btn primary" href="${esc(c.url)}" target="_blank" rel="noopener">지도 열기</a>`:`<button type="button" class="small-btn primary" id="eatPick">이걸로!</button><a class="small-btn" href="${esc(c.url)}" target="_blank" rel="noopener">지도</a><button type="button" class="small-btn" data-eatroll="again"${left?'':' disabled'}>다시 굴리기 (${left})</button>`):(eat.busy||dice.rolling?'':`<button type="button" class="dice-go" data-eatroll="go">🍚 ${mt} 굴리기</button>`);
+  }
+  $('#sheet').innerHTML=`<div class="dice eat">${diceTabsHTML()}
+    <div class="eat-bases"><button type="button" class="eat-base" data-eatbase="near" aria-pressed="${eat.base==='near'}">📍 ${esc(nearLbl)} 주변<small>걸어서 ${eat.walk}분</small></button>${planChip}</div>
+    ${eat.base==='near'?`<span class="hint">기준</span>${pills('eatorg',eat.org,orgs)}${MYP.some(x=>x.ll)?'':'<button type="button" class="linkbtn" id="eatSetPlaces">🏠 집·🏢 회사 등록해 두기</button>'}`
+      :`<span class="hint">언제</span>${pills('eatmeal',eat.meal,[['lunch','점심'],['dinner','저녁']])}`}
+    <span class="hint">걸어서</span>${pills('eatwalk',eat.walk,[[5,'5분'],[10,'10분'],[15,'15분'],[20,'20분']])}
+    <span class="hint">기분</span>${pills('eatmood',eat.mood,EAT_MOODS.map(m=>[m[0],m[1]]))}
+    <div class="dice-stage">${stage}</div>
+    ${eat.base==='near'&&eat.msg?`<p class="hint" style="color:var(--warn)">${esc(eat.msg)}</p>`:''}${eat.base==='plan'&&dice.msg?`<p class="hint" style="color:var(--warn)">${esc(dice.msg)}</p>`:''}
+    <div class="row dice-acts">${acts}</div>
+    ${eat.base==='plan'&&sample&&!PACK.manual?`<div class="row"><button type="button" class="small-btn" id="diceAI">🔎 AI가 새로 찾아서 굴리기</button><span class="ai-status" id="st_dice"></span></div>`:''}
+    <p class="hint">최근 5일 동안 고른 곳은 빼고 굴려요.</p>
+    <div class="row"><button type="button" class="small-btn" data-close="1">닫기</button></div></div>`;
+}
+function openDiceTab(tab,fromT){
+  dice.tab=tab; if(tab==='eat'){eatDefaults(); eat.chosen=null}
+  openDice(fromT); 
+}
+document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t||!t.closest('#sheet .dice'))return;
+  if(t.dataset.dicetab){if(t.dataset.dicetab==='eat'){dice.tab='eat';eatDefaults();eat.chosen=null}else{dice.tab='do';dice.pick=null;dice.rolls=0;dice.msg=''}renderDice();return}
+  if(t.dataset.eatbase){eat.base=t.dataset.eatbase;eat.pick=null;eat.rolls=0;eat.msg='';dice.pick=null;dice.rolls=0;dice.msg='';if(eat.base==='plan'){const ti=todayIdx();if(ti>=0)day=ti}renderEat();return}
+  if(t.dataset.eatorg){eat.org=t.dataset.eatorg;eat.pick=null;eat.rolls=0;eat.list=null;renderEat();return}
+  if(t.dataset.eatmeal){eat.meal=t.dataset.eatmeal;dice.pick=null;dice.rolls=0;renderEat();return}
+  if(t.dataset.eatwalk){eat.walk=+t.dataset.eatwalk;eat.pick=null;eat.rolls=0;saveEat();renderEat();return}
+  if(t.dataset.eatmood){eat.mood=t.dataset.eatmood;eat.pick=null;eat.rolls=0;dice.pick=null;dice.rolls=0;saveEat();renderEat();return}
+  if(t.dataset.eatroll){eatRoll(t.dataset.eatroll==='again');return}
+  if(t.id==='eatPick'&&eat.pick){diceLog.push({n:eat.pick.name,d:isoOf(new Date())});diceLog=diceLog.slice(-60);store.set('gp.dice',diceLog);eat.chosen=eat.pick.name;renderEat();return}
+});
+// home-screen shortcut: ./?dice=eat
+function diceFromUrl(){try{const q=new URLSearchParams(location.search).get('dice');if(q==='eat'||q==='do'){history.replaceState(null,'',location.pathname+location.hash);setTimeout(()=>openDiceTab(q),300)}}catch(_){}}
+
+// plan-based meal mood filter
+function eatMoodOk(p){const m=EAT_MOODS.find(x=>x[0]===eat.mood);if(!m||!m[2].length)return true;const tx=p.name+' '+tagsOf(p.id).join(' ')+' '+(p.note||'');return m[2].some(k=>tx.includes(k))}
+// trip departure from 집 (내 장소)
+const KR_AIR={gmp:['김포공항 국제선',37.5583,126.7906],icn1:['인천공항 T1',37.4492,126.4510],icn2:['인천공항 T2',37.4602,126.4407]};
+let homeMsg='';
+function homeBoxHTML(p){if(p.mode==='car')return '';const h=mypOf('home');
+  return `<div class="fsec home-box"><h3>출발지</h3>${h&&h.ll?`<p class="hint">🏠 ${esc(h.addr||'집')}${p.home.ll?' · 출발지로 쓰는 중':''}</p>
+    <div class="row">${p.home.ll?'':'<button class="small-btn primary" type="button" id="homeUse">🏠 집에서 출발</button>'}${KEYS.kakao?Object.entries(KR_AIR).map(([k,a])=>`<button class="small-btn" type="button" data-homeair="${k}">집→${a[0]} 시간 계산</button>`).join(''):''}</div>`
+    :`<p class="hint">더보기 → 설정 → 내 장소에서 집을 등록하면 출발지와 공항까지 시간을 자동으로 채울 수 있어요.</p>`}${homeMsg?`<p class="ai-status">${esc(homeMsg)}</p>`:''}</div>`}
+document.addEventListener('click',async e=>{const t=e.target.closest('button');if(!t||!draft)return;
+  if(t.id==='homeUse'){const h=mypOf('home');if(!h||!h.ll)return;draft.home.ll=h.ll;draft.home.area='집';homeMsg='출발지를 집으로 바꿨어요.';autoSave();renderMeRows();return}
+  if(t.dataset.homeair){const h=mypOf('home'),a=KR_AIR[t.dataset.homeair];if(!h||!h.ll)return;homeMsg='경로를 계산하는 중…';renderMeRows();
+    try{const v=await fetchRoute({m:'transit',a:h.ll,b:[a[1],a[2]],pv:'kakao'});if(!v)throw new Error('경로를 찾지 못했어요');
+      draft.home.ll=h.ll;draft.home.area='집';draft.home.min=Math.min(240,Math.max(10,Math.ceil(v.min/5)*5));homeMsg=`집 → ${a[0]}: ${v.label} 약 ${v.min}분${v.lines?` (${v.lines})`:''}으로 넣었어요.`;autoSave()}
+    catch(err){homeMsg=(err&&err.message)||'계산하지 못했어요'}renderMeRows();return}
+});
+document.addEventListener('click',e=>{const t=e.target.closest('#eatSetPlaces');if(!t)return;closeSheet();tab='settings';mypEdit=null;renderSettings();renderTabs()});
 
 // ---------- state ----------
 const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
@@ -3346,8 +3535,8 @@ document.addEventListener('click',e=>{
   if(t.id==='planJson'){snapshotCurrent();downloadText(`JEPI-${planName()}.json`,JSON.stringify({jepi:1,name:planName(),data:planData()}));return}
   if(t.id==='codeOpen'){openCode(($('#codeIn')||{}).value);return}
   if(t.dataset.jp){setJP(t.dataset.jp);renderAll();return}
-  if(t.id==='diceFab'){openDice(null);return}
-  if(t.dataset.dicefrom!=null){openDice(+t.dataset.dicefrom);diceRoll(false);return}
+  if(t.id==='diceFab'){openDiceTab(mealNow()==='snack'?'do':'eat',null);return}
+  if(t.dataset.dicefrom!=null){dice.tab='do';openDice(+t.dataset.dicefrom);diceRoll(false);return}
   if(t.dataset.dicegap!=null){dice.gapI=+t.dataset.dicegap;dice.pick=null;dice.msg='';renderDice();return}
   if(t.dataset.dicemood){dice.mood=t.dataset.dicemood;dice.pick=null;dice.msg='';renderDice();return}
   if(t.dataset.dicewalk){dice.walk=+t.dataset.dicewalk;dice.pick=null;renderDice();return}
@@ -3453,6 +3642,7 @@ buildDays();
 renderAll();
 applyTheme();
 if(/[#&]s=/.test(location.hash)) openShared(); else if(firstRun) openOnb(); else {startupFocus(); maybeCoach();}
+diceFromUrl();
 // scroll to morning
 setTimeout(()=>{const H=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hour'))||60;
   const g=$('#grid'); if(g) window.scrollTo({top:0})},0);
