@@ -3310,7 +3310,10 @@ function diceCloseAnim(){
 }
 
 // ================= 기기 간 동기화 (Supabase, 본인 계정 데이터만) =================
+// built-in sync server: the publishable key is meant to be public; RLS keeps each person's rows private
+const SB_DEFAULT={url:'https://qjzxhcvneorbskpebvca.supabase.co',key:'sb_publishable_-IUuxuXFsSJQFz4V0we-zA_OIi1AZQH'};
 let SYNC=Object.assign({url:'',key:'',email:'',sess:null,lastPull:0,sent:{},at:0,msg:''},LS.get('jepi.sync',{})||{});
+if(!SYNC.url||!SYNC.key){SYNC.url=SB_DEFAULT.url;SYNC.key=SB_DEFAULT.key}
 const saveSync=()=>LS.set('jepi.sync',{url:SYNC.url,key:SYNC.key,email:SYNC.email,sess:SYNC.sess,lastPull:SYNC.lastPull,sent:SYNC.sent,at:SYNC.at});
 let syncStep='', syncBusy=false, syncErr='';
 const syncOn=()=>!!(SYNC.url&&SYNC.key&&SYNC.sess&&SYNC.sess.access);
