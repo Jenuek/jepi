@@ -49,14 +49,15 @@ function fakeServer() {
       return true });
     const role = t => (S.members.find(x => x.trip_id === t && x.user_id === me) || {}).role;
     const T = { jepi_docs: ['rows', x => x.user_id === me], jepi_alerts: ['alerts', x => x.user_id === me], jepi_push: ['subs', x => x.user_id === me],
-      jepi_trips: ['trips', x => !!role(x.id)], jepi_trip_members: ['members', x => !!role(x.trip_id)], jepi_trip_marks: ['marks', x => !!role(x.trip_id)], jepi_trip_invites: ['invites', () => false] }[tbl];
+      jepi_trips: ['trips', x => !!role(x.id)], jepi_trip_members: ['members', x => !!role(x.trip_id)], jepi_trip_marks: ['marks', x => !!role(x.trip_id)], jepi_trip_invites: ['invites', () => false], jepi_recs: ['recs', () => true] }[tbl];
     if (T) {
       const [key, can] = T; S[key] = S[key] || [];
-      const pk = x => key === 'trips' ? x.id : key === 'members' ? x.trip_id + '/' + x.user_id : key === 'marks' ? x.trip_id + '/' + x.place_id + '/' + x.user_id : key === 'invites' ? x.code : x.user_id + '/' + x.id;
+      const pk = x => key === 'trips' ? x.id : key === 'members' ? x.trip_id + '/' + x.user_id : key === 'marks' ? x.trip_id + '/' + x.place_id + '/' + x.user_id : key === 'invites' ? x.code : key === 'recs' ? x.user_id + '/' + x.k : x.user_id + '/' + x.id;
       if (m === 'GET') return J(200, S[key].filter(x => can(x) && filt(x)));
       if (m === 'POST') {
         for (const x of [].concat(body)) {
-          if (['rows', 'alerts', 'subs', 'marks'].includes(key)) x.user_id = x.user_id || me;
+          if (['rows', 'alerts', 'subs', 'marks', 'recs'].includes(key)) x.user_id = x.user_id || me;
+          if (key === 'recs' && x.user_id !== me) return J(403, { message: 'rls' });
           if (key === 'trips' && x.owner !== me) return J(403, { message: 'rls' });
           if (key === 'members' && !(x.user_id === me && x.role === 'owner')) return J(403, { message: 'rls' });
           if (key === 'invites' && !['owner', 'edit'].includes(role(x.trip_id))) return J(403, { message: 'rls' });
@@ -68,7 +69,7 @@ function fakeServer() {
         const hit = S[key].filter(x => can(x) && filt(x) && (key !== 'trips' || ['owner', 'edit'].includes(role(x.id))));
         hit.forEach(x => Object.assign(x, body)); return J(200, hit)
       }
-      if (m === 'DELETE') { const before = S[key].length; S[key] = S[key].filter(x => !(filt(x) && (can(x) || key === 'rows' || key === 'alerts'))); if (key === 'trips') S.members = S.members.filter(x => S.trips.some(t => t.id === x.trip_id)); return J(204, null) }
+      if (m === 'DELETE') { const before = S[key].length; S[key] = S[key].filter(x => !(filt(x) && (key === 'recs' ? x.user_id === me : (can(x) || key === 'rows' || key === 'alerts')))); if (key === 'trips') S.members = S.members.filter(x => S.trips.some(t => t.id === x.trip_id)); return J(204, null) }
     }
     if (tbl === 'rpc/jepi_join') {
       const inv = (S.invites || []).find(x => x.code === body.p_code); if (!inv) return J(400, { message: 'invite expired' });

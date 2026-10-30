@@ -138,4 +138,52 @@ module.exports = [
       await p.ctx.close();
     }
   },
+  {
+    name: 'tidy day screen, one find screen, same place twice, everyone\'s 👍',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const e = (n) => ({ k: '오사카|' + n.replace(/\s+/g, '').toLowerCase(), city: '오사카', name: n, cat: 'trip', lat: 34.66, lng: 135.43, dur: 60 });
+      S.recs = [{ user_id: 'U_a', ...e('덴포잔 대관람차'), entry: e('덴포잔 대관람차') }, { user_id: 'U_b', ...e('덴포잔 대관람차'), entry: e('덴포잔 대관람차') }, { user_id: 'U_b', ...e('가이유칸 수족관'), entry: e('가이유칸 수족관') }]
+        .map(x => ({ user_id: x.user_id, k: x.k, city: x.city, entry: x.entry }));
+      const p = await device(b, S);
+      await p.click('[data-w="new"]'); await p.waitForTimeout(200);
+      await p.evaluate(() => window.__jepi.demoLikeTrip()); await p.waitForTimeout(500); await skipCoach(p);
+      // tidy
+      const chips = await p.$$eval('#daySum .sum-chip', e => e.map(x => x.textContent));
+      ok(chips.length >= 2 && chips[0].startsWith('이동'), 'summary chips ' + chips.join(' / '));
+      ok(!(await vis(p, '#route')) && !(await vis(p, '#budgetBox')), 'route and cost folded away');
+      await p.click('[data-sum="route"]'); await p.waitForTimeout(150);
+      ok(await vis(p, '#route'), 'route opens from its chip');
+      ok((await p.$$('#grid .blk .flag')).length === 0, 'blocks carry no warning sentences');
+      // find screen
+      await p.evaluate(() => window.__jepi.openFind({ when: 'gap', into: 'sched' })); await p.waitForTimeout(150);
+      ok(await vis(p, '#findForm'), 'find sheet opens');
+      ok(await p.$eval('[data-find="into:sched"]', x => x.getAttribute('aria-pressed') === 'true'), 'opened with 넣을 곳 = 일정에');
+      await p.click('[data-find="where:area"]'); await p.waitForTimeout(100);
+      ok(await vis(p, '#findArea'), 'area picker appears');
+      await p.click('#sheet [data-close]').catch(() => p.evaluate(() => closeSheet && closeSheet())); await p.waitForTimeout(150);
+      // same place twice
+      const nm = await p.evaluate(() => window.__jepi.dupTest());
+      await p.click('.tabs [data-tab="tray"]'); await p.waitForTimeout(250);
+      ok(await vis(p, '.dup-card'), '"같은 곳 같아요" shown for ' + nm);
+      await p.click('[data-dupmerge]'); await p.waitForTimeout(250);
+      ok(!(await p.evaluate(() => window.__jepi.has('dupx'))) && !(await vis(p, '.dup-card')), 'merged into one');
+      await p.evaluate(() => window.__jepi.openCustom()); await p.waitForTimeout(150);
+      await p.fill('#cfName', nm.slice(0, 3)); await p.dispatchEvent('#cfName', 'input'); await p.waitForTimeout(100);
+      ok((await p.$$('.dup-pick')).length >= 1, 'typing a new place shows the existing one');
+      await p.click('#sheet [data-close]'); await p.waitForTimeout(100);
+      // everyone's 👍 (not logged in: can see, cannot add)
+      await p.click('.tabs [data-tab="tray"]'); await p.waitForTimeout(150);
+      await p.evaluate(() => { const o = document.getElementById('openOnly'); if (o.checked) o.click() }); await p.waitForTimeout(150);
+      await p.click('[data-group="pop"]'); await p.waitForTimeout(200);
+      const first = await p.$eval('#cards .card', x => x.textContent);
+      ok(first.includes('덴포잔') && first.includes('👍 2'), 'sorted by 👍 · first card ' + first.slice(0, 40));
+      ok((await p.textContent('#recSt')).includes('로그인'), 'logged out: asks to log in to recommend');
+      await p.click('.tabs [data-tab="timeline"]'); await p.waitForTimeout(150);
+      await p.click('#dayTitleEdit'); await p.fill('#dayTitleIn', '도착, 그리고 네온의 첫인상'); await p.click('#dayTitleForm [type=submit]'); await p.waitForTimeout(200);
+      ok((await p.textContent('#dayTitle')) === '도착, 그리고 네온의 첫인상', 'day title renamed');
+      ok(await p.evaluate(() => JSON.parse(localStorage.getItem('gp.profile')).dayTitles[0] === '도착, 그리고 네온의 첫인상'), 'title saved with the plan');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  }
 ];
