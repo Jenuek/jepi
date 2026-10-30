@@ -1,0 +1,132 @@
+
+<div id="intro" role="presentation"><div class="sky"><i class="cl c1"></i><i class="cl c2"></i><i class="cl c3"></i><i class="cl c4"></i><i class="sun"></i></div>
+<div class="intro-c"><svg class="intro-logo" viewBox="0 0 34 30" aria-hidden="true"><rect x="1" y="9" width="15" height="15" rx="3.5" fill="#1b2027"/><g transform="rotate(14 25 15)"><g class="intro-die"><rect x="17" y="6" width="15" height="15" rx="4" fill="#27306b"/><circle cx="21" cy="10" r="1.5" fill="#fff"/><circle cx="24.5" cy="13.5" r="1.5" fill="#fff"/><circle cx="28" cy="17" r="1.5" fill="#fff"/></g></g></svg>
+<b class="intro-name">JEPI</b><p class="intro-slogan"><span>우리의 삶은</span><span>계획과 우연의 연속</span></p></div></div>
+
+<header class="top">
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 34 30" aria-hidden="true"><rect x="1" y="9" width="15" height="15" rx="3.5" fill="var(--ink)"/><g transform="rotate(14 25 15)"><rect x="17" y="6" width="15" height="15" rx="4" fill="var(--accent)"/><circle cx="21" cy="10" r="1.5" fill="var(--paper)"/><circle cx="24.5" cy="13.5" r="1.5" fill="var(--paper)"/><circle cx="28" cy="17" r="1.5" fill="var(--paper)"/></g></svg>
+    <h1>JEPI</h1><span class="beta">베타</span>
+    <span class="meta mono" id="tripMeta"></span>
+    <button class="plan-btn" id="planBtn" aria-haspopup="menu" aria-expanded="false" aria-label="계획 바꾸기"><span id="planName"></span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+    <div class="jp" role="group" aria-label="모드"><button type="button" data-jp="J" aria-pressed="true">J 계획</button><button type="button" data-jp="P" aria-pressed="false">P 즉흥</button></div>
+  </div>
+  <div class="days" id="days" role="group" aria-label="날짜 선택"></div>
+  <div class="tabs" role="group" aria-label="화면 선택">
+    <button data-tab="timeline" aria-pressed="true">일정</button>
+    <button data-tab="tray" aria-pressed="false">장소</button>
+    <button data-tab="map" aria-pressed="false">지도</button>
+    <button data-tab="more" aria-pressed="false">더보기<span class="n" id="warnCount"></span></button>
+  </div>
+</header>
+
+<main>
+  <section class="panel" id="panel-timeline">
+    <div id="phase" hidden></div>
+    <div class="dayhead"><div><h2 id="dayTitle"></h2><p id="daySub"></p></div></div>
+    <div id="nudges"></div>
+    <div class="route" id="route" aria-label="하루 동선"></div>
+    <details class="budget-box" id="budgetBox"><summary id="budgetSum"></summary><div class="budget" id="budget" aria-label="오늘 예상 비용"></div></details>
+    <div class="ai-box" id="aiBox" hidden></div>
+    <div id="pview" class="pview" hidden></div>
+    <div class="grid-wrap"><div class="grid" id="grid"></div></div>
+    <div class="chat dock" id="chat">
+      <button class="chat-fold" type="button" id="chatFold" hidden></button>
+      <div class="chat-log" id="chatLog"></div>
+      <div class="quick"><button class="chip-btn" id="aiBtn" hidden>✨ 빈 시간 채우기</button><button class="chip-btn warn" id="fixWarnChip" hidden></button><button class="chip-btn" id="helperBtn" hidden>🧳 예약 도우미</button><button class="chip-btn" id="customBtn">+ 직접 만들기</button></div>
+      <form class="chat-form" id="chatForm"><textarea id="chatInput" rows="1" maxlength="600" placeholder="AI에게 말로 부탁하기"></textarea><button class="small-btn primary" type="submit" id="chatSend">보내기</button></form>
+      <span class="chat-note" id="chatNote"></span>
+    </div>
+  </section>
+  <aside class="panel side" id="panel-side" hidden>
+    <div id="side-tray">
+      <h2>장소</h2>
+      <form class="kw-add" id="moreForm" hidden><input id="moreInput" maxlength="60" placeholder="AI로 장소 더 찾기 · 예) 비 오는 날" autocomplete="off"><button class="small-btn primary" type="submit" id="moreBtn">찾기</button></form>
+      <p class="ai-status" id="moreSt" style="margin:0 0 8px"></p>
+      <p class="rec-st" id="recSt" hidden></p>
+      <div class="seg" role="group" aria-label="묶어 보기"><button class="fchip" data-group="zone" aria-pressed="true">동네별</button><button class="fchip" data-group="list" aria-pressed="false">추천순</button></div>
+      <div class="filters" id="filters"></div>
+      <label class="toggle"><input type="checkbox" id="openOnly" checked> 이 날 문 여는 곳만</label>
+      <div class="cards" id="cards"></div>
+    </div>
+    <div id="side-more" hidden>
+      <h2>더보기</h2>
+      <div id="moreBox"></div>
+    </div>
+    <div id="side-plans" hidden>
+      <button class="back" data-tab="more">← 더보기</button>
+      <h2>내 계획</h2>
+      <div id="plansBox"></div>
+    </div>
+    <div id="side-check" hidden>
+      <button class="back" data-tab="more">← 더보기</button>
+      <h2>준비하기<span class="n" id="warnCount2" hidden></span></h2>
+      <div class="mgroup"><button class="mrow" id="moreHelper"><span class="mt"><b>예약 도우미</b><small>가고 싶은 곳, 숙소 동네, 교통편 시간대, 예약 링크</small></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button></div>
+      <div id="checks"></div>
+    </div>
+    <div id="side-me" hidden>
+      <button class="back" data-tab="more">← 더보기</button>
+      <h2>이번 여행</h2>
+      <p class="side-lead">누른 줄만 펼쳐서 고쳐요. 고치면 바로 저장되고 일정표에 반영돼요.</p>
+      <div id="meBox"></div>
+    </div>
+    <div id="side-pref" hidden>
+      <button class="back" data-tab="more">← 더보기</button>
+      <h2>나의 여행 취향</h2>
+      <p class="side-lead">나에 대한 정보라서 새 계획을 만들어도 그대로 이어져요. 여기와 많이 겹치는 장소일수록 추천에서 앞에 나와요.</p>
+      <div class="mgroup pad" id="tasteStyle"></div>
+      <div class="mgroup pad"><h3 class="taste-h">취향 키워드</h3><div id="prefBox"></div></div>
+      <div class="mgroup"><button class="mrow" id="wishGo"><span class="mt"><b>♥ 해 둔 장소</b><small>장소 탭에서 ♥만 모아 봐요</small></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button></div>
+    </div>
+    <div id="side-settings" hidden>
+      <button class="back" data-tab="more">← 더보기</button>
+      <h2>설정</h2>
+      <div id="setBox"></div>
+    </div>
+    <div id="side-friends" hidden>
+      <button class="back" data-tab="more">← 더보기</button>
+      <h2>친구와 함께</h2>
+      <div id="friendsBox"></div>
+    </div>
+    <div id="side-notify" hidden>
+      <button class="back" data-tab="more">← 더보기</button>
+      <h2>알림</h2>
+      <div id="notifyBox"></div>
+    </div>
+    <div id="side-help" hidden>
+      <button class="back" data-tab="more">← 더보기</button>
+      <h2>사용 안내</h2>
+      <div id="helpBox"></div>
+    </div>
+    <div id="side-map" hidden>
+      <div class="map-top"><h2 style="margin:0;flex:1">지도</h2><div class="radio" role="group" aria-label="보기"><button type="button" data-mapday="day" aria-pressed="true">이 날</button><button type="button" data-mapday="all" aria-pressed="false">전체</button></div><button class="small-btn" type="button" id="mapMe" aria-pressed="false">내 위치</button></div>
+      <div id="mapBox" role="region" aria-label="일정 지도"></div>
+      <p id="mapMsg"></p>
+      <div id="mapCards"></div>
+    </div>
+    <p class="foot">지도 키를 연결하면 이동 시간은 실제 경로로, 아니면 직선거리 추정치(≈)로 계산해요. AI가 만든 장소 정보는 틀릴 수 있으니 지도 링크로 확인하세요.</p>
+  </aside>
+</main>
+
+<div class="errbar" id="errbar" hidden></div>
+<div class="toast" id="toast" role="status" hidden></div>
+<div class="plan-menu" id="planMenu" role="menu" aria-label="계획 바꾸기" hidden></div>
+<div class="banner" id="banner" hidden><span id="bannerText"></span><button id="bannerCancel">취소</button></div>
+<div class="welcome" id="welcome" hidden><div class="w-box" id="welcomeBox" role="dialog" aria-modal="true" aria-label="JEPI 시작하기"></div></div>
+<div class="demo-bar" id="demoBar" hidden><span><b>데모</b> 오사카 3박 4일 · 바꿔도 저장되지 않아요</span><button type="button" id="demoExit">데모 끝내기</button></div>
+<div class="onb-bg" id="onb" hidden><div class="onb" role="dialog" aria-modal="true" aria-labelledby="onbTitle">
+  <div class="onb-top"><span class="mono" id="onbStep"></span><span class="mono" style="font-size:11px;color:var(--muted);margin-left:8px">v35</span><button class="small-btn" id="onbExample">데모 둘러보기</button></div>
+  <h2 id="onbTitle"></h2><p class="onb-sub" id="onbSub"></p>
+  <div id="onbBody"></div>
+  <div class="onb-nav"><button class="small-btn" id="onbPrev">이전</button><span style="flex:1"></span><button class="small-btn" id="onbSkip">건너뛰기</button><button class="small-btn primary" id="onbNext">다음</button></div>
+</div></div>
+<div class="onb-bg" id="helper" hidden><div class="onb" role="dialog" aria-modal="true" aria-labelledby="helperTitle">
+  <div class="onb-top"><span class="mono" id="helperStep"></span><span>예약 도우미</span></div>
+  <h2 id="helperTitle"></h2>
+  <div id="helperBody"></div>
+  <div class="onb-nav"><button class="small-btn" id="helperPrev">이전</button><span style="flex:1"></span><button class="small-btn" id="helperClose">닫기</button><button class="small-btn primary" id="helperNext">다음</button></div>
+</div></div>
+<div class="coach" id="coach" hidden role="dialog" aria-live="polite"><p id="coachText"></p><div class="row"><span class="mono" id="coachStep"></span><span style="flex:1"></span><button class="small-btn" id="coachSkip">건너뛰기</button><button class="small-btn primary" id="coachNext">다음</button></div></div>
+<button class="dice-fab" id="diceFab" aria-label="DICE 굴리기" title="DICE 굴리기"><span class="fab-die" aria-hidden="true"><span class="cube" aria-hidden="true"><i class="cf front"><b class="p5 red"></b></i><i class="cf back"><b class="p1"></b><b class="p3"></b><b class="p4"></b><b class="p6"></b><b class="p7"></b><b class="p9"></b></i><i class="cf right"><b class="p1"></b><b class="p5"></b><b class="p9"></b></i><i class="cf left"><b class="p1"></b><b class="p3"></b><b class="p7"></b><b class="p9"></b></i><i class="cf top"><b class="p1"></b><b class="p9"></b></i><i class="cf bottom"><b class="p1"></b><b class="p3"></b><b class="p5"></b><b class="p7"></b><b class="p9"></b></i></span></span></button>
+<div class="sheet-bg" id="sheetBg" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+
