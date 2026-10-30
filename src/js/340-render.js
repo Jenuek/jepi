@@ -28,7 +28,7 @@ function renderTimeline(){
     const cls=['blk',it.kind==='fixed'?'fixed':'',it.warns.length?'bad':'',hgt<48?'compact':hgt<72?'short':''].join(' ');
     const full=`${fmt(it.start)}–${fmt(it.end)} ${it.name}${it.marks&&it.marks.length?' · '+it.marks.map(m=>MARKS[m][1]).join(', '):''}${it.warns.length?' · '+it.warns[0]:''}`;
     html+=`<button class="${cls}" style="top:${top}px;height:${hgt}px;--cc:${it.cc}" data-uid="${it.uid}" title="${esc(full)}" aria-label="${esc(full)}" ${it.kind==='place'?'draggable="true"':''}>
-      <span class="bt">${hgt<48?`${fmt(it.start)} · ${durTxt(it.end-it.start)}`:`${fmt(it.start)}–${fmt(it.end)}`}</span><span class="bn">${it.warns.length?'<span class="bang" aria-hidden="true">!</span>':''}${extras(BLOCK_BADGES,it,day)}${it.marks&&it.marks.length?`<span class="mks">${[...new Set(it.marks.map(m=>MARKS[m][0]))].join('')}</span> `:''}${esc(it.name)}</span>
+      <span class="bt">${hgt<48?`${fmt(it.start)} · ${durTxt(it.end-it.start)}`:`${fmt(it.start)}–${fmt(it.end)}`}</span><span class="bn">${it.warns.length?'<span class="bang" aria-hidden="true">!</span>':''}${extras(BLOCK_BADGES,it,day)}${it.marks&&it.marks.length?`<span class="mks">${[...new Set(it.marks.map(m=>MARKS[m][0]))].join('')}</span> `:''}${esc(it.name)}</span>${blockMemoHTML(it,day)}
       ${hgt>=72?`<span class="ba">${esc(it.locName)}</span>`:''}</button>`;
   }
   // area bands: consecutive blocks (not lodging) in the same area group
@@ -196,6 +196,7 @@ function renderTabs(){document.body.classList.toggle('no-fab',!['timeline','tray
   const grp={check:'more',pref:'more',me:'more',plans:'more',settings:'more'}; Object.keys(PANELS).forEach(k=>grp[k]='more');
   const shown=wide&&tab==='timeline'?'tray':(grp[tab]||tab);
   document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===shown)));
+  document.body.dataset.tab=grp[tab]||tab;
   $('#panel-timeline').hidden=!wide&&tab!=='timeline';
   $('#panel-side').hidden=!wide&&tab==='timeline';
   const sides=['tray','check','pref','me','more','plans','settings','map',...Object.keys(PANELS)];
@@ -229,5 +230,5 @@ function renderPref(){
     <button class="small-btn" id="kwReset">처음 키워드로 되돌리기</button>`;
 }
 const saveKw=()=>{store.set('gp.kw',kws);LS.set('jepi.kwAt',Date.now());syncSoon();renderPref();renderTray()};
-function renderAll(){touchPlan();renderMeta();renderNudges();renderDays();renderTimeline();renderTray();renderChecks();renderPref();renderTabs();renderBanner();renderAI();renderChat();renderExt()}
+function renderAll(){touchPlan();renderMeta();renderNudges();renderDays();renderTimeline();renderTray();renderChecks();renderPref();renderTabs();renderBanner();renderAI();renderChat();renderExt();renderLook()}
 

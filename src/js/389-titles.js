@@ -7,13 +7,13 @@ function editDayTitle(){
   const cur=((profile.dayTitles||[])[day])||'';
   h.hidden=true; $('#dayTitleEdit').hidden=true;
   const f=document.createElement('form'); f.id='dayTitleForm'; f.className='dt-form';
-  f.innerHTML=`<input id="dayTitleIn" maxlength="40" value="${esc(cur)}" placeholder="${esc(DAYS[day].title)}" aria-label="Day ${day+1} 제목"><button class="small-btn primary" type="submit">저장</button><button class="small-btn" type="button" id="dayTitleCancel">취소</button>`;
+  f.innerHTML=`<input id="dayTitleIn" maxlength="40" value="${esc(cur)}" placeholder="${esc(DAYS[day].title)}" aria-label="Day ${day+1} 제목"><input id="dayMemoIn" class="hand" maxlength="60" value="${esc(dayMemoOf(day))}" placeholder="한 줄 메모 (손글씨로 보여요)" aria-label="Day ${day+1} 메모"><button class="small-btn primary" type="submit">저장</button><button class="small-btn" type="button" id="dayTitleCancel">취소</button>`;
   h.after(f); const i=$('#dayTitleIn'); i.focus(); i.select();
 }
 function closeDayTitle(save){
   const f=$('#dayTitleForm'); if(!f) return;
   if(save){const v=$('#dayTitleIn').value.trim().slice(0,40); const a=(profile.dayTitles||[]).slice(); a[day]=v; while(a.length&&!a[a.length-1])a.pop();
-    profile.dayTitles=a; store.set('gp.profile',profile)}
+    profile.dayTitles=a; setDayMemo(day,$('#dayMemoIn').value); store.set('gp.profile',profile)}
   f.remove(); $('#dayTitle').hidden=false; $('#dayTitleEdit').hidden=false; renderAll();
   if(save) showToast($('#dayTitle').textContent?'제목을 바꿨어요':'자동 제목으로 돌아갔어요');
 }
