@@ -577,6 +577,13 @@ body.placing .grid-wrap{outline:2px solid var(--accent);outline-offset:-2px}
 .dice.eat .radio{flex-wrap:wrap}
 .myp-hits{display:grid}
 .home-box .row{flex-wrap:wrap}
+.kin{display:flex;gap:6px;align-items:center;width:100%;min-width:0}
+.kin input{width:auto!important;flex:1 1 0;min-width:0;max-width:none}
+.kin .small-btn{flex:none;white-space:nowrap;min-height:44px}
+.krow.open{min-width:0;overflow:hidden}
+.krow.open .kh{flex:none}
+body.no-fab .dice-fab{display:none!important}
+body:has(input:focus,textarea:focus,select:focus) .dice-fab{display:none!important}
 </style>
 </head>
 <body>
@@ -2695,7 +2702,7 @@ function startupFocus(){
 }
 function renderPlanBtn(){const b=$('#planBtn');if(!b)return;const p=plans.find(x=>x.id===curPlan);$('#planName').textContent=(p&&p.name)||planName()}
 const inside=sel=>{const a=document.activeElement;return !!(a&&a.closest&&a.closest(sel))};
-function renderExt(){renderPhase();renderMore();renderPlanBtn();
+function renderExt(){document.body.classList.toggle('no-fab',!['timeline','tray'].includes(tab));renderPhase();renderMore();renderPlanBtn();
   if(tab==='me'&&$('#onb').hidden&&!inside('#meBox'))renderMeRows();
   if(tab==='pref'&&!inside('#tasteStyle'))renderTasteStyle();
   if(tab==='settings'&&!inside('#setBox'))renderSettings();
@@ -3236,7 +3243,7 @@ function renderChecks(){
   $('#checks').innerHTML=html;
 }
 function ckRow(id,t,sub){const on=!!done[id];return `<label class="ck${on?' done':''}"><input type="checkbox" data-ck="${id}" ${on?'checked':''}><span>${esc(t)}${sub?`<small>${esc(sub)}</small>`:''}</span></label>`}
-function renderTabs(){
+function renderTabs(){document.body.classList.toggle('no-fab',!['timeline','tray'].includes(tab));
   const wide=matchMedia('(min-width:900px)').matches;
   const grp={check:'more',pref:'more',me:'more',plans:'more',settings:'more'};
   const shown=wide&&tab==='timeline'?'tray':(grp[tab]||tab);
