@@ -644,11 +644,26 @@ body:has(input:focus,textarea:focus,select:focus) .dice-fab{display:none!importa
 .pm-acts{display:flex;gap:6px;padding:8px 2px 2px;border-top:1px solid var(--line);margin-top:6px}
 .pm-acts .small-btn{flex:1;min-height:40px}
 @media (prefers-reduced-motion:reduce){.plan-menu{animation:none}}
+
+/* die motion */
+#intro .intro-die{transform-box:fill-box;transform-origin:50% 90%;animation:dieRock 1.6s .45s ease-in-out both}
+@keyframes dieRock{0%{transform:rotate(0)}25%{transform:rotate(-10deg) translateY(-1px)}50%{transform:rotate(6deg)}72%{transform:rotate(-3deg)}100%{transform:rotate(0)}}
+.dice-fab{transition:transform .25s ease-out}
+.dice-fab.rolling{transition:none}
+.dice-fab.tap{animation:fabTap .35s ease-out}
+@keyframes fabTap{0%{scale:1}40%{scale:.86}100%{scale:1}}
+#sheet.pop{animation:popFromFab .42s cubic-bezier(.2,.9,.25,1.04) both;transform-origin:50% 100%}
+#sheet.unpop{animation:popFromFab .26s cubic-bezier(.5,0,.75,.4) reverse both;transform-origin:50% 100%}
+@keyframes popFromFab{0%{transform:translate(var(--fx,0),var(--fy,0)) scale(.12) rotate(-18deg);opacity:0;border-radius:48px}35%{opacity:1}100%{transform:none;opacity:1}}
+.sheet-bg.bg-in{animation:bgIn .3s ease-out both}
+.sheet-bg.bg-out{animation:bgIn .26s ease-in reverse both}
+@keyframes bgIn{from{background:rgba(10,12,16,0)}to{background:rgba(10,12,16,.45)}}
+@media (prefers-reduced-motion:reduce){#intro .intro-die,#sheet.pop,#sheet.unpop,.sheet-bg.bg-in,.sheet-bg.bg-out,.dice-fab.tap{animation:none}}
 </style>
 </head>
 <body>
 <div id="intro" role="presentation"><div class="sky"><i class="cl c1"></i><i class="cl c2"></i><i class="cl c3"></i><i class="cl c4"></i><i class="sun"></i></div>
-<div class="intro-c"><svg class="intro-logo" viewBox="0 0 34 30" aria-hidden="true"><rect x="1" y="9" width="15" height="15" rx="3.5" fill="#1b2027"/><g transform="rotate(14 25 15)"><rect x="17" y="6" width="15" height="15" rx="4" fill="#27306b"/><circle cx="21" cy="10" r="1.5" fill="#fff"/><circle cx="24.5" cy="13.5" r="1.5" fill="#fff"/><circle cx="28" cy="17" r="1.5" fill="#fff"/></g></svg>
+<div class="intro-c"><svg class="intro-logo" viewBox="0 0 34 30" aria-hidden="true"><rect x="1" y="9" width="15" height="15" rx="3.5" fill="#1b2027"/><g transform="rotate(14 25 15)"><g class="intro-die"><rect x="17" y="6" width="15" height="15" rx="4" fill="#27306b"/><circle cx="21" cy="10" r="1.5" fill="#fff"/><circle cx="24.5" cy="13.5" r="1.5" fill="#fff"/><circle cx="28" cy="17" r="1.5" fill="#fff"/></g></g></svg>
 <b class="intro-name">JEPI</b><p class="intro-slogan"><span>우리의 삶은</span><span>계획과 우연의 연속</span></p></div></div>
 
 <header class="top">
@@ -2994,7 +3009,7 @@ function renderEat(){
 }
 function openDiceTab(tab,fromT){
   dice.tab=tab; if(tab==='eat'){eatDefaults(); eat.chosen=null} else doDefaults(fromT!=null);
-  openDice(fromT); 
+  openDice(fromT); if(fromT==null) diceOpenAnim();
 }
 document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t||!t.closest('#sheet .dice'))return;
   if(t.dataset.dicetab){if(t.dataset.dicetab==='eat'){dice.tab='eat';eatDefaults();eat.chosen=null}else{dice.tab='do';dice.pick=null;dice.rolls=0;dice.msg='';doDefaults(false)}renderDice();return}
@@ -3245,6 +3260,30 @@ document.addEventListener('click',e=>{
   if(!e.target.closest('#planMenu'))planMenu(false);
 },true);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){const m=document.getElementById('planMenu');if(m&&!m.hidden){planMenu(false);document.getElementById('planBtn').focus()}}});
+
+// ---------- DICE motion: rolls while the page scrolls, opens out of the die ----------
+const calmMotion=()=>matchMedia('(prefers-reduced-motion:reduce)').matches;
+(function(){let raf=0,stopT=0;const fab=()=>document.getElementById('diceFab');
+  addEventListener('scroll',()=>{if(calmMotion())return;const f=fab();if(!f)return;f.classList.add('rolling');
+    if(!raf)raf=requestAnimationFrame(()=>{raf=0;const y=scrollY;f.style.transform=`translateX(${(Math.sin(y/22)*3).toFixed(1)}px) translateY(${(Math.cos(y/30)*1.5).toFixed(1)}px) rotate(${(-8+y*0.5)%360}deg)`});
+    clearTimeout(stopT);stopT=setTimeout(()=>f.classList.remove('rolling'),150)},{passive:true});
+})();
+function diceOpenAnim(){
+  const f=document.getElementById('diceFab'),sh=document.getElementById('sheet'),bg=document.getElementById('sheetBg');
+  if(!f||!sh||calmMotion()||!f.getClientRects().length)return;
+  const a=f.getBoundingClientRect(),b=sh.getBoundingClientRect();
+  sh.style.setProperty('--fx',Math.round(a.left+a.width/2-(b.left+b.width/2))+'px');sh.style.setProperty('--fy',Math.round(a.top+a.height/2-(b.top+b.height/2))+'px');
+  sh.classList.remove('pop','unpop');bg.classList.remove('bg-out');void sh.offsetWidth;sh.classList.add('pop');bg.classList.add('bg-in');
+  f.classList.remove('tap');void f.offsetWidth;f.classList.add('tap');
+}
+function diceCloseAnim(){
+  const f=document.getElementById('diceFab'),sh=document.getElementById('sheet'),bg=document.getElementById('sheetBg');
+  if(!sh||sh.dataset.uid!=='dice'||calmMotion()||!f||!f.getClientRects().length||bg.hidden||sh.classList.contains('unpop'))return false;
+  const a=f.getBoundingClientRect(),b=sh.getBoundingClientRect();
+  sh.style.setProperty('--fx',Math.round(a.left+a.width/2-(b.left+b.width/2))+'px');sh.style.setProperty('--fy',Math.round(a.top+a.height/2-(b.top+b.height/2))+'px');
+  sh.classList.remove('pop');sh.classList.add('unpop');bg.classList.remove('bg-in');bg.classList.add('bg-out');
+  setTimeout(()=>{bg.hidden=true;sh.classList.remove('unpop');bg.classList.remove('bg-out')},260);return true;
+}
 
 // ---------- state ----------
 const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
@@ -3600,7 +3639,7 @@ function openSheet(uid){
   $('#sheet').dataset.uid=uid; $('#sheetBg').hidden=false;
   setTimeout(()=>{const b=$('#sheet button');b&&b.focus()},0);
 }
-const closeSheet=()=>{$('#sheetBg').hidden=true};
+const closeSheet=()=>{if(diceCloseAnim())return;$('#sheetBg').hidden=true};
 function altsFor(it){
   const D=DAYS[day], wd=D.wd, {items}=analyze(day);
   const others=items.filter(i=>i.uid!==it.uid);
