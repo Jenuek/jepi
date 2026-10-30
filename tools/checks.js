@@ -185,5 +185,38 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'trip look: hero folds, 여행 꾸미기, handwritten memos, 여행 노트',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S);
+      await p.click('[data-w="new"]'); await p.waitForTimeout(200);
+      await p.evaluate(() => window.__jepi.demoLikeTrip()); await p.waitForTimeout(500); await skipCoach(p);
+      ok(await vis(p, '#hero #dayTitle') && await vis(p, '.tabs'), 'day title sits in the hero, tabs at the bottom');
+      ok(await p.$eval('.tabs', x => getComputedStyle(x).position === 'fixed' && x.getBoundingClientRect().bottom >= innerHeight - 1), 'tabs fixed to the bottom');
+      await p.evaluate(() => scrollTo(0, 900)); await p.waitForTimeout(400);
+      ok(await p.evaluate(() => document.body.classList.contains('mini')), 'scrolling down folds the hero into the one-line bar');
+      await p.click('[data-mbday="1"]'); await p.waitForTimeout(200);
+      ok((await p.textContent('#mbDay')) === '02', 'bar arrows switch the day');
+      await p.click('[data-mbday="-1"]'); await p.evaluate(() => scrollTo(0, 0)); await p.waitForTimeout(400);
+      await p.click('#lookBtn'); await p.waitForTimeout(200);
+      await p.click('[data-lk="style:note"]'); await p.click('[data-lk="color:#0f7a5c"]'); await p.fill('#lkTag', '먹고 걷는 3박 4일'); await p.fill('[data-lkday="1"]', '성과 시장 사이');
+      await p.click('#lookForm [type=submit]'); await p.waitForTimeout(300);
+      const L = await p.evaluate(() => JSON.parse(localStorage.getItem('gp.profile')));
+      ok(L.look.style === 'note' && L.look.color === '#0f7a5c' && L.dayTitles[1] === '성과 시장 사이', 'look saved with the plan');
+      ok(await p.evaluate(() => document.body.classList.contains('style-note') && getComputedStyle(document.documentElement).getPropertyValue('--theme').trim() === '#0f7a5c'), '여행 수첩 style and colour applied');
+      ok((await p.textContent('#heroTag')) === '먹고 걷는 3박 4일', 'tagline shown');
+      await p.click('#grid .blk:not(.fixed)'); await p.waitForTimeout(200);
+      await p.fill('#bmIn', '참치!'); await p.click('#bmSave'); await p.waitForTimeout(250);
+      ok((await p.$$eval('#grid .bmemo', e => e.map(x => x.textContent))).includes('참치!'), 'block shows the handwritten memo');
+      await p.click('#dayTitleEdit'); await p.fill('#dayMemoIn', '바로 시장으로!'); await p.click('#dayTitleForm [type=submit]'); await p.waitForTimeout(250);
+      ok((await p.textContent('#dayMemo')).includes('바로 시장으로!'), 'day memo under the day title');
+      await p.click('.tabs [data-tab="more"]'); await p.waitForTimeout(200); await p.click('#nbOpen'); await p.waitForTimeout(300);
+      const nb = await p.textContent('#notebook');
+      ok(nb.includes('CHAPTER 2') && nb.includes('성과 시장 사이') && nb.includes('참치!') && nb.includes('바로 시장으로!'), 'notebook has chapters, titles and memos');
+      await p.click('#nbClose');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];
