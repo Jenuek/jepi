@@ -648,8 +648,6 @@ body:has(input:focus,textarea:focus,select:focus) .dice-fab{display:none!importa
 /* die motion */
 #intro .intro-die{transform-box:fill-box;transform-origin:50% 90%;animation:dieRock 1.6s .45s ease-in-out both}
 @keyframes dieRock{0%{transform:rotate(0)}25%{transform:rotate(-10deg) translateY(-1px)}50%{transform:rotate(6deg)}72%{transform:rotate(-3deg)}100%{transform:rotate(0)}}
-.dice-fab{transition:transform .25s ease-out}
-.dice-fab.rolling{transition:none}
 .dice-fab.tap{animation:fabTap .35s ease-out}
 @keyframes fabTap{0%{scale:1}40%{scale:.86}100%{scale:1}}
 #sheet.pop{animation:popFromFab .42s cubic-bezier(.2,.9,.25,1.04) both;transform-origin:50% 100%}
@@ -659,6 +657,10 @@ body:has(input:focus,textarea:focus,select:focus) .dice-fab{display:none!importa
 .sheet-bg.bg-out{animation:bgIn .26s ease-in reverse both}
 @keyframes bgIn{from{background:rgba(10,12,16,0)}to{background:rgba(10,12,16,.45)}}
 @media (prefers-reduced-motion:reduce){#intro .intro-die,#sheet.pop,#sheet.unpop,.sheet-bg.bg-in,.sheet-bg.bg-out,.dice-fab.tap{animation:none}}
+
+.dice-fab{perspective:220px;display:grid;place-items:center;overflow:hidden}
+.fab-die{display:inline-block;line-height:1;transform-style:preserve-3d;backface-visibility:visible;will-change:transform;transition:transform .3s ease-out}
+.dice-fab.rolling .fab-die{transition:none}
 </style>
 </head>
 <body>
@@ -773,7 +775,7 @@ body:has(input:focus,textarea:focus,select:focus) .dice-fab{display:none!importa
   <div class="onb-nav"><button class="small-btn" id="helperPrev">이전</button><span style="flex:1"></span><button class="small-btn" id="helperClose">닫기</button><button class="small-btn primary" id="helperNext">다음</button></div>
 </div></div>
 <div class="coach" id="coach" hidden role="dialog" aria-live="polite"><p id="coachText"></p><div class="row"><span class="mono" id="coachStep"></span><span style="flex:1"></span><button class="small-btn" id="coachSkip">건너뛰기</button><button class="small-btn primary" id="coachNext">다음</button></div></div>
-<button class="dice-fab" id="diceFab" aria-label="DICE 굴리기" title="DICE 굴리기">🎲</button>
+<button class="dice-fab" id="diceFab" aria-label="DICE 굴리기" title="DICE 굴리기"><span class="fab-die" aria-hidden="true">🎲</span></button>
 <div class="sheet-bg" id="sheetBg" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
 
 <script>
@@ -3265,7 +3267,8 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){const m=document.ge
 const calmMotion=()=>matchMedia('(prefers-reduced-motion:reduce)').matches;
 (function(){let raf=0,stopT=0;const fab=()=>document.getElementById('diceFab');
   addEventListener('scroll',()=>{if(calmMotion())return;const f=fab();if(!f)return;f.classList.add('rolling');
-    if(!raf)raf=requestAnimationFrame(()=>{raf=0;const y=scrollY;f.style.transform=`translateX(${(Math.sin(y/22)*3).toFixed(1)}px) translateY(${(Math.cos(y/30)*1.5).toFixed(1)}px) rotate(${(-8+y*0.5)%360}deg)`});
+    if(!raf)raf=requestAnimationFrame(()=>{raf=0;const y=scrollY,d=f.querySelector('.fab-die');if(!d)return;
+      d.style.transform=`translate(${(Math.sin(y/26)*2).toFixed(1)}px,${(Math.cos(y/34)*2).toFixed(1)}px) rotateX(${(y*0.9%360).toFixed(0)}deg) rotateY(${(y*0.55%360).toFixed(0)}deg) rotateZ(${(y*0.35%360).toFixed(0)}deg)`});
     clearTimeout(stopT);stopT=setTimeout(()=>f.classList.remove('rolling'),150)},{passive:true});
 })();
 function diceOpenAnim(){
