@@ -60,6 +60,11 @@ npm run check          # = python3 tools/build.py && node tools/check.js
 |---|---|
 | 첫 화면(새 여행·로그인·데모), 데모 시작/끝 | `381-welcome-demo.js`, 데모 격리 `005-demo-guard.js`, 데모 일정 `066-demo-osaka.js` |
 | 일정표 그리기, 장소 카드 | `340-render.js` |
+| 일정 화면 요약 줄(이동·비용·확인할 것·빈 시간) | `382-tidy.js` |
+| 장소 찾기 화면 (모든 "찾기" 버튼이 여기로) | `385-find.js` |
+| 같은 장소 묶기, 직접 추가할 때 기존 장소 제안 | `388-dedup.js` |
+| 날짜별 제목 바꾸기 | `389-titles.js` |
+| 👍 모든 여행자의 추천 (서버 `jepi_recs`), 👍 많은 순 | `070-shared-recs.js` |
 | 블록 누르면 나오는 시트, 옮기기·길이 | `350-actions.js` |
 | 경고 계산(영업시간·이동시간) | `330-helpers.js` (`analyze`) |
 | 이동 시간·경로 (Google/카카오) | `200-routes.js` |
