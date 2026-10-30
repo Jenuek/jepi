@@ -13,7 +13,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="JEPI">
-<script>try{var t=JSON.parse(localStorage.getItem("jepi.theme")||"\"light\"");if(t==="system")document.documentElement.removeAttribute("data-theme");else document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>/* theme before first paint */try{var t=JSON.parse(localStorage.getItem("jepi.theme")||"\"light\"");if(t==="system")document.documentElement.removeAttribute("data-theme");else document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
@@ -333,6 +333,7 @@ body.placing .grid-wrap{outline:2px solid var(--accent);outline-offset:-2px}
 .tag.w{color:var(--warn);border-color:var(--warn)}
 .tag.r{color:var(--accent);border-color:var(--accent)}
 
+.tag.ok{color:var(--ok);border-color:var(--ok)}
 /* Checklist */
 .check-group{margin-bottom:14px}
 .check-group h3{font-size:12px;letter-spacing:.06em;color:var(--muted);margin:0 0 6px;text-transform:uppercase}
@@ -681,7 +682,53 @@ body.mode-p .dice-fab{--cs:28px}
 .sb-form{display:grid;gap:6px}
 .sb-form input{height:44px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font:inherit;font-size:16px;background:var(--surface);color:var(--ink)}
 .sb-form .small-btn{min-height:44px}
-</style>
+
+/* first screen (same sky as the intro, so the intro fades into it) */
+.welcome{position:fixed;inset:0;z-index:900;display:flex;align-items:flex-end;justify-content:center;padding:16px 16px calc(16px + env(safe-area-inset-bottom));
+  background:linear-gradient(180deg,#6fa8e0 0%,#9cc8ef 34%,#cfe4f6 64%,#f3efe6 88%,#fbe9d6 100%)}
+.welcome[hidden]{display:none}
+.w-box{width:100%;max-width:420px;background:var(--surface);color:var(--ink);border-radius:22px;padding:22px 18px 18px;box-shadow:0 18px 50px rgba(30,50,90,.18)}
+.w-logo{text-align:center;margin:2px 0 18px}
+.w-logo b{display:block;font-family:var(--f-mono);font-size:30px;letter-spacing:.12em}
+.w-logo span{display:block;font-family:var(--f-display);font-size:14px;color:var(--muted);margin-top:4px}
+.w-choices{display:grid;gap:8px}
+.w-card{display:block;width:100%;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:14px 16px;min-height:60px;color:var(--ink)}
+.w-card b{display:block;font-size:16px}
+.w-card small{display:block;color:var(--muted);font-size:12.5px;margin-top:3px}
+.w-card.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.w-card.primary small{color:rgba(255,255,255,.8)}
+.w-h{margin:8px 0 4px;font-size:20px}
+.w-sub{margin:0 0 12px;color:var(--muted);font-size:13.5px;line-height:1.5}
+.w-back{margin:0}
+.w-go{min-height:46px;border:0;border-radius:12px;background:var(--accent);color:#fff;font-weight:600;font-size:15px}
+.w-go:disabled{opacity:.7}
+.w-err{color:var(--warn);font-size:13px;margin:8px 0 0}
+.w-links{display:flex;justify-content:space-between;gap:8px;margin-top:10px;flex-wrap:wrap}
+/* demo bar */
+.demo-bar{position:fixed;left:0;right:0;top:0;z-index:850;display:flex;align-items:center;gap:8px;padding:6px 12px calc(6px);padding-top:calc(6px + env(safe-area-inset-top));
+  background:#fff4d6;color:#5b4300;font-size:12.5px;border-bottom:1px solid #efd99a}
+.demo-bar[hidden]{display:none}
+.demo-bar span{flex:1;min-width:0}
+.demo-bar button{border:1px solid #d9b85a;background:#fff;border-radius:999px;padding:5px 12px;font-size:12.5px;font-weight:600;color:#5b4300;white-space:nowrap}
+body.demo-on{padding-top:calc(38px + env(safe-area-inset-top))}
+:root[data-theme="dark"] .demo-bar{background:#3a2f12;color:#f3dfa5;border-color:#5b4a1c}
+:root[data-theme="dark"] .demo-bar button{background:#2a2210;color:#f3dfa5;border-color:#7a6326}
+body.demo-on header.top{top:calc(env(safe-area-inset-top,0px) + 38px)}
+/* 친구와 함께 · 가고 싶어요 · 알림 */
+.want{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 10px;font-size:12px;color:var(--ink);min-height:28px}
+.want[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600}
+.want-who{font-size:11.5px;color:var(--muted);margin-left:4px;align-self:center}
+.tag.usr{color:var(--c-walk);border-color:var(--c-walk)}
+.fr-list{margin:6px 0 10px;padding-left:18px;line-height:1.6}
+.mrow.static{cursor:default}
+.alert-row .hint{margin:0;align-self:center}
+#side-help details{border-bottom:1px solid var(--line);padding:10px 2px}
+#side-help details:last-child{border-bottom:0}
+#side-help summary{font-weight:600;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center}
+#side-help summary::after{content:'+';color:var(--muted);font-weight:400}
+#side-help details[open] summary::after{content:'–'}
+#side-help details p,#side-help details li{font-size:13.5px;line-height:1.6;color:var(--ink)}
+#side-help details ul{padding-left:18px;margin:6px 0}</style>
 </head>
 <body>
 <div id="intro" role="presentation"><div class="sky"><i class="cl c1"></i><i class="cl c2"></i><i class="cl c3"></i><i class="cl c4"></i><i class="sun"></i></div>
@@ -768,6 +815,21 @@ body.mode-p .dice-fab{--cs:28px}
       <h2>설정</h2>
       <div id="setBox"></div>
     </div>
+    <div id="side-friends" hidden>
+      <button class="back" data-tab="more">← 더보기</button>
+      <h2>친구와 함께</h2>
+      <div id="friendsBox"></div>
+    </div>
+    <div id="side-notify" hidden>
+      <button class="back" data-tab="more">← 더보기</button>
+      <h2>알림</h2>
+      <div id="notifyBox"></div>
+    </div>
+    <div id="side-help" hidden>
+      <button class="back" data-tab="more">← 더보기</button>
+      <h2>사용 안내</h2>
+      <div id="helpBox"></div>
+    </div>
     <div id="side-map" hidden>
       <div class="map-top"><h2 style="margin:0;flex:1">지도</h2><div class="radio" role="group" aria-label="보기"><button type="button" data-mapday="day" aria-pressed="true">이 날</button><button type="button" data-mapday="all" aria-pressed="false">전체</button></div><button class="small-btn" type="button" id="mapMe" aria-pressed="false">내 위치</button></div>
       <div id="mapBox" role="region" aria-label="일정 지도"></div>
@@ -782,8 +844,10 @@ body.mode-p .dice-fab{--cs:28px}
 <div class="toast" id="toast" role="status" hidden></div>
 <div class="plan-menu" id="planMenu" role="menu" aria-label="계획 바꾸기" hidden></div>
 <div class="banner" id="banner" hidden><span id="bannerText"></span><button id="bannerCancel">취소</button></div>
+<div class="welcome" id="welcome" hidden><div class="w-box" id="welcomeBox" role="dialog" aria-modal="true" aria-label="JEPI 시작하기"></div></div>
+<div class="demo-bar" id="demoBar" hidden><span><b>데모</b> 오사카 3박 4일 · 바꿔도 저장되지 않아요</span><button type="button" id="demoExit">데모 끝내기</button></div>
 <div class="onb-bg" id="onb" hidden><div class="onb" role="dialog" aria-modal="true" aria-labelledby="onbTitle">
-  <div class="onb-top"><span class="mono" id="onbStep"></span><span class="mono" style="font-size:11px;color:var(--muted);margin-left:8px">v35</span><button class="small-btn" id="onbExample">예시로 둘러보기</button></div>
+  <div class="onb-top"><span class="mono" id="onbStep"></span><span class="mono" style="font-size:11px;color:var(--muted);margin-left:8px">v35</span><button class="small-btn" id="onbExample">데모 둘러보기</button></div>
   <h2 id="onbTitle"></h2><p class="onb-sub" id="onbSub"></p>
   <div id="onbBody"></div>
   <div class="onb-nav"><button class="small-btn" id="onbPrev">이전</button><span style="flex:1"></span><button class="small-btn" id="onbSkip">건너뛰기</button><button class="small-btn primary" id="onbNext">다음</button></div>
@@ -799,7 +863,42 @@ body.mode-p .dice-fab{--cs:28px}
 <div class="sheet-bg" id="sheetBg" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
 
 <script>
+// JEPI — every file in src/js is pasted into ONE function scope, in file-name order.
+// A file may use what an earlier file defines. Top-level code runs at load time, so keep
+// start-up actions in 390-boot.js (after every file has defined its variables).
 (function(){
+// ---------- demo sandbox (runs before anything reads storage) ----------
+// Entering the demo copies this browser's saved data aside, fills storage with the Osaka demo
+// and reloads. Leaving (or opening the app again later) puts the copy back exactly as it was,
+// so the demo never leaves a plan, a keyword or a sync change behind.
+const DEMO_BACKUP='jepi.demoBackup', DEMO_LIVE='jepi.demoLive';
+const DEMO_KEEP=k=>k==='jepi.routes'||k.startsWith('jepi.hours'); // caches: shared, never part of the copy
+const DEMO={on:false};
+function demoRestore(){
+  const raw=localStorage.getItem(DEMO_BACKUP); if(raw==null) return;
+  let snap={}; try{snap=JSON.parse(raw)||{}}catch(_){}
+  Object.keys(localStorage).forEach(k=>{if(!(k in snap)&&!DEMO_KEEP(k)) localStorage.removeItem(k)});
+  Object.entries(snap).forEach(([k,v])=>{try{localStorage.setItem(k,v)}catch(_){}});
+  localStorage.removeItem(DEMO_BACKUP);
+  try{sessionStorage.removeItem(DEMO_LIVE)}catch(_){}
+}
+try{
+  if(localStorage.getItem(DEMO_BACKUP)!=null){
+    // same tab reloading during the demo → stay in it; a new launch → back to the real data
+    if(sessionStorage.getItem(DEMO_LIVE)) DEMO.on=true; else demoRestore();
+  }
+}catch(_){}
+// ---------- extra side panels ----------
+// A feature adds a panel with: PANELS.name={render(){…}}  plus  <div id="side-name" hidden> in body.html.
+// Opening it: any button with data-tab="name". It is shown under the 더보기 tab.
+const PANELS={};
+// Extra settings sections: SETTINGS_EXTRA.push(()=>`<section class="sset">…</section>`)
+const SETTINGS_EXTRA=[];
+// Features that ride on the account sync: run after every push / pull (310-sync.js)
+const SYNC_AFTER_PUSH=[], SYNC_AFTER_PULL=[];
+// Little extras drawn by features: on a timeline block, a place card, and the block sheet
+const BLOCK_BADGES=[], CARD_EXTRAS=[], SHEET_EXTRAS=[];
+const extras=(list,...a)=>list.map(f=>{try{return f(...a)||''}catch(_){return ''}}).join('');
 const WD=['일','월','화','수','목','금','토'];
 const DAY_START=7*60, DAY_END=24*60;
 let LOC={};
@@ -1487,13 +1586,69 @@ function fDest(p){
   ${ready&&PACK.currency!=='KRW'?`<div class="fg"><label>환율: 1 ${esc(PACK.currency)}는 몇 원?<input type="number" step="any" min="0" data-pk="rate" value="${esc(+KRW_PER_JPY.toFixed(4))}"></label></div><p class="hint">AI가 넣은 대략적인 값이에요. 바꾸면 비용 계산에 바로 반영돼요.</p>`:''}</div>`;
 }
 
+// ---------- demo trip: a generic first-timer's Osaka, 3 nights / 4 days ----------
+// Used only by "데모 둘러보기" (see 381-welcome-demo.js). No personal taste in here on purpose.
+// hours: [open, close] in minutes from midnight · closed: weekdays (0 = Sunday) · cost: [yen per person, note]
+function demoOsaka(){
+  const A=(key,name,lat,lng,zone)=>({key,name,lat,lng,zone});
+  const pl=(id,name,cat,area,zone,ll,dur,hours,cost,note,extra)=>Object.assign({id:'os_'+id,name,cat,area,zone,ll,dur,
+    hours:hours||undefined,always:!hours,closed:[],note,cost,tags:[],verify:'영업시간',best:'any'},extra||{});
+  const pack={city:'오사카',country:'일본',intl:true,currency:'JPY',symbol:'¥',rate:9,transit:'전철',fare:{base:190,perKm:15,max:390},snack:1000,step:500,demo:true,
+    arrivalNote:'간사이 공항에서 난카이 전철로 난바까지 약 45분.',
+    areas:[A('namba','난바·도톤보리',34.6687,135.5013,'minami'),A('shinsaibashi','신사이바시·아메무라',34.6740,135.5005,'minami'),
+      A('umeda','우메다',34.7025,135.4959,'kita'),A('nakanoshima','나카노시마',34.6925,135.4930,'kita'),A('tenma','덴마·텐진바시',34.7035,135.5119,'kita'),
+      A('castle','오사카성',34.6873,135.5262,'castle'),A('tennoji','덴노지·신세카이',34.6520,135.5065,'south'),A('bay','베이 에어리어',34.6560,135.4320,'bay')],
+    zones:{minami:'미나미 (난바·신사이바시)',kita:'키타 (우메다·나카노시마)',castle:'오사카성 주변',south:'덴노지·신세카이',bay:'베이 에어리어'},
+    gateways:[{key:'gw_kix',iata:'KIX',name:'간사이 공항',kind:'air',lat:34.4320,lng:135.2304,min:50,fare:970}],
+    checks:['간사이 공항 → 난바 난카이 전철표 (현장 구매 가능)','유니버설 스튜디오 재팬 입장권 날짜 지정 예매','교통카드(ICOCA) 또는 모바일 Suica 준비'],
+    places:[
+      pl('kuromon','구로몬 시장','food','난바','minami',[34.6655,135.5068],60,[540,1020],[2500,'꼬치·해산물 몇 가지'],'오사카의 부엌이라 불리는 시장. 해산물 꼬치와 과일을 조금씩 사 먹으며 걷기 좋아요.'),
+      pl('dotonbori','도톤보리 강변 산책','walk','난바','minami',[34.6687,135.5013],60,null,[0,'무료'],'글리코 간판과 네온이 강물에 비치는 오사카 대표 풍경. 해 진 뒤가 가장 예뻐요.',{best:'evening'}),
+      pl('takoyaki','도톤보리 타코야키','food','난바','minami',[34.6683,135.5025],30,[600,1380],[700,'8개 기준'],'겉은 바삭, 속은 촉촉. 줄이 짧은 가게로 골라도 충분히 맛있어요.'),
+      pl('okonomi','오코노미야키 저녁','food','난바','minami',[34.6680,135.5032],60,[660,1320],[1800,'1인분 기준'],'철판에서 바로 구워 주는 오사카식 오코노미야키. 저녁엔 대기가 생길 수 있어요.'),
+      pl('hozenji','호젠지 요코초','walk','난바','minami',[34.6680,135.5030],30,null,[0,'무료'],'이끼 낀 부동명왕상과 돌길 골목. 번화가 바로 옆 조용한 한 블록.',{best:'night'}),
+      pl('urananba','우라난바 이자카야 골목','night','난바','minami',[34.6650,135.5040],90,[1020,1440],[3000,'한두 잔과 안주'],'난바역 뒤편 작은 선술집 골목. 서서 마시는 가게도 많아요.'),
+      pl('denden','덴덴타운','shop','난바','minami',[34.6610,135.5060],75,[660,1200],[0,'구매 별도'],'게임, 피규어, 전자제품 가게가 모인 거리.'),
+      pl('shinsai','신사이바시스지 쇼핑','shop','신사이바시','minami',[34.6748,135.5013],90,[660,1260],[0,'구매 별도'],'지붕 덮인 600m 쇼핑 거리. 드럭스토어와 브랜드 매장이 이어져요.'),
+      pl('amemura','아메리카무라','walk','신사이바시','minami',[34.6720,135.4985],60,[660,1260],[0,'무료'],'빈티지 옷가게와 길거리 그래피티가 많은 젊은 동네.'),
+      pl('castle','오사카성 천수각','art','오사카성','castle',[34.6873,135.5262],120,[540,1020],[1200,'천수각 입장료'],'성 안은 역사 전시관, 꼭대기 전망대에서 시내가 한눈에 보여요.',{must:'오사카에 처음이면 한 번은'}),
+      pl('nishinomaru','니시노마루 정원','walk','오사카성','castle',[34.6855,135.5235],45,[540,1020],[200,'입장료'],'천수각이 가장 예쁘게 보이는 잔디 정원.',{closed:[1]}),
+      pl('tenjin','텐진바시스지 상점가','shop','덴마','kita',[34.7035,135.5119],75,[600,1200],[1000,'군것질 기준'],'일본에서 가장 긴 상점가. 현지 반찬가게와 오래된 식당이 많아요.'),
+      pl('tenma_lunch','덴마 점심 (카이센동)','food','덴마','kita',[34.7040,135.5125],45,[660,1400],[1500,'덮밥 기준'],'시장 근처 해산물 덮밥집이 많아요.'),
+      pl('nakanoshima_museum','나카노시마 미술관','art','나카노시마','kita',[34.6914,135.4925],90,[600,1020],[1200,'전시마다 다름'],'검은 큐브 모양 건물의 근현대 미술관.',{closed:[1]}),
+      pl('nakanoshima_park','나카노시마 공원','walk','나카노시마','kita',[34.6925,135.5070],45,null,[0,'무료'],'강 사이 섬 공원. 장미 정원과 중앙공회당 붉은 벽돌 건물.'),
+      pl('umeda_sky','우메다 스카이 빌딩 공중정원','walk','우메다','kita',[34.7053,135.4896],75,[570,1350],[2000,'전망대 입장료'],'두 빌딩을 잇는 옥상 전망대. 노을부터 야경까지.',{best:'sunset'}),
+      pl('grandfront','그랜드 프론트 오사카','shop','우메다','kita',[34.7046,135.4949],90,[600,1260],[0,'구매 별도'],'우메다역 바로 옆 대형 쇼핑몰. 비 오는 날 대안.'),
+      pl('umeda_dinner','우메다 지하 식당가 저녁','food','우메다','kita',[34.7020,135.4980],60,[660,1380],[1800,'1인 저녁'],'역 지하에 식당이 수십 곳. 쿠시카츠, 우동, 돈카츠 무엇이든.'),
+      pl('tsutenkaku','츠텐카쿠','walk','신세카이','south',[34.6525,135.5063],60,[600,1200],[1200,'전망대 입장료'],'신세카이 한가운데 레트로 전망탑.'),
+      pl('kushikatsu','신세카이 쿠시카츠','food','신세카이','south',[34.6520,135.5060],60,[660,1380],[2500,'꼬치 여러 개'],'소스는 한 번만 찍기가 규칙인 오사카 꼬치튀김.'),
+      pl('harukas','아베노 하루카스 300','walk','덴노지','south',[34.6459,135.5135],75,[540,1320],[2000,'전망대 입장료'],'일본에서 손꼽히게 높은 빌딩 전망대.',{best:'sunset'}),
+      pl('usj','유니버설 스튜디오 재팬','walk','베이 에어리어','bay',[34.6654,135.4323],540,[540,1260],[9800,'1일권 기준 · 날짜마다 다름'],'하루를 통째로 쓰는 테마파크. 입장권은 날짜 지정 예매.',{must:'놀이기구를 좋아한다면'}),
+      pl('kaiyukan','가이유칸 수족관','art','베이 에어리어','bay',[34.6545,135.4289],120,[600,1200],[2700,'입장료'],'고래상어가 있는 큰 수족관. 비 오는 날 좋아요.'),
+      pl('tempozan','덴포잔 대관람차','walk','베이 에어리어','bay',[34.6560,135.4310],30,[600,1320],[900,'1회'],'바다와 시내가 보이는 관람차.',{best:'sunset'})
+    ]};
+  // 3 nights. Flight lands at KIX 10:40; the flight home leaves 15:30, so the last morning stays near the hotel.
+  const profile={dest:'오사카',mode:'flight',local:'transit',startDate:isoPlus(21),nights:3,
+    out:{airport:'gw_kix',dep:'08:30',arr:'10:40',flight:''},back:{airport:'gw_kix',dep:'15:30',arr:'17:20',flight:''},
+    home:{area:'',min:60,fare:0,byMin:120},stays:[{name:'난바 숙소',area:'namba',checkin:'15:00',checkout:'11:00',from:0,to:3}],events:[],
+    purpose:'',pace:'normal',social:'some',breakfast:false,party:{type:'friends',adults:2,kids:0},
+    flightSet:true,staySet:true,dateSet:true,nightsSet:true,dateUnknown:false,bookedFlight:true,bookedStay:true};
+  const t=s=>{const [h,m]=s.split(':').map(Number);return h*60+m};
+  const b=(id,day,start,dur)=>({id:'os_'+id,day,start:t(start),dur});
+  const placed=[
+    b('kuromon',0,'15:45',60),b('shinsai',0,'17:15',90),b('dotonbori',0,'19:00',60),b('okonomi',0,'20:15',60),b('hozenji',0,'21:30',30),
+    b('castle',1,'09:30',120),b('nishinomaru',1,'11:45',45),b('tenma_lunch',1,'13:00',45),b('tenjin',1,'14:00',75),b('nakanoshima_museum',1,'15:40',75),b('umeda_sky',1,'17:45',75),b('umeda_dinner',1,'19:15',60),
+    b('usj',2,'09:00',510),b('takoyaki',2,'19:15',30),b('urananba',2,'20:00',90),
+    b('dotonbori',3,'09:00',45),b('takoyaki',3,'10:00',30)];
+  return {pack,profile,placed,name:'오사카 3박 4일 (데모)'};
+}
 // ---------- recommendations shared between travelers (artifact db) ----------
 // recs/<viewer id> = {items:[entry]} — each viewer writes only their own document; counts are unique viewers per place key.
 let rdb=null, myId=null, recDocs=[], myItems=[], recCount=new Map(), recWriting=Promise.resolve(), recState='off', recMsg='';
 const SHARED_IDS=new Set();
 const cityKey=()=>norm(PACK.city||'');
 const placeKey=p=>cityKey()+'|'+norm(p.name);
-function hashStr(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(36)}
+function recHash(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(36)}
 const recOf=p=>recCount.get(placeKey(p))||0;
 const iRec=p=>myItems.some(e=>e.k===placeKey(p));
 function entryOf(p){const h=p.always?null:p.hours;
@@ -1513,7 +1668,7 @@ function rebuildShared(){
   const have=new Set(P.map(placeKey));
   const pick=new Map();
   recDocs.forEach(d=>(d.items||[]).forEach(e=>{if(e&&typeof e.k==='string'&&e.k.startsWith(ck)&&!have.has(e.k)&&!pick.has(e.k))pick.set(e.k,e)}));
-  pick.forEach((e,k)=>{const id='s'+hashStr(k);if(PM[id])return;
+  pick.forEach((e,k)=>{const id='s'+recHash(k);if(PM[id])return;
     const pl=cleanPlace({name:e.name,local:e.local,cat:e.cat,lat:e.lat,lng:e.lng,dur:e.dur,open:e.open,closed:e.closed,cost:e.cost,tags:e.tags,note:e.note||(e.made?'다른 여행자가 직접 올린 장소예요.':'다른 여행자가 추천한 장소예요.')});
     if(!pl)return; pl.id=id; pl.shared=true; pl.ai=false; pl.userMade=!!e.made; addPackPlace(pl); SHARED_IDS.add(id)});
 }
@@ -2239,7 +2394,7 @@ async function pAI(k){const nm=k.split('|')[1], id='st_p_'+BUCKETS.findIndex(b=>
 let plans=[], curPlan='', planTimer=null, cloudTimer=null, planMsg='', delArm='';
 const PLAN_KEYS=['profile','pack','placed3','custom','meal2','done','fmarks','wish'];
 function planName(){const pr=profile;if(pr.kind==='day')return `${PACK.city} 하루 코스`;const n=nightsOf(pr);return `${PACK.city} ${n}박 ${n+1}일`}
-function planData(){return {profile:clone(profile),pack:PACK===TOKYO_PACK&&!(PACK.places||[]).some(p=>p.ai)?'tokyo':PACK,placed:placed.map(({id,day,start,dur,mk})=>mk&&mk.length?{id,day,start,dur,mk}:{id,day,start,dur}),custom:clone(custom),fmarks:clone(fmarks),wish:wish.slice(),meals:clone(meals),done:clone(done)}}
+function planData(){return {profile:clone(profile),pack:PACK,placed:placed.map(({id,day,start,dur,mk})=>mk&&mk.length?{id,day,start,dur,mk}:{id,day,start,dur}),custom:clone(custom),fmarks:clone(fmarks),wish:wish.slice(),meals:clone(meals),done:clone(done)}}
 function planMeta(){const D0=DAYS[0]||{},Dn=DAYS[DAYS.length-1]||{};return {name:'',dates:D0.iso?`${D0.iso.slice(5).replace('-','/')}${DAYS.length>1?'~'+(Dn.iso||'').slice(5).replace('-','/'):''}`:'',blocks:placed.length,kind:profile.kind||'trip'}}
 function savePlans(){store.set('gp.plans',plans);store.set('gp.cur',curPlan);syncSoon()}
 function snapshotCurrent(){
@@ -2263,7 +2418,7 @@ async function cloudPull(){
 }
 function cloudDelete(id){if(!rdb||!myId)return;try{rdb.doc(`data/users/${myId}/plan_${id}`).delete().catch(()=>{})}catch(_){}}
 function applyPlanData(d){
-  d=d||{}; loadPack(packFrom(d.pack)||TOKYO_PACK);
+  d=d||{}; loadPack(packFrom(d.pack)||blankPack());
   custom=Array.isArray(d.custom)?d.custom:[]; custom.forEach(addCustomToData);
   profile=d.profile&&typeof d.profile==='object'?d.profile:clone(PROFILE_EXAMPLE); fixProfile(profile);
   placed=(Array.isArray(d.placed)?d.placed:[]).filter(b=>PM[b.id]).map(b=>({uid:'u'+(uidN++),id:b.id,day:b.day,start:b.start,dur:b.dur||PM[b.id].dur,mk:Array.isArray(b.mk)?b.mk.filter(m=>MARKS[m]):undefined}));
@@ -2360,7 +2515,7 @@ let KEYS=LS.get('jepi.keys',{})||{};
 const KEY_DEF={
   anthropic:{name:'Claude',sub:'일정 짜기·대화·여행지 준비 (필수)',ph:'sk-ant-...',re:/^sk-ant-/},
   gemini:{name:'Gemini',sub:'가벼운 작업용 (선택 · 넣으면 비용이 줄어요)',ph:'AIza...',re:/^AIza/},
-  gmaps:{name:'Google 지도',sub:'해외 경로 자동 연결',ph:'AIza...',re:/^AIza/},
+  gmaps:{name:'Google 지도',sub:'해외 경로 · 영업시간',ph:'AIza...',re:/^AIza/},
   kakao:{name:'카카오 지도',sub:'국내 경로 자동 연결 (REST API 키)',ph:'32자리 영문·숫자',re:/^[0-9a-f]{32}$/i}
 };
 const MODELS=Object.assign({heavy:'claude-sonnet-5-5',light:'claude-haiku-5-5',gemini:'gemini-3.6-flash'},LS.get('jepi.models',{})||{});
@@ -2632,6 +2787,11 @@ function renderMore(){
     ${full?`<button class="mrow" data-tab="pref"><span class="mt"><b>나의 여행 취향</b><small>여행 스타일 · 취향 키워드 · ♥ 장소 — 모든 계획에 공통</small></span>${arrow}</button>
     <button class="mrow" data-tab="plans"><span class="mt"><b>내 계획</b><small>${plans.length}개 저장됨 · 새 계획 · 공유</small></span>${arrow}</button>`:''}
   </div>
+  <div class="mgroup">
+    <button class="mrow" data-tab="friends"><span class="mt"><b>친구와 함께</b><small>초대 링크 · 같이 고치기 · 👍 가고 싶어요</small></span>${(()=>{const sp=plans.find(x=>x.id===curPlan&&x.shared);return sp?chip('👥 '+(((TRIPS&&TRIPS.members[curPlan])||[]).length||'공유 중'),'ok'):arrow})()}</button>
+    <button class="mrow" data-tab="notify"><span class="mt"><b>알림</b><small>출발 시간 · 아침 일정 · 알림 받을 기기</small></span>${NOTIFY&&NOTIFY.on?chip('켜짐','ok'):arrow}</button>
+    <button class="mrow" data-tab="help"><span class="mt"><b>사용 안내</b><small>처음 쓰는 기능을 짧게 설명해요</small></span>${arrow}</button>
+  </div>
   ${full?`<div class="mgroup"><button class="mrow" data-tab="settings"><span class="mt"><b>설정</b><small>화면 · AI·지도 연결 · 백업 · 초기화</small></span>${STANDALONE&&!sample?chip('AI 꺼짐','warn'):''}${arrow}</button></div>`:''}
   ${jp==='P'?`<button class="linkbtn" id="moreAll">${moreAll?'간단히 보기':'전체 메뉴 보기'}</button>`:''}`;
   const wc=$('#warnCount'); if(wc) wc.textContent=w?String(w):'';
@@ -2680,7 +2840,7 @@ const ORIGIN=String(location.origin||'').replace(/[<>"&']/g,'');
 const KEY_HELP={
   anthropic:`<ol><li><a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>에 로그인해요.</li><li>Billing에서 크레딧을 충전해요 (5달러면 개인 여행에 충분해요).</li><li>API Keys → Create Key → 만든 키를 복사해서 여기에 붙여 넣어요.</li></ol>`,
   gemini:`<ol><li><a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>에서 Create API key를 눌러요.</li><li>만든 키를 붙여 넣어요. 무료 한도 안에서 가벼운 작업을 맡아요.</li></ol>`,
-  gmaps:`<ol><li><a href="https://console.cloud.google.com/google/maps-apis/start" target="_blank" rel="noopener">Google Cloud 콘솔</a>에서 결제 계정을 연결해요 (무료 한도 안이면 청구되지 않아요).</li><li>API 및 서비스 → 라이브러리에서 <b>Routes API</b>를 사용 설정해요.</li><li>사용자 인증 정보 → API 키 만들기 → <b>애플리케이션 제한: 웹사이트</b>에 <code>${ORIGIN}/*</code>를 넣고, API 제한은 Routes API만 골라요.</li><li>할당량에서 하루 요청 수 상한(예: 500)을 걸어 두면 안전해요.</li></ol>`,
+  gmaps:`<ol><li><a href="https://console.cloud.google.com/google/maps-apis/start" target="_blank" rel="noopener">Google Cloud 콘솔</a>에서 결제 계정을 연결해요 (무료 한도 안이면 청구되지 않아요).</li><li>API 및 서비스 → 라이브러리에서 <b>Routes API</b>와 <b>Places API (New)</b>를 사용 설정해요 (Places는 영업시간 확인용).</li><li>사용자 인증 정보 → API 키 만들기 → <b>애플리케이션 제한: 웹사이트</b>에 <code>${ORIGIN}/*</code>를 넣고, API 제한은 Routes API와 Places API (New) 두 개만 골라요.</li><li>할당량에서 하루 요청 수 상한(예: 500)을 걸어 두면 안전해요.</li></ol>`,
   kakao:`<ol><li><a href="https://developers.kakao.com/console/app" target="_blank" rel="noopener">카카오 디벨로퍼스</a>에서 애플리케이션을 추가해요.</li><li>플랫폼 → Web에 <code>${ORIGIN}</code>를 등록해요.</li><li>제품 설정에서 <b>카카오맵</b>을 활성화해요.</li><li>앱 키의 <b>REST API 키</b>를 복사해서 붙여 넣어요.</li></ol>`
 };
 let keyEdit=null, keyShow=false;
@@ -2699,17 +2859,17 @@ function renderSettings(){
   const zoom=store.get('gp.zoom',60);
   el.innerHTML=`<section class="sset"><h3>화면</h3><div class="mgroup pad">
     <div class="srow"><span>테마</span><div class="radio">${[['light','밝게'],['dark','어둡게'],['system','기기 설정']].map(([v,l])=>`<button type="button" data-theme-set="${v}" aria-pressed="${themePref===v}">${l}</button>`).join('')}</div></div>
-    <div class="srow"><span>시간 간격</span><div class="radio"><button type="button" data-zoom="60" aria-pressed="${zoom!==100}">보통</button><button type="button" data-zoom="100" aria-pressed="${zoom===100}">넓게</button></div></div>
-    <div class="row"><button class="small-btn" id="coachAgain">사용 안내 다시 보기</button></div></div></section>
+    <div class="srow"><span>시간 간격</span><div class="radio"><button type="button" data-zoom="60" aria-pressed="${zoom!==100}">보통</button><button type="button" data-zoom="100" aria-pressed="${zoom===100}">넓게</button></div></div></div></section>
   <section class="sset"><h3>기기 간 동기화</h3>${syncHTML()}</section>
   <section class="sset"><h3>내 장소</h3>${mypHTML()}</section>
-  <section class="sset"><h3>AI·지도 연결 <small>· 키는 이 기기에만 저장돼요</small></h3>${STANDALONE?`<div class="mgroup">${Object.keys(KEY_DEF).map(keyRow).join('')}</div>
+  <section class="sset"><h3>AI·지도 연결 <small>· 로그인하면 비밀번호로 잠가서 기기끼리 맞춰요</small></h3>${STANDALONE?`<div class="mgroup">${Object.keys(KEY_DEF).map(keyRow).join('')}</div>
     <p class="hint">무거운 작업(일정 짜기, 여행지 준비)은 Claude ${esc(MODELS.heavy)}, 가벼운 작업(키워드, 예약 내용 읽기)은 ${KEYS.gemini?'Gemini Flash':'Claude '+esc(MODELS.light)}가 맡아요. 경로는 국내는 카카오, 해외는 Google로 계산하고 한 번 계산한 구간은 이 기기에 저장해 다시 부르지 않아요${routeStats.ok?` (이번에 ${routeStats.ok}구간 계산)`:''}.</p>
-    <details class="khelp"><summary>고급: 모델 이름</summary><div class="fg"><label>무거운 작업<input id="mHeavy" value="${esc(MODELS.heavy)}"></label><label>가벼운 작업 (Claude)<input id="mLight" value="${esc(MODELS.light)}"></label><label>Gemini<input id="mGem" value="${esc(MODELS.gemini)}"></label></div><div class="row"><button class="small-btn" type="button" id="mSave">모델 저장</button></div></details>`
+    ${hoursHint()}<details class="khelp"><summary>고급: 모델 이름</summary><div class="fg"><label>무거운 작업<input id="mHeavy" value="${esc(MODELS.heavy)}"></label><label>가벼운 작업 (Claude)<input id="mLight" value="${esc(MODELS.light)}"></label><label>Gemini<input id="mGem" value="${esc(MODELS.gemini)}"></label></div><div class="row"><button class="small-btn" type="button" id="mSave">모델 저장</button></div></details>`
     :`<p class="hint">Claude 안에서는 AI가 자동으로 연결돼요. 지도 키는 깃허브 앱 버전에서 넣을 수 있어요.</p>`}</section>
+  ${SETTINGS_EXTRA.map(f=>f()).join('')}
   <section class="sset"><h3>데이터</h3><div class="mgroup pad">
     <div class="row"><button class="small-btn" type="button" id="backupAll">전체 백업 받기</button><label class="small-btn filebtn">백업 불러오기<input type="file" accept=".json,application/json" class="importFile"></label></div>
-    <p class="hint">계획은 이 기기에만 저장돼요. 기기를 바꾸기 전에 백업을 받아 두세요.</p>
+    <p class="hint">로그인해 두면 계획은 서버에 자동으로 맞춰져요. 백업은 파일로 따로 보관하고 싶을 때 받아요.</p>
     <hr><p class="hint">저장한 계획 전부, 취향, 일정 블록을 지우고 처음부터 시작해요. 되돌릴 수 없어요. 연결한 키는 남아요.</p>
     <div class="row"><button class="small-btn danger" type="button" id="wipeBtn">${wipeArm?'한 번 더 누르면 모두 지워요':'모두 초기화'}</button>${wipeArm?'<button class="small-btn" type="button" id="wipeCancel">취소</button>':''}</div></div></section>
   <p class="hint" style="text-align:center">JEPI · ${esc(location.host||'로컬')}</p>`;
@@ -3316,7 +3476,7 @@ let SYNC=Object.assign({url:'',key:'',email:'',sess:null,lastPull:0,sent:{},at:0
 if(!SYNC.url||!SYNC.key){SYNC.url=SB_DEFAULT.url;SYNC.key=SB_DEFAULT.key}
 const saveSync=()=>LS.set('jepi.sync',{url:SYNC.url,key:SYNC.key,email:SYNC.email,sess:SYNC.sess,lastPull:SYNC.lastPull,sent:SYNC.sent,at:SYNC.at});
 let syncStep='', syncBusy=false, syncErr='';
-const syncOn=()=>!!(SYNC.url&&SYNC.key&&SYNC.sess&&SYNC.sess.access);
+const syncOn=()=>!DEMO.on&&!!(SYNC.url&&SYNC.key&&SYNC.sess&&SYNC.sess.access);
 function hashStr(s){let h=5381;for(let i=0;i<s.length;i++)h=(h*33^s.charCodeAt(i))>>>0;return h.toString(36)+s.length.toString(36)}
 async function sbAuth(path,body){
   let r;try{r=await fetch(SYNC.url.replace(/\/$/,'')+path,{method:'POST',headers:{apikey:SYNC.key,'content-type':'application/json'},body:JSON.stringify(body)})}catch(_){throw aiErr('network','서버에 연결하지 못했어요. 주소를 확인해 주세요.')}
@@ -3331,9 +3491,11 @@ async function sbToken(){
   try{keepSess(await sbAuth('/auth/v1/token?grant_type=refresh_token',{refresh_token:SYNC.sess.refresh}));return SYNC.sess.access}
   catch(e){if(e.code==='auth'){SYNC.sess=null;saveSync()}throw e}
 }
-async function sbRest(method,q,body,prefer){
+async function sbRest(method,q,body,prefer){return sbTable('jepi_docs',method,q,body,prefer)}
+// any table (or rpc/<name>) in the project, as the logged-in person; rows are limited by RLS on the server
+async function sbTable(table,method,q,body,prefer){
   const tk=await sbToken(); let r;
-  try{r=await fetch(SYNC.url.replace(/\/$/,'')+'/rest/v1/jepi_docs'+q,{method,headers:Object.assign({apikey:SYNC.key,Authorization:'Bearer '+tk,'content-type':'application/json'},prefer?{Prefer:prefer}:{}),body:body?JSON.stringify(body):undefined})}
+  try{r=await fetch(SYNC.url.replace(/\/$/,'')+'/rest/v1/'+table+(q||''),{method,headers:Object.assign({apikey:SYNC.key,Authorization:'Bearer '+tk,'content-type':'application/json'},prefer?{Prefer:prefer}:{}),body:body?JSON.stringify(body):undefined})}
   catch(_){throw aiErr('network','오프라인이에요')}
   if(r.status===401){SYNC.sess.exp=0;throw aiErr('auth','로그인이 만료됐어요')}
   if(!r.ok){let m='';try{m=(await r.json()).message}catch(_){}throw aiErr('upstream_error',m||('HTTP '+r.status))}
@@ -3341,7 +3503,8 @@ async function sbRest(method,q,body,prefer){
 }
 function syncDocs(){
   const out=[];
-  plans.forEach(p=>{const d=store.get('gp.plan.'+p.id,null);if(!d)return;out.push({id:'plan:'+p.id,kind:'plan',data:{meta:p,data:d},updated:p.updated||Date.now()})});
+  plans.forEach(p=>{const d=store.get('gp.plan.'+p.id,null);if(!d||p.shared)return; // shared trips sync through jepi_trips
+   out.push({id:'plan:'+p.id,kind:'plan',data:{meta:p,data:d},updated:p.updated||Date.now()})});
   out.push({id:'kw',kind:'kw',data:{kws},updated:LS.get('jepi.kwAt',1)});
   out.push({id:'myplaces',kind:'myplaces',data:{MYP},updated:LS.get('jepi.mypAt',1)});
   return out;
@@ -3362,11 +3525,12 @@ async function syncPush(){
     const rows=[];
     for(const d of syncDocs()){const h=hashStr(JSON.stringify(d.data.data||d.data));if(SYNC.sent[d.id]===h)continue;rows.push(Object.assign({user_id:SYNC.sess.user},d,{deleted:false,_h:h}))}
     if(LS.get('jepi.vk',null)&&Object.keys(KEYS).length&&!keysLocked){const h=hashStr(JSON.stringify(KEYS));if(SYNC.sent.keys!==h){let at=LS.get('jepi.keysAt',0);if(!at){at=Date.now();LS.set('jepi.keysAt',at)}const sealed=await vaultSeal(KEYS);if(sealed)rows.push({user_id:SYNC.sess.user,id:'keys',kind:'keys',data:sealed,updated:at,deleted:false,_h:h})}}
-    for(const id of Object.keys(SYNC.sent)) if(id.startsWith('plan:')&&!plans.some(p=>'plan:'+p.id===id)&&SYNC.sent[id]!=='x') rows.push({user_id:SYNC.sess.user,id,kind:'plan',data:{},updated:Date.now(),deleted:true,_h:'x'});
+    for(const id of Object.keys(SYNC.sent)) if(id.startsWith('plan:')&&!plans.some(p=>'plan:'+p.id===id&&!p.shared)&&SYNC.sent[id]!=='x') rows.push({user_id:SYNC.sess.user,id,kind:'plan',data:{},updated:Date.now(),deleted:true,_h:'x'});
     if(rows.length){await sbRest('POST','?on_conflict=user_id,id',rows.map(({_h,...r})=>r),'resolution=merge-duplicates,return=minimal');rows.forEach(r=>SYNC.sent[r.id]=r._h)}
     SYNC.at=Date.now(); syncErr=''; saveSync();
   }catch(e){syncErr=e.message;if(e.code!=='network')console.warn('sync push',e)}
   syncBusy=false; if(tab==='settings') renderSettings();
+  for(const f of SYNC_AFTER_PUSH){try{await f()}catch(e){console.warn(e)}}
 }
 async function syncPull(){
   if(!syncOn()||syncBusy) return; syncBusy=true; let changed=false, curChanged=null, keysPulled=false;
@@ -3375,6 +3539,7 @@ async function syncPull(){
     for(const r of rows){
       SYNC.lastPull=Math.max(SYNC.lastPull,+r.updated||0);
       if(r.kind==='plan'){const pid=r.id.slice(5), loc=plans.find(p=>p.id===pid);
+        if(loc&&loc.shared){SYNC.sent[r.id]=r.deleted?'x':SYNC.sent[r.id];continue}
         if(r.deleted){if(loc&&pid!==curPlan){plans=plans.filter(p=>p.id!==pid);LS.del('gp.plan.'+pid);changed=true}SYNC.sent[r.id]='x';continue}
         const v=r.data||{}, m=v.meta; if(!m||!v.data) continue; const h=hashStr(JSON.stringify(v.data));
         if(loc&&SYNC.sent[r.id]===h) continue;
@@ -3395,6 +3560,7 @@ async function syncPull(){
     if(!editing){applyPlanData(curChanged);showToast('다른 기기에서 바꾼 내용을 받아왔어요')} }
   if(keysPulled){keyBad={};if(STANDALONE)sample=makeSample();renderAll();showToast('AI·지도 키도 받아왔어요')}
   if(changed){renderPlans();renderExt()} if(tab==='settings')renderSettings();
+  for(const f of SYNC_AFTER_PULL){try{await f()}catch(e){console.warn(e)}}
 }
 async function syncNow(){await syncPull();await syncPush();await syncPull()}
 // hooks: every local save schedules a push; coming back to the app pulls
@@ -3477,15 +3643,18 @@ document.addEventListener('submit',async e=>{const f=e.target;if(!f||(f.id!=='sb
   if(em){SYNC.email=em;saveSync()}
   if(join&&pw!==(($('#sbPw2')||{}).value||'')){syncErr='두 비밀번호가 달라요.';renderSettings();return}
   const btn=$('#sbGo'); if(btn){btn.disabled=true;btn.textContent='잠시만요…'}
-  try{
-    SYNC.email=em; saveSync();
-    const j=join?await sbAuth('/auth/v1/signup',{email:em,password:pw}):await sbAuth('/auth/v1/token?grant_type=password',{email:em,password:pw});
-    const sess=j.access_token?j:(j.session||null);
-    if(!sess||!sess.access_token) throw aiErr('auth','메일 확인이 켜져 있어서 바로 로그인되지 않았어요. Supabase에서 Confirm email을 꺼 주세요.');
-    try{await vaultMake(em,pw)}catch(_){}
-    keepSess(Object.assign({},sess,{user:sess.user||j.user}));syncStep='';syncErr='';SYNC.sent={};SYNC.lastPull=0;saveSync();renderSettings();await syncNow();showToast(join?'가입했어요 · 동기화를 켰어요':'로그인했어요 · 동기화를 켰어요');
-  }catch(err){syncErr=sbErrText(err.message);renderSettings()}
+  try{syncStep='';await sbSignIn(em,pw,join);renderSettings();await syncNow();showToast(join?'가입했어요 · 동기화를 켰어요':'로그인했어요 · 동기화를 켰어요')}
+  catch(err){if(join)syncStep='join';syncErr=sbErrText(err.message);renderSettings()}
 });
+// sign up or log in with email + password; also makes this device's key-unlocking key
+async function sbSignIn(em,pw,join){
+  SYNC.email=em; saveSync();
+  const j=join?await sbAuth('/auth/v1/signup',{email:em,password:pw}):await sbAuth('/auth/v1/token?grant_type=password',{email:em,password:pw});
+  const sess=j.access_token?j:(j.session||null);
+  if(!sess||!sess.access_token) throw aiErr('auth','메일 확인이 켜져 있어서 바로 로그인되지 않았어요. Supabase에서 Confirm email을 꺼 주세요.');
+  try{await vaultMake(em,pw)}catch(_){}
+  keepSess(Object.assign({},sess,{user:sess.user||j.user}));syncErr='';SYNC.sent={};SYNC.lastPull=0;saveSync();
+}
 document.addEventListener('click',async e=>{const t=e.target.closest('button');if(!t)return;
   if(t.dataset.sbmode){syncStep=t.dataset.sbmode==='join'?'join':'';syncErr='';renderSettings();return}
   if(t.id==='sbForgot'){const em=(($('#sbEmail')||{}).value||SYNC.email||'').trim();if(!/^\S+@\S+\.\S+$/.test(em)){syncErr='이메일을 먼저 넣어 주세요.';renderSettings();return}
@@ -3495,7 +3664,7 @@ document.addEventListener('click',async e=>{const t=e.target.closest('button');i
 // ---------- state ----------
 const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 let uidN=1;
-loadPack(packFrom(store.get('gp.pack',null))||TOKYO_PACK);
+loadPack(packFrom(store.get('gp.pack',null))||blankPack());
 let profile=store.get('gp.profile',null); const firstRun=!profile||typeof profile!=='object'; if(firstRun){profile=clone(PROFILE_EXAMPLE);Object.assign(profile,{dest:'',pace:'normal',social:'some',breakfast:true,purpose:'',party:{type:'solo',adults:1,kids:0},flightSet:false,staySet:false,dateSet:false,nightsSet:false,dateUnknown:false,startDate:isoPlus(30)});profile.stays[0].name='숙소'}
 let custom=store.get('gp.custom',[]); if(!Array.isArray(custom)) custom=[]; custom.forEach(addCustomToData);
 let placed=store.get('gp.placed3',null);
@@ -3617,7 +3786,7 @@ function renderTimeline(){
     const cls=['blk',it.kind==='fixed'?'fixed':'',it.warns.length?'bad':'',hgt<48?'compact':hgt<72?'short':''].join(' ');
     const full=`${fmt(it.start)}–${fmt(it.end)} ${it.name}${it.marks&&it.marks.length?' · '+it.marks.map(m=>MARKS[m][1]).join(', '):''}${it.warns.length?' · '+it.warns[0]:''}`;
     html+=`<button class="${cls}" style="top:${top}px;height:${hgt}px;--cc:${it.cc}" data-uid="${it.uid}" title="${esc(full)}" aria-label="${esc(full)}" ${it.kind==='place'?'draggable="true"':''}>
-      <span class="bt">${hgt<48?`${fmt(it.start)} · ${durTxt(it.end-it.start)}`:`${fmt(it.start)}–${fmt(it.end)}${it.yen?` · ${yen(it.yen)}`:it.krw?` · ${won(it.krw)}`:''}`}</span><span class="bn">${it.tips&&it.tips.length&&!it.warns.length?'<span class="mks" title="시간대 팁">💡</span> ':''}${it.marks&&it.marks.length?`<span class="mks">${[...new Set(it.marks.map(m=>MARKS[m][0]))].join('')}</span> `:''}${esc(it.name)}</span>
+      <span class="bt">${hgt<48?`${fmt(it.start)} · ${durTxt(it.end-it.start)}`:`${fmt(it.start)}–${fmt(it.end)}${it.yen?` · ${yen(it.yen)}`:it.krw?` · ${won(it.krw)}`:''}`}</span><span class="bn">${extras(BLOCK_BADGES,it,day)}${it.tips&&it.tips.length&&!it.warns.length?'<span class="mks" title="시간대 팁">💡</span> ':''}${it.marks&&it.marks.length?`<span class="mks">${[...new Set(it.marks.map(m=>MARKS[m][0]))].join('')}</span> `:''}${esc(it.name)}</span>
       ${it.warns.length?`<span class="flag">${esc(it.warns[0])}</span>`:`<span class="ba">${it.carry&&it.kind==='place'&&!it.drop?'캐리어 들고 · ':''}${esc(it.locName)}</span>`}</button>`;
   }
   // area bands: consecutive blocks (not lodging) in the same area group
@@ -3701,7 +3870,7 @@ function cardHTML(p,wd,used,near){
     const key=off?`<span class="tag w">${WD[wd]} 휴관</span>`:oos?`<span class="tag w">이 날은 기간 아님</span>`:p.season?`<span class="tag r">🗓 ${esc(p.season)}</span>`:mustOf(p.id)?`<span class="tag r">★ 추천</span>`:mk.length?`<span class="tag kwt">#${esc(mk[0])}</span>`:'';
     const row=[`<button class="vote" data-wish="${p.id}" aria-pressed="${isWish(p.id)}" aria-label="가고 싶어요">${isWish(p.id)?'♥':'♡'}</button>`,
       recState!=='off'?`<button class="vote" data-vote="${p.id}" aria-pressed="${iRec(p)}" aria-label="추천하기"${recState==='readonly'?' disabled':''}>👍 ${recOf(p)}</button>`:'',
-      `<span class="tag mono">${p.dur}분</span>`,key].join('');
+      extras(CARD_EXTRAS,p),`<span class="tag mono">${p.dur}분</span>`,key].join('');
     const det=[p.shared||p.fromUsers?`<span class="tag usr">${p.userMade?'여행자가 올린 곳':'여행자 추천'}</span>`:'',
       mustOf(p.id)?`<span class="tag r">★ ${esc(mustOf(p.id))}</span>`:'',...mk.map(k=>`<span class="tag kwt">#${esc(k)}</span>`),
       `<span class="tag mono">${costOf(p.id)[0]?yen(costOf(p.id)[0]):'무료'}</span>`,
@@ -3710,7 +3879,7 @@ function cardHTML(p,wd,used,near){
       p.season&&p.dates?`<span class="tag r">🗓 ${mdTxt(p.dates[0])||''}~${mdTxt(p.dates[1])||''}</span>`:'',
       p.best&&p.best!=='any'?`<span class="tag">${BEST_KO[p.best]}에 좋아요</span>`:'',
       p.check?`<span class="tag">준비: ${esc(p.check)}</span>`:'',
-      p.verify?`<span class="tag">확인 필요: ${esc(p.verify)}</span>`:''].join('');
+      p.gone?`<span class="tag r">폐업했을 수 있어요</span>`:p.hsrc==='google'?`<span class="tag ok">영업시간 확인됨</span>`:p.verify==='영업시간'&&p.ll&&inKR(p.ll)?`<span class="tag">영업시간 추정</span>`:p.verify?`<span class="tag">확인 필요: ${esc(p.verify)}</span>`:''].join('');
     return `<div class="card${selected===p.id?' sel':''}${off||oos?' off':''}" style="--cc:var(--c-${p.cat})" draggable="true" data-id="${p.id}">
       <div class="nm">${esc(p.name)}</div><button class="small-btn primary" data-pick="${p.id}">${selected===p.id?'선택됨':'넣기'}</button>
       <div class="sub">${esc(p.area)} · ${esc(p.note)}</div>${dist}<div class="tags">${row}</div>
@@ -3777,13 +3946,14 @@ function renderChecks(){
 function ckRow(id,t,sub){const on=!!done[id];return `<label class="ck${on?' done':''}"><input type="checkbox" data-ck="${id}" ${on?'checked':''}><span>${esc(t)}${sub?`<small>${esc(sub)}</small>`:''}</span></label>`}
 function renderTabs(){document.body.classList.toggle('no-fab',!['timeline','tray'].includes(tab));
   const wide=matchMedia('(min-width:900px)').matches;
-  const grp={check:'more',pref:'more',me:'more',plans:'more',settings:'more'};
+  const grp={check:'more',pref:'more',me:'more',plans:'more',settings:'more'}; Object.keys(PANELS).forEach(k=>grp[k]='more');
   const shown=wide&&tab==='timeline'?'tray':(grp[tab]||tab);
   document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===shown)));
   $('#panel-timeline').hidden=!wide&&tab!=='timeline';
   $('#panel-side').hidden=!wide&&tab==='timeline';
-  const sideTab=['check','pref','me','more','plans','settings','map'].includes(tab)?tab:'tray';
-  ['tray','check','pref','me','more','plans','settings','map'].forEach(k=>{$('#side-'+k).hidden=sideTab!==k});
+  const sides=['tray','check','pref','me','more','plans','settings','map',...Object.keys(PANELS)];
+  const sideTab=sides.includes(tab)&&tab!=='tray'?tab:'tray';
+  sides.forEach(k=>{const el=$('#side-'+k);if(el)el.hidden=sideTab!==k});
 }
 function renderBanner(){
   document.body.classList.toggle('placing',!!selected);
@@ -3834,6 +4004,7 @@ function openSheet(uid){
     ${isP&&it.p.check?`<p><b>준비:</b> ${esc(it.p.check)}</p>`:''}
     ${it.tips&&it.tips.length?`<div class="tips">💡 ${it.tips.map(esc).join(' · ')}</div>`:''}
     ${isP&&it.p.season?`<p>🗓 <b>${esc(it.p.season)}</b>${it.p.dates?` · ${mdTxt(it.p.dates[0])||'?'}~${mdTxt(it.p.dates[1])||'?'}`:''}${it.p.conf!=='high'?` · <a href="https://www.google.com/search?q=${encodeURIComponent((it.p.local||it.p.name)+' '+(DAYS[0].iso||'').slice(0,4))}" target="_blank" rel="noopener">올해 날짜 확인</a>`:''}</p>`:''}
+    ${extras(SHEET_EXTRAS,it,day)}
     ${it.warns.length?`<div class="warns">${it.warns.map(w=>`<div>${esc(w)}</div>`).join('')}</div>`:''}
     ${ti?`<p>이동: ${esc(ti.fromName)}에서 ${ti.real?'':'약 '}${ti.mode} ${ti.min}분${ti.lines?` (${esc(ti.lines)}${ti.tf?` · 환승 ${ti.tf}회`:''})`:''}${ti.fare?` · ${yen(ti.fare)}`:''} · <a href="${ti.link}" target="_blank" rel="noopener">안내 시작</a></p>`:''}
     ${!it.stay&&!['f0a','f0b','f0c','f8','f9'].includes(it.uid)?marksHTML(it):''}
@@ -3969,11 +4140,11 @@ function wipeAll(){
   buildDays(); day=0; tab='timeline'; $('#helper').hidden=true; closeSheet(); renderAll(); openOnb();
 }
 // ---------- first-use guide ----------
-const COACH=[{sel:'.jp',t:'J는 꼼꼼한 계획파, P는 가볍게 즉흥파 화면이에요. 같은 일정을 언제든 바꿔 볼 수 있어요.'},
-  {sel:'#grid',t:'빈 시간을 누르면 앞뒤 일정과 가까운 장소를 골라 넣을 수 있어요.'},
-  {sel:'#grid .blk',t:'블록을 누르면 시간을 옮기거나, 대안을 보거나, 짐 맡기기 같은 할 일을 붙일 수 있어요.'},
-  {sel:'#diceFab',t:'고민될 땐 🎲. 빈 시간에 할 일을 무작위로 골라 줘요. 점심 메뉴도 굴릴 수 있어요.'},
-  {sel:'#chatForm',t:'막히면 여기에 말로 부탁하세요. 바꿀 내용을 먼저 보여 주고, 확인한 뒤에 적용해요.'}];
+// first-use guide: four steps only; everything else is in 더보기 → 사용 안내 (387-help.js)
+const COACH=[{sel:'#grid',t:'일정표예요. 빈 시간을 누르면 앞뒤 일정과 가까운 장소를 골라 넣을 수 있어요.'},
+  {sel:'#grid .blk',t:'블록을 누르면 시간을 옮기거나, 대안을 보거나, 🔔 알림을 켤 수 있어요.'},
+  {sel:'#diceFab',t:'고민될 땐 🎲. 빈 시간에 할 일이나 오늘 메뉴를 무작위로 골라 줘요.'},
+  {sel:'#chatForm',t:'말로 부탁해도 돼요. 바꿀 내용을 먼저 보여 주고, 확인한 뒤에 적용해요. 자세한 사용법은 더보기 → 사용 안내에 있어요.'}];
 function showCoach(i){
   document.querySelectorAll('.coach-hl').forEach(e=>e.classList.remove('coach-hl'));
   if(i>=COACH.length){$('#coach').hidden=true;store.set('gp.coach',1);return}
@@ -3988,7 +4159,7 @@ const maybeCoach=()=>{if(!store.get('gp.coach',0)&&$('#onb').hidden&&$('#helper'
 document.addEventListener('click',e=>{
   const t=e.target.closest('button,input,label'); if(!t) return;
   if(t.dataset.day!=null){day=+t.dataset.day;renderAll();return}
-  if(t.dataset.tab){tab=t.dataset.tab;autoMsg='';if(tab==='me'){draft=clone(profile);meOpen=null;renderMe()}if(tab==='pref'){draft=clone(profile);renderTasteStyle()}if(tab==='plans'){snapshotCurrent();showText=false;renderPlans()}if(tab==='settings'){keyEdit=null;renderSettings()}if(tab==='more')renderMore();renderTabs();if(tab==='map')openMap();else mapState.on=false;window.scrollTo({top:0});return}
+  if(t.dataset.tab){tab=t.dataset.tab;autoMsg='';if(tab==='me'){draft=clone(profile);meOpen=null;renderMe()}if(tab==='pref'){draft=clone(profile);renderTasteStyle()}if(tab==='plans'){snapshotCurrent();showText=false;renderPlans()}if(tab==='settings'){keyEdit=null;renderSettings()}if(tab==='more')renderMore();if(PANELS[tab])PANELS[tab].render();renderTabs();if(tab==='map')openMap();else mapState.on=false;window.scrollTo({top:0});return}
   if(t.id==='customBtn'){openCustom(null,null);return}
   if(t.dataset.newcustom!=null){openCustom(null,+t.dataset.newcustom);return}
   if(t.dataset.editcustom){openCustom(t.dataset.editcustom,null);return}
@@ -4029,7 +4200,7 @@ document.addEventListener('click',e=>{
     (async()=>{const inOnb=!$('#onb').hidden;if(await genPack(dest)){if(inOnb)renderOnb();else{commitProfile(draft);renderAll();renderMe();await morePlaces(24,'st_pack','');renderAll()}}})()
       .catch(err=>{onbBusy=false;setBusy(false);t.textContent='AI로 여행지 준비하기';setSt('st_pack','문제가 생겼어요: '+((err&&(err.message||err.code))||err)+' · 다시 눌러 주세요.')});
     return}
-  if(t.id==='onbExample'){if(onbBusy)return;custom=[];store.set('gp.custom',custom);placed=[];save();loadPack(TOKYO_PACK);store.set('gp.pack','tokyo');draft=clone(PROFILE_EXAMPLE);if(!kws.length)kws=['음악','미술','사진','카메라','혼술'];finishOnb();return}
+  if(t.id==='onbExample'){if(onbBusy)return;demoEnter();return}
   if(t.dataset.radio&&!t.closest('#helper')){if(t.dataset.radio.startsWith('style.'))styleOpen=true;let v=t.dataset.val;if(v==='true')v=true;else if(v==='false')v=false;if(draft){setPath(draft,t.dataset.radio,v);if(t.dataset.radio==='mode')draft.local=v==='car'?'car':'transit';if(t.dataset.radio==='party.type'){const q=draft.party;if(v==='couple')q.adults=2;if(v==='friends'&&q.adults<2)q.adults=3;if(v==='family'){if(q.adults<2)q.adults=2;if(!q.kids)q.kids=1;draft.pace='slow'}fixProfile(draft)}rerenderForm()}return}
   if(t.dataset.kwtoggle){const k=t.dataset.kwtoggle,i=kws.findIndex(x=>norm(x)===norm(k));if(i>=0)kws.splice(i,1);else kws.push(k);store.set('gp.kw',kws);t.setAttribute('aria-pressed',String(i<0));renderPref();return}
   if(t.dataset.addstay&&draft){const n=nightsOf(draft);draft.stays.push({name:'숙소 '+(draft.stays.length+1),area:firstArea(),checkin:'15:00',checkout:'11:00',from:Math.max(0,n-1),to:n});rerenderForm();return}
@@ -4173,6 +4344,463 @@ gridEl.addEventListener('drop',e=>{if(!drag)return;e.preventDefault();
   drag=null; selected=null; renderAll()});
 matchMedia('(min-width:900px)').addEventListener?.('change',renderTabs);
 
+// ---------- first screen: 새 여행 만들기 / 이미 계정이 있어요 / 데모 둘러보기 ----------
+var welcomeView='pick', welcomeErr='', welcomeBusy=false, welcomeJoin=false;
+function openWelcome(){welcomeView='pick';welcomeErr='';renderWelcome();$('#welcome').hidden=false}
+function closeWelcome(){$('#welcome').hidden=true}
+function renderWelcome(){
+  const box=$('#welcomeBox'); if(!box) return;
+  if(welcomeView==='login'||welcomeView==='join'){
+    const inv=welcomeView==='join';
+    box.innerHTML=`${inv?'':'<button class="linkbtn w-back" data-w="back">← 처음으로</button>'}
+      <h2 class="w-h">${inv?'친구가 여행에 초대했어요':'로그인'}</h2><p class="w-sub">${inv?'로그인하거나 처음이면 가입하면 바로 같은 일정에 참여해요.':'다른 기기에서 만든 계획과 AI·지도 연결을 그대로 가져와요.'}</p>
+      ${inv?`<div class="radio" style="margin:0 0 8px"><button type="button" data-w="mode-login" aria-pressed="${!welcomeJoin}">로그인</button><button type="button" data-w="mode-join" aria-pressed="${welcomeJoin}">처음이에요 (가입)</button></div>`:''}
+      <form id="wForm" class="sb-form"><input id="wEmail" type="email" placeholder="이메일" autocomplete="email" value="${esc(SYNC.email||'')}" required>
+      <input id="wPw" type="password" placeholder="${welcomeJoin?'비밀번호 (6자 이상)':'비밀번호'}" autocomplete="${welcomeJoin?'new-password':'current-password'}" minlength="6" required>
+      <button class="w-go" type="submit" id="wGo" ${welcomeBusy?'disabled':''}>${welcomeBusy?'잠시만요…':welcomeJoin?'가입하고 참여하기':inv?'로그인하고 참여하기':'로그인'}</button></form>
+      ${welcomeErr?`<p class="w-err">✕ ${esc(welcomeErr)}</p>`:''}
+      <div class="w-links"><button class="linkbtn" data-w="forgot">비밀번호를 잊었어요</button><button class="linkbtn" data-w="new">계정 없이 시작하기</button></div>`;
+    return;
+  }
+  if(welcomeView==='sent'){
+    box.innerHTML=`<button class="linkbtn w-back" data-w="login">← 로그인으로</button><h2 class="w-h">메일을 보냈어요</h2>
+      <p class="w-sub"><b>${esc(SYNC.email)}</b>로 비밀번호 재설정 링크를 보냈어요. 이 기기에서 링크를 누르면 새 비밀번호를 정할 수 있어요.</p>`;
+    return;
+  }
+  box.innerHTML=`<div class="w-logo"><b>JEPI</b><span>우리의 삶은 계획과 우연의 연속</span></div>
+    <div class="w-choices">
+      <button class="w-card primary" data-w="new"><b>새 여행 만들기</b><small>어디로 갈지 아직 몰라도 괜찮아요</small></button>
+      <button class="w-card" data-w="login"><b>이미 계정이 있어요</b><small>로그인하면 다른 기기의 계획을 가져와요</small></button>
+      <button class="w-card" data-w="demo"><b>데모 둘러보기</b><small>오사카 3박 4일 예시 · 끝내면 아무것도 남지 않아요</small></button>
+    </div>`;
+}
+async function welcomeLogin(em,pw){
+  welcomeBusy=true; welcomeErr=''; renderWelcome();
+  try{
+    await sbSignIn(em,pw,welcomeJoin); await syncNow();
+    if(LS.get('jepi.joinCode','')){welcomeBusy=false;closeWelcome();if(!(await joinPending())&&firstRun)openOnb();return}
+    const mine=plans.filter(p=>p.id!==curPlan&&store.get('gp.plan.'+p.id,null)).sort((a,b)=>(b.updated||0)-(a.updated||0));
+    welcomeBusy=false; closeWelcome();
+    if(mine.length){curPlan='';openPlan(mine[0].id);startupFocus();showToast(`로그인했어요 · 계획 ${mine.length}개를 가져왔어요`)}
+    else{openOnb();showToast('로그인했어요 · 아직 저장된 여행이 없어서 새로 만들어요')}
+  }catch(err){welcomeBusy=false;welcomeErr=sbErrText(err.message);renderWelcome()}
+}
+// ---------- demo: enter / leave (the sandbox itself is in 005-demo-guard.js) ----------
+function demoEnter(){
+  try{
+    const snap={}; Object.keys(localStorage).forEach(k=>{if(k!==DEMO_BACKUP&&!DEMO_KEEP(k)) snap[k]=localStorage.getItem(k)});
+    localStorage.setItem(DEMO_BACKUP,JSON.stringify(snap));
+  }catch(_){showToast('저장 공간이 부족해서 데모를 열 수 없어요');return}
+  Object.keys(localStorage).forEach(k=>{if(k.startsWith('gp.')||k==='jepi.myplaces') localStorage.removeItem(k)});
+  const d=demoOsaka(), set=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+  set('gp.pack',d.pack); set('gp.profile',d.profile); set('gp.placed3',d.placed); set('gp.custom',[]); set('gp.kw',[]); set('gp.jp','J');
+  set('gp.plan.demo',{profile:d.profile,pack:d.pack,placed:d.placed});
+  set('gp.plans',[{id:'demo',name:d.name,custom_name:true,updated:Date.now(),kind:'trip',dates:'',blocks:d.placed.length}]); set('gp.cur','demo');
+  try{sessionStorage.setItem(DEMO_LIVE,'1')}catch(_){}
+  location.replace(location.pathname);
+}
+function demoExit(){demoRestore();location.replace(location.pathname)}
+function renderDemoBar(){
+  const bar=$('#demoBar'); if(!bar) return; bar.hidden=!DEMO.on; document.body.classList.toggle('demo-on',DEMO.on);
+}
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-w],#demoExit'); if(!t) return;
+  if(t.id==='demoExit'){demoExit();return}
+  const w=t.dataset.w;
+  if(w==='new'){closeWelcome();openOnb();return}
+  if(w==='mode-login'||w==='mode-join'){welcomeJoin=w==='mode-join';welcomeErr='';renderWelcome();return}
+  if(w==='demo'){demoEnter();return}
+  if(w==='login'||w==='back'){welcomeView=w==='login'?'login':'pick';welcomeErr='';renderWelcome();if(w==='login')setTimeout(()=>{const i=$('#wEmail');if(i&&!i.value)i.focus()},50);return}
+  if(w==='forgot'){const em=(($('#wEmail')||{}).value||'').trim();if(!/^\S+@\S+\.\S+$/.test(em)){welcomeErr='이메일을 먼저 넣어 주세요.';renderWelcome();return}
+    SYNC.email=em;saveSync();sbAuth('/auth/v1/recover?redirect_to='+encodeURIComponent(location.origin+location.pathname),{email:em}).then(()=>{welcomeView='sent';renderWelcome()}).catch(err=>{welcomeErr=err.message;renderWelcome()});return}
+});
+document.addEventListener('submit',e=>{if(!e.target||e.target.id!=='wForm')return;e.preventDefault();
+  welcomeLogin((($('#wEmail')||{}).value||'').trim(),($('#wPw')||{}).value||'')});
+// test hooks (local checks only)
+if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__jepi={demoEnter,sync:()=>syncNow(),state:()=>({cur:curPlan,plans:plans.map(p=>({id:p.id,shared:p.shared,role:p.role}))}),demoLikeTrip(){const d=demoOsaka();d.pack.demo=false;applyPlanData({profile:d.profile,pack:d.pack,placed:d.placed});$('#onb').hidden=true;snapshotCurrent();renderAll()}};
+// ---------- 영업시간: real opening hours from Google Places (abroad), AI estimate in Korea ----------
+// Only places that are on the schedule and carry an AI/estimated time ("확인 필요: 영업시간") are looked up.
+// Each place is looked up once and kept in jepi.hours (30 days). Kakao has no opening hours, so
+// places in Korea keep the estimate and say so. A monthly cap keeps Google inside its free tier.
+const HOURS_CAP=900; // Google Place Details/Text Search with opening hours: 1,000 free per month
+let hoursOff='', hoursBusy=false;
+const hoursCache=()=>LS.get('jepi.hours',{})||{};
+const hoursKey=p=>`${p.local||p.name}|${(+p.ll[0]).toFixed(3)}|${(+p.ll[1]).toFixed(3)}`;
+function hoursUse(add){const m=new Date().toISOString().slice(0,7);let u=LS.get('jepi.hoursUse',{m,n:0});if(u.m!==m)u={m,n:0};if(add){u.n+=add;LS.set('jepi.hoursUse',u)}return u.n}
+// Google periods → {hours:[o,c], hoursBy:{wd:[o,c]}, closed:[wd…]} in this app's shape
+function hoursFromGoogle(oh){
+  const per=(oh&&oh.periods)||[]; if(!per.length) return null;
+  if(per.length===1&&per[0].open&&!per[0].close) return {always:true};
+  const byDay={};
+  per.forEach(x=>{if(!x.open)return;const d=x.open.day,o=x.open.hour*60+(x.open.minute||0);
+    let c=x.close?x.close.hour*60+(x.close.minute||0):1440; if(x.close&&x.close.day!==d) c=1440; if(c<=o) c=1440;
+    const cur=byDay[d]; byDay[d]=cur?[Math.min(cur[0],o),Math.max(cur[1],c)]:[o,c]});
+  const days=Object.keys(byDay).map(Number); if(!days.length) return null;
+  const count={}; days.forEach(d=>{const k=byDay[d].join('-');count[k]=(count[k]||0)+1});
+  const base=Object.entries(count).sort((a,b)=>b[1]-a[1])[0][0].split('-').map(Number);
+  const hoursBy={}; days.forEach(d=>{if(byDay[d].join('-')!==base.join('-'))hoursBy[d]=byDay[d]});
+  return {hours:base,hoursBy:Object.keys(hoursBy).length?hoursBy:undefined,closed:[0,1,2,3,4,5,6].filter(d=>!(d in byDay))};
+}
+function hoursApply(p,h){
+  if(!h) return false;
+  if(h.gone){p.gone=true;return true}
+  if(h.always){p.always=true;p.hours=undefined}else{p.always=false;p.hours=h.hours;p.hoursBy=h.hoursBy;p.closed=h.closed||[]}
+  p.hsrc='google'; if(p.verify==='영업시간') p.verify=undefined; return true;
+}
+const hoursNeeds=p=>p&&p.ll&&!inKR(p.ll)&&p.hsrc!=='google'&&!p.always&&p.hours&&(p.verify==='영업시간'||p.ai);
+async function hoursLookup(p,key){
+  const r=await fetch('https://places.googleapis.com/v1/places:searchText',{method:'POST',
+    headers:{'Content-Type':'application/json','X-Goog-Api-Key':key,'X-Goog-FieldMask':'places.displayName,places.location,places.regularOpeningHours,places.businessStatus'},
+    body:JSON.stringify({textQuery:`${p.local||p.name} ${PACK.city||''}`.trim(),maxResultCount:1,languageCode:'ko',
+      locationBias:{circle:{center:{latitude:+p.ll[0],longitude:+p.ll[1]},radius:1500}}})});
+  if(r.status===403||r.status===400){let m='';try{m=(await r.json()).error.message||''}catch(_){}throw aiErr('off',/not been used|disabled|not enabled|blocked/i.test(m)?'Google Cloud에서 Places API (New)를 켜 주세요.':'Google 키가 장소 정보를 쓸 수 없어요.')}
+  if(!r.ok) throw aiErr('net','HTTP '+r.status);
+  const j=await r.json(), x=j.places&&j.places[0];
+  if(!x||!x.location||km([x.location.latitude,x.location.longitude],p.ll)>0.8) return {miss:true};
+  if(x.businessStatus==='CLOSED_PERMANENTLY') return {gone:true};
+  return hoursFromGoogle(x.regularOpeningHours)||{miss:true};
+}
+async function hoursSweep(){
+  if(hoursBusy||hoursOff||DEMO.on||document.hidden) return;
+  const key=KEYS.gmaps; if(!key||isBad('gmaps')) return;
+  const ids=[...new Set(placed.map(b=>b.id))], todo=ids.map(id=>PM[id]).filter(hoursNeeds);
+  if(!todo.length) return;
+  hoursBusy=true; const cache=hoursCache(), now=Date.now(); let changed=false, asked=0;
+  try{
+    for(const p of todo){
+      const k=hoursKey(p), c=cache[k];
+      if(c&&now-c.t<30*864e5){if(!c.miss&&hoursApply(p,c))changed=true;else if(c.miss)p.hsrc='miss';continue}
+      if(hoursUse()>=HOURS_CAP||asked>=12) break;
+      asked++; hoursUse(1);
+      const h=await hoursLookup(p,key); cache[k]=Object.assign({t:now},h);
+      if(!h.miss&&hoursApply(p,h)) changed=true; else p.hsrc='miss';
+    }
+  }catch(e){if(e.code==='off')hoursOff=e.message}
+  LS.set('jepi.hours',cache); hoursBusy=false;
+  if(changed){savePack();store.set('gp.custom',custom);renderAll();touchPlan()}
+}
+function hoursHint(){
+  if(!KEYS.gmaps) return '';
+  return `<p class="hint">영업시간: 해외 장소는 Google에서 실제 영업시간을 확인해요 (이번 달 ${hoursUse()}/${HOURS_CAP}곳, 월 1,000곳까지 무료). 국내 장소는 카카오가 영업시간을 주지 않아 AI 추정이에요.${hoursOff?` <b class="wtxt">${esc(hoursOff)}</b>`:''}</p>`;
+}
+// ---------- 친구와 함께: shared trips, invite links, 가고 싶어요 ----------
+// A shared trip keeps its plan in jepi_trips (one row, `rev` goes up by one on every save).
+// Each device remembers the last server version it saw (`base`). When two people change the
+// same trip, the three versions are merged per block / per place / per field, so a change to
+// day 1 and a change to day 2 both survive; only the very same block edited twice keeps the later one.
+// Server tables + rules: see supabase/schema.sql.
+var TRIPS={base:LS.get('jepi.tripBase',{}),members:{},marks:{},invite:null,msg:'',busy:false};
+const saveTripBase=()=>LS.set('jepi.tripBase',TRIPS.base);
+const myName=()=>LS.get('jepi.myName','')||String((SYNC.sess&&SYNC.sess.email)||SYNC.email||'나').split('@')[0];
+const planOf=id=>plans.find(p=>p.id===id);
+const curShared=()=>{const p=planOf(curPlan);return p&&p.shared?p:null};
+const JS=x=>x===undefined?'∅':JSON.stringify(x);
+// ----- merge -----
+function merge3(base,mine,theirs){
+  base=base||{};mine=mine||{};theirs=theirs||{};const out={};
+  new Set([...Object.keys(base),...Object.keys(mine),...Object.keys(theirs)]).forEach(k=>{
+    const b=JS(base[k]),m=JS(mine[k]),t=JS(theirs[k]);
+    const v=m===b?theirs[k]:mine[k]; // I didn't touch it → take theirs; otherwise my change is the newest here
+    if(v!==undefined) out[k]=v});
+  return out;
+}
+function blockMap(a){const n={};return Object.fromEntries((a||[]).map(b=>{const k=b.id+'@'+b.day;n[k]=(n[k]||0)+1;return [k+'#'+n[k],b]}))}
+const idMap=a=>Object.fromEntries((a||[]).map(x=>[x.id,x]));
+function mergePlan(base,mine,theirs){
+  base=base||{};
+  const pk=x=>x&&typeof x==='object'?x:{};
+  const pack=Object.assign({},pk(theirs.pack),{places:Object.values(merge3(idMap(pk(base.pack).places),idMap(pk(mine.pack).places),idMap(pk(theirs.pack).places)))});
+  return Object.assign({},theirs,{
+    profile:merge3(base.profile,mine.profile,theirs.profile),pack,
+    placed:Object.values(merge3(blockMap(base.placed),blockMap(mine.placed),blockMap(theirs.placed))),
+    custom:Object.values(merge3(idMap(base.custom),idMap(mine.custom),idMap(theirs.custom))),
+    fmarks:merge3(base.fmarks,mine.fmarks,theirs.fmarks),meals:merge3(base.meals,mine.meals,theirs.meals),done:merge3(base.done,mine.done,theirs.done),
+    wish:mine.wish||[]});
+}
+// places I add to a shared trip carry my name ("민지 추천")
+function stampMine(id,data){
+  const known=new Set((((TRIPS.base[id]||{}).data||{}).pack||{}).places?.map(p=>p.id)||[]);
+  ((data.pack||{}).places||[]).forEach(p=>{if(!p.by&&!known.has(p.id))p.by=myName()});
+  (data.custom||[]).forEach(c=>{if(!c.by)c.by=myName()});
+}
+// ----- server -----
+function applyIfOpen(id,data,who){
+  if(id!==curPlan) return true;
+  const ae=document.activeElement, editing=(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))||!$('#sheetBg').hidden||!$('#onb').hidden||selected;
+  if(editing) return false; // try again on the next pull, so nothing I type gets lost
+  const d0=day; applyPlanData(data); day=Math.min(d0,Math.max(0,DAYS.length-1)); renderAll();
+  if(who&&who!==myName()) showToast(`${who}님이 일정을 바꿨어요`);
+  return true;
+}
+async function tripPush(id){
+  const p=planOf(id); if(!p||!p.shared||p.role==='view') return;
+  const mine=store.get('gp.plan.'+id,null), b=TRIPS.base[id]; if(!mine||(b&&JS(b.data)===JS(mine))) return;
+  stampMine(id,mine);
+  for(let i=0;i<3;i++){
+    const srv=(await sbTable('jepi_trips','GET',`?id=eq.${encodeURIComponent(id)}&select=rev,data`))[0];
+    if(!srv){p.shared=false;p.role='';savePlans();showToast('공유가 끝난 여행이라 내 계획으로 남겼어요');return}
+    const next=b&&srv.rev!==b.rev?mergePlan(b.data,mine,srv.data):mine;
+    const res=await sbTable('jepi_trips','PATCH',`?id=eq.${encodeURIComponent(id)}&rev=eq.${srv.rev}`,{data:next,rev:srv.rev+1,updated:Date.now(),last_by:myName(),name:p.name},'return=representation');
+    if(res&&res.length){TRIPS.base[id]={rev:srv.rev+1,data:next};saveTripBase();
+      if(JS(next)!==JS(mine)){store.set('gp.plan.'+id,next);applyIfOpen(id,next)}return}
+  }
+}
+async function tripsPull(){
+  const me=SYNC.sess.user;
+  const mem=await sbTable('jepi_trip_members','GET','?select=trip_id,user_id,role,name')||[];
+  TRIPS.members={}; mem.forEach(m=>(TRIPS.members[m.trip_id]=TRIPS.members[m.trip_id]||[]).push(m));
+  const mine=mem.filter(m=>m.user_id===me), ids=mine.map(m=>m.trip_id);
+  let listChanged=false;
+  plans.filter(p=>p.shared&&!ids.includes(p.id)).forEach(p=>{p.shared=false;p.role='';listChanged=true;delete TRIPS.base[p.id]});
+  if(ids.length){
+    const rows=await sbTable('jepi_trips','GET',`?id=in.(${ids.map(encodeURIComponent).join(',')})&select=id,name,rev,data,updated,last_by,owner`)||[];
+    for(const r of rows){
+      const role=(mine.find(m=>m.trip_id===r.id)||{}).role||'view', b=TRIPS.base[r.id]; let p=planOf(r.id);
+      if(!p){p={id:r.id,name:r.name||'함께하는 여행',custom_name:true};plans.push(p);listChanged=true}
+      if(!p.shared||p.role!==role){p.shared=true;p.role=role;listChanged=true}
+      if(b&&b.rev===r.rev) continue;
+      const local=store.get('gp.plan.'+r.id,null);
+      const next=!local||!b||role==='view'||JS(local)===JS(b.data)?r.data:mergePlan(b.data,local,r.data);
+      if(!applyIfOpen(r.id,next,r.last_by)) continue;
+      store.set('gp.plan.'+r.id,next); Object.assign(p,{updated:+r.updated||Date.now()}); TRIPS.base[r.id]={rev:r.rev,data:r.data}; listChanged=true;
+      if(JS(next)!==JS(r.data)) setTimeout(()=>tripPush(r.id).catch(()=>{}),300);
+    }
+    const mk=await sbTable('jepi_trip_marks','GET',`?trip_id=in.(${ids.map(encodeURIComponent).join(',')})&select=trip_id,place_id,user_id,name`)||[];
+    TRIPS.marks={}; mk.forEach(m=>{const t=TRIPS.marks[m.trip_id]=TRIPS.marks[m.trip_id]||{};(t[m.place_id]=t[m.place_id]||[]).push(m)});
+  }
+  saveTripBase();
+  if(listChanged){store.set('gp.plans',plans);renderPlans();renderExt()}
+  if(curShared()) renderAll();
+  if(tab==='friends') PANELS.friends.render();
+}
+SYNC_AFTER_PUSH.push(async()=>{for(const p of plans.filter(p=>p.shared)) await tripPush(p.id)});
+SYNC_AFTER_PULL.push(tripsPull);
+async function tripShare(){
+  snapshotCurrent(); const p=planOf(curPlan), data=store.get('gp.plan.'+curPlan,null); if(!p||!data) return;
+  stampMine(curPlan,data);
+  await sbTable('jepi_trips','POST','',{id:curPlan,owner:SYNC.sess.user,name:p.name,data,rev:1,updated:Date.now(),last_by:myName()},'return=minimal');
+  await sbTable('jepi_trip_members','POST','',{trip_id:curPlan,user_id:SYNC.sess.user,role:'owner',name:myName()},'return=minimal');
+  p.shared=true;p.role='owner';TRIPS.base[curPlan]={rev:1,data};saveTripBase();savePlans();
+  TRIPS.members[curPlan]=[{trip_id:curPlan,user_id:SYNC.sess.user,role:'owner',name:myName()}];
+}
+async function tripInvite(role){
+  const ab='abcdefghjkmnpqrstuvwxyz23456789', code=Array.from(crypto.getRandomValues(new Uint8Array(12)),x=>ab[x%ab.length]).join('');
+  await sbTable('jepi_trip_invites','POST','',{code,trip_id:curPlan,role,created_by:SYNC.sess.user},'return=minimal');
+  return location.origin+location.pathname+'?join='+code;
+}
+async function tripJoin(code){
+  const id=await sbTable('rpc/jepi_join','POST','',{p_code:code,p_name:myName()});
+  await tripsPull(); const p=planOf(id);
+  if(p){curPlan=curPlan===id?'':curPlan;openPlan(id);showToast('여행에 참여했어요')}
+  return id;
+}
+async function tripLeave(uid){
+  const id=curPlan, p=planOf(id);
+  await sbTable('jepi_trip_members','DELETE',`?trip_id=eq.${encodeURIComponent(id)}&user_id=eq.${uid||SYNC.sess.user}`,null,'return=minimal');
+  if(!uid||uid===SYNC.sess.user){p.shared=false;p.role='';delete TRIPS.base[id];saveTripBase();savePlans();showToast('여행에서 나왔어요 · 계획은 내 것으로 남아요')}
+  await tripsPull();
+}
+async function tripStop(){
+  const id=curPlan,p=planOf(id);
+  await sbTable('jepi_trips','DELETE',`?id=eq.${encodeURIComponent(id)}`,null,'return=minimal');
+  p.shared=false;p.role='';delete TRIPS.base[id];saveTripBase();savePlans();showToast('공유를 끝냈어요 · 친구들 기기에는 마지막 내용이 남아요');
+}
+// join link: ?join=CODE
+function joinFromUrl(){
+  const code=new URLSearchParams(location.search).get('join'); if(!code) return false;
+  history.replaceState(null,'',location.pathname); LS.set('jepi.joinCode',code);
+  if(syncOn()){joinPending();return true}
+  welcomeView='join';welcomeErr='';renderWelcome();$('#welcome').hidden=false;return true;
+}
+async function joinPending(){
+  const code=LS.get('jepi.joinCode',''); if(!code||!syncOn()) return false;
+  LS.del('jepi.joinCode');
+  try{await tripJoin(code);return true}catch(e){showToast(/expired|invite/i.test(e.message)?'초대 링크가 만료됐어요. 새 링크를 받아 주세요.':'참여하지 못했어요: '+e.message);return false}
+}
+// ----- 가고 싶어요 -----
+const wantsOf=pid=>((TRIPS.marks[curPlan]||{})[pid])||[];
+const iWant=pid=>wantsOf(pid).some(m=>m.user_id===(SYNC.sess&&SYNC.sess.user));
+async function toggleWant(pid){
+  if(!curShared()) return; const me=SYNC.sess.user, t=TRIPS.marks[curPlan]=TRIPS.marks[curPlan]||{};
+  if(iWant(pid)){t[pid]=wantsOf(pid).filter(m=>m.user_id!==me);renderTray();
+    await sbTable('jepi_trip_marks','DELETE',`?trip_id=eq.${encodeURIComponent(curPlan)}&place_id=eq.${encodeURIComponent(pid)}&user_id=eq.${me}`,null,'return=minimal')}
+  else{(t[pid]=t[pid]||[]).push({trip_id:curPlan,place_id:pid,user_id:me,name:myName()});renderTray();
+    await sbTable('jepi_trip_marks','POST','',{trip_id:curPlan,place_id:pid,user_id:me,name:myName()},'return=minimal')}
+}
+function wantChip(pid){
+  const m=wantsOf(pid), on=iWant(pid), who=m.map(x=>x.user_id===SYNC.sess.user?'나':x.name).join(', ');
+  return `<button class="want" type="button" data-want="${esc(pid)}" aria-pressed="${on}" title="${esc(who||'가고 싶어요')}">👍 가고 싶어요${m.length?` ${m.length}`:''}</button>${m.length?`<span class="want-who">${esc(who)}</span>`:''}`;
+}
+CARD_EXTRAS.push(p=>curShared()?wantChip(p.id)+(p.by?`<span class="tag usr">${esc(p.by===myName()?'내가':p.by+'님')} 추천</span>`:''):'');
+SHEET_EXTRAS.push(it=>curShared()&&it.kind==='place'?`<div class="row">${wantChip(it.id)}${it.p.by?`<span class="hint">${esc(it.p.by)} 추천</span>`:''}</div>`:'');
+BLOCK_BADGES.push(it=>{if(!curShared()||it.kind!=='place')return '';const n=wantsOf(it.id).length;return n?`<span class="mks" title="가고 싶어요 ${n}">👍${n}</span> `:''});
+document.addEventListener('click',async e=>{
+  const w=e.target.closest('[data-want]'); if(w){e.preventDefault();e.stopPropagation();try{await toggleWant(w.dataset.want)}catch(err){showToast('저장하지 못했어요: '+err.message)}
+    if(!$('#sheetBg').hidden&&$('#sheet').dataset.uid)openSheet($('#sheet').dataset.uid);return}
+  const t=e.target.closest('[data-trip]'); if(!t) return; const a=t.dataset.trip;
+  if(TRIPS.busy) return; TRIPS.busy=true; TRIPS.msg=''; PANELS.friends.render();
+  try{
+    if(a==='share'){await tripShare();TRIPS.invite={role:'edit',url:await tripInvite('edit')}}
+    if(a==='invite-edit'||a==='invite-view'){const role=a.slice(7);TRIPS.invite={role,url:await tripInvite(role)}}
+    if(a==='send'&&TRIPS.invite){const txt=`${planOf(curPlan).name} 여행을 같이 짜요 · JEPI`;
+      if(navigator.share){try{await navigator.share({title:'JEPI 여행 초대',text:txt,url:TRIPS.invite.url})}catch(_){}}
+      else{try{await navigator.clipboard.writeText(TRIPS.invite.url);TRIPS.msg='초대 링크를 복사했어요'}catch(_){TRIPS.msg='아래 링크를 길게 눌러 복사해 주세요'}}}
+    if(a==='copy'&&TRIPS.invite){try{await navigator.clipboard.writeText(TRIPS.invite.url);TRIPS.msg='초대 링크를 복사했어요'}catch(_){TRIPS.msg='링크를 길게 눌러 복사해 주세요'}}
+    if(a==='leave') await tripLeave();
+    if(a==='kick') await tripLeave(t.dataset.uid);
+    if(a==='stop'){if(t.dataset.arm!=='1'){t.dataset.arm='1';TRIPS.busy=false;t.textContent='한 번 더 누르면 공유를 끝내요';return}await tripStop()}
+    if(a==='name'){const v=(($('#myNameIn')||{}).value||'').trim().slice(0,20);LS.set('jepi.myName',v);
+      if(curShared())await sbTable('jepi_trip_members','PATCH',`?trip_id=eq.${encodeURIComponent(curPlan)}&user_id=eq.${SYNC.sess.user}`,{name:myName()},'return=minimal');TRIPS.msg='이름을 바꿨어요';await tripsPull()}
+  }catch(err){TRIPS.msg='✕ '+err.message}
+  TRIPS.busy=false; PANELS.friends.render(); renderMore();
+});
+// ----- panel -----
+PANELS.friends={render(){
+  const box=$('#friendsBox'); if(!box) return; const p=curShared(), msg=TRIPS.msg?`<p class="hint">${esc(TRIPS.msg)}</p>`:'';
+  if(DEMO.on){box.innerHTML='<div class="mgroup pad"><p class="hint" style="margin:0">데모에서는 친구 초대를 쓸 수 없어요.</p></div>';return}
+  if(!syncOn()){box.innerHTML=`<div class="mgroup pad"><p class="hint" style="margin-top:0">친구와 함께 쓰려면 먼저 로그인해 주세요. 친구도 JEPI에 가입하면 같은 일정을 같이 보고 고칠 수 있어요.</p><div class="row"><button class="small-btn primary" data-tab="settings">로그인하러 가기</button></div></div>`;return}
+  const nameRow=`<div class="mgroup pad"><label class="fg" style="display:block"><span class="hint">친구에게 보일 내 이름</span><div class="kin"><input id="myNameIn" maxlength="20" value="${esc(myName())}"><button class="small-btn" data-trip="name">저장</button></div></label></div>`;
+  if(!p){box.innerHTML=`<div class="mgroup pad"><p style="margin-top:0"><b>${esc((planOf(curPlan)||{}).name||'이 여행')}</b>을 친구와 함께 짜요.</p>
+    <ul class="hint fr-list"><li>초대 링크를 받은 친구가 로그인하면 바로 참여해요.</li><li>누가 어느 날을 고쳐도 서로의 변경이 합쳐져요.</li><li>장소마다 👍 가고 싶어요를 눌러 의견을 모아요.</li><li>AI·지도 키와 취향, 내 장소는 공유되지 않아요.</li></ul>
+    <div class="row"><button class="small-btn primary" data-trip="share" ${TRIPS.busy?'disabled':''}>${TRIPS.busy?'준비 중…':'이 여행에 친구 초대하기'}</button></div>${msg}</div>${nameRow}`;return}
+  const mem=(TRIPS.members[curPlan]||[]).slice().sort((a,b)=>(a.role==='owner'?-1:0)-(b.role==='owner'?-1:0)), me=SYNC.sess.user, owner=p.role==='owner';
+  const roleTxt={owner:'만든 사람',edit:'같이 고침',view:'보기만'};
+  box.innerHTML=`<div class="mgroup">${mem.map(m=>`<div class="mrow static"><span class="mt"><b>${esc(m.name||'친구')}${m.user_id===me?' (나)':''}</b><small>${roleTxt[m.role]||''}</small></span>${owner&&m.user_id!==me?`<button class="small-btn" data-trip="kick" data-uid="${m.user_id}">내보내기</button>`:''}</div>`).join('')||'<p class="hint pad">멤버를 불러오는 중…</p>'}</div>
+    ${p.role!=='view'?`<div class="mgroup pad"><h3 class="taste-h">친구 초대</h3><div class="row"><button class="small-btn primary" data-trip="invite-edit">같이 고칠 친구 초대</button><button class="small-btn" data-trip="invite-view">보기만 할 친구 초대</button></div>
+      ${TRIPS.invite?`<p class="hint">${TRIPS.invite.role==='edit'?'같이 고칠 수 있는':'보기만 하는'} 초대 링크예요 · 14일 동안 쓸 수 있어요</p><input class="share-text" readonly value="${esc(TRIPS.invite.url)}"><div class="row"><button class="small-btn primary" data-trip="send">보내기</button><button class="small-btn" data-trip="copy">복사</button></div>`:''}${msg}</div>`
+      :`<div class="mgroup pad"><p class="hint" style="margin:0">보기만 할 수 있는 여행이에요. 고친 내용은 친구들에게 가지 않아요.</p>${msg}</div>`}
+    ${nameRow}
+    <div class="mgroup pad"><div class="row">${owner?'<button class="small-btn danger" data-trip="stop">공유 끝내기</button>':'<button class="small-btn danger" data-trip="leave">이 여행에서 나가기</button>'}</div></div>`;
+}};
+// ---------- 알림: push notifications while travelling ----------
+// This device subscribes once (Web Push). The app writes the upcoming reminders of the open plan
+// into jepi_alerts (fire time in UTC); a server function (supabase/functions/jepi-push) runs every
+// minute and sends the ones that are due to every device the person turned alerts on.
+// Per-block on/off lives in jepi.alerts {planId: {blockKey: true|false}}; defaults in jepi.notify.
+var NOTIFY=Object.assign({on:false,all:false,lead:10,depart:true,morning:true,dev:''},LS.get('jepi.notify',{})||{});
+var ALERTS=LS.get('jepi.alerts',{})||{}, notifyMsg='', alertHash='';
+const saveNotify=()=>LS.set('jepi.notify',NOTIFY), saveAlerts=()=>LS.set('jepi.alerts',ALERTS);
+const pushFn=()=>SYNC.url.replace(/\/$/,'')+'/functions/v1/jepi-push';
+const pushSupported=()=>'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
+const isIOS=()=>/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const standaloneApp=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+// which blocks can ring: places and fixed things like check-in / flights, not the night at the hotel
+const alertKey=(it,d)=>`${it.kind==='place'?it.id:it.uid}@${d}`;
+const alertable=it=>!it.stay&&(it.kind==='place'||it.kind==='fixed');
+function alertOn(it,d){const m=ALERTS[curPlan]||{},k=alertKey(it,d);return k in m?!!m[k]:NOTIFY.all}
+function setAlert(it,d,v){(ALERTS[curPlan]=ALERTS[curPlan]||{})[alertKey(it,d)]=v;saveAlerts();alertsSoon(400)}
+// time zone of the trip: pack.tz, else by country, else this device
+const COUNTRY_TZ={'일본':'Asia/Tokyo','한국':'Asia/Seoul','대한민국':'Asia/Seoul','대만':'Asia/Taipei','중국':'Asia/Shanghai','홍콩':'Asia/Hong_Kong','태국':'Asia/Bangkok','베트남':'Asia/Ho_Chi_Minh','싱가포르':'Asia/Singapore','필리핀':'Asia/Manila','인도네시아':'Asia/Jakarta','말레이시아':'Asia/Kuala_Lumpur','미국':'America/Los_Angeles','캐나다':'America/Vancouver','영국':'Europe/London','프랑스':'Europe/Paris','이탈리아':'Europe/Rome','스페인':'Europe/Madrid','독일':'Europe/Berlin','호주':'Australia/Sydney','괌':'Pacific/Guam'};
+const tripTZ=()=>PACK.tz||COUNTRY_TZ[PACK.country]||(PACK.currency==='KRW'?'Asia/Seoul':Intl.DateTimeFormat().resolvedOptions().timeZone);
+function tzOffsetMs(tz,t){const f=new Intl.DateTimeFormat('en-US',{timeZone:tz,hourCycle:'h23',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const v=Object.fromEntries(f.formatToParts(new Date(t)).map(x=>[x.type,x.value]));return Date.UTC(+v.year,+v.month-1,+v.day,+v.hour%24,+v.minute,+v.second)-t}
+function localToUtc(iso,min,tz){const [y,m,d]=iso.split('-').map(Number);const g=Date.UTC(y,m-1,d,0,0)+min*60000;let t=g-tzOffsetMs(tz,g);t=g-tzOffsetMs(tz,t);return t}
+function alertList(){
+  if(!curPlan||!DAYS.length||!DAYS[0].iso) return [];
+  const tz=tripTZ(), now=Date.now(), out=[], lead=+NOTIFY.lead||10;
+  DAYS.forEach((D,d)=>{
+    if(!D.iso) return; const {items}=analyze(d), rows=items.filter(alertable);
+    if(NOTIFY.morning&&rows.length){const first=rows[0], at=Math.min(480,first.start-60);
+      out.push({id:`${curPlan}:${d}:morning`,t:localToUtc(D.iso,Math.max(300,at),tz),title:`☀️ 오늘 일정 · Day ${d+1}`,body:rows.slice(0,3).map(i=>`${fmt(i.start)} ${i.name}`).join(' → ')})}
+    rows.forEach(it=>{if(!alertOn(it,d))return;
+      const ti=it.travelIn, go=NOTIFY.depart&&ti&&ti.min>=5;
+      const at=(go?it.start-ti.min:it.start)-lead;
+      out.push({id:`${curPlan}:${alertKey(it,d)}`,t:localToUtc(D.iso,at,tz),
+        title:go?`🚶 ${lead}분 뒤 출발 · ${it.name}`:`⏰ ${lead}분 뒤 · ${it.name}`,
+        body:go?`${fmt(it.start)} 도착 예정 · ${ti.fromName}에서 ${ti.mode} ${ti.min}분`:`${fmt(it.start)}–${fmt(it.end)} · ${it.locName||''}`})});
+  });
+  return out.filter(a=>a.t>now+30000).slice(0,80);
+}
+let alertT=0; function alertsSoon(ms){clearTimeout(alertT);alertT=setTimeout(()=>alertsUpload().catch(e=>{notifyMsg='✕ '+e.message}),ms||3000)}
+async function alertsUpload(force){
+  if(!NOTIFY.on||!syncOn()||DEMO.on) return;
+  const list=alertList(), h=hashStr(curPlan+JSON.stringify(list.map(a=>[a.id,a.t,a.title,a.body])));
+  if(!force&&h===alertHash) return; alertHash=h;
+  await sbTable('jepi_alerts','DELETE',`?plan=eq.${encodeURIComponent(curPlan)}&sent_at=is.null`,null,'return=minimal');
+  if(list.length) await sbTable('jepi_alerts','POST','?on_conflict=user_id,id',list.map(a=>({id:a.id,plan:curPlan,fire_at:new Date(a.t).toISOString(),title:a.title,body:a.body,url:location.pathname,sent_at:null})),'resolution=merge-duplicates,return=minimal');
+}
+// ----- this device -----
+const b64u=s=>{const p='='.repeat((4-s.length%4)%4);return Uint8Array.from(atob((s+p).replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0))};
+async function notifyEnable(){
+  if(!pushSupported()) throw aiErr('unsupported',isIOS()?'홈 화면에 추가한 JEPI 앱에서 켜 주세요.':'이 브라우저는 알림을 지원하지 않아요.');
+  if(!syncOn()) throw aiErr('auth','먼저 로그인해 주세요.');
+  const perm=await Notification.requestPermission(); if(perm!=='granted') throw aiErr('denied','알림 권한이 꺼져 있어요. 기기 설정에서 JEPI 알림을 허용해 주세요.');
+  const reg=await navigator.serviceWorker.register('sw.js'); await navigator.serviceWorker.ready;
+  const r=await fetch(pushFn()); if(!r.ok) throw aiErr('server','알림 서버가 아직 준비되지 않았어요.'); const {publicKey}=await r.json();
+  let sub=await reg.pushManager.getSubscription();
+  if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(publicKey)});
+  NOTIFY.dev=NOTIFY.dev||('d'+Date.now().toString(36)+Math.random().toString(36).slice(2,6));
+  await sbTable('jepi_push','POST','?on_conflict=user_id,id',{id:NOTIFY.dev,sub:sub.toJSON(),updated:Date.now(),label:isIOS()?'iPhone/iPad':/Android/.test(navigator.userAgent)?'Android':'PC'},'resolution=merge-duplicates,return=minimal');
+  NOTIFY.on=true; saveNotify(); alertHash=''; await alertsUpload(true);
+}
+async function notifyDisable(){
+  try{const reg=await navigator.serviceWorker.getRegistration();const sub=reg&&await reg.pushManager.getSubscription();if(sub)await sub.unsubscribe()}catch(_){}
+  if(syncOn()&&NOTIFY.dev) await sbTable('jepi_push','DELETE',`?id=eq.${NOTIFY.dev}`,null,'return=minimal');
+  NOTIFY.on=false; saveNotify();
+}
+async function notifyTest(){
+  await sbTable('jepi_alerts','POST','?on_conflict=user_id,id',{id:'test:'+Date.now(),plan:'test',fire_at:new Date().toISOString(),title:'🔔 JEPI 알림 테스트',body:'이렇게 알림이 와요. 여행 중에는 출발할 시간을 알려 드려요.',url:location.pathname,sent_at:null},'return=minimal');
+  await fetch(pushFn(),{method:'POST',headers:{'content-type':'application/json'},body:'{}'}).catch(()=>{});
+}
+// ----- UI -----
+BLOCK_BADGES.push((it,d)=>alertable(it)&&alertOn(it,d)&&NOTIFY.on?'<span class="mks" title="알림 켜짐">🔔</span> ':'');
+SHEET_EXTRAS.push((it,d)=>{if(!alertable(it)||DEMO.on)return '';const on=alertOn(it,d);
+  return `<div class="row alert-row"><button class="small-btn${on?' primary':''}" type="button" data-alert="${on?'off':'on'}">🔔 ${on?'알림 켜짐':'알림 켜기'}</button><span class="hint">${!NOTIFY.on?'더보기 → 알림에서 이 기기 알림을 켜야 와요':on?(NOTIFY.depart&&it.travelIn?`출발 ${NOTIFY.lead}분 전에 알려 드려요`:`시작 ${NOTIFY.lead}분 전에 알려 드려요`):''}</span></div>`});
+PANELS.notify={render(){
+  const box=$('#notifyBox'); if(!box) return; const msg=notifyMsg?`<p class="hint">${esc(notifyMsg)}</p>`:'';
+  if(DEMO.on){box.innerHTML='<div class="mgroup pad"><p class="hint" style="margin:0">데모에서는 알림을 쓸 수 없어요.</p></div>';return}
+  let dev;
+  if(!pushSupported()) dev=isIOS()&&!standaloneApp()?`<p class="hint" style="margin-top:0">아이폰·아이패드는 <b>홈 화면에 추가한 JEPI</b>에서만 알림을 받을 수 있어요 (iOS 16.4 이상).</p><ol class="hint fr-list"><li>사파리에서 공유 버튼 → <b>홈 화면에 추가</b></li><li>홈 화면의 JEPI를 열고 여기로 다시 오기</li><li>이 기기에서 알림 받기를 켜기</li></ol>`:'<p class="hint" style="margin:0">이 브라우저는 알림을 지원하지 않아요. 크롬이나 홈 화면에 추가한 앱에서 열어 주세요.</p>';
+  else if(!syncOn()) dev=`<p class="hint" style="margin-top:0">알림은 로그인한 기기로 보내요.</p><div class="row"><button class="small-btn primary" data-tab="settings">로그인하러 가기</button></div>`;
+  else dev=`<div class="srow" style="margin:0"><span><b>이 기기에서 알림 받기</b><br><small class="hint">${NOTIFY.on?'켜져 있어요':'꺼져 있어요'}</small></span><button class="small-btn${NOTIFY.on?'':' primary'}" type="button" data-ntf="${NOTIFY.on?'off':'on'}">${NOTIFY.on?'끄기':'켜기'}</button></div>
+    ${NOTIFY.on?'<div class="row"><button class="small-btn" type="button" data-ntf="test">테스트 알림 보내기</button></div>':''}`;
+  const R=(k,opts)=>`<div class="radio">${opts.map(([v,l])=>`<button type="button" data-nset="${k}" data-val="${v}" aria-pressed="${String(NOTIFY[k])===String(v)}">${l}</button>`).join('')}</div>`;
+  box.innerHTML=`<div class="mgroup pad">${dev}${msg}</div>
+    <div class="mgroup pad"><h3 class="taste-h">어떤 일정에 알릴까요</h3>
+      <div class="srow"><span>일정마다</span>${R('all',[['false','고른 일정만'],['true','모든 일정']])}</div>
+      <p class="hint">일정 블록을 누르면 🔔 알림 켜기로 하나씩 고를 수 있어요.</p>
+      <div class="srow"><span>언제</span>${R('lead',[[5,'5분 전'],[10,'10분 전'],[15,'15분 전'],[30,'30분 전']])}</div>
+      <div class="srow"><span>기준</span>${R('depart',[['true','출발할 때'],['false','시작할 때']])}</div>
+      <p class="hint">출발할 때: 다음 장소까지 이동 시간을 빼고 "이제 나가야 해요"를 알려요.</p>
+      <div class="srow"><span>아침 일정 요약</span>${R('morning',[['true','받기'],['false','안 받기']])}</div></div>
+    <p class="hint">알림은 지금 열어 둔 여행 기준으로 준비돼요. 시간은 여행지 현지 시간(${esc(tripTZ())})이에요. 저전력 모드에서는 조금 늦게 올 수 있어요.</p>`;
+}};
+document.addEventListener('click',async e=>{
+  const a=e.target.closest('[data-alert]');
+  if(a){const uid=$('#sheet').dataset.uid,{items}=analyze(day),it=items.find(i=>i.uid===uid);if(it){setAlert(it,day,a.dataset.alert==='on');openSheet(uid);renderAll()}return}
+  const s=e.target.closest('[data-nset]');
+  if(s){let v=s.dataset.val;v=v==='true'?true:v==='false'?false:+v;NOTIFY[s.dataset.nset]=v;saveNotify();alertsSoon(500);PANELS.notify.render();renderAll();return}
+  const n=e.target.closest('[data-ntf]'); if(!n) return;
+  n.disabled=true; notifyMsg='';
+  try{if(n.dataset.ntf==='on'){await notifyEnable();notifyMsg='알림을 켰어요'}else if(n.dataset.ntf==='off'){await notifyDisable();notifyMsg='알림을 껐어요'}else{await notifyTest();notifyMsg='테스트 알림을 보냈어요. 몇 초 안에 와요.'}}
+  catch(err){notifyMsg='✕ '+err.message}
+  PANELS.notify.render(); renderMore(); renderAll();
+});
+// keep the server's list in step with the plan (cheap: only uploads when something changed)
+setInterval(()=>{if(NOTIFY.on&&!document.hidden)alertsSoon(100)},30000);
+// ---------- 사용 안내 (더보기 → 사용 안내) ----------
+const HELP=[
+  ['J 계획 · P 즉흥','<p>같은 여행을 두 가지 화면으로 봐요. <b>J</b>는 시간표로 꼼꼼하게, <b>P</b>는 하루를 네 칸으로 가볍게. 위쪽 J/P 버튼으로 언제든 바꿔요.</p>'],
+  ['일정 짜기','<ul><li>일정표의 <b>빈 시간</b>을 누르면 앞뒤 일정과 가까운 장소를 골라 넣어요.</li><li><b>블록</b>을 누르면 시간을 옮기거나, 길이를 바꾸거나, 대안을 봐요.</li><li>블록 사이의 이동 시간은 자동으로 계산돼요. ≈ 표시는 직선거리 추정이에요.</li><li>빨간 표시는 문 닫는 시간, 이동 시간 부족 같은 경고예요.</li></ul>'],
+  ['장소 찾기','<ul><li><b>장소</b> 탭에 이 여행의 후보가 동네별로 모여 있어요. ♥는 나만 보는 관심 표시예요.</li><li>"AI로 장소 더 찾기"에 원하는 걸 적으면 새 후보를 찾아 와요.</li><li>장소 카드의 <b>영업시간 확인됨</b>은 Google에서 확인한 시간, <b>영업시간 추정</b>은 AI가 짐작한 시간이에요.</li></ul>'],
+  ['말로 부탁하기','<p>아래 입력창에 "둘째 날 오후를 여유 있게" 같은 식으로 적으면 바꿀 내용을 먼저 보여 주고, 확인한 뒤에 적용해요. 추천 장소는 일정에 넣을지, 장소 목록에만 둘지 하나씩 고를 수 있어요.</p>'],
+  ['🎲 DICE','<ul><li><b>뭐 먹지</b>: 지금 있는 곳 근처에서 메뉴와 가게를 굴려요.</li><li><b>뭐 하지</b>: 근처, 원하는 동네, 몇 시간짜리 코스로 굴려요.</li><li>홈 화면 아이콘을 길게 누르면 바로 굴릴 수 있어요.</li></ul>'],
+  ['지도 · 경로','<p>지도 탭에서 그날 동선을 봐요. 더보기 → 설정에서 Google(해외)·카카오(국내) 지도 키를 연결하면 실제 경로와 대중교통 시간으로 계산해요.</p>'],
+  ['친구와 함께','<ul><li>더보기 → 친구와 함께에서 초대 링크를 만들어 보내요. 친구가 로그인하면 바로 참여해요.</li><li>"같이 고칠 친구"는 일정을 고칠 수 있고, "보기만 할 친구"는 보기만 해요.</li><li>장소마다 👍 가고 싶어요를 누르면 누가 가고 싶어 하는지 다 같이 보여요.</li><li>둘이 다른 날을 동시에 고쳐도 서로의 변경이 합쳐져요.</li></ul>'],
+  ['알림','<ul><li>더보기 → 알림에서 이 기기 알림을 켜요. 아이폰·아이패드는 홈 화면에 추가한 앱에서만 돼요.</li><li>일정 블록을 누르고 🔔 알림 켜기를 누르면 그 일정만 알려요. "모든 일정"으로 한 번에 켤 수도 있어요.</li><li>"출발할 때"를 고르면 이동 시간까지 빼서 나갈 시간을 알려 줘요.</li></ul>'],
+  ['여러 기기에서 쓰기','<ul><li>더보기 → 설정 → 기기 간 동기화에서 이메일과 비밀번호로 로그인하면 계획이 기기끼리 맞춰져요.</li><li>AI·지도 키도 비밀번호로 잠가서 함께 옮겨져요. 서버는 키를 읽을 수 없어요.</li></ul>'],
+  ['데모 · 백업','<ul><li>데모는 오사카 3박 4일 예시예요. 무엇을 바꿔도 끝내면 원래 상태로 돌아가요.</li><li>설정 → 데이터에서 전체 백업 파일을 받아 둘 수 있어요.</li></ul>']
+];
+PANELS.help={render(){
+  const box=$('#helpBox'); if(!box) return;
+  box.innerHTML=`<div class="mgroup pad">${HELP.map(([t,b],i)=>`<details${i===0?' open':''}><summary>${t}</summary>${b}</details>`).join('')}</div>
+    <div class="mgroup pad"><div class="row"><button class="small-btn" type="button" data-help="coach">처음 안내 다시 보기</button>${DEMO.on?'':'<button class="small-btn" type="button" data-help="demo">데모 둘러보기</button>'}</div></div>`;
+}};
+document.addEventListener('click',e=>{const t=e.target.closest('[data-help]');if(!t)return;
+  if(t.dataset.help==='coach'){tab='timeline';renderTabs();showCoach(0)}
+  if(t.dataset.help==='demo') demoEnter();
+});
+// ---------- start-up: runs after every file above has defined its variables ----------
 if(STANDALONE) sample=makeSample();
 plans=store.get('gp.plans',[]); if(!Array.isArray(plans)) plans=[]; curPlan=store.get('gp.cur','')||''; if(!curPlan){curPlan='p'+Date.now().toString(36);savePlans()}
 setZoom(store.get('gp.zoom',60),true);
@@ -4180,7 +4808,9 @@ setJP(store.get('gp.jp',profile.kind==='day'?'P':'J'),true);
 buildDays();
 renderAll();
 applyTheme(); introRun(); syncBoot();
-if(/[#&]s=/.test(location.hash)) openShared(); else if(firstRun) openOnb(); else {startupFocus(); maybeCoach();}
+if(/[#&]s=/.test(location.hash)) openShared(); else if(joinFromUrl()){} else if(firstRun&&!syncOn()&&!/access_token/.test(location.hash)) openWelcome(); else if(firstRun) openOnb(); else {startupFocus(); maybeCoach();}
+renderDemoBar();
+setTimeout(hoursSweep,4000); setInterval(hoursSweep,20000);
 diceFromUrl();
 // scroll to morning
 setTimeout(()=>{const H=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hour'))||60;

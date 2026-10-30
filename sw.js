@@ -1,5 +1,5 @@
 // JEPI service worker: app shell works offline; APIs and map tiles always go to the network.
-const VER='jepi-v1';
+const VER='jepi-v2';
 const SHELL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./apple-touch-icon.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(VER).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==VER).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
@@ -15,4 +15,15 @@ self.addEventListener('fetch',e=>{
   if(/fonts\.(googleapis|gstatic)\.com|cdnjs\.cloudflare\.com/.test(u.host)){
     e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{const c=res.clone();caches.open(VER).then(x=>x.put(e.request,c));return res})));
   }
+});
+// push notifications (sent by supabase/functions/jepi-push)
+self.addEventListener('push',e=>{
+  let d={}; try{d=e.data?e.data.json():{}}catch(_){d={title:'JEPI',body:e.data&&e.data.text()}}
+  e.waitUntil(self.registration.showNotification(d.title||'JEPI',{body:d.body||'',tag:d.tag||undefined,icon:'icon-192.png',badge:'icon-192.png',data:{url:d.url||'./'}}));
+});
+self.addEventListener('notificationclick',e=>{
+  e.notification.close(); const url=new URL((e.notification.data&&e.notification.data.url)||'./',self.location.origin).href;
+  e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(ws=>{
+    for(const w of ws){if(w.url.startsWith(self.location.origin)&&'focus' in w) return w.focus()}
+    return self.clients.openWindow(url)}));
 });

@@ -1,0 +1,13 @@
+{
+  "name": "jepi",
+  "private": true,
+  "description": "JEPI — J와 P가 함께 쓰는 여행 플래너 (static PWA)",
+  "scripts": {
+    "build": "python3 tools/build.py",
+    "check": "python3 tools/build.py && node tools/check.js"
+  },
+  "devDependencies": {
+    "leaflet": "1.9.4",
+    "playwright": "1.47.2"
+  }
+}
