@@ -64,6 +64,9 @@ npm run check          # = python3 tools/build.py && node tools/check.js
 | 장소 찾기 화면 (모든 "찾기" 버튼이 여기로) | `385-find.js` |
 | 같은 장소 묶기, 직접 추가할 때 기존 장소 제안 | `388-dedup.js` |
 | 날짜별 제목 바꾸기 | `389-titles.js` |
+| 여행 꾸미기(테마 색·커버·스타일·손글씨 글꼴), 접히는 헤더, 아래 탭 | `389a-look.js`, 스타일 `17-look.css` |
+| 손글씨 메모 (일정 블록별·날짜별) | `389b-memo.js` |
+| 여행 노트 보기 (PDF 저장·링크) | `389c-notebook.js` |
 | 👍 모든 여행자의 추천 (서버 `jepi_recs`), 👍 많은 순 | `070-shared-recs.js` |
 | 블록 누르면 나오는 시트, 옮기기·길이 | `350-actions.js` |
 | 경고 계산(영업시간·이동시간) | `330-helpers.js` (`analyze`) |
