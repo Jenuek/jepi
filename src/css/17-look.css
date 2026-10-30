@@ -1,0 +1,161 @@
+/* ---------- trip look: hero header that folds away, bottom tabs, theme colour, handwriting, 여행 수첩 style ---------- */
+:root{--theme:#2448c9;--pop:#ffd23f;--f-hand:"Nanum Pen Script",cursive;--f-bold:"Black Han Sans","IBM Plex Sans KR",sans-serif;--tabh:64px}
+.hand{font-family:var(--f-hand)}
+
+/* hero */
+body{margin:0}
+header.top.hero{position:relative;top:auto;z-index:2;margin:0 -16px;padding:calc(env(safe-area-inset-top,0px) + 12px) 20px 22px;background:var(--theme);color:#fff;border-bottom:0;border-radius:0 0 26px 26px;overflow:hidden}
+.hero>*{position:relative;z-index:1;opacity:calc(1 - var(--fold,0) * 1.25)}
+.hero .hero-art{position:absolute;inset:0;z-index:0;display:flex;align-items:flex-end;justify-content:flex-end;pointer-events:none;background-size:cover;background-position:center;opacity:1}
+.hero .hero-art svg{margin:0 0 14px}
+.hero .brand h1{color:#fff;font-size:17px}
+.hero .logo rect:first-child{fill:#fff}
+.hero .logo g rect{fill:var(--pop)}
+.hero .logo circle{fill:var(--theme)}
+.hero .beta{display:none}
+.hero .jp{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.25)}
+.hero .jp button{color:#fff}
+.hero .jp button[aria-pressed="true"]{background:#fff;color:var(--theme)}
+.look-btn{margin-left:auto;width:40px;height:40px;border-radius:20px;border:0;background:rgba(255,255,255,.18);color:#fff;display:inline-flex;align-items:center;justify-content:center}
+.look-btn+.jp{margin-left:0}
+.hero .plan-btn{display:flex;align-items:center;gap:6px;margin:14px 0 0;padding:0;border:0;background:none;color:#fff;font-family:var(--f-display);font-weight:700;font-size:23px;line-height:1.25;text-align:left;max-width:100%}
+.hero .plan-btn #planName{overflow:hidden;text-overflow:ellipsis}
+.hero #tripMeta{display:block;margin-top:4px;color:rgba(255,255,255,.8);font-size:12px}
+.hero .hero-tag{display:block;color:rgba(255,255,255,.85);font-size:12.5px;margin-top:2px}
+.hero .dayhead{margin:18px 0 0;display:block}
+.hero .dt-wrap{display:grid;grid-template-columns:1fr auto;column-gap:10px;align-items:end}
+.hero .hero-day{grid-column:1/-1;color:var(--pop);font-size:12px;letter-spacing:.06em}
+.hero #dayTitle{font-family:var(--f-bold);font-weight:400;font-size:30px;line-height:1.15;margin:4px 0 0;color:#fff;word-break:keep-all}
+.hero .dt-edit{background:rgba(255,255,255,.16);border-color:transparent;color:#fff}
+.hero #daySub{display:none}
+.hero .day-memo{grid-column:1/-1;margin:6px 0 0;font-size:22px;line-height:1.2;color:var(--pop)}
+.hero .dt-form input{background:#fff;color:var(--ink)}
+.hero .dt-form .small-btn{background:rgba(255,255,255,.18);color:#fff;border-color:transparent}
+.hero .dt-form .small-btn.primary{background:#fff;color:var(--theme)}
+.hero .dt-form #dayMemoIn{font-size:20px}
+body:not([data-tab="timeline"]) .hero .dayhead{display:none}
+body:not([data-tab="timeline"]) header.top.hero{padding-bottom:16px}
+@media (min-width:900px){body .hero .dayhead{display:block}}
+.hero .tabs{border-color:var(--line)}
+
+/* one-line bar after the hero scrolls away */
+.minibar{position:fixed;left:0;right:0;top:0;z-index:25;display:flex;align-items:center;gap:8px;height:calc(56px + env(safe-area-inset-top,0px));padding:env(safe-area-inset-top,0px) 8px 0 16px;background:var(--theme);color:#fff;box-shadow:0 2px 10px rgba(0,0,0,.18);transform:translateY(-110%);transition:transform .2s ease}
+body.mini .minibar{transform:none}
+.mb-day{background:var(--pop);color:#111827;font-weight:600;font-size:12px;padding:3px 7px;border-radius:7px}
+.mb-title{flex:1;min-width:0;font-family:var(--f-bold);font-weight:400;font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mb-nav{width:40px;height:44px;border:0;background:none;color:#fff;font-size:22px}
+body.demo-on .minibar{top:44px}
+
+/* day pills now sit on the page, under the hero */
+#panel-timeline>.days{margin:4px 0 8px}
+.day-btn[aria-pressed="true"]{background:var(--theme);border-color:var(--theme)}
+
+/* tabs at the bottom */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;margin:0;border:0;border-top:1px solid var(--line);border-radius:0;background:var(--surface);padding:4px 8px env(safe-area-inset-bottom,0px);gap:0;height:calc(var(--tabh) + env(safe-area-inset-bottom,0px))}
+.tabs button{position:relative;height:56px;border-radius:12px;font-size:13px}
+.tabs button[aria-pressed="true"]{background:none;color:var(--theme);font-weight:700}
+.tabs button[aria-pressed="true"]::before{content:"";position:absolute;top:4px;left:50%;width:22px;height:3px;margin-left:-11px;border-radius:2px;background:var(--theme)}
+:root[data-theme="dark"] .tabs button[aria-pressed="true"]{color:var(--ink)}
+body{padding-bottom:calc(var(--tabh) + 40px + env(safe-area-inset-bottom,0px))}
+.dock{bottom:calc(var(--tabh) + env(safe-area-inset-bottom,0px))}
+.dice-fab{bottom:calc(var(--tabh) + 150px + env(safe-area-inset-bottom,0px))}
+.banner{bottom:calc(var(--tabh) + env(safe-area-inset-bottom,0px))}
+.toast{bottom:calc(var(--tabh) + 24px + env(safe-area-inset-bottom,0px))}
+.plan-menu{top:calc(env(safe-area-inset-top,0px) + 110px)}
+main{margin-top:12px}
+
+/* handwritten memos */
+.blk .bmemo{display:block;font-size:17px;line-height:1.1;color:var(--theme);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+:root[data-theme="dark"] .blk .bmemo{color:var(--pop)}
+.memo-f{margin:10px 0 4px}
+.memo-f .kin{display:flex;gap:6px;margin-top:4px}
+.memo-f input{flex:1;min-height:44px;border:1px solid var(--line);border-radius:10px;padding:0 10px;font-size:20px;background:var(--surface);color:var(--ink)}
+
+/* 여행 꾸미기 */
+.look-form{display:flex;flex-direction:column;gap:14px;margin-top:10px}
+.lk-f{display:flex;flex-direction:column;gap:6px}
+.lk-f input{min-height:44px;border:1px solid var(--line);border-radius:10px;padding:0 10px;font:inherit;font-size:16px;background:var(--surface);color:var(--ink)}
+.lk-f input.lk-title{font-family:var(--f-display);font-weight:700;font-size:18px}
+.lk-row{display:flex;flex-wrap:wrap;gap:8px}
+.lk-h{display:flex;justify-content:space-between;align-items:center}
+.lk-opt{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:44px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);padding:6px 10px;cursor:pointer}
+.lk-opt small{font-size:11.5px;color:var(--muted)}
+.lk-opt[aria-pressed="true"]{border:2px solid var(--ink)}
+.lk-opt.color{width:40px;height:40px;min-height:40px;border-radius:20px;padding:0;background:var(--sw)}
+.lk-opt.color[aria-pressed="true"]{box-shadow:0 0 0 3px var(--surface),0 0 0 5px var(--ink);border:0}
+.lk-cv{display:flex;align-items:flex-end;justify-content:flex-end;width:64px;height:40px;border-radius:8px;background:var(--theme);background-size:cover;background-position:center;overflow:hidden}
+.lk-photo .lk-cv{background-color:var(--paper);border:1px dashed var(--muted)}
+.lk-day{display:flex;align-items:center;gap:8px}
+.lk-day span{width:46px;font-size:12px;color:var(--muted)}
+.lk-day input{flex:1}
+
+/* ---------- 여행 수첩 style: paper, ticket hero with a stamp, serif chapter titles ---------- */
+body.style-note{--paper:#efe9de;--surface:#fbf8f2;--line:#e0d6c5;--muted:#5c5866}
+:root[data-theme="dark"] body.style-note{--paper:#1c1916;--surface:#26221d;--line:#3a332b;--muted:#a59d90}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) body.style-note{--paper:#1c1916;--surface:#26221d;--line:#3a332b;--muted:#a59d90}}
+body.style-note header.top.hero{margin:10px 0 0;border-radius:8px;background:var(--surface);color:var(--ink);border:1px solid var(--line);box-shadow:0 6px 16px rgba(60,48,30,.08);padding:14px 16px 18px}
+body.style-note .hero .hero-art{align-items:flex-start;padding:52px 14px 0}
+body.style-note .hero .hero-art.photo{opacity:.18}
+body.style-note .stamp{width:76px;height:76px;border-radius:38px;border:2px solid var(--theme);color:var(--theme);display:flex;flex-direction:column;align-items:center;justify-content:center;transform:rotate(-12deg);font-family:var(--f-mono);font-size:10px;line-height:1.3;opacity:.9}
+body.style-note .stamp b{font-size:14px}
+body.style-note .hero .brand h1,body.style-note .hero .plan-btn,body.style-note .hero .look-btn,body.style-note .hero .jp button,body.style-note .hero .dt-edit{color:var(--ink)}
+body.style-note .hero .logo rect:first-child{fill:var(--ink)}
+body.style-note .hero .look-btn,body.style-note .hero .dt-edit{background:var(--paper)}
+body.style-note .hero .jp{background:var(--paper);border-color:var(--line)}
+body.style-note .hero .jp button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+body.style-note .hero .plan-btn{padding-right:84px}
+body.style-note .hero #tripMeta,body.style-note .hero .hero-tag{color:var(--muted)}
+body.style-note .hero .dayhead{border-top:2px dashed var(--line);padding-top:14px}
+body.style-note .hero .hero-day{color:var(--muted);letter-spacing:.14em}
+body.style-note .hero #dayTitle{font-family:var(--f-display);font-weight:700;font-size:26px;color:var(--ink)}
+body.style-note .hero .day-memo{color:var(--theme)}
+body.style-note .hero .dt-form .small-btn{background:var(--paper);color:var(--ink)}
+body.style-note .hero .dt-form .small-btn.primary{background:var(--ink);color:var(--surface)}
+body.style-note .minibar{background:var(--surface);color:var(--ink);border-bottom:1px solid var(--line)}
+body.style-note .mb-title{font-family:var(--f-display);font-weight:700}
+body.style-note .mb-nav{color:var(--ink)}
+body.style-note .blk{border-radius:4px}
+body.style-note .tabs button[aria-pressed="true"]{color:var(--ink)}
+body.style-note .tabs button[aria-pressed="true"]::before{background:var(--theme)}
+
+/* ---------- 여행 노트 보기 ---------- */
+.notebook{position:fixed;inset:0;z-index:700;overflow:auto;background:#e9e3d8;color:#2b2a33;padding:calc(env(safe-area-inset-top,0px) + 12px) 12px calc(24px + env(safe-area-inset-bottom,0px))}
+.nb-bar{position:sticky;top:0;z-index:2;display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;max-width:640px;margin:0 auto 10px}
+.nb-bar .small-btn{background:#fbf8f2;color:#2b2a33;border-color:#d8cfbf}
+.nb-page{max-width:640px;margin:0 auto 14px;background:#fbf8f2;border-radius:6px;box-shadow:0 1px 0 #d8cfbf,0 6px 16px rgba(60,48,30,.08);padding:22px 20px}
+.nb-cover{position:relative;min-height:300px;display:flex;flex-direction:column;justify-content:flex-end;background:var(--theme);color:#fff;overflow:hidden;background-size:cover;background-position:center}
+.nb-cover .nb-art{position:absolute;right:0;bottom:0;opacity:.95}
+.nb-cover h1{position:relative;font-family:var(--f-display);font-size:32px;line-height:1.2;margin:0}
+.nb-cover p{position:relative;margin:6px 0 0;opacity:.85;font-size:13px}
+.nb-cover .nb-stamp{position:absolute;right:22px;top:22px;width:76px;height:76px;border-radius:38px;border:2px solid #fff;display:flex;flex-direction:column;align-items:center;justify-content:center;transform:rotate(-12deg);font-family:var(--f-mono);font-size:10px}
+.nb-ch{font-family:var(--f-mono);font-size:11px;letter-spacing:.14em;color:#6b6574}
+.nb-page h2{font-family:var(--f-display);font-size:24px;line-height:1.3;margin:4px 0 0}
+.nb-dmemo{font-family:var(--f-hand);font-size:22px;color:var(--theme);margin:4px 0 0}
+.nb-list{margin:14px 0 0;padding:0;list-style:none}
+.nb-list li{display:grid;grid-template-columns:48px 1fr auto;gap:4px 10px;align-items:baseline;padding:9px 0;border-top:1px solid #e6dece}
+.nb-list li:first-child{border-top:0}
+.nb-list .t{font-family:var(--f-mono);font-size:12px;color:#5c5866}
+.nb-list b{font-size:15px}
+.nb-list .m{font-family:var(--f-hand);font-size:19px;color:var(--theme);text-align:right}
+.nb-list .mv{grid-column:2/-1;font-size:12px;color:#6b6574}
+@media print{
+  body>*:not(.notebook){display:none!important}
+  .notebook{position:static;overflow:visible;background:#fff;padding:0}
+  .nb-bar{display:none}
+  .nb-page{box-shadow:none;break-after:page;max-width:none}
+  .nb-cover{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+
+/* trip menu as postcards */
+.pm-list .pm-card{position:relative;overflow:hidden;min-height:92px;align-items:flex-end;background:var(--theme);color:#fff;border-radius:18px;border:0;margin-bottom:8px;padding:14px 16px}
+.pm-card .pm-art{position:absolute;right:0;bottom:0;pointer-events:none}
+.pm-card .pm-t{position:relative}
+.pm-card .pm-t b{font-family:var(--f-display);font-weight:700;font-size:18px;color:#fff}
+.pm-card .pm-t small{color:rgba(255,255,255,.85)}
+.pm-card .pm-dday{position:absolute;left:14px;top:12px;background:var(--pop);color:#111827;font-size:11.5px;font-weight:600;padding:2px 7px;border-radius:7px}
+.pm-card.cur{box-shadow:0 0 0 3px var(--surface),0 0 0 5px var(--theme)}
+.pm-card.past{min-height:56px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-left:8px solid var(--theme)}
+.pm-card.past .pm-t b{color:var(--ink);font-size:15px}
+.pm-card.past .pm-t small{color:var(--muted)}
+.pm-card:not(.past) .pm-t{margin-top:22px}
+body.style-note .hero #tripMeta,body.style-note .hero .hero-tag{padding-right:84px}
