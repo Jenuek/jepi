@@ -23,7 +23,8 @@
 <main>
   <section class="panel" id="panel-timeline">
     <div id="phase" hidden></div>
-    <div class="dayhead"><div><h2 id="dayTitle"></h2><p id="daySub"></p></div></div>
+    <div class="dayhead"><div class="dt-wrap"><h2 id="dayTitle"></h2><button type="button" class="dt-edit" id="dayTitleEdit" aria-label="이 날 제목 바꾸기"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button><p id="daySub"></p></div></div>
+    <div class="daysum" id="daySum" aria-label="오늘 요약"></div><div class="sumbody" id="sumBody" hidden></div>
     <div id="nudges"></div>
     <div class="route" id="route" aria-label="하루 동선"></div>
     <details class="budget-box" id="budgetBox"><summary id="budgetSum"></summary><div class="budget" id="budget" aria-label="오늘 예상 비용"></div></details>
@@ -44,7 +45,7 @@
       <form class="kw-add" id="moreForm" hidden><input id="moreInput" maxlength="60" placeholder="AI로 장소 더 찾기 · 예) 비 오는 날" autocomplete="off"><button class="small-btn primary" type="submit" id="moreBtn">찾기</button></form>
       <p class="ai-status" id="moreSt" style="margin:0 0 8px"></p>
       <p class="rec-st" id="recSt" hidden></p>
-      <div class="seg" role="group" aria-label="묶어 보기"><button class="fchip" data-group="zone" aria-pressed="true">동네별</button><button class="fchip" data-group="list" aria-pressed="false">추천순</button></div>
+      <div class="seg" role="group" aria-label="묶어 보기"><button class="fchip" data-group="zone" aria-pressed="true">동네별</button><button class="fchip" data-group="list" aria-pressed="false">추천순</button><button class="fchip" data-group="pop" aria-pressed="false">👍 많은 순</button></div>
       <div class="filters" id="filters"></div>
       <label class="toggle"><input type="checkbox" id="openOnly" checked> 이 날 문 여는 곳만</label>
       <div class="cards" id="cards"></div>
