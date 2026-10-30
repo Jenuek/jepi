@@ -145,7 +145,8 @@ document.addEventListener('click',e=>{
     if(t.dataset.mv){b.start=Math.max(dayStart(day),Math.min(1410,b.start+ +t.dataset.mv))}
     if(t.dataset.du){b.dur=Math.max(30,Math.min(720,b.dur+ +t.dataset.du))}
     if(t.dataset.del){placed=placed.filter(x=>x.uid!==uid);save();closeSheet();renderAll();return}
-    save();renderAll();openSheet(uid);return}
+    // only the move/length buttons redraw the sheet; tapping an input (memo, etc.) must keep focus for the keyboard
+    if(t.dataset.mv||t.dataset.du){save();renderAll();openSheet(uid)}return}
 });
 document.addEventListener('change',e=>{
   if(e.target.id==='openOnly'){renderTray();return}
