@@ -94,3 +94,22 @@ select cron.schedule('jepi-push','* * * * *',
 -- old sent reminders are cleaned up once a day
 select cron.unschedule(jobid) from cron.job where jobname='jepi-alerts-clean';
 select cron.schedule('jepi-alerts-clean','17 4 * * *', $$ delete from public.jepi_alerts where fire_at < now() - interval '3 days' $$);
+
+-- 5) recommendations from all travelers (👍): anyone can read the counts, people only add or remove their own.
+--    Rows hold a place (name, area, position…), never who the person is beyond their account id.
+create table if not exists public.jepi_recs(
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  k text not null, city text not null, entry jsonb not null, at bigint,
+  primary key(user_id,k));
+create index if not exists jepi_recs_city on public.jepi_recs(city);
+alter table public.jepi_recs enable row level security;
+drop policy if exists recs_read on public.jepi_recs;
+create policy recs_read on public.jepi_recs for select using (true);
+drop policy if exists recs_own on public.jepi_recs;
+create policy recs_own on public.jepi_recs for insert with check (user_id=auth.uid());
+drop policy if exists recs_del on public.jepi_recs;
+create policy recs_del on public.jepi_recs for delete using (user_id=auth.uid());
+drop policy if exists recs_upd on public.jepi_recs;
+create policy recs_upd on public.jepi_recs for update using (user_id=auth.uid()) with check (user_id=auth.uid());
+grant select on public.jepi_recs to anon, authenticated;
+grant insert, update, delete on public.jepi_recs to authenticated;
