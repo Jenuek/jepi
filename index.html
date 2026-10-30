@@ -628,6 +628,7 @@ body:has(input:focus,textarea:focus,select:focus) .dice-fab{display:none!importa
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @keyframes sloganIn{from{opacity:0;transform:translateY(12px);filter:blur(4px)}to{opacity:1;transform:none;filter:none}}
 @media (prefers-reduced-motion:reduce){#intro .sky,#intro .sun,#intro .cl,#intro .intro-logo,#intro .intro-name,#intro .intro-slogan span{animation:none;opacity:1;transform:none;filter:none}#intro .cl{filter:blur(6px)}}
+.course-h{margin:0 0 6px;font-size:13px;font-weight:600;color:var(--accent);text-align:left;width:100%}
 </style>
 </head>
 <body>
@@ -3015,7 +3016,7 @@ const DO_MOODS=[['any','상관없음'],['quiet','조용히'],['move','움직이�
 const DO_Q={any:[{c:'AT4'},{c:'CT1'},{c:'CE7'}],quiet:[{q:'서점'},{q:'미술관'},{q:'갤러리'},{q:'공원'}],move:[{q:'공원'},{q:'산책로'},{q:'볼링장'},{q:'클라이밍'}],
   drink:[{q:'바',c:'FD6'},{q:'이자카야',c:'FD6'},{q:'와인바',c:'FD6'}],rain:[{q:'전시'},{q:'영화관'},{q:'서점'},{q:'보드게임카페'}],hungry:[{c:'FD6'}]};
 const TYPE_Q={meal:[{c:'FD6'}],cafe:[{c:'CE7'}],night:[{q:'바',c:'FD6'},{q:'이자카야',c:'FD6'},{q:'와인바',c:'FD6'}]};
-const TYPE_ICON={meal:'🍽',cafe:'☕',act:'🎯',night:'🍸'}, TYPE_DUR={meal:70,cafe:50,act:80,night:90};
+const TYPE_ICON={meal:'🍽',cafe:'☕',act:'🎯',night:'🍸'}, TYPE_DUR={meal:60,cafe:45,act:60,night:75};
 let doS={base:null,org:'gps',area:null,when:'now',at:'18:00',clen:'short',mood:'any',pick:null,rolls:0,course:null,busy:false,msg:'',origin:null,where:'',src:'',hits:[],chosen:null,cond:false};
 Object.assign(doS,LS.get('jepi.do',{}),{base:null,pick:null,course:null,busy:false,msg:'',hits:[],chosen:null,cond:false});
 const saveDo=()=>LS.set('jepi.do',{mood:doS.mood,clen:doS.clen,area:doS.area,at:doS.at});
@@ -3081,7 +3082,7 @@ function courseTypes(t,items){
 }
 async function buildCourse(ll,t0,tEnd){
   const items=[]; let t=t0, prev=ll; const used=new Set();
-  while(t+40<=tEnd&&items.length<7){
+  while(items.length<8&&(t+20<=tEnd||(items.length<3&&t<tEnd+60))){
     const ty=courseTypes(t,items); if(!ty) break;
     let [type,meal]=ty, pool=(await poolFor(type,ll,t)).filter(x=>!used.has(x.id)), c=pickNear(pool,prev,900);
     if(!c&&type==='act'){type='cafe';pool=(await poolFor('cafe',ll,t)).filter(x=>!used.has(x.id));c=pickNear(pool,prev,900)}
@@ -3107,7 +3108,7 @@ async function doGo(kind,again){
       if(!c){doS.pick=null;doS.msg='이 근처에서 조건에 맞는 곳을 찾지 못했어요. 기분을 바꾸거나 코스로 짜 보세요.'}
       else{doS.pick=Object.assign({},c,{type,walk:walkMin(ll,c.ll)});doS.rolls++;dice.rolling=!matchMedia('(prefers-reduced-motion:reduce)').matches;if(dice.rolling)setTimeout(()=>{dice.rolling=false;renderDice()},650)}
     }else{
-      const tEnd=doS.clen==='rest'?Math.min(1410,Math.max(t0+120,1380)):Math.min(1410,t0+180);
+      const tEnd=doS.clen==='rest'?Math.min(1410,Math.max(t0+150,1380)):doS.clen==='half'?Math.min(1410,t0+300):Math.min(1410,t0+180);
       doS.course=await buildCourse(ll,t0,tEnd);
       if(!doS.course.length){doS.course=null;doS.msg='지금 시간에는 코스를 짜기 어려워요. 시간을 바꿔 보세요.'}
     }
@@ -3141,7 +3142,7 @@ function saveCourse(){
   curPlan=nid; savePlans(); closeSheet(); applyPlanData(data); snapshotCurrent(); day=0; tab='timeline'; renderTabs(); renderAll();
   showToast('내 계획에 저장했어요 · 일정과 지도에서 볼 수 있어요');
 }
-function doCondTxt(){const mood=(DO_MOODS.find(m=>m[0]===doS.mood)||[])[1];return [doS.when==='now'?'지금':`이따 ${doS.at}`,doS.clen==='rest'?'코스: 오늘 끝까지':'코스: 2~3시간',mood==='상관없음'?'':mood].filter(Boolean).join(' · ')}
+function doCondTxt(){const mood=(DO_MOODS.find(m=>m[0]===doS.mood)||[])[1];return [doS.when==='now'?'지금':`이따 ${doS.at}`,doS.clen==='rest'?'코스: 오늘 끝까지':doS.clen==='half'?'코스: 반나절':'코스: 2~3시간',mood==='상관없음'?'':mood].filter(Boolean).join(' · ')}
 function eatCondTxt(){const mood=(EAT_MOODS.find(m=>m[0]===eat.mood)||[])[1];return [eat.base==='plan'?MEAL_TXT[eat.meal]:'',`걸어서 ${eat.walk}분`,mood==='상관없음'?'':mood].filter(Boolean).join(' · ')}
 const pillRow=(attr,cur,opts)=>`<div class="radio">${opts.map(([v,l])=>`<button type="button" data-${attr}="${v}" aria-pressed="${String(cur)===String(v)}">${l}</button>`).join('')}</div>`;
 function doBasesHTML(){
@@ -3158,7 +3159,8 @@ function renderDoNear(){
   let stage='', acts='';
   const busy=doS.busy?`<div class="die spin" aria-hidden="true">🎲</div><p class="hint">${doS.base==='area'&&doS.area?esc(doS.area.name):'주변'}에서 찾는 중…</p>`:'';
   if(doS.course){
-    stage=busy||`<ol class="course">${doS.course.map((x,i)=>`<li><span class="mono ct">${fmt(x.start)}</span><div class="cm"><b>${TYPE_ICON[x.type]} ${esc(x.name)}</b><small>${i?`앞에서 걸어서 ${x.walk}분`:`${esc(doS.where)}에서 걸어서 ${x.walk}분`} · ${esc(x.cat)}${x.meal?` · ${x.meal==='lunch'?'점심':'저녁'}`:''}</small></div><a class="small-btn" href="${esc(x.url)}" target="_blank" rel="noopener" aria-label="${esc(x.name)} 지도">지도</a><button class="small-btn" type="button" data-doreroll="${i}" aria-label="이 칸 다시 굴리기">🎲</button></li>`).join('')}</ol><small class="hint">${esc(doS.src)}</small>`;
+    const cEnd=doS.course.length?doS.course[doS.course.length-1].start+doS.course[doS.course.length-1].dur:0;
+    stage=busy||`<p class="course-h">${fmt(doS.course[0].start)}–${fmt(cEnd)} · ${doS.course.length}곳 · 약 ${durTxt(cEnd-doS.course[0].start)}</p><ol class="course">${doS.course.map((x,i)=>`<li><span class="mono ct">${fmt(x.start)}</span><div class="cm"><b>${TYPE_ICON[x.type]} ${esc(x.name)}</b><small>${i?`앞에서 걸어서 ${x.walk}분`:`${esc(doS.where)}에서 걸어서 ${x.walk}분`} · ${esc(x.cat)}${x.meal?` · ${x.meal==='lunch'?'점심':'저녁'}`:''}</small></div><a class="small-btn" href="${esc(x.url)}" target="_blank" rel="noopener" aria-label="${esc(x.name)} 지도">지도</a><button class="small-btn" type="button" data-doreroll="${i}" aria-label="이 칸 다시 굴리기">🎲</button></li>`).join('')}</ol><small class="hint">${esc(doS.src)}</small>`;
     acts=doS.busy?'':`<button type="button" class="small-btn primary" id="doSave">📌 이 코스 저장</button><button type="button" class="small-btn" data-dogo="course">다시 짜기</button><button type="button" class="small-btn" data-dogo="one">하나만 굴리기</button>`;
   }else if(doS.pick){
     const c=doS.pick,left=Math.max(0,3-doS.rolls);
@@ -3173,7 +3175,7 @@ function renderDoNear(){
     <details class="cond"${doS.cond?' open':''}><summary><span>${esc(doCondTxt())}</span><span class="cond-e">조건 바꾸기</span></summary>
       ${doS.base==='near'?`<span class="hint">기준</span>${pillRow('doorg',doS.org,orgs)}${MYP.some(x=>x.ll)?'':'<button type="button" class="linkbtn" id="eatSetPlaces">🏠 집·🏢 회사 등록해 두기</button>'}`:''}
       <span class="hint">언제</span><div class="radio"><button type="button" data-dowhen="now" aria-pressed="${doS.when==='now'}">지금</button><button type="button" data-dowhen="later" aria-pressed="${doS.when==='later'}">이따</button>${doS.when==='later'?`<input type="time" id="doAt" value="${esc(doS.at)}" aria-label="시작 시간">`:''}</div>
-      <span class="hint">코스 길이</span>${pillRow('doclen',doS.clen,[['short','2~3시간'],['rest','오늘 끝까지']])}
+      <span class="hint">코스 길이</span>${pillRow('doclen',doS.clen,[['short','2~3시간 · 3곳 안팎'],['half','반나절 · 4~5곳'],['rest','오늘 끝까지']])}
       <span class="hint">기분</span>${pillRow('domood',doS.mood,DO_MOODS)}</details>
     <div class="dice-stage">${stage}</div>
     ${doS.msg?`<p class="hint" style="color:var(--warn)">${esc(doS.msg)}</p>`:''}
