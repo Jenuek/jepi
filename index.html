@@ -2236,7 +2236,7 @@ const PLAN_KEYS=['profile','pack','placed3','custom','meal2','done','fmarks','wi
 function planName(){const pr=profile;if(pr.kind==='day')return `${PACK.city} 하루 코스`;const n=nightsOf(pr);return `${PACK.city} ${n}박 ${n+1}일`}
 function planData(){return {profile:clone(profile),pack:PACK===TOKYO_PACK&&!(PACK.places||[]).some(p=>p.ai)?'tokyo':PACK,placed:placed.map(({id,day,start,dur,mk})=>mk&&mk.length?{id,day,start,dur,mk}:{id,day,start,dur}),custom:clone(custom),fmarks:clone(fmarks),wish:wish.slice(),meals:clone(meals),done:clone(done)}}
 function planMeta(){const D0=DAYS[0]||{},Dn=DAYS[DAYS.length-1]||{};return {name:'',dates:D0.iso?`${D0.iso.slice(5).replace('-','/')}${DAYS.length>1?'~'+(Dn.iso||'').slice(5).replace('-','/'):''}`:'',blocks:placed.length,kind:profile.kind||'trip'}}
-function savePlans(){store.set('gp.plans',plans);store.set('gp.cur',curPlan)}
+function savePlans(){store.set('gp.plans',plans);store.set('gp.cur',curPlan);syncSoon()}
 function snapshotCurrent(){
   if(!curPlan) return; let p=plans.find(x=>x.id===curPlan);
   if(!p){p={id:curPlan,name:''};plans.unshift(p)}
@@ -2696,6 +2696,7 @@ function renderSettings(){
     <div class="srow"><span>테마</span><div class="radio">${[['light','밝게'],['dark','어둡게'],['system','기기 설정']].map(([v,l])=>`<button type="button" data-theme-set="${v}" aria-pressed="${themePref===v}">${l}</button>`).join('')}</div></div>
     <div class="srow"><span>시간 간격</span><div class="radio"><button type="button" data-zoom="60" aria-pressed="${zoom!==100}">보통</button><button type="button" data-zoom="100" aria-pressed="${zoom===100}">넓게</button></div></div>
     <div class="row"><button class="small-btn" id="coachAgain">사용 안내 다시 보기</button></div></div></section>
+  <section class="sset"><h3>기기 간 동기화</h3>${syncHTML()}</section>
   <section class="sset"><h3>내 장소</h3>${mypHTML()}</section>
   <section class="sset"><h3>AI·지도 연결 <small>· 키는 이 기기에만 저장돼요</small></h3>${STANDALONE?`<div class="mgroup">${Object.keys(KEY_DEF).map(keyRow).join('')}</div>
     <p class="hint">무거운 작업(일정 짜기, 여행지 준비)은 Claude ${esc(MODELS.heavy)}, 가벼운 작업(키워드, 예약 내용 읽기)은 ${KEYS.gemini?'Gemini Flash':'Claude '+esc(MODELS.light)}가 맡아요. 경로는 국내는 카카오, 해외는 Google로 계산하고 한 번 계산한 구간은 이 기기에 저장해 다시 부르지 않아요${routeStats.ok?` (이번에 ${routeStats.ok}구간 계산)`:''}.</p>
@@ -2880,7 +2881,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-cp]');if(!
 // ================= 내 장소 (집·회사·…) — kept only on this device =================
 let MYP=LS.get('jepi.myplaces',null);
 if(!Array.isArray(MYP)) MYP=[{id:'home',name:'집',ll:null,addr:''},{id:'work',name:'회사',ll:null,addr:''}];
-const saveMYP=()=>LS.set('jepi.myplaces',MYP);
+const saveMYP=()=>{LS.set('jepi.myplaces',MYP);LS.set('jepi.mypAt',Date.now());syncSoon()};
 const mypOf=id=>MYP.find(x=>x.id===id);
 let mypEdit=null, mypMsg='', mypHits=[];
 function getPos(maxAge){return new Promise((res,rej)=>{if(!navigator.geolocation)return rej(new Error('이 기기에서는 위치를 쓸 수 없어요'));
@@ -3303,6 +3304,109 @@ function diceCloseAnim(){
   setTimeout(()=>{bg.hidden=true;sh.classList.remove('unpop');bg.classList.remove('bg-out')},260);return true;
 }
 
+// ================= 기기 간 동기화 (Supabase, 본인 계정 데이터만) =================
+let SYNC=Object.assign({url:'',key:'',email:'',sess:null,lastPull:0,sent:{},at:0,msg:''},LS.get('jepi.sync',{})||{});
+const saveSync=()=>LS.set('jepi.sync',{url:SYNC.url,key:SYNC.key,email:SYNC.email,sess:SYNC.sess,lastPull:SYNC.lastPull,sent:SYNC.sent,at:SYNC.at});
+let syncStep='', syncBusy=false, syncErr='';
+const syncOn=()=>!!(SYNC.url&&SYNC.key&&SYNC.sess&&SYNC.sess.access);
+function hashStr(s){let h=5381;for(let i=0;i<s.length;i++)h=(h*33^s.charCodeAt(i))>>>0;return h.toString(36)+s.length.toString(36)}
+async function sbAuth(path,body){
+  let r;try{r=await fetch(SYNC.url.replace(/\/$/,'')+path,{method:'POST',headers:{apikey:SYNC.key,'content-type':'application/json'},body:JSON.stringify(body)})}catch(_){throw aiErr('network','서버에 연결하지 못했어요. 주소를 확인해 주세요.')}
+  let j={};try{j=await r.json()}catch(_){}
+  if(!r.ok){const m=j.msg||j.error_description||j.message||j.error||('HTTP '+r.status);throw aiErr(r.status===429?'rate_limited':'auth',/rate|seconds/i.test(m)?'잠시 뒤에 다시 시도해 주세요 (메일 발송 제한).':/invalid|expired/i.test(m)?'코드가 틀렸거나 만료됐어요. 다시 받아 주세요.':m)}
+  return j;
+}
+function keepSess(j){SYNC.sess={access:j.access_token,refresh:j.refresh_token,exp:Date.now()+((+j.expires_in||3600)-60)*1000,user:(j.user&&j.user.id)||SYNC.sess&&SYNC.sess.user,email:(j.user&&j.user.email)||SYNC.email};saveSync()}
+async function sbToken(){
+  if(!syncOn()) throw aiErr('auth','로그인이 필요해요');
+  if(Date.now()<SYNC.sess.exp) return SYNC.sess.access;
+  try{keepSess(await sbAuth('/auth/v1/token?grant_type=refresh_token',{refresh_token:SYNC.sess.refresh}));return SYNC.sess.access}
+  catch(e){if(e.code==='auth'){SYNC.sess=null;saveSync()}throw e}
+}
+async function sbRest(method,q,body,prefer){
+  const tk=await sbToken(); let r;
+  try{r=await fetch(SYNC.url.replace(/\/$/,'')+'/rest/v1/jepi_docs'+q,{method,headers:Object.assign({apikey:SYNC.key,Authorization:'Bearer '+tk,'content-type':'application/json'},prefer?{Prefer:prefer}:{}),body:body?JSON.stringify(body):undefined})}
+  catch(_){throw aiErr('network','오프라인이에요')}
+  if(r.status===401){SYNC.sess.exp=0;throw aiErr('auth','로그인이 만료됐어요')}
+  if(!r.ok){let m='';try{m=(await r.json()).message}catch(_){}throw aiErr('upstream_error',m||('HTTP '+r.status))}
+  return r.status===204?null:r.json().catch(()=>null);
+}
+function syncDocs(){
+  const out=[];
+  plans.forEach(p=>{const d=store.get('gp.plan.'+p.id,null);if(!d)return;out.push({id:'plan:'+p.id,kind:'plan',data:{meta:p,data:d},updated:p.updated||Date.now()})});
+  out.push({id:'kw',kind:'kw',data:{kws},updated:LS.get('jepi.kwAt',1)});
+  out.push({id:'myplaces',kind:'myplaces',data:{MYP},updated:LS.get('jepi.mypAt',1)});
+  return out;
+}
+let pushT=0;
+function syncSoon(ms){if(!syncOn())return;clearTimeout(pushT);pushT=setTimeout(syncPush,ms||2500)}
+async function syncPush(){
+  if(!syncOn()||syncBusy) return; syncBusy=true;
+  try{
+    const rows=[];
+    for(const d of syncDocs()){const h=hashStr(JSON.stringify(d.data.data||d.data));if(SYNC.sent[d.id]===h)continue;rows.push(Object.assign({user_id:SYNC.sess.user},d,{deleted:false,_h:h}))}
+    for(const id of Object.keys(SYNC.sent)) if(id.startsWith('plan:')&&!plans.some(p=>'plan:'+p.id===id)&&SYNC.sent[id]!=='x') rows.push({user_id:SYNC.sess.user,id,kind:'plan',data:{},updated:Date.now(),deleted:true,_h:'x'});
+    if(rows.length){await sbRest('POST','?on_conflict=user_id,id',rows.map(({_h,...r})=>r),'resolution=merge-duplicates,return=minimal');rows.forEach(r=>SYNC.sent[r.id]=r._h)}
+    SYNC.at=Date.now(); syncErr=''; saveSync();
+  }catch(e){syncErr=e.message;if(e.code!=='network')console.warn('sync push',e)}
+  syncBusy=false; if(tab==='settings') renderSettings();
+}
+async function syncPull(){
+  if(!syncOn()||syncBusy) return; syncBusy=true; let changed=false, curChanged=null;
+  try{
+    const rows=await sbRest('GET',`?select=id,kind,data,updated,deleted&updated=gt.${Math.max(0,SYNC.lastPull-5000)}&order=updated.asc`)||[];
+    for(const r of rows){
+      SYNC.lastPull=Math.max(SYNC.lastPull,+r.updated||0);
+      if(r.kind==='plan'){const pid=r.id.slice(5), loc=plans.find(p=>p.id===pid);
+        if(r.deleted){if(loc&&pid!==curPlan){plans=plans.filter(p=>p.id!==pid);LS.del('gp.plan.'+pid);changed=true}SYNC.sent[r.id]='x';continue}
+        const v=r.data||{}, m=v.meta; if(!m||!v.data) continue; const h=hashStr(JSON.stringify(v.data));
+        if(loc&&SYNC.sent[r.id]===h) continue;
+        if(!loc||(+r.updated)>(loc.updated||0)){store.set('gp.plan.'+pid,v.data);if(loc)Object.assign(loc,m,{updated:+r.updated});else plans.push(Object.assign({},m,{updated:+r.updated}));SYNC.sent[r.id]=h;changed=true;if(pid===curPlan)curChanged=v.data}
+      }else if(r.kind==='kw'&&Array.isArray(r.data&&r.data.kws)&&(+r.updated)>LS.get('jepi.kwAt',0)){kws=r.data.kws.slice();store.set('gp.kw',kws);LS.set('jepi.kwAt',+r.updated);SYNC.sent.kw=hashStr(JSON.stringify(r.data));changed=true}
+      else if(r.kind==='myplaces'&&Array.isArray(r.data&&r.data.MYP)&&(+r.updated)>LS.get('jepi.mypAt',0)){MYP=r.data.MYP;LS.set('jepi.myplaces',MYP);LS.set('jepi.mypAt',+r.updated);SYNC.sent.myplaces=hashStr(JSON.stringify(r.data));changed=true}
+    }
+    if(changed){plans.sort((a,b)=>(b.updated||0)-(a.updated||0));store.set('gp.plans',plans)}
+    syncErr=''; SYNC.at=Date.now(); saveSync();
+  }catch(e){syncErr=e.message}
+  syncBusy=false;
+  if(curChanged){const ae=document.activeElement;const editing=(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))||!$('#sheetBg').hidden||!$('#onb').hidden;
+    if(!editing){applyPlanData(curChanged);showToast('다른 기기에서 바꾼 내용을 받아왔어요')} }
+  if(changed){renderPlans();renderExt()} if(tab==='settings')renderSettings();
+}
+async function syncNow(){await syncPull();await syncPush();await syncPull()}
+// hooks: every local save schedules a push; coming back to the app pulls
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')syncPull();else syncPush()});
+setInterval(()=>{if(document.visibilityState==='visible')syncPull()},60000);
+addEventListener('online',()=>syncNow());
+function syncHTML(){
+  if(!SYNC.url||!SYNC.key||syncStep==='setup') return `<div class="mgroup pad"><p class="hint" style="margin-top:0">Supabase 프로젝트의 <b>Project URL</b>과 <b>anon(또는 publishable) 키</b>를 넣어 주세요. 대시보드 → Project Settings → API에 있어요.</p>
+    <label class="fg" style="display:block"><span class="hint">Project URL</span><input id="sbUrl" value="${esc(SYNC.url)}" placeholder="https://xxxx.supabase.co" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+    <label class="fg" style="display:block;margin-top:6px"><span class="hint">anon / publishable 키</span><input id="sbKey" type="password" value="" placeholder="${SYNC.key?'저장됨 · 바꿀 때만 입력':'eyJ… 또는 sb_publishable_…'}" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+    <div class="row" style="margin-top:8px"><button class="small-btn primary" type="button" id="sbSave">저장</button>${SYNC.url&&SYNC.key?'<button class="small-btn" type="button" id="sbCancel">취소</button>':''}</div>${syncErr?`<small class="kmsg">✕ ${esc(syncErr)}</small>`:''}</div>`;
+  if(!syncOn()) return `<div class="mgroup pad">${syncStep==='code'?`<p class="hint" style="margin-top:0">${esc(SYNC.email)}로 보낸 6자리 코드를 넣어 주세요.</p><div class="kin"><input id="sbCode" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="123456"><button class="small-btn primary" type="button" id="sbVerify">확인</button></div><div class="row"><button class="small-btn" type="button" id="sbBack">이메일 다시 입력</button></div>`
+      :`<p class="hint" style="margin-top:0">폰·아이패드 모두 같은 이메일로 로그인하면 계획이 자동으로 맞춰져요.</p><div class="kin"><input id="sbEmail" type="email" value="${esc(SYNC.email)}" placeholder="이메일" autocomplete="email"><button class="small-btn primary" type="button" id="sbSend">코드 받기</button></div>`}
+    ${syncErr?`<small class="kmsg">✕ ${esc(syncErr)}</small>`:''}<div class="row"><button class="small-btn" type="button" id="sbSetup">서버 주소 바꾸기</button></div></div>`;
+  const t=SYNC.at?new Date(SYNC.at):null;
+  return `<div class="mgroup pad"><div class="srow" style="margin:0"><span><b>☁️ ${esc(SYNC.sess.email||SYNC.email)}</b><br><small class="hint">${syncBusy?'맞추는 중…':syncErr?'✕ '+esc(syncErr):t?`마지막 동기화 ${t.getHours()}:${String(t.getMinutes()).padStart(2,'0')}`:'아직 동기화 전'}</small></span><span class="mchip ${syncErr?'warn':'ok'}">${syncErr?'확인 필요':'켜짐'}</span></div>
+    <div class="row" style="margin-top:8px"><button class="small-btn primary" type="button" id="sbNow">지금 동기화</button><button class="small-btn" type="button" id="sbOut">로그아웃</button></div>
+    <p class="hint">계획, 취향 키워드, 내 장소가 맞춰져요. AI·지도 키는 이 기기에만 남아요.</p></div>`;
+}
+document.addEventListener('click',async e=>{const t=e.target.closest('button');if(!t)return;
+  if(t.id==='sbSetup'){syncStep='setup';renderSettings();return}
+  if(t.id==='sbCancel'){syncStep='';renderSettings();return}
+  if(t.id==='sbSave'){const u=(($('#sbUrl')||{}).value||'').trim().replace(/\/+$/,''),k=(($('#sbKey')||{}).value||'').trim();
+    if(!/^https:\/\/[a-z0-9-]+\.supabase\.(co|in)$/i.test(u)){syncErr='주소는 https://xxxx.supabase.co 모양이에요.';renderSettings();return}
+    if(!k&&!SYNC.key){syncErr='키를 넣어 주세요.';renderSettings();return}
+    if(u!==SYNC.url){SYNC.sess=null;SYNC.sent={};SYNC.lastPull=0} SYNC.url=u; if(k)SYNC.key=k; syncErr='';syncStep='';saveSync();renderSettings();return}
+  if(t.id==='sbSend'){const em=(($('#sbEmail')||{}).value||'').trim();if(!/^\S+@\S+\.\S+$/.test(em)){syncErr='이메일을 확인해 주세요.';renderSettings();return}
+    SYNC.email=em;saveSync();t.disabled=true;try{await sbAuth('/auth/v1/otp',{email:em,create_user:true});syncStep='code';syncErr=''}catch(err){syncErr=err.message}renderSettings();setTimeout(()=>{const i=$('#sbCode');if(i)i.focus()},50);return}
+  if(t.id==='sbBack'){syncStep='';renderSettings();return}
+  if(t.id==='sbVerify'){const code=(($('#sbCode')||{}).value||'').replace(/\s/g,'');if(!code)return;t.disabled=true;
+    try{keepSess(await sbAuth('/auth/v1/verify',{type:'email',email:SYNC.email,token:code}));syncStep='';syncErr='';SYNC.sent={};SYNC.lastPull=0;saveSync();renderSettings();await syncNow();showToast('동기화를 켰어요')}catch(err){syncErr=err.message;renderSettings()}return}
+  if(t.id==='sbNow'){syncNow();renderSettings();return}
+  if(t.id==='sbOut'){SYNC.sess=null;SYNC.sent={};SYNC.lastPull=0;saveSync();syncStep='';renderSettings();return}
+});
+
 // ---------- state ----------
 const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 let uidN=1;
@@ -3622,7 +3726,7 @@ function renderPref(){
     <p class="now-hint" style="margin:0 0 6px">숫자는 그 키워드가 붙은 장소 수예요. 장소에 없는 키워드는 0으로 나오고, 장소 데이터가 늘어나면 반영돼요.</p>
     <button class="small-btn" id="kwReset">처음 키워드로 되돌리기</button>`;
 }
-const saveKw=()=>{store.set('gp.kw',kws);renderPref();renderTray()};
+const saveKw=()=>{store.set('gp.kw',kws);LS.set('jepi.kwAt',Date.now());syncSoon();renderPref();renderTray()};
 function renderAll(){touchPlan();renderMeta();renderNudges();renderDays();renderTimeline();renderTray();renderChecks();renderPref();renderTabs();renderBanner();renderAI();renderChat();renderExt()}
 
 // ---------- actions ----------
@@ -3990,7 +4094,7 @@ setZoom(store.get('gp.zoom',60),true);
 setJP(store.get('gp.jp',profile.kind==='day'?'P':'J'),true);
 buildDays();
 renderAll();
-applyTheme(); introRun();
+applyTheme(); introRun(); setTimeout(syncNow,1500);
 if(/[#&]s=/.test(location.hash)) openShared(); else if(firstRun) openOnb(); else {startupFocus(); maybeCoach();}
 diceFromUrl();
 // scroll to morning
