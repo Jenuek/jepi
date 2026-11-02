@@ -218,5 +218,31 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'React screen: 사용 안내 is drawn by React and its buttons work',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S, { ls: { 'gp.plans': [{ id: 'mine', name: '내 여행', updated: 1 }], 'gp.cur': 'mine', 'gp.profile': { dest: '부산', nights: 1, startDate: '2026-12-01', stays: [{ name: '숙소', area: 'center', checkin: '15:00', checkout: '11:00', from: 0, to: 1 }], events: [] }, 'gp.plan.mine': { profile: { dest: '부산' } } } });
+      await skipCoach(p);
+      ok(await p.evaluate(() => typeof window.JEPI_UI === 'object' && typeof window.JEPI_UI.mount === 'function'), 'React bridge is ready before the old code');
+      const openHelp = async () => { await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="help"]'); await p.waitForTimeout(250) };
+      await openHelp();
+      ok(await vis(p, '#side-help'), 'help panel opens');
+      const d = await p.$$eval('#helpBox details', e => e.map(x => [x.querySelector('summary').textContent, x.open]));
+      ok(d.length === 10 && d[0][1] && !d[1][1], '10 sections, only the first open ' + d.map(x => x[0]).join(','));
+      await p.click('#helpBox details:nth-child(2) summary');
+      ok(await p.$eval('#helpBox details:nth-child(2)', x => x.open), 'a section opens when tapped');
+      ok(await vis(p, '#helpBox button:has-text("데모 둘러보기")'), 'demo button shown outside the demo');
+      await p.click('#helpBox button:has-text("처음 안내 다시 보기")'); await p.waitForTimeout(250);
+      ok(await vis(p, '#coach'), '"처음 안내 다시 보기" shows the guide again');
+      await skipCoach(p);
+      await openHelp();
+      await p.click('#helpBox button:has-text("데모 둘러보기")'); await p.waitForTimeout(3600); await skipCoach(p);
+      ok(await vis(p, '#demoBar'), '"데모 둘러보기" starts the demo');
+      await openHelp();
+      ok(!(await vis(p, '#helpBox button:has-text("데모 둘러보기")')), 'demo button hidden inside the demo');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];

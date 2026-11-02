@@ -1,7 +1,9 @@
 // JEPI service worker: app shell works offline; APIs and map tiles always go to the network.
-const VER='jepi-v2';
+const VER='jepi-v3';
 const SHELL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./apple-touch-icon.png'];
-self.addEventListener('install',e=>{e.waitUntil(caches.open(VER).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()))});
+// the app code lives in assets/*.js (names change every build): read them from index.html and keep them too
+const withAssets=c=>fetch('./index.html',{cache:'no-store'}).then(r=>r.text()).then(h=>{const a=[...h.matchAll(/(?:src|href)="\.\/(assets\/[^"]+)"/g)].map(m=>'./'+m[1]);return c.addAll(a)}).catch(()=>{});
+self.addEventListener('install',e=>{e.waitUntil(caches.open(VER).then(c=>c.addAll(SHELL).then(()=>withAssets(c))).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==VER).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
 self.addEventListener('fetch',e=>{
   const u=new URL(e.request.url);

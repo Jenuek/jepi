@@ -1,22 +1,6 @@
 // ---------- 사용 안내 (더보기 → 사용 안내) ----------
-const HELP=[
-  ['J 계획 · P 즉흥','<p>같은 여행을 두 가지 화면으로 봐요. <b>J</b>는 시간표로 꼼꼼하게, <b>P</b>는 하루를 네 칸으로 가볍게. 위쪽 J/P 버튼으로 언제든 바꿔요.</p>'],
-  ['일정 짜기','<ul><li>일정표의 <b>빈 시간</b>을 누르면 앞뒤 일정과 가까운 장소를 골라 넣어요.</li><li><b>블록</b>을 누르면 시간을 옮기거나, 길이를 바꾸거나, 대안을 봐요.</li><li>블록 사이의 이동 시간은 자동으로 계산돼요. ≈ 표시는 직선거리 추정이에요.</li><li>빨간 표시는 문 닫는 시간, 이동 시간 부족 같은 경고예요.</li></ul>'],
-  ['장소 찾기','<ul><li><b>장소</b> 탭에 이 여행의 후보가 동네별로 모여 있어요. ♥는 나만 보는 관심 표시예요.</li><li>"AI로 장소 더 찾기"에 원하는 걸 적으면 새 후보를 찾아 와요.</li><li>장소 카드의 <b>영업시간 확인됨</b>은 Google에서 확인한 시간, <b>영업시간 추정</b>은 AI가 짐작한 시간이에요.</li></ul>'],
-  ['말로 부탁하기','<p>아래 입력창에 "둘째 날 오후를 여유 있게" 같은 식으로 적으면 바꿀 내용을 먼저 보여 주고, 확인한 뒤에 적용해요. 추천 장소는 일정에 넣을지, 장소 목록에만 둘지 하나씩 고를 수 있어요.</p>'],
-  ['🎲 DICE','<ul><li><b>뭐 먹지</b>: 지금 있는 곳 근처에서 메뉴와 가게를 굴려요.</li><li><b>뭐 하지</b>: 근처, 원하는 동네, 몇 시간짜리 코스로 굴려요.</li><li>홈 화면 아이콘을 길게 누르면 바로 굴릴 수 있어요.</li></ul>'],
-  ['지도 · 경로','<p>지도 탭에서 그날 동선을 봐요. 더보기 → 설정에서 Google(해외)·카카오(국내) 지도 키를 연결하면 실제 경로와 대중교통 시간으로 계산해요.</p>'],
-  ['친구와 함께','<ul><li>더보기 → 친구와 함께에서 초대 링크를 만들어 보내요. 친구가 로그인하면 바로 참여해요.</li><li>"같이 고칠 친구"는 일정을 고칠 수 있고, "보기만 할 친구"는 보기만 해요.</li><li>장소마다 👍 가고 싶어요를 누르면 누가 가고 싶어 하는지 다 같이 보여요.</li><li>둘이 다른 날을 동시에 고쳐도 서로의 변경이 합쳐져요.</li></ul>'],
-  ['알림','<ul><li>더보기 → 알림에서 이 기기 알림을 켜요. 아이폰·아이패드는 홈 화면에 추가한 앱에서만 돼요.</li><li>일정 블록을 누르고 🔔 알림 켜기를 누르면 그 일정만 알려요. "모든 일정"으로 한 번에 켤 수도 있어요.</li><li>"출발할 때"를 고르면 이동 시간까지 빼서 나갈 시간을 알려 줘요.</li></ul>'],
-  ['여러 기기에서 쓰기','<ul><li>더보기 → 설정 → 기기 간 동기화에서 이메일과 비밀번호로 로그인하면 계획이 기기끼리 맞춰져요.</li><li>AI·지도 키도 비밀번호로 잠가서 함께 옮겨져요. 서버는 키를 읽을 수 없어요.</li></ul>'],
-  ['데모 · 백업','<ul><li>데모는 오사카 3박 4일 예시예요. 무엇을 바꿔도 끝내면 원래 상태로 돌아가요.</li><li>설정 → 데이터에서 전체 백업 파일을 받아 둘 수 있어요.</li></ul>']
-];
+// The screen itself is drawn by React: app/screens/HelpPanel.tsx
 PANELS.help={render(){
   const box=$('#helpBox'); if(!box) return;
-  box.innerHTML=`<div class="mgroup pad">${HELP.map(([t,b],i)=>`<details${i===0?' open':''}><summary>${t}</summary>${b}</details>`).join('')}</div>
-    <div class="mgroup pad"><div class="row"><button class="small-btn" type="button" data-help="coach">처음 안내 다시 보기</button>${DEMO.on?'':'<button class="small-btn" type="button" data-help="demo">데모 둘러보기</button>'}</div></div>`;
+  window.JEPI_UI.mount('help',box,{demoOn:!!DEMO.on,onCoach(){tab='timeline';renderTabs();showCoach(0)},onDemo(){demoEnter()}});
 }};
-document.addEventListener('click',e=>{const t=e.target.closest('[data-help]');if(!t)return;
-  if(t.dataset.help==='coach'){tab='timeline';renderTabs();showCoach(0)}
-  if(t.dataset.help==='demo') demoEnter();
-});
