@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // JEPI smoke check — run after every change, before uploading:
-//   python3 tools/build.py && node tools/check.js
-// Needs: npm i playwright (and optionally leaflet, for the map step).
+// Run:  npm run check   (= type check + build + this file)
+// Needs: npm install (playwright, and leaflet for the map step).
 // Every outside service (AI, routes, Supabase, Google Places) is replaced by a fake,
 // so the check is free, offline and repeatable. It fails (exit 1) on any page error.
 const http = require('http'), fs = require('fs'), path = require('path');
@@ -12,7 +12,7 @@ let failed = 0;
 const ok = (cond, label) => { console.log((cond ? '  ✓ ' : '  ✗ ') + label); if (!cond) failed++; };
 
 function serve() {
-  const types = { '.html': 'text/html', '.js': 'application/javascript', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.png': 'image/png' };
+  const types = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.png': 'image/png' };
   return http.createServer((q, r) => {
     const f = path.join(DIST, decodeURIComponent(q.url.split('?')[0]).replace(/\/$/, '/index.html'));
     fs.readFile(f, (e, b) => { if (e) { r.writeHead(404); r.end(); return } r.writeHead(200, { 'content-type': types[path.extname(f)] || 'text/plain' }); r.end(b) });
@@ -104,8 +104,18 @@ const vis = (p, s) => p.isVisible(s).catch(() => false);
 async function skipCoach(p) { for (let i = 0; i < 8 && await vis(p, '#coach'); i++) { await p.click('#coachSkip').catch(() => { }); await p.waitForTimeout(80) } }
 async function openSettings(p) { await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="settings"]'); await p.waitForTimeout(250) }
 
+// Playwright's own browser, or (in cloud work environments) the browser that is already installed
+async function launch() {
+  try { return await chromium.launch() }
+  catch (e) {
+    const pre = '/opt/pw-browsers/chromium';
+    if (fs.existsSync(pre)) return chromium.launch({ executablePath: pre });
+    throw e;
+  }
+}
+
 (async () => {
-  const srv = serve(); const b = await chromium.launch(); const S = fakeServer();
+  const srv = serve(); const b = await launch(); const S = fakeServer();
   try {
     for (const t of require('./checks')) {
       console.log('▶ ' + t.name);

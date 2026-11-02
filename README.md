@@ -14,40 +14,55 @@ Claude Code로 작업할 때는 `CLAUDE.md`(작업 규칙)와 `docs/ROADMAP.md`(
 
 ### 구조 한눈에
 
+지금은 예전 코드(`src/`)를 리액트(`app/`)로 조금씩 옮기는 중이에요. 둘이 한 페이지에서 같이 돌아가요.
+
 ```
-index.html            ← 빌드 결과물 (직접 고치지 마세요). GitHub Pages가 이 파일을 그대로 서비스해요.
+index.html, assets/   ← 빌드 결과물 (직접 고치지 마세요). GitHub Pages가 저장소 맨 위를 그대로 서비스해요.
 sw.js, manifest…      ← 오프라인 캐시 · 푸시 알림 수신 · 홈 화면 앱 설정
-src/
+app/                  ← 새 코드 (React + TypeScript)
+  main.tsx            ← 시작점. 예전 코드보다 먼저 실행돼요.
+  bridge.ts           ← 예전 코드가 리액트 화면을 부르는 다리 (window.JEPI_UI.mount)
+  screens/*.tsx       ← 리액트로 옮긴 화면들
+src/                  ← 예전 코드
   html/head.html      ← <head> (메타, 폰트, 테마 깜빡임 방지)
   html/body.html      ← 화면 뼈대 (헤더, 일정표, 장소/더보기 패널, 시트, 첫 화면)
-  html/tail.html      ← 닫는 태그
   css/NN-*.css        ← 기능별 스타일 (이름 순서대로 붙어요)
   js/NNN-*.js         ← 기능별 코드 (이름 순서대로 하나의 스크립트로 붙어요)
 supabase/
   schema.sql          ← 서버 테이블·권한(RLS)·예약 작업. SQL 편집기에서 다시 실행해도 안전해요.
   functions/jepi-push ← 알림 보내는 서버 함수 (Verify JWT 끔)
+vite.config.mjs       ← 빌드 설정: src/와 app/을 합쳐 index.html + assets/를 만들어요.
 tools/
-  build.py            ← src → index.html. 이름 충돌·문법 오류가 있으면 빌드를 멈춰요.
-  check.js, checks.js ← 자동 점검 (가짜 서버로 첫 화면·데모·동기화·공유·알림·영업시간을 돌려 봐요)
+  legacy.mjs          ← src/js를 하나로 붙여요. 이름 충돌·문법 오류가 있으면 빌드를 멈춰요.
+  check.js, checks.js ← 자동 점검 (가짜 서버로 첫 화면·데모·동기화·공유·알림·영업시간·사용 안내를 돌려 봐요)
 ```
 
 ### 고치는 순서
 
 ```bash
-npm install            # playwright, leaflet (점검용, 한 번만)
-npm run check          # = python3 tools/build.py && node tools/check.js
+npm install            # 처음 한 번
+npm run dev            # 화면을 보면서 고치기 (고치면 바로 다시 그려져요)
+npm run check          # = 타입 검사 + 빌드 + 자동 점검
 ```
 
-`all checks passed`가 나오면 `index.html`(과 바꾼 `src/` 파일)을 올리면 돼요.
+`all checks passed`가 나오면 `index.html`, `assets/`와 바꾼 원본 파일을 올리면 돼요.
+
+### 리액트 화면 만들기 (옮기기)
+
+1. `app/screens/이름.tsx`에 화면을 만들고, 예전 코드에서 받을 값(props)을 타입으로 적어요.
+2. `app/bridge.ts`의 `Screens`와 `SCREENS`에 등록해요.
+3. 예전 코드에서 `window.JEPI_UI.mount('이름', 요소, {…})`로 그려요. 예: `src/js/387-help.js` → `app/screens/HelpPanel.tsx`
+4. id·class 이름은 그대로 둬요. CSS와 자동 점검이 그 이름을 써요.
+5. `tools/checks.js`에 그 화면 점검을 추가해요.
 
 ### 꼭 알아야 할 규칙 하나
 
-`src/js`의 파일들은 **하나의 함수 안에 이름 순서대로** 붙어요. 그래서
+(예전 코드) `src/js`의 파일들은 **하나의 함수 안에 이름 순서대로** 붙어요. 그래서
 
 - 앞 번호 파일에서 만든 것은 뒤 번호 파일에서 바로 쓸 수 있어요.
-- 같은 `const`/`let` 이름을 두 파일에 만들면 앱이 멈춰요 → `build.py`가 미리 잡아서 빌드를 멈춰요.
+- 같은 `const`/`let` 이름을 두 파일에 만들면 앱이 멈춰요 → `tools/legacy.mjs`가 미리 잡아서 빌드를 멈춰요.
 - 앱이 켜질 때 실행할 코드는 `390-boot.js`에 넣어요 (모든 파일이 준비된 뒤).
-- 새 기능은 뒤쪽 번호(381~389)에 파일 하나로 추가하고, 아래 연결점만 써요. 기존 파일을 고칠 일이 거의 없어요.
+- 리액트로 옮기는 동안 새 기능은 만들지 않아요. 예전 코드를 고칠 때는 아래 연결점을 써요.
 
 | 연결점 (`007-panels.js`) | 쓰는 법 |
 |---|---|
@@ -81,7 +96,7 @@ npm run check          # = python3 tools/build.py && node tools/check.js
 | 로그인·기기 간 동기화·키 암호화 | `310-sync.js` |
 | 친구와 함께 (초대·합치기·가고 싶어요) | `384-trips.js` |
 | 알림 (일정별 🔔, 서버로 예약) | `386-notify.js`, 서버 `supabase/functions/jepi-push` |
-| 더보기 메뉴 / 설정 / 사용 안내 | `220-more-menu.js` / `230-settings.js` / `387-help.js` |
+| 더보기 메뉴 / 설정 / 사용 안내 | `220-more-menu.js` / `230-settings.js` / `app/screens/HelpPanel.tsx` (리액트) |
 
 ### 서버 (Supabase)
 
