@@ -244,5 +244,49 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'data layer (app/data): data saved by the old version still works',
+    async run({ b, S, device, ok, skipCoach }) {
+      // exactly what the old version left in storage: a plan, a login, an encryption key
+      const sess = { access: 'AT_old@x.y', refresh: 'RT_old@x.y', exp: Date.now() + 3600e3, user: 'U_old@x.y', email: 'old@x.y' };
+      const p = await device(b, S, { ls: { 'gp.plans': [{ id: 'mine', name: '내 여행', updated: 1 }], 'gp.cur': 'mine', 'gp.profile': { dest: '부산', nights: 1, startDate: '2026-12-01', stays: [{ name: '숙소', area: 'center', checkin: '15:00', checkout: '11:00', from: 0, to: 1 }], events: [] }, 'gp.plan.mine': { profile: { dest: '부산' } },
+        'jepi.sync': { url: 'https://qjzxhcvneorbskpebvca.supabase.co', key: 'sb_publishable_-IUuxuXFsSJQFz4V0we-zA_OIi1AZQH', email: 'old@x.y', sess, lastPull: 0, sent: {}, at: 0 } } });
+      await skipCoach(p);
+      const st = await p.evaluate(() => { const D = window.JEPI_DATA; return { on: D.server.syncOn(), user: D.server.SYNC.sess && D.server.SYNC.sess.user, plan: D.storage.get('gp.plans', []).map(x => x.id) } });
+      ok(st.on && st.user === 'U_old@x.y', 'still logged in with the saved session');
+      ok(st.plan.includes('mine'), 'saved plan list read');
+      // keys locked by the OLD code (copied here as it was) must open with the new code, and the other way round
+      const r = await p.evaluate(async () => {
+        const b64e = u => btoa(String.fromCharCode(...new Uint8Array(u))), b64d = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
+        const base = await crypto.subtle.importKey('raw', new TextEncoder().encode('pw-1234'), 'PBKDF2', false, ['deriveBits']);
+        const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: new TextEncoder().encode('jepi-keys:' + ' Old@X.y '.trim().toLowerCase()), iterations: 210000 }, base, 256);
+        const oldVk = b64e(bits);
+        const k = await crypto.subtle.importKey('raw', b64d(oldVk), 'AES-GCM', false, ['encrypt', 'decrypt']);
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, k, new TextEncoder().encode(JSON.stringify({ claude: 'sk-test' })));
+        const oldBox = { v: 1, iv: b64e(iv), ct: b64e(ct) };
+        const V = window.JEPI_DATA.vault;
+        await V.vaultMake(' Old@X.y ', 'pw-1234');
+        const sameKey = JSON.parse(localStorage.getItem('jepi.vk')) === oldVk;
+        const opened = await V.vaultOpen(oldBox);
+        const box = await V.vaultSeal({ gemini: 'g-test' });
+        const back = JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64d(box.iv) }, k, b64d(box.ct))));
+        await V.vaultMake('old@x.y', 'wrong');
+        let wrong = 'opened'; try { await V.vaultOpen(oldBox) } catch (_) { wrong = 'refused' }
+        return { sameKey, opened, back, wrong, hash: window.JEPI_DATA.hashStr('JEPI 여행') };
+      });
+      ok(r.sameKey, 'same lock key from the same email + password');
+      ok(r.opened && r.opened.claude === 'sk-test', 'keys locked by the old version open');
+      ok(r.back.gemini === 'g-test', 'keys locked now open with the old method');
+      ok(r.wrong === 'refused', 'a different password cannot open them');
+      // old hash (copied as it was): documents already sent are not sent again
+      const oldHash = s => { let h = 5381; for (let i = 0; i < s.length; i++) h = (h * 33 ^ s.charCodeAt(i)) >>> 0; return h.toString(36) + s.length.toString(36) };
+      ok(r.hash === oldHash('JEPI 여행'), 'change fingerprint is the same as before');
+      // a broken saved value falls back instead of stopping the app
+      ok(await p.evaluate(() => { localStorage.setItem('x.bad', '{oops'); return window.JEPI_DATA.storage.get('x.bad', 7) === 7 }), 'broken saved value → default');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];

@@ -50,7 +50,7 @@ function newPlan(){
 function dupPlan(id){snapshotCurrent();const d=store.get('gp.plan.'+id,null),src=plans.find(x=>x.id===id);if(!d||!src)return;
   const nid='p'+Date.now().toString(36);store.set('gp.plan.'+nid,d);const p=Object.assign({},src,{id:nid,name:src.name+' (복사본)',custom_name:true,updated:Date.now()});plans.unshift(p);savePlans();cloudSave(p);planMsg='복사본을 만들었어요.';renderPlans()}
 function delPlan(id){if(delArm!==id){delArm=id;renderPlans();return}delArm='';
-  plans=plans.filter(x=>x.id!==id);try{localStorage.removeItem('gp.plan.'+id)}catch(_){}clearTimeout(cloudTimers[id]);cloudDelete(id);
+  plans=plans.filter(x=>x.id!==id);JD.storage.del('gp.plan.'+id);clearTimeout(cloudTimers[id]);cloudDelete(id);
   if(id===curPlan){if(plans[0]){curPlan='';openPlan(plans[0].id)}else{curPlan='';newPlan()}}savePlans();renderPlans()}
 function renamePlan(id,name){const p=plans.find(x=>x.id===id);if(!p||!name)return;p.name=name.slice(0,40);p.custom_name=true;p.updated=Date.now();savePlans();cloudSave(p);renderPlans()}
 // sharing

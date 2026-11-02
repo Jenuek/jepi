@@ -6,7 +6,7 @@
 var NOTIFY=Object.assign({on:false,all:false,lead:10,depart:true,morning:true,dev:''},LS.get('jepi.notify',{})||{});
 var ALERTS=LS.get('jepi.alerts',{})||{}, notifyMsg='', alertHash='';
 const saveNotify=()=>LS.set('jepi.notify',NOTIFY), saveAlerts=()=>LS.set('jepi.alerts',ALERTS);
-const pushFn=()=>SYNC.url.replace(/\/$/,'')+'/functions/v1/jepi-push';
+const pushFn=()=>JD.server.sbFunctionUrl('jepi-push');
 const pushSupported=()=>'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
 const isIOS=()=>/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const standaloneApp=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;

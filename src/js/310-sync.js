@@ -1,35 +1,18 @@
 // ================= 기기 간 동기화 (Supabase, 본인 계정 데이터만) =================
-// built-in sync server: the publishable key is meant to be public; RLS keeps each person's rows private
-const SB_DEFAULT={url:'https://qjzxhcvneorbskpebvca.supabase.co',key:'sb_publishable_-IUuxuXFsSJQFz4V0we-zA_OIi1AZQH'};
-let SYNC=Object.assign({url:'',key:'',email:'',sess:null,lastPull:0,sent:{},at:0,msg:''},LS.get('jepi.sync',{})||{});
-if(!SYNC.url||!SYNC.key){SYNC.url=SB_DEFAULT.url;SYNC.key=SB_DEFAULT.key}
-const saveSync=()=>LS.set('jepi.sync',{url:SYNC.url,key:SYNC.key,email:SYNC.email,sess:SYNC.sess,lastPull:SYNC.lastPull,sent:SYNC.sent,at:SYNC.at});
+// The server conversation (login, session, tables) is in app/data/server.ts, key encryption in app/data/vault.ts.
+// SYNC is the same object as JD.server.SYNC: the sync settings, saved as jepi.sync.
+const SB_DEFAULT=JD.server.SB_DEFAULT;
+const SYNC=JD.server.SYNC;
+const saveSync=JD.server.saveSync;
 let syncStep='', syncBusy=false, syncErr='';
-const syncOn=()=>!DEMO.on&&!!(SYNC.url&&SYNC.key&&SYNC.sess&&SYNC.sess.access);
-function hashStr(s){let h=5381;for(let i=0;i<s.length;i++)h=(h*33^s.charCodeAt(i))>>>0;return h.toString(36)+s.length.toString(36)}
-async function sbAuth(path,body){
-  let r;try{r=await fetch(SYNC.url.replace(/\/$/,'')+path,{method:'POST',headers:{apikey:SYNC.key,'content-type':'application/json'},body:JSON.stringify(body)})}catch(_){throw aiErr('network','서버에 연결하지 못했어요. 주소를 확인해 주세요.')}
-  let j={};try{j=await r.json()}catch(_){}
-  if(!r.ok){const m=j.msg||j.error_description||j.message||j.error||('HTTP '+r.status);throw aiErr(r.status===429?'rate_limited':'auth',/rate|seconds/i.test(m)?'잠시 뒤에 다시 시도해 주세요 (메일 발송 제한).':/invalid login|invalid_credentials|invalid_grant/i.test(m)?'이메일이나 비밀번호가 맞지 않아요.':/already registered|already exists/i.test(m)?'이미 가입된 이메일이에요. "로그인"으로 들어가 주세요.':/invalid|expired/i.test(m)?'링크가 틀렸거나 만료됐어요. 다시 받아 주세요.':m)}
-  return j;
-}
-function keepSess(j){SYNC.sess={access:j.access_token,refresh:j.refresh_token,exp:Date.now()+((+j.expires_in||3600)-60)*1000,user:(j.user&&j.user.id)||SYNC.sess&&SYNC.sess.user,email:(j.user&&j.user.email)||SYNC.email};saveSync()}
-async function sbToken(){
-  if(!syncOn()) throw aiErr('auth','로그인이 필요해요');
-  if(Date.now()<SYNC.sess.exp) return SYNC.sess.access;
-  try{keepSess(await sbAuth('/auth/v1/token?grant_type=refresh_token',{refresh_token:SYNC.sess.refresh}));return SYNC.sess.access}
-  catch(e){if(e.code==='auth'){SYNC.sess=null;saveSync()}throw e}
-}
-async function sbRest(method,q,body,prefer){return sbTable('jepi_docs',method,q,body,prefer)}
+const syncOn=JD.server.syncOn;
+function hashStr(s){return JD.hashStr(s)}
+function sbAuth(path,body){return JD.server.sbAuth(path,body)}
+function keepSess(j){JD.server.keepSess(j)}
+function sbToken(){return JD.server.sbToken()}
+function sbRest(method,q,body,prefer){return JD.server.sbRest(method,q,body,prefer)}
 // any table (or rpc/<name>) in the project, as the logged-in person; rows are limited by RLS on the server
-async function sbTable(table,method,q,body,prefer){
-  const tk=await sbToken(); let r;
-  try{r=await fetch(SYNC.url.replace(/\/$/,'')+'/rest/v1/'+table+(q||''),{method,headers:Object.assign({apikey:SYNC.key,Authorization:'Bearer '+tk,'content-type':'application/json'},prefer?{Prefer:prefer}:{}),body:body?JSON.stringify(body):undefined})}
-  catch(_){throw aiErr('network','오프라인이에요')}
-  if(r.status===401){SYNC.sess.exp=0;throw aiErr('auth','로그인이 만료됐어요')}
-  if(!r.ok){let m='';try{m=(await r.json()).message}catch(_){}throw aiErr('upstream_error',m||('HTTP '+r.status))}
-  return r.status===204?null:r.json().catch(()=>null);
-}
+function sbTable(table,method,q,body,prefer){return JD.server.sbTable(table,method,q,body,prefer)}
 function syncDocs(){
   const out=[];
   plans.forEach(p=>{const d=store.get('gp.plan.'+p.id,null);if(!d||p.shared)return; // shared trips sync through jepi_trips
@@ -39,12 +22,11 @@ function syncDocs(){
   return out;
 }
 // AI·지도 키: 비밀번호에서 만든 열쇠로 암호화해서만 서버에 올려요 (열쇠는 이 기기에만)
-const b64e=u=>btoa(String.fromCharCode(...new Uint8Array(u))), b64d=t=>Uint8Array.from(atob(t),c=>c.charCodeAt(0));
-async function vaultMake(email,pw){const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveBits']);
-  const bits=await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:new TextEncoder().encode('jepi-keys:'+String(email).trim().toLowerCase()),iterations:210000},base,256);LS.set('jepi.vk',b64e(bits))}
-async function vaultKey(){const r=LS.get('jepi.vk',null);return r?crypto.subtle.importKey('raw',b64d(r),'AES-GCM',false,['encrypt','decrypt']):null}
-async function vaultSeal(obj){const k=await vaultKey();if(!k)return null;const iv=crypto.getRandomValues(new Uint8Array(12));const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},k,new TextEncoder().encode(JSON.stringify(obj)));return{v:1,iv:b64e(iv),ct:b64e(ct)}}
-async function vaultOpen(d){const k=await vaultKey();if(!k||!d||!d.ct)return null;const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64d(d.iv)},k,b64d(d.ct));return JSON.parse(new TextDecoder().decode(pt))}
+const b64e=JD.vault.b64e, b64d=JD.vault.b64d;
+function vaultMake(email,pw){return JD.vault.vaultMake(email,pw)}
+function vaultKey(){return JD.vault.vaultKey()}
+function vaultSeal(obj){return JD.vault.vaultSeal(obj)}
+function vaultOpen(d){return JD.vault.vaultOpen(d)}
 let keysLocked=false;
 let pushT=0;
 function syncSoon(ms){if(!syncOn())return;clearTimeout(pushT);pushT=setTimeout(syncPush,ms||2500)}

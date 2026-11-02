@@ -39,14 +39,11 @@ async function welcomeLogin(em,pw){
     else{openOnb();showToast('로그인했어요 · 아직 저장된 여행이 없어서 새로 만들어요')}
   }catch(err){welcomeBusy=false;welcomeErr=sbErrText(err.message);renderWelcome()}
 }
-// ---------- demo: enter / leave (the sandbox itself is in 005-demo-guard.js) ----------
+// ---------- demo: enter / leave (the sandbox itself is in app/data/demo.ts) ----------
 function demoEnter(){
-  try{
-    const snap={}; Object.keys(localStorage).forEach(k=>{if(k!==DEMO_BACKUP&&!DEMO_KEEP(k)) snap[k]=localStorage.getItem(k)});
-    localStorage.setItem(DEMO_BACKUP,JSON.stringify(snap));
-  }catch(_){showToast('저장 공간이 부족해서 데모를 열 수 없어요');return}
-  Object.keys(localStorage).forEach(k=>{if(k.startsWith('gp.')||k==='jepi.myplaces') localStorage.removeItem(k)});
-  const d=demoOsaka(), set=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+  if(!JD.demo.demoSaveCopy()){showToast('저장 공간이 부족해서 데모를 열 수 없어요');return}
+  JD.demo.demoClearTrips();
+  const d=demoOsaka(), set=JD.storage.set;
   set('gp.pack',d.pack); set('gp.profile',d.profile); set('gp.placed3',d.placed); set('gp.custom',[]); set('gp.kw',[]); set('gp.jp','J');
   set('gp.plan.demo',{profile:d.profile,pack:d.pack,placed:d.placed});
   set('gp.plans',[{id:'demo',name:d.name,custom_name:true,updated:Date.now(),kind:'trip',dates:'',blocks:d.placed.length}]); set('gp.cur','demo');

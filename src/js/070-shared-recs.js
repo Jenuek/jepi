@@ -38,8 +38,7 @@ const recPublic=()=>!(window.claude&&window.claude.use);
 async function recsFetch(){
   if(!SYNC.url||!SYNC.key) return;
   const c=cityKey(); if(!c) return;
-  const tk=syncOn()?await sbToken().catch(()=>null):null;
-  const r=await fetch(SYNC.url.replace(/\/$/,'')+'/rest/v1/jepi_recs?select=user_id,k,entry&city=eq.'+encodeURIComponent(c)+'&limit=5000',{headers:Object.assign({apikey:SYNC.key},tk?{Authorization:'Bearer '+tk}:{})});
+  const r=await JD.server.sbPublicGet('jepi_recs','?select=user_id,k,entry&city=eq.'+encodeURIComponent(c)+'&limit=5000');
   if(!r.ok) throw aiErr('network','추천을 불러오지 못했어요');
   const rows=await r.json(); const by=new Map();
   rows.forEach(x=>{if(!by.has(x.user_id))by.set(x.user_id,[]);by.get(x.user_id).push(Object.assign({},x.entry,{k:x.k}))});
