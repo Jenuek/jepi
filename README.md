@@ -10,6 +10,8 @@ J와 P가 함께 쓰는 여행 플래너. GitHub Pages로 배포되는 정적 �
 
 ## 개발자용 안내
 
+Claude Code로 작업할 때는 `CLAUDE.md`(작업 규칙)와 `docs/ROADMAP.md`(다음 할 일·결정)를 먼저 읽어요.
+
 ### 구조 한눈에
 
 ```
