@@ -1,0 +1,9 @@
+/* Checklist */
+.check-group{margin-bottom:14px}
+.check-group h3{font-size:12px;letter-spacing:.06em;color:var(--muted);margin:0 0 6px;text-transform:uppercase}
+.ck{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:start;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin-bottom:6px;font-size:13px}
+.ck.warn{border-color:var(--warn);background:var(--warn-soft)}
+.ck small{display:block;color:var(--muted);font-size:11.5px}
+.ck input{margin-top:3px}
+.ck.done span{text-decoration:line-through;color:var(--muted)}
+

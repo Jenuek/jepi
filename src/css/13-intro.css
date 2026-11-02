@@ -1,0 +1,41 @@
+/* intro */
+#intro{position:fixed;inset:0;z-index:1000;overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:opacity .5s ease}
+#intro.out{opacity:0;pointer-events:none}
+#intro .sky{position:absolute;inset:-6%;background:linear-gradient(180deg,#6fa8e0 0%,#9cc8ef 34%,#cfe4f6 64%,#f3efe6 88%,#fbe9d6 100%);animation:skyDrift 2.8s ease-out forwards}
+#intro .sun{position:absolute;left:62%;top:58%;width:46vmax;height:46vmax;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(255,244,214,.75) 0%,rgba(255,236,200,.25) 35%,rgba(255,236,200,0) 65%);animation:sunGlow 2.8s ease-out forwards}
+#intro .cl{position:absolute;border-radius:50%;background:radial-gradient(ellipse at 50% 60%,rgba(255,255,255,.95) 0%,rgba(255,255,255,.75) 40%,rgba(255,255,255,0) 70%);filter:blur(6px)}
+#intro .c1{width:62vmax;height:16vmax;left:-14vmax;top:18%;animation:cloudA 2.8s ease-out forwards}
+#intro .c2{width:48vmax;height:12vmax;right:-12vmax;top:34%;opacity:.85;animation:cloudB 2.8s ease-out forwards}
+#intro .c3{width:70vmax;height:18vmax;left:-6vmax;bottom:8%;opacity:.9;animation:cloudB 2.8s ease-out forwards}
+#intro .c4{width:36vmax;height:10vmax;right:4vmax;top:10%;opacity:.7;animation:cloudA 2.8s ease-out forwards}
+#intro .intro-c{position:relative;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:0 24px}
+#intro .intro-logo{width:58px;height:51px;opacity:0;animation:fadeUp .7s .1s ease-out forwards}
+#intro .intro-name{font-family:var(--f-body);font-weight:700;letter-spacing:.14em;font-size:26px;color:#1b2027;opacity:0;animation:fadeUp .7s .2s ease-out forwards}
+#intro .intro-slogan{margin:14px 0 0;font-family:var(--f-display);font-size:22px;line-height:1.55;color:#22324f;display:flex;flex-direction:column;text-shadow:0 1px 12px rgba(255,255,255,.6)}
+#intro .intro-slogan span{opacity:0;animation:sloganIn 1.1s ease-out forwards}
+#intro .intro-slogan span:first-child{animation-delay:.5s}
+#intro .intro-slogan span:last-child{animation-delay:.9s;letter-spacing:.02em}
+@keyframes skyDrift{from{transform:scale(1.1) translateY(2%)}to{transform:scale(1) translateY(0)}}
+@keyframes sunGlow{from{opacity:.4;transform:translate(-50%,-44%) scale(.9)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+@keyframes cloudA{from{transform:translateX(-6vmax)}to{transform:translateX(4vmax)}}
+@keyframes cloudB{from{transform:translateX(6vmax)}to{transform:translateX(-3vmax)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes sloganIn{from{opacity:0;transform:translateY(12px);filter:blur(4px)}to{opacity:1;transform:none;filter:none}}
+@media (prefers-reduced-motion:reduce){#intro .sky,#intro .sun,#intro .cl,#intro .intro-logo,#intro .intro-name,#intro .intro-slogan span{animation:none;opacity:1;transform:none;filter:none}#intro .cl{filter:blur(6px)}}
+.course-h{margin:0 0 6px;font-size:13px;font-weight:600;color:var(--accent);text-align:left;width:100%}
+
+.top{position:sticky}
+.plan-menu{position:fixed;left:50%;transform:translateX(-50%);top:58px;z-index:400;width:min(360px,calc(100vw - 24px));max-height:min(70vh,520px);overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:0 12px 32px rgba(0,0,0,.18);padding:8px;animation:pmIn .16s ease-out}
+@keyframes pmIn{from{opacity:0;transform:translate(-50%,-6px)}to{opacity:1;transform:translate(-50%,0)}}
+.pm-list{display:grid;gap:2px}
+.pm-item{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:10px;min-height:52px;padding:8px 10px;border-radius:10px;cursor:pointer}
+.pm-item:hover,.pm-item:focus-visible{background:var(--paper);outline:none}
+.pm-item.cur{background:var(--accent-soft)}
+.pm-t{flex:1;display:flex;flex-direction:column;min-width:0}
+.pm-t b{font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pm-t small{color:var(--muted);font-size:12px}
+.pm-ck{color:var(--accent);font-weight:700}
+.pm-acts{display:flex;gap:6px;padding:8px 2px 2px;border-top:1px solid var(--line);margin-top:6px}
+.pm-acts .small-btn{flex:1;min-height:40px}
+@media (prefers-reduced-motion:reduce){.plan-menu{animation:none}}
+

@@ -1,0 +1,31 @@
+/* Route summary, zone bands, zone groups, fill sheet */
+.route{display:flex;align-items:center;flex-wrap:wrap;gap:6px 0;margin:-2px 0 12px;font-size:12.5px}
+.route .st{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.route .st i{width:10px;height:10px;border-radius:50%;border:2.5px solid var(--rail);background:var(--surface);display:inline-block}
+.route .ln{width:16px;height:3px;background:var(--rail);margin:0 5px;border-radius:2px}
+.route .sum{flex-basis:100%;color:var(--muted);font-size:12px}
+.route .sum b{color:var(--warn);font-weight:600}
+.zband{position:absolute;right:4px;width:14px;border-radius:7px;background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 40%,transparent);z-index:1;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.zband span{writing-mode:vertical-rl;font-size:10px;color:var(--accent);white-space:nowrap}
+.seg{display:flex;gap:6px;margin-bottom:8px}
+.zone{border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--surface) 55%,var(--paper))}
+.zone>summary{cursor:pointer;padding:10px 12px;display:flex;justify-content:space-between;gap:8px;align-items:baseline;list-style:none}
+.zone>summary::-webkit-details-marker{display:none}
+.zone>summary b{font-size:13.5px}
+.zone>summary b .mono{font-weight:400;color:var(--muted);font-size:12px;margin-left:4px}
+.zone>summary span.d{font-size:11.5px;color:var(--muted);text-align:right}
+.zone>summary span.d.near{color:var(--ok)}
+.zone[open]>summary{border-bottom:1px solid var(--line)}
+.zone .cards{padding:8px}
+.card .dist{grid-column:1/-1;font-size:11.5px;color:var(--ok)}
+.fill-list{display:grid;gap:6px;margin-top:12px}
+.fill-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center;border:1px solid var(--line);border-left:4px solid var(--cc);border-radius:10px;padding:8px 10px}
+.fill-row .m{font-size:11.5px;color:var(--muted)}
+.fill-row.dim{opacity:.55}
+.fill-row .t{font-family:var(--f-mono)}
+.fsec .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.fsec .hint,.sheet .hint{font-size:12px;color:var(--muted);margin:0}
+@media (max-width:899px){
+  .panel[hidden]{display:none!important}
+}
+@media (prefers-reduced-motion:no-preference){.blk,.card{transition:box-shadow .15s}.blk:hover,.card:hover{box-shadow:0 2px 10px rgba(0,0,0,.08)}}
