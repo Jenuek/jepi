@@ -78,6 +78,15 @@ function fakeServer() {
       }
       if (m === 'DELETE') { const before = S[key].length; S[key] = S[key].filter(x => !(filt(x) && (key === 'recs' ? x.user_id === me : (can(x) || key === 'rows' || key === 'alerts')))); if (key === 'trips') S.members = S.members.filter(x => S.trips.some(t => t.id === x.trip_id)); return J(204, null) }
     }
+    if (tbl === 'rpc/jepi_share') {
+      if (!me) return J(401, { message: 'login required' });
+      let t = S.trips.find(x => x.id === body.p_id);
+      if (t && t.owner !== me) return J(400, { message: 'not your trip' });
+      if (!t) { t = { id: body.p_id, owner: me, rev: 0 }; S.trips.push(t) }
+      Object.assign(t, { name: body.p_name, data: body.p_data, rev: t.rev + 1, updated: Date.now(), last_by: body.p_member });
+      S.members = S.members.filter(m => !(m.trip_id === t.id && m.user_id === me)); S.members.push({ trip_id: t.id, user_id: me, role: 'owner', name: body.p_member });
+      return J(200, t.rev);
+    }
     if (tbl === 'rpc/jepi_join') {
       const inv = (S.invites || []).find(x => x.code === body.p_code); if (!inv) return J(400, { message: 'invite expired' });
       if (!role(inv.trip_id)) S.members.push({ trip_id: inv.trip_id, user_id: me, role: inv.role, name: body.p_name });

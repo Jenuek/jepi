@@ -53,7 +53,9 @@
 ### 0-1. 실제 서버에서 찾은 문제
 - **친구와 함께가 실제 서버에서 동작한 적이 없었음**(가짜 서버 점검에선 통과): 여행을 만든 뒤 나를 멤버로 넣는 규칙이 "내가 만든 여행인지" 보려고
   여행을 들여다보는데, 아직 멤버가 아니라 안 보여서 거절됨 → 다시 누르면 `duplicate key … jepi_trips_pkey`.
-  고침: `schema.sql`의 trips_sel에 `owner=auth.uid() or …` 추가(**사용자가 SQL Editor에서 실행해야 함**), 앱은 반쯤 된 공유를 다시 해도 되게(ignore-duplicates + 오늘 계획으로 PATCH).
+  1차: trips_sel에 `owner=auth.uid() or …` 추가 + 앱 ignore-duplicates → 실제 서버에서 여전히 `new row violates row-level security policy`.
+  2차(지금): 공유를 서버 함수 `jepi_share`(security definer, jepi_join처럼) 하나로 — 여행 만들기/반쯤 된 내 여행 되찾기 + 나를 owner 멤버로를 한 번에.
+  **사용자가 schema.sql의 jepi_share 부분을 SQL Editor에서 실행해야 함.**
   가짜 서버도 실제처럼(같은 여행 두 번 넣기 409, 멤버 넣기는 내가 만든 여행만). 점검 187개.
 - 카카오 "요청을 막았어요": 앱이 공개되지 않은 경로 주소(`dapi.kakao.com/v2/routing/…`)를 부르고 있었음. 사용자 결정으로
   **국내는 거리로 어림(≈) + "안내 시작"은 카카오맵(출발→도착)으로**. 카카오 키는 장소·주소 검색용(내 장소·🎲), "확인"도 장소 검색으로 해요.
