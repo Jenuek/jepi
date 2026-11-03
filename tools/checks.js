@@ -288,5 +288,54 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'sync engine (app/data/sync.ts): deleted plans, taste, my places, keys locked with another password',
+    async run({ b, S, device, ok, skipCoach }) {
+      const sess = { access: 'AT_sy@x.y', refresh: 'RT_sy@x.y', exp: Date.now() + 3600e3, user: 'U_sy@x.y', email: 'sy@x.y' };
+      const sync = { url: 'https://qjzxhcvneorbskpebvca.supabase.co', key: 'sb_publishable_-IUuxuXFsSJQFz4V0we-zA_OIi1AZQH', email: 'sy@x.y', sess, lastPull: 0, sent: {}, at: 0 };
+      // the lock key a login makes from email + password (same recipe as app/data/vault.ts)
+      const vk = pw => JSON.stringify(require('crypto').pbkdf2Sync(pw, 'jepi-keys:sy@x.y', 210000, 32, 'sha256').toString('base64'));
+      const prof = d => ({ dest: d, nights: 1, startDate: '2026-12-01', stays: [{ name: '숙소', area: 'center', checkin: '15:00', checkout: '11:00', from: 0, to: 1 }], events: [] });
+      const lsA = { 'jepi.sync': sync, 'gp.plans': [{ id: 'p1', name: '부산', updated: 10 }, { id: 'p2', name: '제주', updated: 5 }], 'gp.cur': 'p1', 'gp.profile': prof('부산'),
+        'gp.plan.p1': { profile: prof('부산') }, 'gp.plan.p2': { profile: prof('제주') }, 'gp.kw': ['바다'], 'jepi.kwAt': 100,
+        'jepi.myplaces': [{ id: 'home', name: '집', ll: [37.5, 127], addr: '' }], 'jepi.mypAt': 100, 'jepi.keys': { gemini: 'G-KEY-1' }, 'jepi.vk': vk('pw-same') };
+      const A = await device(b, S, { ls: lsA }); await skipCoach(A);
+      await A.evaluate(() => window.__jepi.sync()); await A.waitForTimeout(300);
+      const mine = S.rows.filter(r => r.user_id === 'U_sy@x.y');
+      ok(['plan:p1', 'plan:p2', 'kw', 'myplaces', 'keys'].every(id => mine.some(r => r.id === id)), 'A sent plans, taste, my places, keys ' + mine.map(r => r.id).join(','));
+      ok(!JSON.stringify(mine).includes('G-KEY-1'), 'keys only encrypted on the server');
+
+      const B = await device(b, S, { ls: { 'jepi.sync': sync, 'gp.plans': [{ id: 'p1', name: '부산', updated: 1 }], 'gp.cur': 'p1', 'gp.profile': prof('부산'), 'gp.plan.p1': { profile: prof('부산') }, 'jepi.vk': vk('pw-same') } });
+      await skipCoach(B);
+      await B.evaluate(() => window.__jepi.sync()); await B.waitForTimeout(300);
+      const gotB = await B.evaluate(() => { const g = k => JSON.parse(localStorage.getItem(k) || 'null'); return { plans: g('gp.plans').map(p => p.id), kw: g('gp.kw'), myp: g('jepi.myplaces'), keys: g('jepi.keys') } });
+      ok(gotB.plans.includes('p2'), 'B got the other plan');
+      ok(JSON.stringify(gotB.kw) === '["바다"]', 'B got the taste keywords');
+      ok(gotB.myp && gotB.myp[0].ll && gotB.myp[0].ll[0] === 37.5, 'B got my places');
+      ok(gotB.keys && gotB.keys.gemini === 'G-KEY-1', 'B opened the keys');
+
+      // A deletes 제주 and changes taste (as the app saves them), then syncs
+      await A.evaluate(() => { const D = window.JEPI_DATA.storage; D.set('gp.plans', [{ id: 'p1', name: '부산', updated: 10 }]); D.del('gp.plan.p2'); D.set('gp.kw', ['바다', '시장']); D.set('jepi.kwAt', Date.now()) });
+      await A.reload(); await A.waitForTimeout(3300); await skipCoach(A);
+      await A.evaluate(() => window.__jepi.sync()); await A.waitForTimeout(300);
+      ok(S.rows.some(r => r.id === 'plan:p2' && r.deleted), 'A marked 제주 deleted on the server');
+      await B.evaluate(() => window.__jepi.sync()); await B.waitForTimeout(300);
+      const gotB2 = await B.evaluate(() => ({ plans: JSON.parse(localStorage.getItem('gp.plans')).map(p => p.id), p2: localStorage.getItem('gp.plan.p2'), kw: JSON.parse(localStorage.getItem('gp.kw')) }));
+      ok(!gotB2.plans.includes('p2') && gotB2.p2 === null, 'deleted plan gone on B too');
+      ok(gotB2.kw.includes('시장'), 'B got the new taste keyword');
+
+      // C: same account, but its lock key comes from another password → cannot open, must not overwrite
+      const before = JSON.stringify(S.rows.find(r => r.id === 'keys').data);
+      const C = await device(b, S, { ls: { 'jepi.sync': sync, 'gp.plans': [{ id: 'p1', name: '부산', updated: 1 }], 'gp.cur': 'p1', 'gp.profile': prof('부산'), 'gp.plan.p1': { profile: prof('부산') }, 'jepi.keys': { kakao: 'C-ONLY' }, 'jepi.vk': vk('pw-other') } });
+      await skipCoach(C);
+      await C.evaluate(() => window.__jepi.sync()); await C.waitForTimeout(300);
+      ok(await C.evaluate(() => window.JEPI_DATA.sync.status.keysLocked === true), 'C sees the keys are locked');
+      ok(JSON.stringify(S.rows.find(r => r.id === 'keys').data) === before, 'C did not overwrite the keys on the server');
+      ok(await C.evaluate(() => JSON.parse(localStorage.getItem('jepi.keys')).kakao === 'C-ONLY'), 'C kept its own key');
+      const errs = A.errs.concat(B.errs, C.errs);
+      ok(errs.length === 0, 'no page errors ' + errs.join(' | '));
+      await A.ctx.close(); await B.ctx.close(); await C.ctx.close();
+    }
   }
 ];

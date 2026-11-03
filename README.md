@@ -95,7 +95,7 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 | AI 연결·모델 선택 | `190-keys-ai-router.js`, 실제 호출 `360-ai.js`, 채팅 `050-chat.js` |
 | 🎲 뭐 먹지 / 뭐 하지 | `280-dice-eat.js`, `290-dice-do.js` |
 | 내 계획 목록, 새 계획 | `180-plans.js` |
-| 로그인·기기 간 동기화·키 암호화 | 무엇을 언제 주고받을지 `310-sync.js`, 서버와 대화 `app/data/server.ts`, 암호화 `app/data/vault.ts` |
+| 로그인·기기 간 동기화·키 암호화 | 로그인 화면 `310-sync.js`, 무엇을 보내고 어떻게 합칠지 `app/data/sync.ts`, 서버와 대화 `app/data/server.ts`, 암호화 `app/data/vault.ts` |
 | 기기에 저장 (localStorage) | `app/data/storage.ts` (여기로만 읽고 써요) |
 | 친구와 함께 (초대·합치기·가고 싶어요) | `384-trips.js` |
 | 알림 (일정별 🔔, 서버로 예약) | `386-notify.js`, 서버 `supabase/functions/jepi-push` |
