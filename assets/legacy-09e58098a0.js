@@ -2002,7 +2002,7 @@ function settingsAI(){return STANDALONE?`<div class="mgroup">${Object.keys(KEY_D
     :`<p class="hint">Claude 안에서는 AI가 자동으로 연결돼요. 지도 키는 깃허브 앱 버전에서 넣을 수 있어요.</p>`}
 function renderSettings(){
   const el=$('#setBox'); if(!el) return;
-  window.JEPI_UI.mount('settings',el,{theme:themePref,zoom:store.get('gp.zoom',60),sync:syncView(),myPlacesHTML:mypHTML(),aiHTML:settingsAI(),
+  window.JEPI_UI.mount('settings',el,{theme:themePref,zoom:store.get('gp.zoom',60),sync:syncView(),myPlaces:mypView(),aiHTML:settingsAI(),
     extrasHTML:SETTINGS_EXTRA.map(f=>f()).join(''),wipeArm:!!wipeArm,host:location.host||'로컬',rev:++settingsRev});
 }
 function backupAll(){
@@ -2189,19 +2189,9 @@ async function kakaoGet(path,params){if(!KEYS.kakao)throw aiErr('nokey','카카�
   if(r.status===401||r.status===403)throw aiErr('not_granted','카카오 키나 카카오맵 사용 설정을 확인해 주세요');
   if(!r.ok)throw aiErr('upstream_error','카카오 오류 (HTTP '+r.status+')'); return r.json()}
 async function addrOf(ll){try{const j=await kakaoGet('/v2/local/geo/coord2address.json',{x:ll[1],y:ll[0]});const d=(j.documents||[])[0];return d?((d.road_address&&d.road_address.address_name)||(d.address&&d.address.address_name)||''):''}catch(_){return ''}}
-function mypHTML(){
-  const pin=x=>x.ll?`<small class="mono">${esc(x.addr||`${x.ll[0].toFixed(4)}, ${x.ll[1].toFixed(4)}`)}</small>`:'<small>아직 등록 안 함</small>';
-  return `<div class="mgroup">${MYP.map(x=>mypEdit===x.id?`<div class="krow open"><div class="kh"><b>${esc(x.name)}</b>${pin(x)}</div>
-      ${x.id!=='home'&&x.id!=='work'?`<div class="kin"><input id="mypName" value="${esc(x.name)}" maxlength="12" placeholder="이름 (예: 본가, 헬스장)"></div>`:''}
-      <div class="row"><button class="small-btn primary" type="button" data-myphere="${x.id}">📍 지금 위치로 저장</button></div>
-      ${KEYS.kakao?`<div class="kin"><input id="mypQ" placeholder="주소나 건물 이름 검색 (예: 판교역로 235)" autocomplete="off"><button class="small-btn" type="button" data-mypsearch="${x.id}">찾기</button></div>
-      ${mypHits.length?`<div class="myp-hits">${mypHits.map((h,i)=>`<button class="mrow" type="button" data-myppick="${x.id}:${i}"><span class="mt"><b>${esc(h.name)}</b><small>${esc(h.addr)}</small></span></button>`).join('')}</div>`:''}`:'<p class="hint">카카오 지도 키를 연결하면 주소로도 찾을 수 있어요.</p>'}
-      <div class="row">${x.ll?`<button class="small-btn danger" type="button" data-mypclear="${x.id}">${x.id==='home'||x.id==='work'?'위치 지우기':'삭제'}</button>`:''}<button class="small-btn" type="button" id="mypDone">닫기</button></div>
-      ${mypMsg?`<small class="kmsg">${esc(mypMsg)}</small>`:''}</div>`
-    :`<div class="krow"><div class="kh"><b>${x.id==='home'?'🏠 ':x.id==='work'?'🏢 ':'📍 '}${esc(x.name)}</b>${pin(x)}</div><button class="small-btn${x.ll?'':' primary'}" type="button" data-mypedit="${x.id}">${x.ll?'바꾸기':'등록'}</button></div>`).join('')}
-    <div class="krow"><button class="small-btn" type="button" id="mypAdd">+ 장소 추가</button></div></div>
-  <p class="hint">"뭐 먹지?"에서 주변 식당을 찾는 기준과 여행 출발지로 써요. 이 기기에만 저장되고 공유 링크에는 들어가지 않아요.</p>`;
-}
+// The section is drawn by React: app/screens/MyPlacesSection.tsx. Here: what it shows.
+function mypView(){return {places:MYP.map(x=>({id:x.id,name:x.name,ll:x.ll||null,addr:x.addr||''})),editing:mypEdit,msg:mypMsg||'',
+  hits:mypHits.map(h=>({name:h.name,addr:h.addr})),hasKakao:!!KEYS.kakao}}
 document.addEventListener('click',async e=>{const t=e.target.closest('button');if(!t)return;
   if(t.dataset.mypedit){mypEdit=t.dataset.mypedit;mypMsg='';mypHits=[];renderSettings();return}
   if(t.id==='mypDone'){const n=$('#mypName'),x=mypOf(mypEdit);if(n&&x&&n.value.trim())x.name=n.value.trim().slice(0,12);saveMYP();mypEdit=null;renderSettings();return}

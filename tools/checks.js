@@ -489,5 +489,22 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'React screen: 내 장소 (add and name a place, clear home, saved on this device)',
+    async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
+      const p = await device(b, S, { ls: { 'jepi.myplaces': [{ id: 'home', name: '집', ll: [37.5665, 126.978], addr: '서울 중구 세종대로 110' }, { id: 'work', name: '회사', ll: null, addr: '' }] } });
+      await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await openSettings(p);
+      ok((await p.textContent('#setBox')).includes('세종대로 110'), 'saved address shown');
+      await p.click('#mypAdd'); await p.waitForTimeout(100);
+      ok(await vis(p, '#mypName') && await vis(p, '[data-myphere]'), 'new place opens for editing');
+      await p.fill('#mypName', '본가'); await p.click('#mypDone'); await p.waitForTimeout(100);
+      ok((await p.textContent('#setBox')).includes('📍 본가') && await p.evaluate(() => JSON.parse(localStorage.getItem('jepi.myplaces')).some(x => x.name === '본가')), 'named and saved');
+      await p.click('[data-mypedit="home"]'); await p.click('[data-mypclear="home"]'); await p.waitForTimeout(100);
+      ok(await p.evaluate(() => JSON.parse(localStorage.getItem('jepi.myplaces')).find(x => x.id === 'home').ll === null) && (await p.textContent('#setBox [data-mypedit="home"]')) === '등록', '위치 지우기 clears home');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];
