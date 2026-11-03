@@ -98,21 +98,11 @@ function importBackup(file,after){
 }
 async function copyText(text){try{await navigator.clipboard.writeText(text);planMsg='복사했어요. 카톡에 붙여 넣으면 돼요.'}catch(_){planMsg='자동 복사가 막혀 있어요. 아래 글을 길게 눌러 복사해 주세요.'}renderPlans()}
 let showText=false;
+// The screen itself is drawn by React: app/screens/PlansScreen.tsx
 function renderPlans(){
   const box=$('#plansBox'); if(!box) return;
-  const cur=plans.find(x=>x.id===curPlan);
-  box.innerHTML=`<div class="row" style="margin-bottom:10px"><button class="small-btn primary" id="planNew">+ 새 계획</button></div>
-  ${planMsg?`<p class="ai-status" style="margin:0 0 8px">${esc(planMsg)}</p>`:''}
-  <div class="plan-list">${plans.map(p=>`<div class="plan${p.id===curPlan?' cur':''}">
-    <div class="pl-top"><b>${esc(p.name||'이름 없는 계획')}</b>${p.id===curPlan?'<span class="tag r">지금 보는 계획</span>':''}</div>
-    <small>${p.kind==='day'?'☀️ 하루 코스':'✈️ 여행'}${p.dates?' · '+esc(p.dates):''} · 블록 ${p.blocks||0}개${p.updated?' · '+new Date(p.updated).toLocaleDateString('ko-KR',{month:'numeric',day:'numeric'})+' 저장':''}</small>
-    <div class="row">${p.id===curPlan?'':`<button class="small-btn primary" data-planopen="${p.id}">열기</button>`}<button class="small-btn" data-planrename="${p.id}">이름 바꾸기</button><button class="small-btn" data-plandup="${p.id}">복제</button><button class="small-btn danger" data-plandel="${p.id}">${delArm===p.id?'한 번 더 누르면 삭제':'삭제'}</button></div></div>`).join('')||'<p class="hint">저장된 계획이 없어요.</p>'}</div>
-  <div class="fsec" style="margin-top:14px"><h3>지금 계획 공유하기</h3>
-    <div class="row"><button class="small-btn primary" id="planShare">${STANDALONE?'공유 링크 보내기':'공유 코드 만들기'}</button><button class="small-btn" id="planText">카톡용 글</button><button class="small-btn" id="planTxt">글 파일 받기</button><button class="small-btn" id="planJson">백업 파일 받기</button></div>
-    ${STANDALONE&&lastLink?`<textarea class="share-text" rows="3" readonly>${esc(lastLink)}</textarea><p class="hint">링크 안에 계획이 통째로 들어 있어요. 받은 사람이 열면 자기 계획으로 복사돼요.</p>`:''}${lastCode?`<p class="share-code">${lastCode}</p><p class="hint">이 코드를 친구에게 알려 주세요. 친구는 "공유받은 계획 열기"에 넣으면 이 순간의 계획을 자기 계획으로 복사해 열 수 있어요. 친구도 이 페이지를 열 수 있어야 해요.</p>`:''}
-    ${showText?`<textarea class="share-text" rows="10" readonly>${esc(planText())}</textarea>`:''}</div>
-  <div class="fsec"><h3>백업 파일 불러오기</h3><p class="hint">"백업 파일 받기"로 저장한 .json 파일을 고르면 새 계획으로 열려요.</p><input type="file" accept=".json,application/json" class="importFile"></div>
-  <div class="fsec"><h3>공유받은 계획 열기</h3><div class="kw-add"><input id="codeIn" ${STANDALONE?'placeholder="받은 링크 붙여 넣기"':'maxlength="10" placeholder="JP-7K2QX"'} autocomplete="off"><button class="small-btn primary" id="codeOpen">열기</button></div></div>
-  <p class="hint">${rdb&&recState==='on'?'계획은 이 Claude 계정에 저장돼서 다른 기기에서 열어도 보여요.':'계획은 이 기기에만 저장돼요. 다른 기기로 옮기려면 공유 링크나 더보기 → 설정 → 전체 백업을 쓰세요.'}</p>`;
+  window.JEPI_UI.mount('plans',box,{plans:plans.map(p=>({id:p.id,name:p.name,kind:p.kind,dates:p.dates,blocks:p.blocks,updated:p.updated})),
+    curPlan,delArm,planMsg,standalone:!!STANDALONE,lastLink:lastLink||'',lastCode:lastCode||'',shareText:showText?planText():null,
+    savedInAccount:!!(rdb&&recState==='on')});
 }
 

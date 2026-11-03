@@ -337,5 +337,52 @@ module.exports = [
       ok(errs.length === 0, 'no page errors ' + errs.join(' | '));
       await A.ctx.close(); await B.ctx.close(); await C.ctx.close();
     }
+  },
+  {
+    name: 'React screen: 더보기 menu (trip card, chips, P-mode short menu, buttons open screens)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S);
+      await p.evaluate(() => window.__jepi.demoEnter()); await p.waitForTimeout(3600); await skipCoach(p);
+      await p.click('.tabs [data-tab="more"]'); await p.waitForTimeout(250);
+      ok((await p.textContent('#moreBox .tc-city')).includes('오사카'), 'trip card shows the city');
+      ok(await p.$$eval('#moreBox .tc-chips .mchip', e => e.length) >= 2, 'trip card chips (교통편 · 숙소)');
+      ok(await vis(p, '#moreBox [data-tab="plans"]') && await vis(p, '#moreBox [data-tab="settings"]'), 'J mode: full menu');
+      ok(!(await vis(p, '#moreAll')), 'J mode: no short-menu toggle');
+      await p.click('#moreBox [data-tab="help"]'); await p.waitForTimeout(250);
+      ok(await vis(p, '#side-help'), '사용 안내 opens from the menu');
+      await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="settings"]'); await p.waitForTimeout(250);
+      ok(await vis(p, '#setBox'), '설정 opens from the menu');
+      await p.click('[data-jp="P"]'); await p.waitForTimeout(250);
+      await p.click('.tabs [data-tab="more"]'); await p.waitForTimeout(250);
+      ok(!(await vis(p, '#moreBox [data-tab="plans"]')) && await vis(p, '#moreAll'), 'P mode: short menu with 전체 메뉴 보기');
+      await p.click('#moreAll'); await p.waitForTimeout(200);
+      ok(await vis(p, '#moreBox [data-tab="plans"]') && (await p.textContent('#moreAll')).includes('간단히'), '전체 메뉴 보기 shows everything');
+      await p.click('#moreBox #lookOpen'); await p.waitForTimeout(300);
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'React screen: 내 계획 (list, copy, delete twice, 카톡용 글, typed link kept)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S);
+      await p.evaluate(() => window.__jepi.demoEnter()); await p.waitForTimeout(3600); await skipCoach(p);
+      await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="plans"]'); await p.waitForTimeout(250);
+      const count = () => p.$$eval('#plansBox .plan', e => e.length);
+      ok(await count() === 1 && await vis(p, '#plansBox .plan.cur .tag'), 'one plan, marked 지금 보는 계획');
+      await p.fill('#codeIn', 'JP-TEST1');
+      await p.click('#plansBox [data-plandup]'); await p.waitForTimeout(250);
+      ok(await p.inputValue('#codeIn') === 'JP-TEST1', 'what you typed stays when the list redraws');
+      ok(await count() === 2 && (await p.textContent('#plansBox .ai-status')).includes('복사본'), '복제 adds a copy with a message');
+      const other = '#plansBox .plan:not(.cur) [data-plandel]';
+      await p.click(other); await p.waitForTimeout(150);
+      ok((await p.textContent(other)).includes('한 번 더'), '삭제 asks once more');
+      await p.click(other); await p.waitForTimeout(250);
+      ok(await count() === 1, 'second press deletes it');
+      await p.click('#planText'); await p.waitForTimeout(200);
+      ok((await p.$eval('#plansBox textarea.share-text', x => x.value)).includes('오사카'), '카톡용 글 shows the plan as text');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];

@@ -1649,22 +1649,12 @@ function importBackup(file,after){
 }
 async function copyText(text){try{await navigator.clipboard.writeText(text);planMsg='복사했어요. 카톡에 붙여 넣으면 돼요.'}catch(_){planMsg='자동 복사가 막혀 있어요. 아래 글을 길게 눌러 복사해 주세요.'}renderPlans()}
 let showText=false;
+// The screen itself is drawn by React: app/screens/PlansScreen.tsx
 function renderPlans(){
   const box=$('#plansBox'); if(!box) return;
-  const cur=plans.find(x=>x.id===curPlan);
-  box.innerHTML=`<div class="row" style="margin-bottom:10px"><button class="small-btn primary" id="planNew">+ 새 계획</button></div>
-  ${planMsg?`<p class="ai-status" style="margin:0 0 8px">${esc(planMsg)}</p>`:''}
-  <div class="plan-list">${plans.map(p=>`<div class="plan${p.id===curPlan?' cur':''}">
-    <div class="pl-top"><b>${esc(p.name||'이름 없는 계획')}</b>${p.id===curPlan?'<span class="tag r">지금 보는 계획</span>':''}</div>
-    <small>${p.kind==='day'?'☀️ 하루 코스':'✈️ 여행'}${p.dates?' · '+esc(p.dates):''} · 블록 ${p.blocks||0}개${p.updated?' · '+new Date(p.updated).toLocaleDateString('ko-KR',{month:'numeric',day:'numeric'})+' 저장':''}</small>
-    <div class="row">${p.id===curPlan?'':`<button class="small-btn primary" data-planopen="${p.id}">열기</button>`}<button class="small-btn" data-planrename="${p.id}">이름 바꾸기</button><button class="small-btn" data-plandup="${p.id}">복제</button><button class="small-btn danger" data-plandel="${p.id}">${delArm===p.id?'한 번 더 누르면 삭제':'삭제'}</button></div></div>`).join('')||'<p class="hint">저장된 계획이 없어요.</p>'}</div>
-  <div class="fsec" style="margin-top:14px"><h3>지금 계획 공유하기</h3>
-    <div class="row"><button class="small-btn primary" id="planShare">${STANDALONE?'공유 링크 보내기':'공유 코드 만들기'}</button><button class="small-btn" id="planText">카톡용 글</button><button class="small-btn" id="planTxt">글 파일 받기</button><button class="small-btn" id="planJson">백업 파일 받기</button></div>
-    ${STANDALONE&&lastLink?`<textarea class="share-text" rows="3" readonly>${esc(lastLink)}</textarea><p class="hint">링크 안에 계획이 통째로 들어 있어요. 받은 사람이 열면 자기 계획으로 복사돼요.</p>`:''}${lastCode?`<p class="share-code">${lastCode}</p><p class="hint">이 코드를 친구에게 알려 주세요. 친구는 "공유받은 계획 열기"에 넣으면 이 순간의 계획을 자기 계획으로 복사해 열 수 있어요. 친구도 이 페이지를 열 수 있어야 해요.</p>`:''}
-    ${showText?`<textarea class="share-text" rows="10" readonly>${esc(planText())}</textarea>`:''}</div>
-  <div class="fsec"><h3>백업 파일 불러오기</h3><p class="hint">"백업 파일 받기"로 저장한 .json 파일을 고르면 새 계획으로 열려요.</p><input type="file" accept=".json,application/json" class="importFile"></div>
-  <div class="fsec"><h3>공유받은 계획 열기</h3><div class="kw-add"><input id="codeIn" ${STANDALONE?'placeholder="받은 링크 붙여 넣기"':'maxlength="10" placeholder="JP-7K2QX"'} autocomplete="off"><button class="small-btn primary" id="codeOpen">열기</button></div></div>
-  <p class="hint">${rdb&&recState==='on'?'계획은 이 Claude 계정에 저장돼서 다른 기기에서 열어도 보여요.':'계획은 이 기기에만 저장돼요. 다른 기기로 옮기려면 공유 링크나 더보기 → 설정 → 전체 백업을 쓰세요.'}</p>`;
+  window.JEPI_UI.mount('plans',box,{plans:plans.map(p=>({id:p.id,name:p.name,kind:p.kind,dates:p.dates,blocks:p.blocks,updated:p.updated})),
+    curPlan,delArm,planMsg,standalone:!!STANDALONE,lastLink:lastLink||'',lastCode:lastCode||'',shareText:showText?planText():null,
+    savedInAccount:!!(rdb&&recState==='on')});
 }
 
 // ================= JEPI standalone: AI keys, model router, routes, map, panels =================
@@ -1932,29 +1922,17 @@ function tripSummary(){
 }
 function prepLeft(){let n=0;document.querySelectorAll('#checks .check-group').forEach(g=>{const h=g.querySelector('h3');if(h&&/예약·준비/.test(h.textContent))n+=g.querySelectorAll('input[data-ck]:not(:checked)').length});return n}
 function warnTotal(){let n=0;for(let d=0;d<DAYS.length;d++)n+=analyze(d).items.reduce((a,it)=>a+it.warns.length,0);return n}
+// The menu itself is drawn by React: app/screens/MoreMenu.tsx. Here: the numbers it shows.
 function renderMore(){
   const box=$('#moreBox'); if(!box) return;
   const s=tripSummary(), pr=profile, b=budgetParts&&budgetParts(pr);
-  const chip=(t,c)=>`<span class="mchip ${c||''}">${t}</span>`;
-  const chips=pr.kind==='day'?[]:[pr.bookedFlight===false?chip('교통편 미정','warn'):chip('교통편 예약됨','ok'),pr.bookedStay===false?chip('숙소 미정','warn'):chip('숙소 예약됨','ok')];
-  if(b) chips.push(chip(`예산 1인 ${Math.round(b.total/10000)}만원`));
-  const w=warnTotal(), pl=prepLeft(), full=jp!=='P'||moreAll;
-  const arrow='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
-  box.innerHTML=`<button class="trip-card" data-tab="me"><span class="tc-top"><span class="tc-k">이번 여행</span><span class="tc-more">자세히${arrow}</span></span><b class="tc-city">${esc(s.city)}</b><span class="tc-line mono">${esc(s.line)}</span>${chips.length?`<span class="tc-chips">${chips.join('')}</span>`:''}</button>
-  <div class="mgroup">
-    <button class="mrow" type="button" id="nbOpen"><span class="mt"><b>📖 여행 노트로 보기</b><small>날짜별 제목 · 손글씨 메모 · PDF 저장 · 링크로 보내기</small></span>${arrow}</button>
-    <button class="mrow" type="button" id="lookOpen"><span class="mt"><b>🎨 여행 꾸미기</b><small>제목 · 테마 색 · 커버 · 스타일 · 날짜별 제목</small></span>${arrow}</button>
-    <button class="mrow" data-tab="check"><span class="mt"><b>준비하기</b><small>일정 경고 · 남은 예약 · 이 시기 팁</small></span>${w?chip('경고 '+w,'warn'):''}${pl?chip('남은 준비 '+pl,'acc'):''}${!w&&!pl?arrow:''}</button>
-    ${full?`<button class="mrow" data-tab="pref"><span class="mt"><b>나의 여행 취향</b><small>여행 스타일 · 취향 키워드 · ♥ 장소 — 모든 계획에 공통</small></span>${arrow}</button>
-    <button class="mrow" data-tab="plans"><span class="mt"><b>내 계획</b><small>${plans.length}개 저장됨 · 새 계획 · 공유</small></span>${arrow}</button>`:''}
-  </div>
-  <div class="mgroup">
-    <button class="mrow" data-tab="friends"><span class="mt"><b>친구와 함께</b><small>초대 링크 · 같이 고치기 · 👍 가고 싶어요</small></span>${(()=>{const sp=plans.find(x=>x.id===curPlan&&x.shared);return sp?chip('👥 '+(((TRIPS&&TRIPS.members[curPlan])||[]).length||'공유 중'),'ok'):arrow})()}</button>
-    <button class="mrow" data-tab="notify"><span class="mt"><b>알림</b><small>출발 시간 · 아침 일정 · 알림 받을 기기</small></span>${NOTIFY&&NOTIFY.on?chip('켜짐','ok'):arrow}</button>
-    <button class="mrow" data-tab="help"><span class="mt"><b>사용 안내</b><small>처음 쓰는 기능을 짧게 설명해요</small></span>${arrow}</button>
-  </div>
-  ${full?`<div class="mgroup"><button class="mrow" data-tab="settings"><span class="mt"><b>설정</b><small>화면 · AI·지도 연결 · 백업 · 초기화</small></span>${STANDALONE&&!sample?chip('AI 꺼짐','warn'):''}${arrow}</button></div>`:''}
-  ${jp==='P'?`<button class="linkbtn" id="moreAll">${moreAll?'간단히 보기':'전체 메뉴 보기'}</button>`:''}`;
+  const tripChips=pr.kind==='day'?[]:[pr.bookedFlight===false?{text:'교통편 미정',tone:'warn'}:{text:'교통편 예약됨',tone:'ok'},pr.bookedStay===false?{text:'숙소 미정',tone:'warn'}:{text:'숙소 예약됨',tone:'ok'}];
+  if(b) tripChips.push({text:`예산 1인 ${Math.round(b.total/10000)}만원`});
+  const w=warnTotal(), sp=plans.find(x=>x.id===curPlan&&x.shared);
+  window.JEPI_UI.mount('more',box,{city:s.city,line:s.line,tripChips,warnCount:w,prepLeft:prepLeft(),
+    full:jp!=='P'||moreAll,showToggle:jp==='P',moreAll,plansCount:plans.length,
+    friendsChip:sp?'👥 '+(((TRIPS&&TRIPS.members[curPlan])||[]).length||'공유 중'):null,
+    notifyOn:!!(NOTIFY&&NOTIFY.on),aiOff:!!(STANDALONE&&!sample)});
   const wc=$('#warnCount'); if(wc) wc.textContent=w?String(w):'';
 }
 // 이번 여행: one row per topic, opens only that part, saves on change
