@@ -54,9 +54,11 @@
     `app/ui/live.tsx`(LiveLine·LiveButton)로 — 예전 도우미(setSt·progStart·progStop·setBusy)가 `JEPI_UI.live(요소)`로 먼저 물어보고, 리액트가 그린 거면 그쪽으로 알려요.
     앞으로 다른 화면도 이 방식으로 옮기면 돼요. 예전 문자열 버전 fParty·dateFields·fDates·fDest·fDay·fJP·fChooser·fQuick·talkBanner·onbKeyBox는 지움.
     점검 추가(시작 방법별 화면, 날짜 먼저 안내, 어디로 안내, AI 준비하기 중 버튼·시간 표시와 실패 뒤 되돌림). 점검 218개 통과.
-    **아직 예전 HTML**: 이야기하면서 정하기(fTalk)와 여행지 추천(fDestFinder, styleMoreHTML 포함) — AI 대화·추천 카드를 예전 코드가 직접 많이 바꿔서 다음에.
     처음 설정의 틀(#onb 제목·다음 버튼)은 body.html 그대로.
-  - [ ] 다음: 이야기하면서 정하기(fTalk)·여행지 추천(fDestFinder)을 LiveLine 방식으로 옮기기. 그다음 장소 탭(renderTray), 준비하기(renderChecks), 지도·DICE, 일정표(renderTimeline).
+  - [x] 이야기하면서 정하기(`OnbTalk.tsx`)와 여행지 추천(`OnbFinder.tsx`, 카드·더 보기·궁금한 곳) — 가짜 AI로 13가지 상태 모두 예전과 같음(`tools/compare/onb-ai.js`).
+    "여행 스타일 더"는 취향 탭과 같은 조각(`TasteStyle.tsx`의 StyleMore). 취향 키워드 칩은 누르면 예전 코드가 눌림 표시를 직접 바꿨는데 → `LiveChip`(live 연결)으로.
+    이제 처음 설정·이번 여행·취향 탭에 예전 HTML 문자열 폼이 남아 있지 않아요(AI 붙여 넣기 칸만 예전 조각). 안 쓰던 fTaste도 지움. 점검 추가(대화·방향·칩·추천 카드·기다리는 동안 버튼). 점검 230개 통과.
+  - [ ] 다음: 장소 탭(renderTray), 준비하기(renderChecks), 지도·DICE, 마지막으로 일정표(renderTimeline). AI 붙여 넣기 칸(pasteBox·aiFill)도 live 방식으로.
   - 참고(예전 계획): 입력 폼 조각들(`030-forms.js`의 fParty·fBudget·fStay·fFlight·fHome·fEvents·dateFields·fStyle…, `140`·`160`·`170`의 fDest·fJP·fQuick·fTalk…)을
     하나씩 리액트로. 처음 설정(`renderOnb`)·이번 여행·취향(renderTasteStyle)이 같이 써요.
     방법: 칸 이름(`data-pf`, `data-radio`)은 그대로, 폼 전체는 다시 그릴 때마다 새로(rev 키) — 예전 코드가 값을 바꾼 뒤 다시 그리는 방식과 같아서 안전해요.

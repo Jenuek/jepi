@@ -15,6 +15,8 @@ export interface LiveHandle {
   label(l: string | null): void;
   /** button: locked or not */
   disabled(b: boolean): void;
+  /** toggle chip: pressed or not */
+  pressed(b: boolean): void;
 }
 
 const handles = new WeakMap<Element, LiveHandle>();
@@ -29,7 +31,7 @@ function useHandle(h: Partial<LiveHandle>) {
     const el = ref.current; if (!el) return;
     // apply right away, like the old direct writes (the old code may read the element back)
     const now = <T,>(f?: (v: T) => void) => f ? (v: T) => flushSync(() => f(v)) : noop;
-    handles.set(el, { text: now(h.text), busy: now(h.busy), label: now(h.label), disabled: now(h.disabled) });
+    handles.set(el, { text: now(h.text), busy: now(h.busy), label: now(h.label), disabled: now(h.disabled), pressed: now(h.pressed) });
     return () => { handles.delete(el) };
   }, []);   // the setters below never change
   return ref;
@@ -51,4 +53,11 @@ export function LiveButton({ id, className, children, disabled = false }: { id: 
   const [l, setL] = useState<string | null>(null), [d, setD] = useState<boolean | null>(null);
   const ref = useHandle({ label: setL, disabled: setD });
   return <button className={className} type="button" id={id} disabled={d ?? disabled} ref={ref as RefObject<HTMLButtonElement>}>{l ?? children}</button>;
+}
+
+/** A taste keyword chip (data-kwtoggle): the old click handler flips it through the handle. */
+export function LiveChip({ k, on }: { k: string; on: boolean }) {
+  const [v, setV] = useState(on);
+  const ref = useHandle({ pressed: setV });
+  return <button type="button" data-kwtoggle={k} aria-pressed={v} ref={ref as RefObject<HTMLButtonElement>}>{k}</button>;
 }

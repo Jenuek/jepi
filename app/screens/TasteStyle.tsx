@@ -22,7 +22,6 @@ export interface TasteStyleProps {
 }
 
 export function TasteStyle(p: TasteStyleProps) {
-  const n = Object.values(p.style).filter(v => v && v !== 'any').length;
   return (
     <Fragment key={p.rev}>
       <div className="fsec">
@@ -36,18 +35,26 @@ export function TasteStyle(p: TasteStyleProps) {
         </>}
         <span className="hint">아침 식사</span>
         <Radio path="breakfast" val={p.breakfast} opts={[['true', '먹어요'], ['false', '거의 안 먹어요']]} />
-        <details className="marks" open={n > 0 || p.open}>
-          <summary>{`여행 스타일 더 알려 주기 (선택)${n ? ` · ${n}개 골랐어요` : ''}`}</summary>
-          <p className="hint">모두 "상관없음"이 기본이에요. 고른 것만 추천에 반영돼요. 하루 리듬과 걷기는 일정 계산에도 쓰여요.</p>
-          {p.rows.map(([k, l, o]) => (
-            <Fragment key={k}>
-              <span className="hint">{l}</span>
-              <Radio path={'style.' + k} val={p.style[k] || 'any'} opts={[...o, ['any', k === 'gender' ? '밝히지 않음' : '상관없음']]} />
-            </Fragment>
-          ))}
-        </details>
+        <StyleMore rows={p.rows} style={p.style} open={p.open} />
       </div>
       <p className="saved">{p.msg}</p>
     </Fragment>
+  );
+}
+
+/** 여행 스타일 더 알려 주기 (also in 처음 설정 → 여행지 추천) */
+export function StyleMore({ rows, style, open }: { rows: [string, string, Opt[]][]; style: Record<string, string>; open: boolean }) {
+  const n = Object.values(style).filter(v => v && v !== 'any').length;
+  return (
+    <details className="marks" open={n > 0 || open}>
+      <summary>{`여행 스타일 더 알려 주기 (선택)${n ? ` · ${n}개 골랐어요` : ''}`}</summary>
+      <p className="hint">모두 "상관없음"이 기본이에요. 고른 것만 추천에 반영돼요. 하루 리듬과 걷기는 일정 계산에도 쓰여요.</p>
+      {rows.map(([k, l, o]) => (
+        <Fragment key={k}>
+          <span className="hint">{l}</span>
+          <Radio path={'style.' + k} val={style[k] || 'any'} opts={[...o, ['any', k === 'gender' ? '밝히지 않음' : '상관없음']]} />
+        </Fragment>
+      ))}
+    </details>
   );
 }

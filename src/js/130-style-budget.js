@@ -20,10 +20,6 @@ const STY={rhythm:{early:'Early riser: starts the day early and ends early.',lat
   gender:{female:'The traveler is a woman: consider practical safety such as well-lit, busy areas late at night and women-friendly lodging. Do not stereotype her interests.',male:''}};
 function styleEn(p){const st=(p&&p.style)||{};return Object.entries(STY).map(([k,m])=>m[st[k]]||'').filter(Boolean).join(' ')}
 let styleOpen=false;
-function styleMoreHTML(p){const st=p.style||{};const n=Object.values(st).filter(v=>v&&v!=='any').length;
-  return `<details class="marks"${n||styleOpen?' open':''}><summary>여행 스타일 더 알려 주기 (선택)${n?` · ${n}개 골랐어요`:''}</summary>
-  <p class="hint">모두 "상관없음"이 기본이에요. 고른 것만 추천에 반영돼요. 하루 리듬과 걷기는 일정 계산에도 쓰여요.</p>
-  ${STYLE_ROWS.map(([k,l,o])=>`<span class="hint">${l}</span>${radioRow('style.'+k,st[k]||'any',[...o,['any',k==='gender'?'밝히지 않음':'상관없음']])}`).join('')}</details>`}
 const walkKm=()=>{const w=profile&&profile.style&&profile.style.walk;return w==='lots'?2:w==='less'?0.7:1.3};
 
 // ---------- optional money budget (per person, in 만원) ----------

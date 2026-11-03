@@ -6,13 +6,13 @@
 // (app/ui/live.tsx): the old code updates them through a handle, not by writing into them.
 import type { CSSProperties, ReactNode } from 'react';
 import { LiveButton, LiveLine } from '../ui/live';
+import { DestFinder, type FinderPart } from './OnbFinder';
 
 export type Opt = [value: string | number | boolean, label: string];
 
 export interface Time2 { dep: string; arr: string; airport: string; flight: string }
 
 export type FormPart =
-  | { f: 'old'; html: string }
   | { f: 'party'; type: string; adults: number; kids: number }
   | { f: 'trip'; bookedFlight: boolean; bookedStay: boolean; dates: DatesInfo }
   | { f: 'flight'; mode: string; word: string; notBooked: boolean; out: Time2; back: Time2; local: string; airports: Opt[]; pasteHTML: string }
@@ -22,6 +22,7 @@ export type FormPart =
   | { f: 'budget'; man: number | string; trip: number | string; local: number | string; hint: string }
   | { f: 'dest'; dest: string; ai: boolean; ready: string; rate: { cur: string; val: number } | null }
   | { f: 'dates'; dates: DatesInfo }
+  | FinderPart
   | { f: 'day'; date: string; time: string; end: string; area: string; areas: Opt[] }
   | { f: 'events'; events: { name: string; day: number; start: string; end: string; area: string }[]; areas: Opt[]; days: string[] };
 
@@ -269,10 +270,9 @@ function Day(p: Extract<FormPart, { f: 'day' }>) {
   );
 }
 
-/** One form part: a React form, or old HTML. */
+/** One form part. */
 export function FormPiece({ part }: { part: FormPart }) {
   switch (part.f) {
-    case 'old': return <Old html={part.html} />;
     case 'party': return <Party {...part} />;
     case 'trip': return <Trip {...part} />;
     case 'flight': return <Flight {...part} />;
@@ -282,6 +282,7 @@ export function FormPiece({ part }: { part: FormPart }) {
     case 'budget': return <Budget {...part} />;
     case 'events': return <Events {...part} />;
     case 'dest': return <Dest {...part} />;
+    case 'finder': return <DestFinder {...part} />;
     case 'dates': return <Fsec id="datesSec"><h3>언제 가나요?</h3><Dates {...part.dates} /></Fsec>;
     case 'day': return <Day {...part} />;
   }

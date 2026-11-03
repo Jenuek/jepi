@@ -310,7 +310,6 @@ function pasteBox(kind,hint){
 }
 // 더보기 → 이번 여행 forms are drawn by React (app/screens/TripForms.tsx): these build what each form shows.
 const optsOf=o=>Object.entries(o).map(([k,v])=>[k,Array.isArray(v)?v[0]:v.name]);
-const oldPart=html=>({f:'old',html});
 function datesInfo(p){const ds=p.dateSet!==false, ns=p.nightsSet!==false;return {start:ds&&!p.dateUnknown?String(p.startDate??''):'',unknown:!!p.dateUnknown,nights:ns?p.nights:null,maxN:MAX_N}}
 function partParty(p){const q=p.party;return {f:'party',type:q.type,adults:q.adults,kids:q.kids}}
 function partTrip(p){return {f:'trip',bookedFlight:p.bookedFlight!==false,bookedStay:p.bookedStay!==false,dates:datesInfo(p)}}
@@ -325,12 +324,8 @@ function datesReady(p){return p.dateSet!==false&&p.nightsSet!==false}
 function needDates(){setSt('st_dates','여행 날짜와 기간을 먼저 골라 주세요. 모르면 "날짜는 아직 몰라요"를 눌러 주세요.');const d=document.getElementById('datesSec');if(d)d.scrollIntoView({block:'center'})}
 const isoPlus=n=>{const d=new Date();d.setDate(d.getDate()+n);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
 const heads2=q=>Math.max(1,(+q.adults||1)+(+q.kids||0));
-function fTaste(){const all=[...new Set([...Object.values(TAGS).flat(),...GENERIC_KW])];
-  return `<div class="fsec"><h3>취향 키워드</h3><p class="hint">끌리는 걸 모두 고르세요. AI가 이 키워드에 맞춰 장소를 찾고, 겹치는 장소가 추천에서 앞에 나와요.</p>
-  <div class="chips">${all.map(k=>`<button type="button" data-kwtoggle="${esc(k)}" aria-pressed="${kws.some(x=>norm(x)===norm(k))}">${esc(k)}</button>`).join('')}</div>
-  ${sample?`<label class="fg" style="display:block"><span class="hint">좋아하는 영화, 음악, 작가, 브랜드를 적으면 AI가 키워드를 골라 줘요.</span><textarea id="tasteText" rows="2" style="margin-top:4px" placeholder="예: 슈게이징 밴드, 지브리, 필름 카메라, 빈티지 옷"></textarea></label><div class="row"><button class="small-btn primary" type="button" id="aiKw">AI로 키워드 찾기</button><span class="ai-status" id="st_kw"></span></div>`:''}</div>`}
 const ONB=[
-  {t:'어디로, 언제, 누구와 떠나나요?',s:'세 가지만 알려 주면 바로 일정표를 만들어요. 교통편, 숙소, 취향은 필요할 때 물어볼게요.',f:p=>!p.jpPicked?[partJP()]:!p.startMode?[{f:'chooser',ai:!!sample}]:p.startMode==='pq'?[partQuick(p,false)]:p.startMode==='talk'?[oldPart(fTalk(p))]:p.startMode==='day'?[partQuick(p,true)]
+  {t:'어디로, 언제, 누구와 떠나나요?',s:'세 가지만 알려 주면 바로 일정표를 만들어요. 교통편, 숙소, 취향은 필요할 때 물어볼게요.',f:p=>!p.jpPicked?[partJP()]:!p.startMode?[{f:'chooser',ai:!!sample}]:p.startMode==='pq'?[partQuick(p,false)]:p.startMode==='talk'?[partTalk(p)]:p.startMode==='day'?[partQuick(p,true)]
     :p.destMode==='find'?[...(p.fromTalk?[partBanner(p,'날짜·기간·예산을 확인하고 아래 "AI로 여행지 추천받기"를 눌러 주세요.')]:[]),{f:'dates',dates:datesInfo(p)},partDest(p)]
     :[...(p.fromTalk?[partBanner(p,'날짜와 동행을 확인하고 "AI로 여행지 준비하기"를 눌러 주세요.')]:[]),partDest(p),{f:'dates',dates:datesInfo(p)},partParty(p)]}
 ];
@@ -673,9 +668,9 @@ async function onbAdvance(){
   }
   if(onbStep<ONB.length-1){onbStep++;renderOnb()} else await finishOnb();
 }
-// 여행지 (drawn by React: TripForms.tsx Dest). Not decided yet → the finder (still old HTML).
+// 여행지 (drawn by React: TripForms.tsx Dest). Not decided yet → the finder (OnbFinder.tsx).
 function partDest(p){
-  if(p.destMode==='find') return oldPart(fDestFinder(p));
+  if(p.destMode==='find') return partFinder(p);
   const ready=PACK&&norm(PACK.city)===norm(p.dest||'');
   return {f:'dest',dest:p.dest??'',ai:!!sample,ready:ready?`${PACK.city} 준비됨 · 동네 ${Object.keys(AREAS).length}곳 · 장소 ${P.length}곳`:'',
     rate:ready&&PACK.currency!=='KRW'?{cur:PACK.currency,val:+KRW_PER_JPY.toFixed(4)}:null};
@@ -1128,27 +1123,12 @@ function seasonChecksHTML(){
 let destRecs=null, destAsked=[], destBusy=false;
 const BUDGET_EN={low:'Tight budget.',mid:'Moderate budget.',high:'Comfortable budget, happy to spend for good experiences.'};
 const REACH_EN={domestic:'Domestic only: places inside South Korea.',near:'Short trip abroad: about 3 hours or less by plane from Seoul (Japan, Taiwan, Hong Kong, eastern China and similar).',far:'Anywhere in the world is fine, including long-haul.'};
-function fDestFinder(p){
-  const all=[...new Set([...GENERIC_KW,...kws])];
-  return `<div class="fsec"><h3>여행지 추천받기</h3><p class="hint">조건과 취향을 고르면 AI가 이 날짜에 가기 좋은 여행지 5곳을 추천해요.</p>
-  <span class="hint">누구와</span>${radioRow('party.type',p.party.type,[['solo','혼자'],['couple','연인·부부'],['friends','친구'],['family','가족']])}
-  <span class="hint">어디까지</span>${radioRow('reach',p.reach,[['domestic','국내'],['near','가까운 해외 (3시간 안쪽)'],['far','먼 곳도 좋아요']])}
-  ${p.reach==='far'&&nightsOf(p)<=4?`<p class="hint" style="margin:0 0 6px">${nightsOf(p)}박 ${nightsOf(p)+1}일이면 유럽·미주는 오가는 데만 하루씩 걸려요. 먼 곳 추천에는 적당한 기간도 같이 알려 줘요.</p>`:''}
-  <span class="hint">예산</span>${radioRow('budget',p.budget,[['low','알뜰하게'],['mid','보통'],['high','여유 있게']])}
-  <div class="fg"><label>1인 총예산 (만원, 선택)${inp('budgetMan',p.budgetMan||'','number','min="0" step="10" data-type="num" placeholder="예: 100"')}</label></div>
-  <span class="hint">끌리는 것 (여러 개)</span><div class="chips">${all.map(k=>`<button type="button" data-kwtoggle="${esc(k)}" aria-pressed="${kws.some(x=>norm(x)===norm(k))}">${esc(k)}</button>`).join('')}</div>
-  ${styleMoreHTML(p)}
-  <label class="fg" style="display:block"><span class="hint">원하는 여행을 자유롭게 (선택)</span><textarea id="destWant" rows="2" maxlength="300" style="margin-top:4px" placeholder="예: 혼자 사색하며 걷고 싶어요, 바다 보며 쉬기, 맛집 많은 도시">${esc(p.want||'')}</textarea></label>
-  <div class="row">${sample?`<button class="small-btn primary" type="button" id="destRecBtn">AI로 여행지 추천받기</button>`:''}<button class="small-btn" type="button" data-destmode="">직접 입력할게요</button><span class="ai-status" id="st_dest"></span></div>
-  ${sample?'':'<p class="hint">여행지 추천은 AI를 연결하면 쓸 수 있어요 (더보기 → 설정).</p>'}</div>
-  ${destRecs?destRecs.map((d,i)=>destCard(d,`${i+1}. `,`data-pickdest="${i}"`)).join('')+`<div class="row" style="margin-bottom:10px"><button class="small-btn" type="button" id="destMoreBtn">다른 곳 더 보기</button><span class="ai-status" id="st_more"></span></div>`:''}
-  ${sample?`<div class="fsec"><h3>궁금한 곳이 따로 있다면</h3><div class="kw-add"><input id="destAsk" maxlength="40" placeholder="예: 아이슬란드" autocomplete="off"><button class="small-btn primary" type="button" id="destAskBtn">나한테 맞는지 보기</button></div><p class="hint">추천 목록과 별개로, 조건과 취향에 비춰 좋은 점과 아쉬운 점을 알려 줘요.</p><p class="ai-status" id="st_ask"></p></div>${destAsked.map((d,i)=>destCard(d,'🔍 물어본 곳 · ',`data-pickask="${i}"`,'asked-'+i)).join('')}`:''}`;
+// drawn by React: app/screens/OnbFinder.tsx
+function partFinder(p){
+  return {f:'finder',ai:!!sample,party:p.party.type,reach:p.reach,budget:p.budget,budgetMan:p.budgetMan||'',nights:nightsOf(p),
+    chips:[...new Set([...GENERIC_KW,...kws])].map(k=>({k,on:kws.some(x=>norm(x)===norm(k))})),
+    styleRows:STYLE_ROWS,style:clone(p.style||{}),styleOpen,want:p.want||'',recs:destRecs?clone(destRecs):null,asked:clone(destAsked)};
 }
-function destCard(d,label,attr,id){return `<div class="fsec area-card"${id?` id="${id}"`:''}><h3>${label}${esc(d.city)}${d.country?` <span class="hint">· ${esc(d.country)}</span>`:''}</h3>
-    <p>${esc(d.why)}</p>${d.fit?`<p class="hint">🎯 ${esc(d.fit)}</p>`:''}${d.season?`<p class="hint">🗓 ${esc(d.season)}</p>`:''}
-    ${d.highlights.length?`<p class="hint">${d.highlights.map(esc).join(' · ')}</p>`:''}
-    <p class="mono hint">${esc(d.flight||'')}${d.budget?` · ${esc(d.budget)}`:''}</p>${d.caution?`<p class="hint">주의: ${esc(d.caution)}</p>`:''}
-    <div class="row"><button class="small-btn primary" type="button" ${attr}>이 여행지로 정하기</button></div></div>`}
 async function recommendDest(mode){
   if(!sample||destBusy) return; destBusy=true; mode=mode||{};
   const prev=(destRecs||[]).map(d=>d.city);
@@ -1196,10 +1176,6 @@ const STY={rhythm:{early:'Early riser: starts the day early and ends early.',lat
   gender:{female:'The traveler is a woman: consider practical safety such as well-lit, busy areas late at night and women-friendly lodging. Do not stereotype her interests.',male:''}};
 function styleEn(p){const st=(p&&p.style)||{};return Object.entries(STY).map(([k,m])=>m[st[k]]||'').filter(Boolean).join(' ')}
 let styleOpen=false;
-function styleMoreHTML(p){const st=p.style||{};const n=Object.values(st).filter(v=>v&&v!=='any').length;
-  return `<details class="marks"${n||styleOpen?' open':''}><summary>여행 스타일 더 알려 주기 (선택)${n?` · ${n}개 골랐어요`:''}</summary>
-  <p class="hint">모두 "상관없음"이 기본이에요. 고른 것만 추천에 반영돼요. 하루 리듬과 걷기는 일정 계산에도 쓰여요.</p>
-  ${STYLE_ROWS.map(([k,l,o])=>`<span class="hint">${l}</span>${radioRow('style.'+k,st[k]||'any',[...o,['any',k==='gender'?'밝히지 않음':'상관없음']])}`).join('')}</details>`}
 const walkKm=()=>{const w=profile&&profile.style&&profile.style.walk;return w==='lots'?2:w==='less'?0.7:1.3};
 
 // ---------- optional money budget (per person, in 만원) ----------
@@ -1221,35 +1197,15 @@ function talkReset(){talk={msgs:[{role:'a',text:TALK_OPEN.q}],options:TALK_OPEN.
 // 처음 설정 parts drawn by React (app/screens/OnbBody.tsx)
 const partBanner=(p,next)=>({f:'banner',purpose:p.purpose||'',next});
 function partJP(){return {f:'jp',keyBox:!!(STANDALONE&&!sample),keyHelpHTML:KEY_HELP.anthropic,importBox:!inClaude()}}
-function fTalk(p){
+// drawn by React: app/screens/OnbTalk.tsx
+function partTalk(p){
   if(!talk) talkReset();
   const t=talk, S=t.summary, last=[...t.msgs].reverse().find(m=>m.role==='a'), hist=[];
   const ok=t.msgs.filter(m=>!m.err);for(let k=0;k<ok.length;k++){const m=ok[k];if(m.role==='u')hist.push([ok[k-1]?ok[k-1].text:'',m.text])}
-  const dots=Array.from({length:TALK_MAX},(_,k)=>`<i class="${k<t.n?'on':''}"></i>`).join('');
-  let h=`<div class="talk2${S?' done':''}">
-    <div class="t-dots" aria-label="${Math.min(t.n,TALK_MAX)} / ${TALK_MAX}">${dots}</div>
-    ${hist.length?`<details class="t-hist"><summary>지금까지 나눈 이야기</summary>${hist.map(([q,a])=>`<p class="t-hq">${esc(q)}</p><p class="t-ha">${esc(a)}</p>`).join('')}</details>`:''}`;
-  if(!S){
-    h+=t.busy?`<p class="t-q t-wait">잠시 생각을 정리하고 있어요<span class="t-ell"></span></p>`
-      :`<p class="t-q" id="talkQ">${esc(last?last.text:'')}</p>
-      ${t.options.length?`<div class="t-opts">${t.options.map((o,i)=>`<button type="button" class="t-opt" data-talkopt="${i}">${esc(o)}</button>`).join('')}</div>`:''}
-      <div class="t-write"><textarea id="talkInput" rows="2" maxlength="300" placeholder="떠오르는 대로 적어 보세요"></textarea><button type="button" class="t-send" id="talkSend" aria-label="보내기">→</button></div>
-      ${t.failed?'<div class="row"><button type="button" class="small-btn primary" id="talkRetry">다시 시도하기</button></div>':''}
-      <div class="t-links">${t.n>=2?'<button type="button" class="t-link" id="talkFinish">이 정도로 정리해 줘</button>':''}<button type="button" class="t-link" data-startmode="quick">건너뛰고 직접 고를게요</button></div>`;
-    h+=`<p class="ai-status" id="st_talk"></p></div>`;
-  }else{
-    const d=p.direction||{};
-    h+=`${last?`<p class="t-close">${esc(last.text)}</p>`:''}
-    <div class="t-letter"><span class="t-label">이번 여행의 방향</span><p class="t-note">${esc(S.note||p.purpose||'')}</p>
-    <label class="t-field"><span>한 줄로 말하면</span>${inp('purpose',p.purpose,'text','maxlength="80"')}</label>
-    <div class="t-field"><span>마음에 담아 둘 단어</span><div class="chips">${[...new Set([...S.keywords,...kws])].map(k=>`<button type="button" data-kwtoggle="${esc(k)}" aria-pressed="${kws.some(x=>norm(x)===norm(k))}">${esc(k)}</button>`).join('')}</div></div>
-    <div class="t-field"><span>여행의 속도</span>${radioRow('pace',p.pace,[['slow','느긋하게'],['normal','보통'],['full','꽉 채워서']])}</div>
-    ${p.party.type==='solo'?`<div class="t-field"><span>사람과의 거리</span>${radioRow('social',p.social,[['alone','혼자가 좋아요'],['some','가끔은 대화도'],['social','많이 만나고 싶어요']])}</div>`:''}
-    <label class="t-field"><span>피하고 싶은 것</span>${inp('direction.avoid',d.avoid||'','text','maxlength="80" placeholder="예: 사람 많은 관광지"')}</label>
-    <div class="row"><button type="button" class="small-btn primary" id="talkApply">${S.dest?`${esc(S.dest)}(으)로 이어 가기`:'이 방향으로 여행지 찾으러 가기'}</button><button type="button" class="t-link" id="talkRedo">다시 이야기하기</button></div>
-    <p class="hint">대화 내용은 저장하지 않고, 이 방향만 남겨요.</p></div></div>`;
-  }
-  return h;
+  const d=p.direction||{};
+  return {f:'talk',n:t.n,max:TALK_MAX,hist,last:last?last.text:'',busy:!!t.busy,options:t.options.slice(),failed:!!t.failed,
+    done:S?{note:S.note||p.purpose||'',purpose:p.purpose??'',chips:[...new Set([...S.keywords,...kws])].map(k=>({k,on:kws.some(x=>norm(x)===norm(k))})),
+      pace:p.pace,solo:p.party.type==='solo',social:p.social,avoid:d.avoid||'',applyLabel:S.dest?`${S.dest}(으)로 이어 가기`:'이 방향으로 여행지 찾으러 가기'}:null};
 }
 async function talkSend(text,opt){
   opt=opt||{};
@@ -3190,7 +3146,7 @@ document.addEventListener('click',e=>{
     return}
   if(t.id==='onbExample'){if(onbBusy)return;demoEnter();return}
   if(t.dataset.radio&&!t.closest('#helper')){if(t.dataset.radio.startsWith('style.'))styleOpen=true;let v=t.dataset.val;if(v==='true')v=true;else if(v==='false')v=false;if(draft){setPath(draft,t.dataset.radio,v);if(t.dataset.radio==='mode')draft.local=v==='car'?'car':'transit';if(t.dataset.radio==='party.type'){const q=draft.party;if(v==='couple')q.adults=2;if(v==='friends'&&q.adults<2)q.adults=3;if(v==='family'){if(q.adults<2)q.adults=2;if(!q.kids)q.kids=1;draft.pace='slow'}fixProfile(draft)}rerenderForm()}return}
-  if(t.dataset.kwtoggle){const k=t.dataset.kwtoggle,i=kws.findIndex(x=>norm(x)===norm(k));if(i>=0)kws.splice(i,1);else kws.push(k);store.set('gp.kw',kws);t.setAttribute('aria-pressed',String(i<0));renderPref();return}
+  if(t.dataset.kwtoggle){const k=t.dataset.kwtoggle,i=kws.findIndex(x=>norm(x)===norm(k));if(i>=0)kws.splice(i,1);else kws.push(k);store.set('gp.kw',kws);{const L=window.JEPI_UI.live(t);if(L)L.pressed(i<0);else t.setAttribute('aria-pressed',String(i<0))}renderPref();return}
   if(t.dataset.addstay&&draft){const n=nightsOf(draft);draft.stays.push({name:'숙소 '+(draft.stays.length+1),area:firstArea(),checkin:'15:00',checkout:'11:00',from:Math.max(0,n-1),to:n});rerenderForm();return}
   if(t.dataset.delstay!=null&&draft){draft.stays.splice(+t.dataset.delstay,1);rerenderForm();return}
   if(t.dataset.addev&&draft){draft.events.push({name:'',day:0,start:'19:00',end:'21:00',area:firstArea()});rerenderForm();return}

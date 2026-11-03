@@ -680,6 +680,53 @@ module.exports = [
     }
   },
   {
+    name: 'React screen: 처음 설정 with AI (talk → 방향, 여행지 추천 cards · 더 보기 · 궁금한 곳, chips flip, buttons relabel while waiting)',
+    async run({ b, S, device, ok, vis }) {
+      const D = c => ({ city: c, country: '일본', why: c + ' 좋아요', season: '선선해요', highlights: ['시장'], flight: '비행 약 2시간', budget: '60만원', caution: '', fit: '' });
+      let turn = 0;
+      const fake = async r => {
+        const body = r.request().postData() || '', say = o => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content: [{ type: 'text', text: JSON.stringify(o) }] }) });
+        if (body.includes('travel companion')) return ++turn < 3 ? say({ reply: '그랬군요. 더 들려주세요.', options: ['쉬고 싶어요', '걷고 싶어요'], done: false, summary: null })
+          : say({ reply: '좋아요.', options: [], done: true, summary: { purpose: '천천히 걷기', keywords: ['산책길'], pace: 'slow', social: 'alone', party: 'solo', reach: 'near', avoid: '', dest: '', nights: null, startDate: null, note: '조용한 여행' } });
+        await new Promise(x => setTimeout(x, 1500));
+        if (body.includes('is considering')) return say({ destinations: [D('레이캬비크')] });
+        return say({ destinations: body.includes('Do not repeat') ? [D('타이베이'), D('하노이')] : ['후쿠오카', '삿포로', '가오슝', '다낭', '제주'].map(D) });
+      };
+      const fresh = async () => {
+        const p = await device(b, S); await p.route(/api\.anthropic\.com/, fake); await p.click('[data-w="new"]'); await p.waitForTimeout(250);
+        if (await p.$('#onbKey_anthropic')) { await p.fill('#onbKey_anthropic', 'sk-ant-test-key'); await p.click('#onbBody [data-onbkey="anthropic"]'); await p.waitForTimeout(300) }
+        await p.click('#onbBody [data-pickjp="J"]'); await p.waitForTimeout(250); return p;
+      };
+      let p = await fresh();
+      await p.click('#onbBody [data-startmode="talk"]'); await p.waitForTimeout(250);
+      ok(await vis(p, '#talkQ') && await p.$$eval('#onbBody .t-opt', e => e.length) === 4, 'talk: first question with 4 answers');
+      await p.click('#onbBody [data-talkopt="0"]'); await p.waitForTimeout(800);
+      ok((await p.textContent('#talkQ')).includes('더 들려주세요') && await p.$$eval('#onbBody .t-dots i.on', e => e.length) === 1, 'an answer: next question, one dot on');
+      await p.fill('#talkInput', '바다'); await p.click('#talkSend'); await p.waitForTimeout(800);
+      await p.click('#talkFinish'); await p.waitForTimeout(800);
+      ok(await vis(p, '#onbBody .t-letter') && await p.inputValue('#onbBody [data-pf="purpose"]') === '천천히 걷기', 'finish: the 방향 letter with the summed-up line');
+      const chip = '#onbBody .t-letter [data-kwtoggle="산책길"]';
+      const before = await p.getAttribute(chip, 'aria-pressed'); await p.click(chip); await p.waitForTimeout(200);
+      ok(before === 'true' && await p.getAttribute(chip, 'aria-pressed') === 'false' && !(await p.evaluate(() => JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k => k.endsWith('gp.kw'))) || '[]'))).includes('산책길'), 'a chip flips off and the keyword is removed');
+      await p.click('#talkApply'); await p.waitForTimeout(300);
+      ok((await p.textContent('#onbBody .t-banner')).includes('천천히 걷기') && await vis(p, '#onbBody #destRecBtn'), 'apply: banner + 여행지 추천');
+      await p.selectOption('#onbBody [data-pf="nights"]', '3'); await p.fill('#onbBody [data-pf="startDate"]', '2026-12-10'); await p.dispatchEvent('#onbBody [data-pf="startDate"]', 'change'); await p.waitForTimeout(300);
+      await p.fill('#destWant', '조용한 바다'); await p.click('#destRecBtn'); await p.waitForTimeout(500);
+      ok((await p.textContent('#destRecBtn')).includes('고르는 중') && (await p.textContent('#st_dest')).includes('초 지났어요'), 'while waiting: 고르는 중… and the time');
+      await p.waitForTimeout(1800);
+      ok(await p.$$eval('#onbBody .area-card', e => e.length) === 5 && (await p.textContent('#destRecBtn')) === 'AI로 여행지 추천받기' && (await p.textContent('#st_dest')).includes('골라 주세요'), 'five cards, button back, a message');
+      ok(await p.inputValue('#destWant') === '조용한 바다', 'what was written in the wish box stays');
+      await p.click('#destMoreBtn'); await p.waitForTimeout(2300);
+      ok(await p.$$eval('#onbBody [data-pickdest]', e => e.length) === 7, '다른 곳 더 보기 adds two');
+      await p.fill('#destAsk', '아이슬란드'); await p.click('#destAskBtn'); await p.waitForTimeout(2300);
+      ok((await p.textContent('#asked-0')).includes('레이캬비크') && (await p.textContent('#st_ask')).includes('정리했어요'), '궁금한 곳: its own card');
+      await p.click('#onbBody [data-pickdest="1"]'); await p.waitForTimeout(400);
+      ok(await p.inputValue('#onbBody [data-pf="dest"]') === '삿포로', 'picking a card fills 여행지');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
     name: 'friends: sharing again after a share that stopped half-way (trip on the server, no membership)',
     async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
       const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);

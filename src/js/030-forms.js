@@ -11,7 +11,6 @@ function pasteBox(kind,hint){
 }
 // 더보기 → 이번 여행 forms are drawn by React (app/screens/TripForms.tsx): these build what each form shows.
 const optsOf=o=>Object.entries(o).map(([k,v])=>[k,Array.isArray(v)?v[0]:v.name]);
-const oldPart=html=>({f:'old',html});
 function datesInfo(p){const ds=p.dateSet!==false, ns=p.nightsSet!==false;return {start:ds&&!p.dateUnknown?String(p.startDate??''):'',unknown:!!p.dateUnknown,nights:ns?p.nights:null,maxN:MAX_N}}
 function partParty(p){const q=p.party;return {f:'party',type:q.type,adults:q.adults,kids:q.kids}}
 function partTrip(p){return {f:'trip',bookedFlight:p.bookedFlight!==false,bookedStay:p.bookedStay!==false,dates:datesInfo(p)}}
@@ -26,12 +25,8 @@ function datesReady(p){return p.dateSet!==false&&p.nightsSet!==false}
 function needDates(){setSt('st_dates','여행 날짜와 기간을 먼저 골라 주세요. 모르면 "날짜는 아직 몰라요"를 눌러 주세요.');const d=document.getElementById('datesSec');if(d)d.scrollIntoView({block:'center'})}
 const isoPlus=n=>{const d=new Date();d.setDate(d.getDate()+n);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
 const heads2=q=>Math.max(1,(+q.adults||1)+(+q.kids||0));
-function fTaste(){const all=[...new Set([...Object.values(TAGS).flat(),...GENERIC_KW])];
-  return `<div class="fsec"><h3>취향 키워드</h3><p class="hint">끌리는 걸 모두 고르세요. AI가 이 키워드에 맞춰 장소를 찾고, 겹치는 장소가 추천에서 앞에 나와요.</p>
-  <div class="chips">${all.map(k=>`<button type="button" data-kwtoggle="${esc(k)}" aria-pressed="${kws.some(x=>norm(x)===norm(k))}">${esc(k)}</button>`).join('')}</div>
-  ${sample?`<label class="fg" style="display:block"><span class="hint">좋아하는 영화, 음악, 작가, 브랜드를 적으면 AI가 키워드를 골라 줘요.</span><textarea id="tasteText" rows="2" style="margin-top:4px" placeholder="예: 슈게이징 밴드, 지브리, 필름 카메라, 빈티지 옷"></textarea></label><div class="row"><button class="small-btn primary" type="button" id="aiKw">AI로 키워드 찾기</button><span class="ai-status" id="st_kw"></span></div>`:''}</div>`}
 const ONB=[
-  {t:'어디로, 언제, 누구와 떠나나요?',s:'세 가지만 알려 주면 바로 일정표를 만들어요. 교통편, 숙소, 취향은 필요할 때 물어볼게요.',f:p=>!p.jpPicked?[partJP()]:!p.startMode?[{f:'chooser',ai:!!sample}]:p.startMode==='pq'?[partQuick(p,false)]:p.startMode==='talk'?[oldPart(fTalk(p))]:p.startMode==='day'?[partQuick(p,true)]
+  {t:'어디로, 언제, 누구와 떠나나요?',s:'세 가지만 알려 주면 바로 일정표를 만들어요. 교통편, 숙소, 취향은 필요할 때 물어볼게요.',f:p=>!p.jpPicked?[partJP()]:!p.startMode?[{f:'chooser',ai:!!sample}]:p.startMode==='pq'?[partQuick(p,false)]:p.startMode==='talk'?[partTalk(p)]:p.startMode==='day'?[partQuick(p,true)]
     :p.destMode==='find'?[...(p.fromTalk?[partBanner(p,'날짜·기간·예산을 확인하고 아래 "AI로 여행지 추천받기"를 눌러 주세요.')]:[]),{f:'dates',dates:datesInfo(p)},partDest(p)]
     :[...(p.fromTalk?[partBanner(p,'날짜와 동행을 확인하고 "AI로 여행지 준비하기"를 눌러 주세요.')]:[]),partDest(p),{f:'dates',dates:datesInfo(p)},partParty(p)]}
 ];

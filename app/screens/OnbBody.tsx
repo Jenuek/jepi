@@ -1,16 +1,17 @@
 // 처음 설정 (#onbBody): the body of the first-setup sheet (it used to be renderOnb's innerHTML in src/js/030-forms.js).
 // The sheet around it (#onb: title, 다음/건너뛰기 buttons) is still old fixed HTML in body.html.
-// The body is a list of parts: shared forms (TripForms.tsx), the parts only this sheet has (below), or old HTML
-// (the 이야기하면서 정하기 talk and the 여행지 추천 finder, which the old code still writes into).
+// The body is a list of parts: shared forms (TripForms.tsx), the parts only this sheet has (below, OnbTalk, OnbFinder).
 // Drawn fresh on every redraw (rev), like before: the old code changes the draft, then redraws.
 import { Fragment } from 'react';
 import { FormPiece, type FormPart, type Opt } from './TripForms';
-import { LiveButton, LiveLine } from '../ui/live';
+import { LiveButton, LiveChip, LiveLine } from '../ui/live';
+import { Talk, type TalkPart } from './OnbTalk';
 
 export type OnbPart =
   | FormPart
   | { f: 'jp'; keyBox: boolean; keyHelpHTML: string; importBox: boolean }
   | { f: 'chooser'; ai: boolean }
+  | TalkPart
   | { f: 'banner'; purpose: string; next: string }
   | { f: 'quick'; dest: string; dayOnly: boolean; when: string; date: string; len: string; slot: string; slots: Opt[]; kws: { k: string; on: boolean }[]; party: string };
 
@@ -71,7 +72,7 @@ function Quick(p: Extract<OnbPart, { f: 'quick' }>) {
       {!p.dayOnly && <div className="q-field"><span>얼마나?</span><Chips name="len" val={p.len} opts={[['0', '하루'], ['1', '1박 2일'], ['2', '2박 3일'], ['3', '3박 4일'], ['5', '더 길게']]} /></div>}
       {p.len === '0' && <div className="q-field"><span>몇 시쯤?</span><Chips name="slot" val={p.slot} opts={p.slots} /></div>}
       <div className="q-field"><span>끌리는 것 <small className="hint">(선택, 안 골라도 돼요)</small></span>
-        <div className="chips">{p.kws.map(x => <button key={x.k} type="button" data-kwtoggle={x.k} aria-pressed={x.on}>{x.k}</button>)}</div></div>
+        <div className="chips">{p.kws.map(x => <LiveChip key={x.k} k={x.k} on={x.on} />)}</div></div>
       <div className="q-field"><span>누구랑?</span><Chips name="party" val={p.party} opts={[['solo', '혼자'], ['friends', '친구'], ['couple', '연인'], ['family', '가족']]} /></div>
       <div className="row"><LiveButton className="dice-go" id="quickStart">{p.len === '0' ? '하루 코스 시작하기' : '🎲 시작하기'}</LiveButton><LiveLine tag="span" id="st_pack" /></div>
       <p className="hint">나머지는 필요할 때 물어볼게요.</p>
@@ -85,6 +86,7 @@ function Piece({ part }: { part: OnbPart }) {
     case 'chooser': return <Chooser ai={part.ai} />;
     case 'banner': return <div className="t-banner"><span>{`🧭 ${part.purpose || '이번 여행의 방향'}`}</span><small>{part.next}</small></div>;
     case 'quick': return <Quick {...part} />;
+    case 'talk': return <Talk {...part} />;
     default: return <FormPiece part={part} />;
   }
 }

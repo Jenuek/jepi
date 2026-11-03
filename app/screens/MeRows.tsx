@@ -1,5 +1,5 @@
 // 더보기 → 이번 여행: one row per topic, tap to open its form (it used to be renderMeRows in src/js/220-more-menu.js).
-// The row values are still old HTML. The open form is a list of parts (TripForms.tsx: React forms, or old HTML)
+// The row values are still old HTML. The open form is a list of parts (TripForms.tsx)
 // drawn fresh on every full redraw (rev) like before; a message-only update keeps it as it is (same rev).
 import { FormPiece, type FormPart } from './TripForms';
 

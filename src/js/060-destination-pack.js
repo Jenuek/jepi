@@ -146,9 +146,9 @@ async function onbAdvance(){
   }
   if(onbStep<ONB.length-1){onbStep++;renderOnb()} else await finishOnb();
 }
-// 여행지 (drawn by React: TripForms.tsx Dest). Not decided yet → the finder (still old HTML).
+// 여행지 (drawn by React: TripForms.tsx Dest). Not decided yet → the finder (OnbFinder.tsx).
 function partDest(p){
-  if(p.destMode==='find') return oldPart(fDestFinder(p));
+  if(p.destMode==='find') return partFinder(p);
   const ready=PACK&&norm(PACK.city)===norm(p.dest||'');
   return {f:'dest',dest:p.dest??'',ai:!!sample,ready:ready?`${PACK.city} 준비됨 · 동네 ${Object.keys(AREAS).length}곳 · 장소 ${P.length}곳`:'',
     rate:ready&&PACK.currency!=='KRW'?{cur:PACK.currency,val:+KRW_PER_JPY.toFixed(4)}:null};

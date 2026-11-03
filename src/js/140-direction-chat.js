@@ -6,35 +6,15 @@ function talkReset(){talk={msgs:[{role:'a',text:TALK_OPEN.q}],options:TALK_OPEN.
 // 처음 설정 parts drawn by React (app/screens/OnbBody.tsx)
 const partBanner=(p,next)=>({f:'banner',purpose:p.purpose||'',next});
 function partJP(){return {f:'jp',keyBox:!!(STANDALONE&&!sample),keyHelpHTML:KEY_HELP.anthropic,importBox:!inClaude()}}
-function fTalk(p){
+// drawn by React: app/screens/OnbTalk.tsx
+function partTalk(p){
   if(!talk) talkReset();
   const t=talk, S=t.summary, last=[...t.msgs].reverse().find(m=>m.role==='a'), hist=[];
   const ok=t.msgs.filter(m=>!m.err);for(let k=0;k<ok.length;k++){const m=ok[k];if(m.role==='u')hist.push([ok[k-1]?ok[k-1].text:'',m.text])}
-  const dots=Array.from({length:TALK_MAX},(_,k)=>`<i class="${k<t.n?'on':''}"></i>`).join('');
-  let h=`<div class="talk2${S?' done':''}">
-    <div class="t-dots" aria-label="${Math.min(t.n,TALK_MAX)} / ${TALK_MAX}">${dots}</div>
-    ${hist.length?`<details class="t-hist"><summary>지금까지 나눈 이야기</summary>${hist.map(([q,a])=>`<p class="t-hq">${esc(q)}</p><p class="t-ha">${esc(a)}</p>`).join('')}</details>`:''}`;
-  if(!S){
-    h+=t.busy?`<p class="t-q t-wait">잠시 생각을 정리하고 있어요<span class="t-ell"></span></p>`
-      :`<p class="t-q" id="talkQ">${esc(last?last.text:'')}</p>
-      ${t.options.length?`<div class="t-opts">${t.options.map((o,i)=>`<button type="button" class="t-opt" data-talkopt="${i}">${esc(o)}</button>`).join('')}</div>`:''}
-      <div class="t-write"><textarea id="talkInput" rows="2" maxlength="300" placeholder="떠오르는 대로 적어 보세요"></textarea><button type="button" class="t-send" id="talkSend" aria-label="보내기">→</button></div>
-      ${t.failed?'<div class="row"><button type="button" class="small-btn primary" id="talkRetry">다시 시도하기</button></div>':''}
-      <div class="t-links">${t.n>=2?'<button type="button" class="t-link" id="talkFinish">이 정도로 정리해 줘</button>':''}<button type="button" class="t-link" data-startmode="quick">건너뛰고 직접 고를게요</button></div>`;
-    h+=`<p class="ai-status" id="st_talk"></p></div>`;
-  }else{
-    const d=p.direction||{};
-    h+=`${last?`<p class="t-close">${esc(last.text)}</p>`:''}
-    <div class="t-letter"><span class="t-label">이번 여행의 방향</span><p class="t-note">${esc(S.note||p.purpose||'')}</p>
-    <label class="t-field"><span>한 줄로 말하면</span>${inp('purpose',p.purpose,'text','maxlength="80"')}</label>
-    <div class="t-field"><span>마음에 담아 둘 단어</span><div class="chips">${[...new Set([...S.keywords,...kws])].map(k=>`<button type="button" data-kwtoggle="${esc(k)}" aria-pressed="${kws.some(x=>norm(x)===norm(k))}">${esc(k)}</button>`).join('')}</div></div>
-    <div class="t-field"><span>여행의 속도</span>${radioRow('pace',p.pace,[['slow','느긋하게'],['normal','보통'],['full','꽉 채워서']])}</div>
-    ${p.party.type==='solo'?`<div class="t-field"><span>사람과의 거리</span>${radioRow('social',p.social,[['alone','혼자가 좋아요'],['some','가끔은 대화도'],['social','많이 만나고 싶어요']])}</div>`:''}
-    <label class="t-field"><span>피하고 싶은 것</span>${inp('direction.avoid',d.avoid||'','text','maxlength="80" placeholder="예: 사람 많은 관광지"')}</label>
-    <div class="row"><button type="button" class="small-btn primary" id="talkApply">${S.dest?`${esc(S.dest)}(으)로 이어 가기`:'이 방향으로 여행지 찾으러 가기'}</button><button type="button" class="t-link" id="talkRedo">다시 이야기하기</button></div>
-    <p class="hint">대화 내용은 저장하지 않고, 이 방향만 남겨요.</p></div></div>`;
-  }
-  return h;
+  const d=p.direction||{};
+  return {f:'talk',n:t.n,max:TALK_MAX,hist,last:last?last.text:'',busy:!!t.busy,options:t.options.slice(),failed:!!t.failed,
+    done:S?{note:S.note||p.purpose||'',purpose:p.purpose??'',chips:[...new Set([...S.keywords,...kws])].map(k=>({k,on:kws.some(x=>norm(x)===norm(k))})),
+      pace:p.pace,solo:p.party.type==='solo',social:p.social,avoid:d.avoid||'',applyLabel:S.dest?`${S.dest}(으)로 이어 가기`:'이 방향으로 여행지 찾으러 가기'}:null};
 }
 async function talkSend(text,opt){
   opt=opt||{};
