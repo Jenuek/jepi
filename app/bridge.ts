@@ -11,6 +11,7 @@ import { FriendsPanel, type FriendsPanelProps } from './screens/FriendsPanel';
 import { NotifyPanel, type NotifyPanelProps } from './screens/NotifyPanel';
 import { SettingsScreen, type SettingsScreenProps } from './screens/SettingsScreen';
 import { TasteKeywords, type TasteKeywordsProps } from './screens/TasteKeywords';
+import { FindSheet, type FindSheetProps } from './screens/FindSheet';
 
 // Every screen React owns, with the props the old code must pass.
 export interface Screens {
@@ -21,6 +22,7 @@ export interface Screens {
   notify: NotifyPanelProps;
   settings: SettingsScreenProps;
   keywords: TasteKeywordsProps;
+  find: FindSheetProps;
 }
 
 const SCREENS: { [K in keyof Screens]: ComponentType<Screens[K]> } = {
@@ -31,6 +33,7 @@ const SCREENS: { [K in keyof Screens]: ComponentType<Screens[K]> } = {
   notify: NotifyPanel,
   settings: SettingsScreen,
   keywords: TasteKeywords,
+  find: FindSheet,
 };
 
 export interface JepiUI {
@@ -41,20 +44,28 @@ declare global {
   interface Window { JEPI_UI: JepiUI }
 }
 
-const roots = new WeakMap<Element, Root>();
+// Each screen draws into its own invisible spot (display:contents) inside the old code's element.
+// Some elements are shared with old screens (#sheet: the block sheet and 장소 찾기). When the old code
+// overwrites the element, the spot is gone: the next mount() starts a fresh one.
+const roots = new WeakMap<Element, { root: Root; host: HTMLElement; name: string }>();
 
 export function installBridge(): void {
   window.JEPI_UI = {
     mount(name, el, props) {
-      let root = roots.get(el);
-      if (!root) {
+      let cur = roots.get(el);
+      if (!cur || cur.host.parentNode !== el || cur.name !== name) {
+        if (cur) cur.root.unmount();
         el.textContent = '';
-        root = createRoot(el);
-        roots.set(el, root);
+        const host = document.createElement('div');
+        host.className = 'jepi-root';
+        host.style.display = 'contents';
+        el.appendChild(host);
+        cur = { root: createRoot(host), host, name };
+        roots.set(el, cur);
       }
       const Screen = SCREENS[name] as ComponentType<typeof props>;
       // draw right away, so the old code can rely on the screen being there when mount() returns
-      const r = root;
+      const r = cur.root;
       flushSync(() => r.render(createElement(Screen, props)));
     },
   };

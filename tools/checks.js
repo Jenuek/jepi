@@ -548,5 +548,26 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'React screen: 장소 찾기 (chips, typed words kept, no AI message, shares the sheet with the block sheet)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await p.evaluate(() => window.__jepi.openFind({ when: 'gap', into: 'sched' })); await p.waitForTimeout(150);
+      ok(await p.getAttribute('[data-find="when:gap"]', 'aria-pressed') === 'true', 'opens with 빈 시간에');
+      await p.fill('#findQ', '카페');
+      await p.click('[data-find="into:list"]'); await p.waitForTimeout(100);
+      ok(await p.getAttribute('[data-find="into:list"]', 'aria-pressed') === 'true' && await p.inputValue('#findQ') === '카페', 'chip switched, typed words kept');
+      await p.click('#findGo'); await p.waitForTimeout(300);
+      ok((await p.textContent('#findSt')).includes('AI가 연결되어 있지 않아요') && !(await p.isDisabled('#findGo')), 'no AI: says so, button usable');
+      await p.click('#sheet [data-close]'); await p.waitForTimeout(100);
+      await p.click('#grid .blk:has-text("구로몬")'); await p.waitForTimeout(200);
+      ok(await vis(p, '#sheet [data-mv="30"]') && !(await vis(p, '#findForm')), 'a block opens its own sheet in the same place');
+      await p.click('#sheet [data-close="1"]').catch(() => {});
+      await p.evaluate(() => window.__jepi.openFind({ where: 'city' })); await p.waitForTimeout(150);
+      ok(await vis(p, '#findForm') && await p.getAttribute('[data-find="where:city"]', 'aria-pressed') === 'true' && await p.inputValue('#findQ') === '', '찾기 opens again fresh after the block sheet');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];

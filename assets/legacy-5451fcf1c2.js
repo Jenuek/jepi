@@ -3756,29 +3756,18 @@ function openFind(o){
   renderFind(); $('#sheet').dataset.uid=''; $('#sheetBg').hidden=false;
   if(o&&o.autorun) runFind();
 }
-function renderFind(){
-  const F=FIND, gaps=gapsOf(day), seg=(k,v,cur,lbl)=>`<button type="button" class="fchip" data-find="${k}:${v}" aria-pressed="${cur===v}">${lbl}</button>`;
-  const areas=Object.entries(AREAS).map(([k,v])=>`<option value="${k}"${F.area===k?' selected':''}>${esc(v[0])}</option>`).join('');
-  $('#sheet').innerHTML=`<h3>장소 찾기</h3><div class="when">Day ${day+1} · ${esc(DAYS[day].date)}</div>
-  <form id="findForm" class="find-form">
-    <div class="find-g"><span class="hint">어디</span><div class="seg">${seg('where','near',F.where,'오늘 일정 근처')}${seg('where','area',F.where,'동네 고르기')}${seg('where','city',F.where,`${esc(PACK.city)} 전체`)}</div>
-      ${F.where==='area'?`<select id="findArea" aria-label="동네">${areas}</select>`:''}</div>
-    <div class="find-g"><span class="hint">언제</span><div class="seg">${gaps.length?seg('when','gap',F.when,'빈 시간에'):''}${seg('when','any',F.when,'아무 때나')}</div>
-      ${F.when==='gap'&&gaps.length>1?`<select id="findGap" aria-label="빈 시간">${gaps.map(g=>`<option value="${g[0]}-${g[1]}"${F.gap&&F.gap[0]===g[0]?' selected':''}>${fmt(g[0])}–${fmt(g[1])}</option>`).join('')}</select>`:F.when==='gap'&&F.gap?`<span class="hint mono">${fmt(F.gap[0])}–${fmt(F.gap[1])}</span>`:''}</div>
-    <div class="find-g"><span class="hint">넣을 곳</span><div class="seg">${seg('into','sched',F.into,'일정에')}${seg('into','list',F.into,'장소에만')}</div></div>
-    <input id="findQ" maxlength="60" value="${esc(F.q)}" placeholder="예) 카페, 비 오는 날 · 비워 두면 알아서" autocomplete="off">
-    <button class="small-btn primary" type="submit" id="findGo"${F.busy?' disabled':''}>${F.busy?'찾는 중…':'찾기'}</button>
-  </form>
-  <p class="ai-status" id="findSt"></p>
-  <div class="cps" id="findRes">${F.res.map(findRowHTML).join('')}</div>
-  <div class="row"><button class="small-btn" type="button" data-close="1">닫기</button></div>`;
-}
-function findRowHTML(r){
-  const p=PM[r.id]; if(!p) return '';
-  const meta=[p.area,CATS[p.cat]||'',p.hours&&!p.always?`${fmt(p.hours[0])}–${fmt(p.hours[1])}`:''].filter(Boolean).join(' · ');
-  const slot=FIND.when==='gap'&&FIND.gap?'· 빈 시간에':'· 시간 고르기';
-  return `<div class="cp${r.c==='skip'?' off':''}"><div class="cp-t"><b>${esc(p.name)}</b>${meta?`<small>${esc(meta)}</small>`:''}${p.note?`<p>${esc(p.note)}</p>`:''}</div>
-    ${r.c?`<span class="cp-st">${esc(r.txt||'')}</span>`:`<div class="cp-b"><button class="small-btn${FIND.into==='sched'?' primary':''}" type="button" data-findr="${r.id}:sched">일정에 넣기 ${slot}</button><button class="small-btn${FIND.into==='list'?' primary':''}" type="button" data-findr="${r.id}:list">장소에만</button><button class="small-btn" type="button" data-findr="${r.id}:skip">안 함</button></div>`}</div>`;
+// Drawn by React: app/screens/FindSheet.tsx. renderFind = full redraw (boxes and status start fresh, like before);
+// findRowsUpdate = only the results change (what was typed and the status line stay).
+let findRev=0;
+function renderFind(){findRev++;findMount()}
+function findRowsUpdate(){findMount()}
+function findMount(){
+  const F=FIND, gaps=gapsOf(day), gv=g=>({v:`${g[0]}-${g[1]}`,label:`${fmt(g[0])}–${fmt(g[1])}`});
+  window.JEPI_UI.mount('find',$('#sheet'),{dayNo:day+1,date:String(DAYS[day].date),city:String(PACK.city||''),where:F.where,area:F.area||'',
+    areas:Object.entries(AREAS).map(([k,v])=>({k,label:String(v[0])})),when:F.when,gaps:gaps.map(gv),gap:F.gap?gv(F.gap):null,into:F.into,q:F.q||'',busy:!!F.busy,
+    rows:F.res.map(r=>{const p=PM[r.id];if(!p)return null;
+      const meta=[p.area,CATS[p.cat]||'',p.hours&&!p.always?`${fmt(p.hours[0])}–${fmt(p.hours[1])}`:''].filter(Boolean).join(' · ');
+      return {id:r.id,name:String(p.name),meta,note:p.note?String(p.note):'',c:r.c||'',txt:r.txt||''}}).filter(Boolean),rev:findRev});
 }
 function findFocus(){
   const F=FIND, parts=[];
@@ -3816,7 +3805,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)r
       applyOpsCore(rr.ops); save(); FIND.cursor=parse(rr.ops[0].start)+p.dur+20;
       r.c='sched'; r.txt=`${rr.ops[0].start}에 넣었어요${rr.warns.length?` · 확인할 것 ${rr.warns.length}`:''}`; renderAll();
     } else {selected=id;r.c='pick';r.txt='일정표에서 넣을 시간을 탭하세요';closeSheet();tab='timeline';renderAll();return}
-    $('#findRes').innerHTML=FIND.res.map(findRowHTML).join(''); renderTray(); return}
+    findRowsUpdate(); renderTray(); return}
 });
 document.addEventListener('change',e=>{
   if(e.target.id==='findArea'){FIND.area=e.target.value}
