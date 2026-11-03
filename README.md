@@ -56,6 +56,7 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 3. 예전 코드에서 `window.JEPI_UI.mount('이름', 요소, {…})`로 그려요. 예: `src/js/387-help.js` → `app/screens/HelpPanel.tsx`
 4. id·class 이름은 그대로 둬요. CSS와 자동 점검이 그 이름을 써요.
 5. `tools/checks.js`에 그 화면 점검을 추가해요.
+6. 예전 화면과 똑같은지: `npm run build` 후 `node tools/compare.js tools/compare/<화면>.js` (시나리오를 하나 만들어요. 예: `tools/compare/settings.js`)
 
 ### 꼭 알아야 할 규칙 하나
 
@@ -99,7 +100,7 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 | 기기에 저장 (localStorage) | `app/data/storage.ts` (여기로만 읽고 써요) |
 | 친구와 함께 (초대·합치기·가고 싶어요) | 화면 `app/screens/FriendsPanel.tsx` (리액트), 동작·서버 `384-trips.js` |
 | 알림 (일정별 🔔, 서버로 예약) | 화면 `app/screens/NotifyPanel.tsx` (리액트), 동작 `386-notify.js`, 서버 `supabase/functions/jepi-push` |
-| 더보기 메뉴 / 설정 / 사용 안내 | `app/screens/MoreMenu.tsx` (리액트, 숫자는 `220-more-menu.js`) / `230-settings.js` / `app/screens/HelpPanel.tsx` (리액트) |
+| 더보기 메뉴 / 설정 / 사용 안내 | `app/screens/MoreMenu.tsx` (리액트, 숫자는 `220-more-menu.js`) / `app/screens/SettingsScreen.tsx`+`SyncSection`·`MyPlacesSection`·`AiKeysSection` (리액트, 값과 동작은 `230-settings.js`·`310-sync.js`·`270-my-places.js`·`250-phase-strip.js`) / `app/screens/HelpPanel.tsx` (리액트) |
 
 ### 서버 (Supabase)
 

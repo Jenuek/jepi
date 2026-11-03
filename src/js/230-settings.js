@@ -11,24 +11,16 @@ const KEY_HELP={
 };
 let keyEdit=null, keyShow=false;
 const isBad=k=>!!keyBad[k==='gmaps'?'google':k];
-function keyRow(k){const d=KEY_DEF[k], v=KEYS[k];
-  const st=keyMsg[k]?`<small class="kmsg">${esc(keyMsg[k])}</small>`:'';
-  if(keyEdit===k) return `<div class="krow open"><div class="kh"><b>${d.name}</b><small>${d.sub}</small></div>
-    <div class="kin"><input id="keyIn" type="${keyShow?'text':'password'}" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${d.ph}" value=""><button class="small-btn" type="button" id="keyShow">${keyShow?'숨기기':'보기'}</button></div>
-    <div class="row"><button class="small-btn primary" type="button" data-keysave="${k}">저장</button><button class="small-btn" type="button" id="keyCancel">취소</button></div>
-    <details class="khelp"><summary>키 받는 법</summary>${KEY_HELP[k]}</details>${st}</div>`;
-  return `<div class="krow"><div class="kh"><b>${d.name}</b><small>${v?`<span class="mono">${esc(maskKey(v))}</span>`:d.sub}</small>${st}</div>
-    ${v?`<span class="mchip ${isBad(k)?'warn':'ok'}">${isBad(k)?'확인 필요':'연결됨'}</span><button class="small-btn" type="button" data-keytest="${k}">확인</button><button class="small-btn" type="button" data-keyedit="${k}">바꾸기</button><button class="small-btn danger" type="button" data-keydel="${k}">삭제</button>`
-     :`<button class="small-btn primary" type="button" data-keyedit="${k}">연결</button>`}</div>`}
 // The frame is drawn by React: app/screens/SettingsScreen.tsx. The parts below are still old HTML.
 let settingsRev=0;
-function settingsAI(){return STANDALONE?`<div class="mgroup">${Object.keys(KEY_DEF).map(keyRow).join('')}</div>
-    <p class="hint">무거운 작업(일정 짜기, 여행지 준비)은 Claude ${esc(MODELS.heavy)}, 가벼운 작업(키워드, 예약 내용 읽기)은 ${KEYS.gemini?'Gemini Flash':'Claude '+esc(MODELS.light)}가 맡아요. 경로는 국내는 카카오, 해외는 Google로 계산하고 한 번 계산한 구간은 이 기기에 저장해 다시 부르지 않아요${routeStats.ok?` (이번에 ${routeStats.ok}구간 계산)`:''}.</p>
-    ${hoursHint()}<details class="khelp"><summary>고급: 모델 이름</summary><div class="fg"><label>무거운 작업<input id="mHeavy" value="${esc(MODELS.heavy)}"></label><label>가벼운 작업 (Claude)<input id="mLight" value="${esc(MODELS.light)}"></label><label>Gemini<input id="mGem" value="${esc(MODELS.gemini)}"></label></div><div class="row"><button class="small-btn" type="button" id="mSave">모델 저장</button></div></details>`
-    :`<p class="hint">Claude 안에서는 AI가 자동으로 연결돼요. 지도 키는 깃허브 앱 버전에서 넣을 수 있어요.</p>`}
+// AI·지도 연결 is drawn by React: app/screens/AiKeysSection.tsx. Only the masked keys go there.
+function settingsAI(){return {standalone:!!STANDALONE,editing:keyEdit,show:!!keyShow,hasGemini:!!KEYS.gemini,routesOk:+routeStats.ok||0,
+  models:{heavy:MODELS.heavy,light:MODELS.light,gemini:MODELS.gemini},
+  hours:KEYS.gmaps?{use:+hoursUse(),cap:HOURS_CAP,off:hoursOff||''}:null,
+  keys:Object.keys(KEY_DEF).map(k=>{const d=KEY_DEF[k];return {k,name:d.name,sub:d.sub,ph:d.ph,masked:KEYS[k]?maskKey(KEYS[k]):'',bad:isBad(k),msg:keyMsg[k]||'',helpHTML:KEY_HELP[k]}})}}
 function renderSettings(){
   const el=$('#setBox'); if(!el) return;
-  window.JEPI_UI.mount('settings',el,{theme:themePref,zoom:store.get('gp.zoom',60),sync:syncView(),myPlaces:mypView(),aiHTML:settingsAI(),
+  window.JEPI_UI.mount('settings',el,{theme:themePref,zoom:store.get('gp.zoom',60),sync:syncView(),myPlaces:mypView(),ai:settingsAI(),
     extrasHTML:SETTINGS_EXTRA.map(f=>f()).join(''),wipeArm:!!wipeArm,host:location.host||'로컬',rev:++settingsRev});
 }
 function backupAll(){

@@ -506,5 +506,27 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'React screen: AI·지도 연결 (empty key asks, key saved and only shown masked, 보기 keeps typing, delete)',
+    async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await openSettings(p);
+      await p.click('[data-keyedit="kakao"]'); await p.waitForTimeout(100);
+      ok(await p.evaluate(() => document.activeElement && document.activeElement.id === 'keyIn') && await p.getAttribute('#keyIn', 'type') === 'password', 'key box opens, ready to type, hidden');
+      await p.click('[data-keysave="kakao"]'); await p.waitForTimeout(100);
+      ok((await p.textContent('#setBox')).includes('키를 붙여 넣어 주세요'), 'empty key: asks for one');
+      const key = '0123456789abcdef0123456789abcdef';
+      await p.fill('#keyIn', key); await p.click('#keyShow'); await p.waitForTimeout(100);
+      ok(await p.getAttribute('#keyIn', 'type') === 'text' && await p.inputValue('#keyIn') === key, '보기 shows what was typed');
+      await p.click('[data-keysave="kakao"]'); await p.waitForTimeout(400);
+      ok(await p.evaluate(k => JSON.parse(localStorage.getItem('jepi.keys')).kakao === k, key), 'key saved on this device');
+      const shown = await p.textContent('#setBox');
+      ok(!shown.includes(key) && shown.includes('012345••••••cdef'), 'the screen shows it only masked');
+      await p.click('[data-keydel="kakao"]'); await p.waitForTimeout(200);
+      ok(await vis(p, '[data-keyedit="kakao"]') && !(await p.evaluate(() => 'kakao' in JSON.parse(localStorage.getItem('jepi.keys') || '{}'))), '삭제 removes it');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];
