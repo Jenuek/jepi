@@ -587,5 +587,42 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'friends: sharing again after a share that stopped half-way (trip on the server, no membership)',
+    async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await openSettings(p); await p.click('[data-sbmode="join"]'); await p.fill('#sbEmail', 'half@x.com'); await p.fill('#sbPw', 'pass123'); await p.fill('#sbPw2', 'pass123'); await p.click('#sbGo'); await p.waitForTimeout(1800);
+      const id = await p.evaluate(() => window.__jepi.state().cur);
+      S.trips.push({ id, owner: 'U_half@x.com', name: '옛 시도', data: { old: true }, rev: 1, updated: 1 });   // what the earlier try left behind
+      await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="friends"]'); await p.waitForTimeout(200);
+      await p.click('[data-trip="share"]'); await p.waitForTimeout(1200);
+      ok(!(await p.textContent('#friendsBox')).includes('duplicate'), 'no "duplicate key" error');
+      ok(await vis(p, '#friendsBox [data-trip="stop"]') && /\?join=/.test(await p.inputValue('#friendsBox .share-text')), 'shared: invite link and 공유 끝내기');
+      const t = S.trips.find(x => x.id === id);
+      ok(S.members.some(m => m.trip_id === id && m.user_id === 'U_half@x.com' && m.role === 'owner'), 'I am the owner member on the server');
+      ok(t && !t.data.old && t.rev === 2, 'the server holds today\'s plan, not the old try');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'Korea: no Kakao route requests, 안내 시작 opens Kakao Map from → to, key check uses place search',
+    async run({ b, S, device, ok, skipCoach, openSettings }) {
+      const p = await device(b, S, { ls: { 'jepi.keys': { kakao: '0123456789abcdef0123456789abcdef' } } });
+      let routing = 0, search = 0;
+      await p.route(/dapi\.kakao\.com\/v2\/routing/, r => { routing++; r.abort() });
+      await p.route(/dapi\.kakao\.com\/v2\/local\/search/, r => { search++; r.fulfill({ status: 200, contentType: 'application/json', body: '{"documents":[{"place_name":"서울역"}],"meta":{}}' }) });
+      await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      const seoul = [37.5547, 126.9707], busan = [35.1151, 129.0415];
+      ok(await p.evaluate(([a, c]) => window.__jepi.routeProvider(a, c), [seoul, busan]) === null, 'in Korea no route provider: estimate only');
+      const link = await p.evaluate(([a, c]) => window.__jepi.navLink(a, c, '도보', '부산역'), [seoul, busan]);
+      ok(link.startsWith('https://map.kakao.com/link/from/') && link.includes(',37.5547,126.9707/to/') && link.includes(encodeURIComponent('부산역') + ',35.1151,129.0415'), '안내 시작: Kakao Map with start and destination');
+      await openSettings(p); await p.click('[data-keytest="kakao"]'); await p.waitForTimeout(400);
+      ok((await p.textContent('#setBox')).includes('✓ 장소·주소 검색 연결됨') && search === 1, '확인 tests place search and says so');
+      ok(routing === 0, 'no requests to the Kakao route address');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];

@@ -66,7 +66,7 @@ export function AiKeysSection(p: AiKeysSectionProps) {
   return (
     <>
       <div className="mgroup">{p.keys.map(r => <KeyRow key={r.k} r={r} editing={p.editing === r.k} show={p.show} />)}</div>
-      <p className="hint">{`무거운 작업(일정 짜기, 여행지 준비)은 Claude ${m.heavy}, 가벼운 작업(키워드, 예약 내용 읽기)은 ${p.hasGemini ? 'Gemini Flash' : 'Claude ' + m.light}가 맡아요. 경로는 국내는 카카오, 해외는 Google로 계산하고 한 번 계산한 구간은 이 기기에 저장해 다시 부르지 않아요${p.routesOk ? ` (이번에 ${p.routesOk}구간 계산)` : ''}.`}</p>
+      <p className="hint">{`무거운 작업(일정 짜기, 여행지 준비)은 Claude ${m.heavy}, 가벼운 작업(키워드, 예약 내용 읽기)은 ${p.hasGemini ? 'Gemini Flash' : 'Claude ' + m.light}가 맡아요. 경로는 해외는 Google로 계산하고(한 번 계산한 구간은 이 기기에 저장해 다시 부르지 않아요), 국내는 거리로 어림하고 길찾기는 카카오맵으로 열어요${p.routesOk ? ` (이번에 ${p.routesOk}구간 계산)` : ''}.`}</p>
       {p.hours && <p className="hint">{`영업시간: 해외 장소는 Google에서 실제 영업시간을 확인해요 (이번 달 ${p.hours.use}/${p.hours.cap}곳, 월 1,000곳까지 무료). 국내 장소는 카카오가 영업시간을 주지 않아 AI 추정이에요.`}{p.hours.off && <>{' '}<b className="wtxt">{p.hours.off}</b></>}</p>}
       <details className="khelp">
         <summary>고급: 모델 이름</summary>

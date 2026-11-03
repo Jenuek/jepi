@@ -1,8 +1,10 @@
-// ---------- routes: Google Routes (abroad) / Kakao (Korea), cached on this device ----------
+// ---------- routes: Google Routes (abroad), cached on this device ----------
+// Korea: Kakao gives no walking / public-transport routes to outside apps, so trips in Korea use the
+// straight-line estimate (≈), and "안내 시작" opens Kakao Map with the start and the destination filled in.
 let RC=LS.get('jepi.routes',{})||{};
 let rcT=0; function rcSave(){clearTimeout(rcT);rcT=setTimeout(()=>{const ks=Object.keys(RC);if(ks.length>700)ks.sort((a,b)=>(RC[a].t||0)-(RC[b].t||0)).slice(0,ks.length-600).forEach(k=>delete RC[k]);LS.set('jepi.routes',RC)},800)}
 const inKR=ll=>!!ll&&ll[0]>33&&ll[0]<38.7&&ll[1]>124.4&&ll[1]<131.2;
-function routeProvider(a,b){if(inKR(a)&&inKR(b))return KEYS.kakao&&!keyBad.kakao?'kakao':null;return KEYS.gmaps&&!keyBad.gmaps?'google':null}
+function routeProvider(a,b){if(inKR(a)&&inKR(b))return null;return KEYS.gmaps&&!keyBad.gmaps?'google':null}
 const rkey=(m,a,b)=>`${m}|${(+a[0]).toFixed(4)},${(+a[1]).toFixed(4)}|${(+b[0]).toFixed(4)},${(+b[1]).toFixed(4)}`;
 const rq=[], rqSet=new Set(); let rqActive=0, routeStats={ok:0,fail:0};
 function routeGet(m,a,b){
@@ -52,21 +54,7 @@ async function fetchRoute(j){
       lines:[...new Set(lines)].slice(0,4).join(' → '),tf:Math.max(0,tr.length-1),fare:fare?(+fare.units||0)+(fare.nanos||0)/1e9:null,cur:fare?fare.currencyCode:'',
       poly:rt.polyline&&rt.polyline.encodedPolyline?thin(decodePoly(rt.polyline.encodedPolyline)):null,km:(rt.distanceMeters||0)/1000,src:'google'};
   }
-  // kakao
-  const walk=m==='walk'||m==='car';
-  const q=new URLSearchParams({start_x:String(a[1]),start_y:String(a[0]),end_x:String(b[1]),end_y:String(b[0])});
-  let r;try{r=await fetch(`https://dapi.kakao.com/v2/routing/${walk?'walk':'publictraffic'}?${q}`,{headers:{Authorization:'KakaoAK '+KEYS.kakao}})}catch(_){throw aiErr('network')}
-  if(r.status===401||r.status===403)throw aiErr('not_granted');
-  if(!r.ok)return null;
-  const jj=await r.json();
-  if(walk){const rt=jj.route;if(!rt||jj.status&&jj.status!=='OK')return null;const pts=[];(rt.legs||[]).forEach(l=>(l.steps||[]).forEach(s=>((s.path||{}).points||[]).forEach(p=>pts.push([p[1],p[0]]))));
-    return {min:Math.max(1,Math.ceil((rt.properties||{}).totalTime/60)),label:'도보',lines:'',tf:0,fare:0,cur:'KRW',poly:pts.length?thin(pts):null,km:((rt.properties||{}).totalDistance||0)/1000,src:'kakao'}}
-  if(jj.status&&jj.status!=='OK'){if(km(a,b)<2.5)return fetchRoute({m:'walk',a,b,pv});return null}
-  const rt=(jj.routes||[])[0]; if(!rt)return null; const pr=rt.properties||{};
-  const kinds=new Set(),lines=[],pts=[];
-  (rt.steps||[]).forEach(s=>{const sp=s.properties||{};(sp.vehicles||[]).slice(0,1).forEach(v=>{const t=String(v.type||'');kinds.add(/지하철|전철|호선|철/.test(t+v.name)?'지하철':'버스');if(v.name)lines.push(v.name)});((s.path||{}).points||[]).forEach(p=>pts.push([p[1],p[0]]))});
-  const fare=pr.fare&&(pr.fare.value!=null?+pr.fare.value:pr.fare.min!=null?+pr.fare.min:null);
-  return {min:Math.max(1,Math.ceil((+pr.totalTime||0)/60)),label:kinds.size===1?[...kinds][0]:kinds.size?'대중교통':'도보',lines:[...new Set(lines)].slice(0,4).join(' → '),tf:+pr.transfers||0,fare:fare,cur:'KRW',poly:pts.length?thin(pts):null,km:(+pr.totalDistance||0)/1000,src:'kakao'};
+  return null;
 }
-const navLink=(a,b,mode,name)=>inKR(a)&&inKR(b)?`https://map.kakao.com/link/to/${encodeURIComponent(name||'도착')},${b[0]},${b[1]}`:mapsLink(a,b,mode);
+const navLink=(a,b,mode,name)=>inKR(a)&&inKR(b)?`https://map.kakao.com/link/from/${encodeURIComponent('출발')},${a[0]},${a[1]}/to/${encodeURIComponent(name||'도착')},${b[0]},${b[1]}`:mapsLink(a,b,mode);
 

@@ -90,7 +90,7 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 | 👍 모든 여행자의 추천 (서버 `jepi_recs`), 👍 많은 순 | `070-shared-recs.js` |
 | 블록 누르면 나오는 시트, 옮기기·길이 | `350-actions.js` |
 | 경고 계산(영업시간·이동시간) | `330-helpers.js` (`analyze`) |
-| 이동 시간·경로 (Google/카카오) | `200-routes.js` |
+| 이동 시간·경로 (해외 Google, 국내는 거리로 어림 + 카카오맵 연결) | `200-routes.js` |
 | 영업시간 확인 (Google Places, 월 900곳 한도) | `383-hours.js` |
 | 지도 | `210-map.js` |
 | AI 연결·모델 선택 | `190-keys-ai-router.js`, 실제 호출 `360-ai.js`, 채팅 `050-chat.js` |

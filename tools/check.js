@@ -60,6 +60,12 @@ function fakeServer() {
           if (['rows', 'alerts', 'subs', 'marks', 'recs'].includes(key)) x.user_id = x.user_id || me;
           if (key === 'recs' && x.user_id !== me) return J(403, { message: 'rls' });
           if (key === 'trips' && x.owner !== me) return J(403, { message: 'rls' });
+          const prefer = r.request().headers()['prefer'] || '';
+          if (['trips', 'members'].includes(key) && S[key].some(y => pk(y) === pk(x))) {
+            if (/ignore-duplicates/.test(prefer)) continue;
+            if (!/merge-duplicates/.test(prefer)) return J(409, { message: `duplicate key value violates unique constraint "jepi_${key === 'trips' ? 'trips' : 'trip_members'}_pkey"` });
+          }
+          if (key === 'members' && !S.trips.some(t => t.id === x.trip_id && t.owner === me)) return J(403, { message: 'rls' });
           if (key === 'members' && !(x.user_id === me && x.role === 'owner')) return J(403, { message: 'rls' });
           if (key === 'invites' && !['owner', 'edit'].includes(role(x.trip_id))) return J(403, { message: 'rls' });
           S[key] = S[key].filter(y => pk(y) !== pk(x)); S[key].push(x)
