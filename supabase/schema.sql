@@ -65,6 +65,28 @@ begin
 end $$;
 revoke all on function public.jepi_join(text,text) from public, anon;
 grant execute on function public.jepi_join(text,text) to authenticated;
+
+-- share my plan as a trip: makes the trip (or takes back a half-made one of mine) and makes me its owner member,
+-- in one step on the server, so the row rules (RLS) above can't stop it half-way. Returns the trip's rev.
+create or replace function public.jepi_share(p_id text, p_name text, p_data jsonb, p_member text) returns int language plpgsql security definer set search_path=public as $$
+declare v_owner uuid; v_rev int; v_now bigint := (extract(epoch from clock_timestamp())*1000)::bigint;
+begin
+  if auth.uid() is null then raise exception 'login required'; end if;
+  select owner, rev into v_owner, v_rev from public.jepi_trips where id=p_id;
+  if found and v_owner<>auth.uid() then raise exception 'not your trip'; end if;
+  if not found then
+    insert into public.jepi_trips(id,owner,name,data,rev,updated,last_by) values (p_id,auth.uid(),left(coalesce(p_name,''),60),coalesce(p_data,'{}'::jsonb),1,v_now,left(coalesce(p_member,''),30));
+    v_rev := 1;
+  else
+    v_rev := v_rev+1;
+    update public.jepi_trips set name=left(coalesce(p_name,''),60), data=coalesce(p_data,'{}'::jsonb), rev=v_rev, updated=v_now, last_by=left(coalesce(p_member,''),30) where id=p_id;
+  end if;
+  insert into public.jepi_trip_members(trip_id,user_id,role,name) values (p_id,auth.uid(),'owner',left(coalesce(p_member,''),30))
+    on conflict (trip_id,user_id) do update set role='owner', name=excluded.name;
+  return v_rev;
+end $$;
+revoke all on function public.jepi_share(text,text,jsonb,text) from public, anon;
+grant execute on function public.jepi_share(text,text,jsonb,text) to authenticated;
 revoke all on function public.jepi_role(text) from public, anon;
 grant execute on function public.jepi_role(text) to authenticated;
 
