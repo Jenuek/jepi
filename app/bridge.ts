@@ -10,6 +10,7 @@ import { PlansScreen, type PlansScreenProps } from './screens/PlansScreen';
 import { FriendsPanel, type FriendsPanelProps } from './screens/FriendsPanel';
 import { NotifyPanel, type NotifyPanelProps } from './screens/NotifyPanel';
 import { SettingsScreen, type SettingsScreenProps } from './screens/SettingsScreen';
+import { TasteKeywords, type TasteKeywordsProps } from './screens/TasteKeywords';
 
 // Every screen React owns, with the props the old code must pass.
 export interface Screens {
@@ -19,6 +20,7 @@ export interface Screens {
   friends: FriendsPanelProps;
   notify: NotifyPanelProps;
   settings: SettingsScreenProps;
+  keywords: TasteKeywordsProps;
 }
 
 const SCREENS: { [K in keyof Screens]: ComponentType<Screens[K]> } = {
@@ -28,6 +30,7 @@ const SCREENS: { [K in keyof Screens]: ComponentType<Screens[K]> } = {
   friends: FriendsPanel,
   notify: NotifyPanel,
   settings: SettingsScreen,
+  keywords: TasteKeywords,
 };
 
 export interface JepiUI {

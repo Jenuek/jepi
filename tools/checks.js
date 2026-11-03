@@ -528,5 +528,25 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'React screen: 취향 키워드 (add, typing kept while the app redraws, box empty after adding, remove)',
+    async run({ b, S, device, ok, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="pref"]'); await p.waitForTimeout(250);
+      const saved = () => p.evaluate(() => JSON.parse(localStorage.getItem('gp.kw') || '[]'));
+      await p.fill('#kwInput', '레코');
+      await p.evaluate(() => document.querySelector('[data-jp="P"]').click()); await p.waitForTimeout(150);   // the whole app redraws
+      await p.evaluate(() => document.querySelector('[data-jp="J"]').click()); await p.waitForTimeout(150);
+      ok(await p.inputValue('#kwInput') === '레코', 'what you typed stays while the app redraws');
+      await p.fill('#kwInput', '레코드'); await p.press('#kwInput', 'Enter'); await p.waitForTimeout(150);
+      ok((await saved()).includes('레코드') && (await p.textContent('#prefBox .kw-list')).includes('#레코드'), 'keyword added and saved');
+      ok(await p.inputValue('#kwInput') === '', 'box empty after adding');
+      const n = (await saved()).length;
+      await p.click('#prefBox [data-kwdel="0"]'); await p.waitForTimeout(150);
+      ok((await saved()).length === n - 1, '× removes one');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];

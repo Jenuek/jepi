@@ -220,14 +220,12 @@ function renderAI(){
       <button class="small-btn primary" data-acc="${i}" ${x.added?'disabled':''}>${x.added?'넣음':'넣기'}</button></div>`).join('')+
     `<button class="small-btn" id="aiClose">닫기</button></div>`;
 }
+// Drawn by React: app/screens/TasteKeywords.tsx
 function renderPref(){
+  const box=$('#prefBox'); if(!box) return;
   const counts=k=>P.filter(p=>tagsOf(p.id).some(t=>norm(t)===norm(k))).length;
   const known=[...new Set([...GENERIC_KW,...Object.values(TAGS).flat()])].filter(t=>!kws.some(k=>norm(k)===norm(t)));
-  $('#prefBox').innerHTML=`<div class="kw-list">${kws.map((k,i)=>`<span class="kw">#${esc(k)} <span class="n">${counts(k)}</span><button data-kwdel="${i}" aria-label="${esc(k)} 빼기">×</button></span>`).join('')||'<p class="now-hint">등록한 키워드가 없어요.</p>'}</div>
-    <form class="kw-add" id="kwForm"><input id="kwInput" placeholder="키워드 추가 (예: 레코드)" maxlength="20" autocomplete="off"><button class="small-btn primary" type="submit">추가</button></form>
-    ${known.length?`<p class="now-hint" style="margin:0 0 6px">장소에 붙어 있는 다른 키워드</p><div class="kw-sugg">${known.map(k=>`<button data-kwadd="${esc(k)}">+ ${esc(k)}</button>`).join('')}</div>`:''}
-    <p class="now-hint" style="margin:0 0 6px">숫자는 그 키워드가 붙은 장소 수예요. 장소에 없는 키워드는 0으로 나오고, 장소 데이터가 늘어나면 반영돼요.</p>
-    <button class="small-btn" id="kwReset">처음 키워드로 되돌리기</button>`;
+  window.JEPI_UI.mount('keywords',box,{kws:kws.map(k=>({k:String(k),n:counts(k)})),known:known.map(String)});
 }
 const saveKw=()=>{store.set('gp.kw',kws);LS.set('jepi.kwAt',Date.now());syncSoon();renderPref();renderTray()};
 function renderAll(){touchPlan();renderMeta();renderNudges();renderDays();renderTimeline();renderTray();renderChecks();renderPref();renderTabs();renderBanner();renderAI();renderChat();renderExt();renderLook()}
