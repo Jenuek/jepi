@@ -471,5 +471,23 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'React screen: 기기 간 동기화 (wrong password, boxes cleared, button not stuck, logout)',
+    async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
+      S.users['sy2@x.com'] = 'pass123';
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await openSettings(p);
+      await p.fill('#sbEmail', 'sy2@x.com'); await p.fill('#sbPw', 'wrong!!'); await p.click('#sbGo'); await p.waitForTimeout(800);
+      ok((await p.textContent('#setBox .kmsg')).includes('맞지 않아요'), 'wrong password: message shown');
+      ok(await p.inputValue('#sbPw') === '' && await p.inputValue('#sbEmail') === 'sy2@x.com', 'password box emptied, email kept');
+      ok(!(await p.isDisabled('#sbGo')) && (await p.textContent('#sbGo')) === '로그인', 'login button usable again');
+      await p.fill('#sbPw', 'pass123'); await p.click('#sbGo'); await p.waitForTimeout(1800);
+      ok(await vis(p, '#sbNow') && (await p.textContent('#setBox')).includes('sy2@x.com'), 'logged in: account and 지금 동기화 shown');
+      await p.click('#sbOut'); await p.waitForTimeout(300);
+      ok(await vis(p, '#sbForm'), 'logout: back to the login form');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];

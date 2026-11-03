@@ -28,7 +28,7 @@ function settingsAI(){return STANDALONE?`<div class="mgroup">${Object.keys(KEY_D
     :`<p class="hint">Claude 안에서는 AI가 자동으로 연결돼요. 지도 키는 깃허브 앱 버전에서 넣을 수 있어요.</p>`}
 function renderSettings(){
   const el=$('#setBox'); if(!el) return;
-  window.JEPI_UI.mount('settings',el,{theme:themePref,zoom:store.get('gp.zoom',60),syncHTML:syncHTML(),myPlacesHTML:mypHTML(),aiHTML:settingsAI(),
+  window.JEPI_UI.mount('settings',el,{theme:themePref,zoom:store.get('gp.zoom',60),sync:syncView(),myPlacesHTML:mypHTML(),aiHTML:settingsAI(),
     extrasHTML:SETTINGS_EXTRA.map(f=>f()).join(''),wipeArm:!!wipeArm,host:location.host||'로컬',rev:++settingsRev});
 }
 function backupAll(){

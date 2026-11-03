@@ -1,7 +1,8 @@
 // 더보기 → 설정 (the frame; it used to be renderSettings in src/js/230-settings.js).
-// 화면 and 데이터 are React. The other sections (동기화, 내 장소, AI·지도 연결, and sections other features add)
+// 화면, 동기화 and 데이터 are React. The other sections (내 장소, AI·지도 연결, and sections other features add)
 // are still drawn by the old code and come in as HTML: they move to React one by one.
 // Buttons keep their id / data-* names: the old code handles the clicks.
+import { SyncSection, type SyncSectionProps } from './SyncSection';
 
 /** HTML from the old code, redrawn from scratch on every render like before (rev changes each time) */
 function Old({ html, rev }: { html: string; rev: number }) {
@@ -12,7 +13,7 @@ export interface SettingsScreenProps {
   theme: 'light' | 'dark' | 'system' | string;
   /** px per hour on the schedule: 60 보통, 100 넓게 */
   zoom: number;
-  syncHTML: string;
+  sync: SyncSectionProps;
   myPlacesHTML: string;
   /** inside of "AI·지도 연결" */
   aiHTML: string;
@@ -42,7 +43,8 @@ export function SettingsScreen(p: SettingsScreenProps) {
           </div></div>
         </div>
       </section>
-      <section className="sset"><h3>기기 간 동기화</h3><Old html={p.syncHTML} rev={p.rev} /></section>
+      <section className="sset"><h3>기기 간 동기화</h3>{/* key: drawn fresh on every redraw like before — the old login code changes its button (잠시만요…)
+          and expects the password boxes to be empty again afterwards */}<SyncSection key={p.rev} {...p.sync} /></section>
       <section className="sset"><h3>내 장소</h3><Old html={p.myPlacesHTML} rev={p.rev} /></section>
       <section className="sset"><h3>AI·지도 연결 <small>· 로그인하면 비밀번호로 잠가서 기기끼리 맞춰요</small></h3><Old html={p.aiHTML} rev={p.rev} /></section>
       <Old html={p.extrasHTML} rev={p.rev} />
