@@ -13,6 +13,7 @@ import { SettingsScreen, type SettingsScreenProps } from './screens/SettingsScre
 import { TasteKeywords, type TasteKeywordsProps } from './screens/TasteKeywords';
 import { FindSheet, type FindSheetProps } from './screens/FindSheet';
 import { MeRows, type MeRowsProps } from './screens/MeRows';
+import { TasteStyle, type TasteStyleProps } from './screens/TasteStyle';
 
 // Every screen React owns, with the props the old code must pass.
 export interface Screens {
@@ -25,6 +26,7 @@ export interface Screens {
   keywords: TasteKeywordsProps;
   find: FindSheetProps;
   me: MeRowsProps;
+  tasteStyle: TasteStyleProps;
 }
 
 const SCREENS: { [K in keyof Screens]: ComponentType<Screens[K]> } = {
@@ -37,6 +39,7 @@ const SCREENS: { [K in keyof Screens]: ComponentType<Screens[K]> } = {
   keywords: TasteKeywords,
   find: FindSheet,
   me: MeRows,
+  tasteStyle: TasteStyle,
 };
 
 export interface JepiUI {

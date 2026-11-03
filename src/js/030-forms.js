@@ -33,16 +33,6 @@ function fDates(p){return `<div class="fsec" id="datesSec"><h3>언제 가나요?
 function datesReady(p){return p.dateSet!==false&&p.nightsSet!==false}
 function needDates(){setSt('st_dates','여행 날짜와 기간을 먼저 골라 주세요. 모르면 "날짜는 아직 몰라요"를 눌러 주세요.');const d=document.getElementById('datesSec');if(d)d.scrollIntoView({block:'center'})}
 const isoPlus=n=>{const d=new Date();d.setDate(d.getDate()+n);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
-function fStyle(p){const r=radioRow, q=p.party;
-  const num=(path,val,min,max,label)=>`<label>${label}<input type="number" data-pf="${path}" data-type="num" min="${min}" max="${max}" value="${esc(val)}"></label>`;
-  return `<div class="fsec"><h3>누구와 가나요?</h3>${r('party.type',q.type,[['solo','혼자'],['couple','연인·부부'],['friends','친구'],['family','가족']])}
-  ${q.type==='friends'||q.type==='family'?`<div class="fg">${num('party.adults',q.adults,1,20,q.type==='family'?'어른 (명)':'인원 (명)')}${q.type==='family'?num('party.kids',q.kids,0,10,'아이 (명)'):''}</div>`:''}
-  <p class="hint">${q.type==='solo'?'비용은 1인 기준으로 계산해요.':`비용은 1인 기준과 ${heads2(q)}명 합계를 같이 보여 줘요.`}</p></div>
-  <div class="fsec"><h3>어떤 여행을 원하나요?</h3>
-  <label class="fg" style="display:block"><span class="hint">이번 여행의 목적을 한 줄로 (선택)</span>${inp('purpose',p.purpose,'text','maxlength="80" placeholder="예: 맛있는 거 먹고 천천히 걷기" style="margin-top:4px"')}</label>
-  <span class="hint">속도</span>${r('pace',p.pace,[['slow','느긋하게 (하루 핵심 하나)'],['normal','보통'],['full','꽉 채워서']])}
-  ${q.type==='solo'?`<span class="hint">현지에서 사람 만나기</span>${r('social',p.social,[['alone','혼자가 좋아요'],['some','가끔은 대화도'],['social','많이 만나고 싶어요']])}`:''}
-  <span class="hint">아침 식사</span>${r('breakfast',p.breakfast,[['true','먹어요'],['false','거의 안 먹어요']])}${styleMoreHTML(p)}</div>`}
 const heads2=q=>Math.max(1,(+q.adults||1)+(+q.kids||0));
 function fTaste(){const all=[...new Set([...Object.values(TAGS).flat(),...GENERIC_KW])];
   return `<div class="fsec"><h3>취향 키워드</h3><p class="hint">끌리는 걸 모두 고르세요. AI가 이 키워드에 맞춰 장소를 찾고, 겹치는 장소가 추천에서 앞에 나와요.</p>
@@ -74,7 +64,7 @@ function onPf(e){const el=e.target;if(el&&el.dataset&&el.dataset.pk&&e.type==='c
   if(el.dataset.pf==='startDate'&&el.value){draft.dateSet=true;draft.dateUnknown=false} if(el.dataset.pf==='nights') draft.nightsSet=true;
   if(/^(out|back)\./.test(el.dataset.pf)) draft.flightSet=true; if(/^stays\./.test(el.dataset.pf)) draft.staySet=true;
   if(e.type==='change'&&['nights','startDate','party.adults','party.kids'].includes(el.dataset.pf)) rerenderForm()
-  if(['budgetMan','tripMan','localMan'].includes(el.dataset.pf)){const h=document.getElementById('budgetHint');if(h)h.textContent=budgetHintTxt(draft)}}
+  if(['budgetMan','tripMan','localMan'].includes(el.dataset.pf))meSetBudgetHint(budgetHintTxt(draft))}
 async function aiFill(kind){
   const ta=$('#paste_'+kind), st=$('#st_'+kind), text=(ta&&ta.value||'').trim();
   if(!st) return; if(!text){st.textContent='붙여 넣은 내용이 없어요.';return} if(!sample) return;

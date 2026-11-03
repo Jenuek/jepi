@@ -618,6 +618,30 @@ module.exports = [
     }
   },
   {
+    name: 'React screen: 예산 hint follows typing, 취향 style rows save and stay open',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      const prof = () => p.evaluate(() => { const k = Object.keys(localStorage).find(x => x.endsWith('gp.profile')); return JSON.parse(localStorage.getItem(k)) });
+      await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="me"]'); await p.waitForTimeout(250);
+      await p.click('[data-meopen="bud"]'); await p.waitForTimeout(150);
+      await p.fill('#meBox [data-pf="budgetMan"]', ''); await p.waitForTimeout(900);
+      const before = await p.textContent('#budgetHint');
+      await p.click('#meBox [data-pf="budgetMan"]'); await p.keyboard.type('200'); await p.waitForTimeout(100);
+      const mid = await p.textContent('#budgetHint');
+      ok(before.includes('총예산만 넣으면') && mid.includes('현지 경비 하루 약'), 'the hint changes while typing');
+      ok(await p.evaluate(() => document.activeElement && document.activeElement.matches('#meBox [data-pf="budgetMan"]')) && await p.inputValue('#meBox [data-pf="budgetMan"]') === '200', 'still typing in the same box');
+      await p.dispatchEvent('#meBox [data-pf="budgetMan"]', 'change'); await p.waitForTimeout(900);
+      ok((await prof()).budgetMan === 200 && await p.inputValue('#meBox [data-pf="budgetMan"]') === '200', 'saved, the box keeps the number');
+      await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="pref"]'); await p.waitForTimeout(250);
+      await p.click('#tasteStyle [data-radio="pace"][data-val="full"]'); await p.waitForTimeout(900);
+      ok((await prof()).pace === 'full' && await p.getAttribute('#tasteStyle [data-radio="pace"][data-val="full"]', 'aria-pressed') === 'true', '속도 saved and shown');
+      await p.click('#tasteStyle details.marks summary'); await p.click('#tasteStyle [data-radio="style.lang"][data-val="high"]'); await p.waitForTimeout(900);
+      ok((await prof()).style.lang === 'high' && await p.evaluate(() => document.querySelector('#tasteStyle details.marks').open) && (await p.textContent('#tasteStyle summary')).includes('1개 골랐어요'), 'a style row is saved, the box stays open and counts it');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
     name: 'friends: sharing again after a share that stopped half-way (trip on the server, no membership)',
     async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
       const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);

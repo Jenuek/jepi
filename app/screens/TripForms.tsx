@@ -3,9 +3,9 @@
 // the old onPf, and the old code redraws the whole form (a new rev) after it changes the draft. So the fields are
 // uncontrolled (defaultValue): they keep what the person types until the next redraw.
 // Pieces the old code still writes into (the AI paste box with its status line, the date status line) stay old HTML.
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
-type Opt = [value: string | number | boolean, label: string];
+export type Opt = [value: string | number | boolean, label: string];
 
 export interface Time2 { dep: string; arr: string; airport: string; flight: string }
 
@@ -17,6 +17,7 @@ export type FormPart =
   | { f: 'homeBox'; hasHome: boolean; addr: string; using: boolean; kakao: Opt[]; msg: string }
   | { f: 'home'; mode: string; word: string; area: string; min: number | string; fare: number | string; byMin: number | string; byMinOpts: Opt[] }
   | { f: 'stay'; helper: boolean; stays: { name: string; area: string; checkin: string; checkout: string; from: number; to: number }[]; areas: Opt[]; nights: string[]; pasteHTML: string }
+  | { f: 'budget'; man: number | string; trip: number | string; local: number | string; hint: string }
   | { f: 'events'; events: { name: string; day: number; start: string; end: string; area: string }[]; areas: Opt[]; days: string[] };
 
 export interface DatesInfo {
@@ -30,7 +31,7 @@ export interface DatesInfo {
 
 const Old = ({ html }: { html: string }) => <div className="old-part" style={{ display: 'contents' }} dangerouslySetInnerHTML={{ __html: html }} />;
 
-function Radio({ path, val, opts }: { path: string; val: unknown; opts: Opt[] }) {
+export function Radio({ path, val, opts }: { path: string; val: unknown; opts: Opt[] }) {
   return (
     <div className="radio">
       {opts.map(([v, l]) => <button key={String(v)} type="button" data-radio={path} data-val={String(v)} aria-pressed={String(val) === String(v)}>{l}</button>)}
@@ -41,7 +42,7 @@ function Radio({ path, val, opts }: { path: string; val: unknown; opts: Opt[] })
 const Options = ({ opts }: { opts: Opt[] }) => <>{opts.map(([v, l]) => <option key={String(v)} value={String(v)}>{l}</option>)}</>;
 const Sel = ({ pf, val, opts, num }: { pf: string; val: string | number; opts: Opt[]; num?: boolean }) =>
   <select data-pf={pf} data-type={num ? 'num' : undefined} defaultValue={String(val)}><Options opts={opts} /></select>;
-const Inp = ({ pf, val, type = 'text', ...rest }: { pf: string; val: unknown; type?: string; maxLength?: number; placeholder?: string; min?: string; max?: string; step?: string; num?: boolean }) => {
+export const Inp = ({ pf, val, type = 'text', ...rest }: { pf: string; val: unknown; type?: string; maxLength?: number; placeholder?: string; min?: string; max?: string; step?: string; num?: boolean; style?: CSSProperties }) => {
   const { num, ...attrs } = rest;
   return <input type={type} data-pf={pf} data-type={num ? 'num' : undefined} defaultValue={val == null ? '' : String(val)} {...attrs} />;
 };
@@ -216,6 +217,20 @@ function Events(p: Extract<FormPart, { f: 'events' }>) {
   );
 }
 
+function Budget(p: Extract<FormPart, { f: 'budget' }>) {
+  return (
+    <Fsec>
+      <h3>예산 (선택)</h3>
+      <div className="fg">
+        <label>1인 총예산 (만원)<Inp pf="budgetMan" val={p.man} type="number" min="0" step="10" num placeholder="비우면 계산 안 해요" /></label>
+        <label>그중 교통·숙박 (만원)<Inp pf="tripMan" val={p.trip} type="number" min="0" step="5" num placeholder="자동 60%" /></label>
+        <label>현지 경비 (만원)<Inp pf="localMan" val={p.local} type="number" min="0" step="5" num placeholder="나머지" /></label>
+      </div>
+      <p className="hint" id="budgetHint">{p.hint}</p>
+    </Fsec>
+  );
+}
+
 /** One form part: a React form, or old HTML. */
 export function FormPiece({ part }: { part: FormPart }) {
   switch (part.f) {
@@ -226,6 +241,7 @@ export function FormPiece({ part }: { part: FormPart }) {
     case 'homeBox': return <HomeBox {...part} />;
     case 'home': return <Home {...part} />;
     case 'stay': return <Stay {...part} />;
+    case 'budget': return <Budget {...part} />;
     case 'events': return <Events {...part} />;
   }
 }

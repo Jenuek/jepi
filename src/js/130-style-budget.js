@@ -31,11 +31,8 @@ function budgetParts(pr){pr=pr||profile;const t=(+pr.budgetMan||0)*10000;if(!t)r
   const trip=(+pr.tripMan>0?+pr.tripMan*10000:Math.round(t*0.6)), local=(+pr.localMan>0?+pr.localMan*10000:Math.max(0,t-trip));
   return {total:t,trip,local,daily:local/(nightsOf(pr)+1)}}
 function roomCap(){const b=budgetParts();if(!b)return null;const lodge=b.trip*(profile.mode==='flight'?0.5:0.7);return Math.round(lodge/nightsOf(profile)*heads()/1000)*1000}
-function fBudget(p){
-  return `<div class="fsec"><h3>예산 (선택)</h3><div class="fg"><label>1인 총예산 (만원)${inp('budgetMan',p.budgetMan||'','number','min="0" step="10" data-type="num" placeholder="비우면 계산 안 해요"')}</label>
-  <label>그중 교통·숙박 (만원)${inp('tripMan',p.tripMan||'','number','min="0" step="5" data-type="num" placeholder="자동 60%"')}</label>
-  <label>현지 경비 (만원)${inp('localMan',p.localMan||'','number','min="0" step="5" data-type="num" placeholder="나머지"')}</label></div>
-  <p class="hint" id="budgetHint">${budgetHintTxt(p)}</p></div>`}
+// 이번 여행 → 예산 (drawn by React: TripForms.tsx Budget). The hint under it follows what is typed (meSetBudgetHint).
+function partBudget(p){return {f:'budget',man:p.budgetMan||'',trip:p.tripMan||'',local:p.localMan||'',hint:budgetHintTxt(p)}}
 function budgetHintTxt(p){const b=budgetParts(p);return b?`교통·숙박 약 ${won(b.trip)} · 현지 경비 하루 약 ${won(b.daily)}로 계산해요.`:'총예산만 넣으면 교통·숙박 60%, 현지 경비 40%로 나눠요.'}
 function budgetEn(){const b=budgetParts();if(!b)return '';const d=b.daily/(KRW_PER_JPY||1);
   return ` Money budget per person: about ${Math.round(b.total/10000)}만원 in total; local spending about ${yen(d)} (${won(b.daily)}) per day.`}

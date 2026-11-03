@@ -332,16 +332,6 @@ function fDates(p){return `<div class="fsec" id="datesSec"><h3>언제 가나요?
 function datesReady(p){return p.dateSet!==false&&p.nightsSet!==false}
 function needDates(){setSt('st_dates','여행 날짜와 기간을 먼저 골라 주세요. 모르면 "날짜는 아직 몰라요"를 눌러 주세요.');const d=document.getElementById('datesSec');if(d)d.scrollIntoView({block:'center'})}
 const isoPlus=n=>{const d=new Date();d.setDate(d.getDate()+n);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
-function fStyle(p){const r=radioRow, q=p.party;
-  const num=(path,val,min,max,label)=>`<label>${label}<input type="number" data-pf="${path}" data-type="num" min="${min}" max="${max}" value="${esc(val)}"></label>`;
-  return `<div class="fsec"><h3>누구와 가나요?</h3>${r('party.type',q.type,[['solo','혼자'],['couple','연인·부부'],['friends','친구'],['family','가족']])}
-  ${q.type==='friends'||q.type==='family'?`<div class="fg">${num('party.adults',q.adults,1,20,q.type==='family'?'어른 (명)':'인원 (명)')}${q.type==='family'?num('party.kids',q.kids,0,10,'아이 (명)'):''}</div>`:''}
-  <p class="hint">${q.type==='solo'?'비용은 1인 기준으로 계산해요.':`비용은 1인 기준과 ${heads2(q)}명 합계를 같이 보여 줘요.`}</p></div>
-  <div class="fsec"><h3>어떤 여행을 원하나요?</h3>
-  <label class="fg" style="display:block"><span class="hint">이번 여행의 목적을 한 줄로 (선택)</span>${inp('purpose',p.purpose,'text','maxlength="80" placeholder="예: 맛있는 거 먹고 천천히 걷기" style="margin-top:4px"')}</label>
-  <span class="hint">속도</span>${r('pace',p.pace,[['slow','느긋하게 (하루 핵심 하나)'],['normal','보통'],['full','꽉 채워서']])}
-  ${q.type==='solo'?`<span class="hint">현지에서 사람 만나기</span>${r('social',p.social,[['alone','혼자가 좋아요'],['some','가끔은 대화도'],['social','많이 만나고 싶어요']])}`:''}
-  <span class="hint">아침 식사</span>${r('breakfast',p.breakfast,[['true','먹어요'],['false','거의 안 먹어요']])}${styleMoreHTML(p)}</div>`}
 const heads2=q=>Math.max(1,(+q.adults||1)+(+q.kids||0));
 function fTaste(){const all=[...new Set([...Object.values(TAGS).flat(),...GENERIC_KW])];
   return `<div class="fsec"><h3>취향 키워드</h3><p class="hint">끌리는 걸 모두 고르세요. AI가 이 키워드에 맞춰 장소를 찾고, 겹치는 장소가 추천에서 앞에 나와요.</p>
@@ -373,7 +363,7 @@ function onPf(e){const el=e.target;if(el&&el.dataset&&el.dataset.pk&&e.type==='c
   if(el.dataset.pf==='startDate'&&el.value){draft.dateSet=true;draft.dateUnknown=false} if(el.dataset.pf==='nights') draft.nightsSet=true;
   if(/^(out|back)\./.test(el.dataset.pf)) draft.flightSet=true; if(/^stays\./.test(el.dataset.pf)) draft.staySet=true;
   if(e.type==='change'&&['nights','startDate','party.adults','party.kids'].includes(el.dataset.pf)) rerenderForm()
-  if(['budgetMan','tripMan','localMan'].includes(el.dataset.pf)){const h=document.getElementById('budgetHint');if(h)h.textContent=budgetHintTxt(draft)}}
+  if(['budgetMan','tripMan','localMan'].includes(el.dataset.pf))meSetBudgetHint(budgetHintTxt(draft))}
 async function aiFill(kind){
   const ta=$('#paste_'+kind), st=$('#st_'+kind), text=(ta&&ta.value||'').trim();
   if(!st) return; if(!text){st.textContent='붙여 넣은 내용이 없어요.';return} if(!sample) return;
@@ -1223,11 +1213,8 @@ function budgetParts(pr){pr=pr||profile;const t=(+pr.budgetMan||0)*10000;if(!t)r
   const trip=(+pr.tripMan>0?+pr.tripMan*10000:Math.round(t*0.6)), local=(+pr.localMan>0?+pr.localMan*10000:Math.max(0,t-trip));
   return {total:t,trip,local,daily:local/(nightsOf(pr)+1)}}
 function roomCap(){const b=budgetParts();if(!b)return null;const lodge=b.trip*(profile.mode==='flight'?0.5:0.7);return Math.round(lodge/nightsOf(profile)*heads()/1000)*1000}
-function fBudget(p){
-  return `<div class="fsec"><h3>예산 (선택)</h3><div class="fg"><label>1인 총예산 (만원)${inp('budgetMan',p.budgetMan||'','number','min="0" step="10" data-type="num" placeholder="비우면 계산 안 해요"')}</label>
-  <label>그중 교통·숙박 (만원)${inp('tripMan',p.tripMan||'','number','min="0" step="5" data-type="num" placeholder="자동 60%"')}</label>
-  <label>현지 경비 (만원)${inp('localMan',p.localMan||'','number','min="0" step="5" data-type="num" placeholder="나머지"')}</label></div>
-  <p class="hint" id="budgetHint">${budgetHintTxt(p)}</p></div>`}
+// 이번 여행 → 예산 (drawn by React: TripForms.tsx Budget). The hint under it follows what is typed (meSetBudgetHint).
+function partBudget(p){return {f:'budget',man:p.budgetMan||'',trip:p.tripMan||'',local:p.localMan||'',hint:budgetHintTxt(p)}}
 function budgetHintTxt(p){const b=budgetParts(p);return b?`교통·숙박 약 ${won(b.trip)} · 현지 경비 하루 약 ${won(b.daily)}로 계산해요.`:'총예산만 넣으면 교통·숙박 60%, 현지 경비 40%로 나눠요.'}
 function budgetEn(){const b=budgetParts();if(!b)return '';const d=b.daily/(KRW_PER_JPY||1);
   return ` Money budget per person: about ${Math.round(b.total/10000)}만원 in total; local spending about ${yen(d)} (${won(b.daily)}) per day.`}
@@ -1917,13 +1904,13 @@ function meRows(p){
   if(p.kind==='day') return [
     ['day','코스',`${esc(PACK.city)} · ${esc(md(0))}`,()=>[oldPart(fDay(p))]],
     ['who','누구와',who,()=>[partParty(p)]],
-    ['bud','예산',b?`1인 ${Math.round(b.total/10000)}만원`:'정하지 않음',()=>[oldPart(fBudget(p))]]];
+    ['bud','예산',b?`1인 ${Math.round(b.total/10000)}만원`:'정하지 않음',()=>[partBudget(p)]]];
   return [
     ['when','언제·어디',`${esc(PACK.city||p.dest||'미정')} · ${p.dateUnknown?'날짜 미정':`${esc(md(0))}–${esc(md(n))}`} (${n}박)`,()=>[oldPart(fDest(p)),partTrip(p)]],
     ['who','누구와',who,()=>[partParty(p)]],
     ['way','오가는 길',flightTxt,()=>[partFlight(p),partHomeBox(p),partHome(p)].filter(Boolean)],
     ['stay','숙소',stayTxt,()=>[partStay(p)]],
-    ['bud','예산',b?`1인 ${Math.round(b.total/10000)}만원 <small>· 현지 하루 ${won(b.daily)}</small>`:'정하지 않음',()=>[oldPart(fBudget(p))]],
+    ['bud','예산',b?`1인 ${Math.round(b.total/10000)}만원 <small>· 현지 하루 ${won(b.daily)}</small>`:'정하지 않음',()=>[partBudget(p)]],
     ['ev','예약한 일정',p.events.length?`${p.events.length}개`:'없음',()=>[partEvents(p)]]];
 }
 // Drawn by React: app/screens/MeRows.tsx. meSetMsg changes only the message (the open form stays as it is).
@@ -1934,16 +1921,19 @@ function renderMeRows(){
   meLast={rows:rows.map(([id,k,v])=>({id,label:k,valueHTML:v})),open:op?meOpen:null,body:op?op[3]():[],msg:autoMsg||'',dayCourse:profile.kind==='day',rev:++meRev};
   window.JEPI_UI.mount('me',$('#meBox'),meLast);
 }
+function meSetBudgetHint(h){if(!meLast||!$('#meBox'))return;meLast=Object.assign({},meLast,{body:meLast.body.map(x=>x.f==='budget'?Object.assign({},x,{hint:h}):x)});window.JEPI_UI.mount('me',$('#meBox'),meLast)}
 function meSetMsg(m){if(!meLast||!$('#meBox')){return}meLast=Object.assign({},meLast,{msg:m});window.JEPI_UI.mount('me',$('#meBox'),meLast)}
 let autoMsg='';
 function autoSave(){clearTimeout(autoT);autoT=setTimeout(()=>{if(!draft||!$('#onb').hidden)return;
   const prevDest=profile.dest;commitProfile(draft);if(prevDest!==profile.dest)draft.dest=profile.dest;
   autoMsg='✓ 자동 저장됨 · 일정표에 바로 반영돼요';renderAll();meSetMsg(autoMsg)},500)}
-// taste: style rows + keywords + wishes (carried into new plans)
-function styleOnly(p){return fStyle(p).replace(/^\s*<div class="fsec"><h3>누구와 가나요\?<\/h3>[\s\S]*?<\/div>\s*(?=<div class="fsec">)/,'')}
+// taste: style rows + keywords + wishes (carried into new plans). The style rows are drawn by React: app/screens/TasteStyle.tsx
 const TASTE_KEYS=['pace','social','breakfast','style'];
 function carryTaste(from,to){TASTE_KEYS.forEach(k=>{if(from&&from[k]!==undefined)to[k]=clone(from[k])})}
-function renderTasteStyle(){const el=$('#tasteStyle');if(!el)return;if(!draft)draft=clone(profile);fixProfile(draft);el.innerHTML=styleOnly(draft)+`<p class="saved">${autoMsg}</p>`}
+let tasteRev=0;
+function renderTasteStyle(){const el=$('#tasteStyle');if(!el)return;if(!draft)draft=clone(profile);fixProfile(draft);const p=draft;
+  window.JEPI_UI.mount('tasteStyle',el,{purpose:p.purpose??'',pace:p.pace,solo:p.party.type==='solo',social:p.social,breakfast:p.breakfast,
+    rows:STYLE_ROWS,style:clone(p.style||{}),open:styleOpen,msg:autoMsg||'',rev:++tasteRev})}
 
 // ---------- settings ----------
 let themePref=LS.get('jepi.theme','light');
