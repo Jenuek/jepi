@@ -298,7 +298,7 @@ function profileSummary(){
 }
 
 // ---------- forms shared by onboarding and the "내 정보" tab ----------
-let draft=null, onbStep=0;
+let draft=null, onbStep=0, onbRev=0;
 const opt=(v,l,sel)=>`<option value="${esc(v)}"${String(v)===String(sel)?' selected':''}>${esc(l)}</option>`;
 const areaOpts=sel=>Object.entries(AREAS).map(([k,v])=>opt(k,v[0],sel)).join('');
 const apOpts=sel=>Object.keys(AIRPORTS).map(k=>opt(k,AIRPORTS[k].name,sel)).join('');
@@ -309,7 +309,6 @@ function pasteBox(kind,hint){
   return `<label class="fg" style="display:block"><span class="hint">${hint} 예약번호·결제 정보는 지우고 넣어도 돼요.</span><textarea id="paste_${kind}" rows="3" style="margin-top:4px"></textarea></label><div class="row"><button class="small-btn primary" type="button" data-aifill="${kind}">AI로 채우기</button><span class="ai-status" id="st_${kind}"></span></div>`;
 }
 // 더보기 → 이번 여행 forms are drawn by React (app/screens/TripForms.tsx): these build what each form shows.
-// fParty and dateFields below are still old HTML for 처음 설정 and the day course (they move with those screens).
 const optsOf=o=>Object.entries(o).map(([k,v])=>[k,Array.isArray(v)?v[0]:v.name]);
 const oldPart=html=>({f:'old',html});
 function datesInfo(p){const ds=p.dateSet!==false, ns=p.nightsSet!==false;return {start:ds&&!p.dateUnknown?String(p.startDate??''):'',unknown:!!p.dateUnknown,nights:ns?p.nights:null,maxN:MAX_N}}
@@ -322,13 +321,6 @@ function partStay(p){const n=nightsOf(p);return {f:'stay',helper:p.bookedStay===
 function partHome(p){const h=p.home;return {f:'home',mode:p.mode,word:MODE_WORD[p.mode],area:h.area,min:h.min,fare:h.fare,byMin:h.byMin,byMinOpts:[60,90,120,150,180].map(m=>[m,'출발 '+durTxt(m)+' 전'])}}
 function partEvents(p){const n=nightsOf(p);return {f:'events',events:clone(p.events),areas:optsOf(AREAS),days:Array.from({length:n+1},(_,k)=>`Day ${k+1} (${mdOf(p,k)})`)}}
 const radioRow=(path,val,opts)=>`<div class="radio">${opts.map(([v,l])=>`<button type="button" data-radio="${path}" data-val="${v}" aria-pressed="${String(val)===String(v)}">${l}</button>`).join('')}</div>`;
-function fParty(p){const q=p.party, num=(path,val,min,max,label)=>`<label>${label}<input type="number" data-pf="${path}" data-type="num" min="${min}" max="${max}" value="${esc(val)}"></label>`;
-  return `<div class="fsec"><h3>누구와 가나요?</h3>${radioRow('party.type',q.type,[['solo','혼자'],['couple','연인·부부'],['friends','친구'],['family','가족']])}
-  ${q.type==='friends'||q.type==='family'?`<div class="fg">${num('party.adults',q.adults,1,20,q.type==='family'?'어른 (명)':'인원 (명)')}${q.type==='family'?num('party.kids',q.kids,0,10,'아이 (명)'):''}</div>`:''}</div>`}
-function dateFields(p){const ds=p.dateSet!==false, ns=p.nightsSet!==false;
-  return `<div class="fg"><label>여행 시작일<input type="date" data-pf="startDate" value="${ds&&!p.dateUnknown?esc(p.startDate):''}"${p.dateUnknown?' disabled':''}></label><label>기간<select data-pf="nights" data-type="num">${ns?'':'<option value="" selected disabled>선택해 주세요</option>'}${Array.from({length:MAX_N},(_,i)=>i+1).map(n=>opt(n,`${n}박 ${n+1}일`,ns?p.nights:-1)).join('')}</select></label></div>
-  <label class="toggle" style="margin:8px 0 0"><input type="checkbox" id="dateUnknown"${p.dateUnknown?' checked':''}> 날짜는 아직 몰라요 (대략 한 달 뒤로 생각할게요)</label><p class="ai-status" id="st_dates"></p>`}
-function fDates(p){return `<div class="fsec" id="datesSec"><h3>언제 가나요?</h3>${dateFields(p)}</div>`}
 function datesReady(p){return p.dateSet!==false&&p.nightsSet!==false}
 function needDates(){setSt('st_dates','여행 날짜와 기간을 먼저 골라 주세요. 모르면 "날짜는 아직 몰라요"를 눌러 주세요.');const d=document.getElementById('datesSec');if(d)d.scrollIntoView({block:'center'})}
 const isoPlus=n=>{const d=new Date();d.setDate(d.getDate()+n);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
@@ -338,12 +330,14 @@ function fTaste(){const all=[...new Set([...Object.values(TAGS).flat(),...GENERI
   <div class="chips">${all.map(k=>`<button type="button" data-kwtoggle="${esc(k)}" aria-pressed="${kws.some(x=>norm(x)===norm(k))}">${esc(k)}</button>`).join('')}</div>
   ${sample?`<label class="fg" style="display:block"><span class="hint">좋아하는 영화, 음악, 작가, 브랜드를 적으면 AI가 키워드를 골라 줘요.</span><textarea id="tasteText" rows="2" style="margin-top:4px" placeholder="예: 슈게이징 밴드, 지브리, 필름 카메라, 빈티지 옷"></textarea></label><div class="row"><button class="small-btn primary" type="button" id="aiKw">AI로 키워드 찾기</button><span class="ai-status" id="st_kw"></span></div>`:''}</div>`}
 const ONB=[
-  {t:'어디로, 언제, 누구와 떠나나요?',s:'세 가지만 알려 주면 바로 일정표를 만들어요. 교통편, 숙소, 취향은 필요할 때 물어볼게요.',f:p=>!p.jpPicked?fJP():!p.startMode?fChooser():p.startMode==='pq'?fQuick(p,false):p.startMode==='talk'?fTalk(p):p.startMode==='day'?fQuick(p,true):p.destMode==='find'?(p.fromTalk?talkBanner(p,'날짜·기간·예산을 확인하고 아래 "AI로 여행지 추천받기"를 눌러 주세요.'):'')+fDates(p)+fDest(p):(p.fromTalk?talkBanner(p,'날짜와 동행을 확인하고 "AI로 여행지 준비하기"를 눌러 주세요.'):'')+fDest(p)+fDates(p)+fParty(p)}
+  {t:'어디로, 언제, 누구와 떠나나요?',s:'세 가지만 알려 주면 바로 일정표를 만들어요. 교통편, 숙소, 취향은 필요할 때 물어볼게요.',f:p=>!p.jpPicked?[partJP()]:!p.startMode?[{f:'chooser',ai:!!sample}]:p.startMode==='pq'?[partQuick(p,false)]:p.startMode==='talk'?[oldPart(fTalk(p))]:p.startMode==='day'?[partQuick(p,true)]
+    :p.destMode==='find'?[...(p.fromTalk?[partBanner(p,'날짜·기간·예산을 확인하고 아래 "AI로 여행지 추천받기"를 눌러 주세요.')]:[]),{f:'dates',dates:datesInfo(p)},partDest(p)]
+    :[...(p.fromTalk?[partBanner(p,'날짜와 동행을 확인하고 "AI로 여행지 준비하기"를 눌러 주세요.')]:[]),partDest(p),{f:'dates',dates:datesInfo(p)},partParty(p)]}
 ];
 function openOnb(){draft=clone(profile);draft.startMode=undefined;draft.jpPicked=false;draft.q=null;draft.destMode='';draft.fromTalk=false;draft.dateSet=false;draft.nightsSet=false;draft.dateUnknown=false;talk=null;onbStep=0;$('#meBox').innerHTML='';$('#onb').hidden=false;renderOnb()}
 function renderOnb(){const st=ONB[onbStep];$('#onbStep').textContent=ONB.length>1?`${onbStep+1} / ${ONB.length}`:'';
   const md=draft&&draft.startMode;$('#onbTitle').textContent=!draft.jpPicked?'어떤 여행자예요?':md==='pq'?'가볍게 시작해요':!md?'어떻게 시작할까요?':md==='talk'?'이번 여행, 어떤 여행이면 좋을까요?':md==='day'?'오늘 어디서 놀아요?':st.t;$('#onbSub').textContent=!draft.jpPicked?'고르는 쪽에 맞춰 화면과 시작 방법이 달라져요.':md==='pq'?'네 가지만 누르면 바로 굴릴 수 있어요.':!md?'편한 방법을 골라 주세요. 언제든 바꿀 수 있어요.':md==='talk'?'정답은 없어요. 떠오르는 대로 답하면 방향을 정리해 드릴게요.':md==='day'?'동네와 시간만 정하면 하루 코스를 바로 짤 수 있어요.':st.s;
-  $('#onbBody').innerHTML=st.f(fixProfile(draft))+'<p class="ai-status" id="st_onb"></p>';$('#onbPrev').disabled=onbStep===0;$('#onbPrev').hidden=ONB.length===1;$('#onbNext').textContent=onbStep===ONB.length-1?'일정표 만들기':'다음';$('#onbSkip').hidden=onbStep===ONB.length-1;$('#onbNext').hidden=!draft.jpPicked||!md||['talk','pq','day'].includes(md);$('#onb').scrollTop=0}
+  window.JEPI_UI.mount('onb',$('#onbBody'),{parts:st.f(fixProfile(draft)),rev:++onbRev});$('#onbPrev').disabled=onbStep===0;$('#onbPrev').hidden=ONB.length===1;$('#onbNext').textContent=onbStep===ONB.length-1?'일정표 만들기':'다음';$('#onbSkip').hidden=onbStep===ONB.length-1;$('#onbNext').hidden=!draft.jpPicked||!md||['talk','pq','day'].includes(md);$('#onb').scrollTop=0}
 function commitProfile(p){profile=fixProfile(clone(p));store.set('gp.profile',profile);store.set('gp.kw',kws);buildDays();placed=placed.filter(b=>b.day<DAYS.length);save();if(day>=DAYS.length)day=0}
 async function finishOnb(){commitProfile(draft);day=0;
   if(sample&&!PACK.example&&!PACK.manual&&P.length<8){onbBusy=true;setBusy(true);placeCtl=new AbortController();
@@ -609,11 +603,14 @@ const placeLink=p=>`https://www.google.com/maps/search/?api=1&query=${encodeURIC
 const rateTxt=()=>PACK.currency==='KRW'?'':` · 환율 ${yen(KRW_PER_JPY<50?100:1)} ≈ ${won(KRW_PER_JPY*(KRW_PER_JPY<50?100:1))}`;
 let onbBusy=false, placeCtl=null;
 const prog={};
-function progStart(stId,label,btnIds,btnLabel){progStop(stId);const t0=Date.now();const old={};[...new Set(btnIds||[])].forEach(id=>{const b=document.getElementById(id);if(b){old[id]=b.textContent;b.textContent=btnLabel}});
-  const tick=()=>{const e=document.getElementById(stId);if(e){e.classList.add('busy');e.textContent=`${label} · ${Math.round((Date.now()-t0)/1000)}초 지났어요`}};
+// Status lines and buttons React drew are updated through a handle (app/ui/live.tsx), others the old way.
+const liveEl=id=>{const e=document.getElementById(id);return e&&window.JEPI_UI.live(e)};
+function progStart(stId,label,btnIds,btnLabel){progStop(stId);const t0=Date.now();const old={};[...new Set(btnIds||[])].forEach(id=>{const b=document.getElementById(id);if(!b)return;const L=window.JEPI_UI.live(b);if(L){old[id]=null;L.label(btnLabel)}else{old[id]=b.textContent;b.textContent=btnLabel}});
+  const tick=()=>{const L=liveEl(stId),e=document.getElementById(stId),t=`${label} · ${Math.round((Date.now()-t0)/1000)}초 지났어요`;if(L){L.busy(true);L.text(t)}else if(e){e.classList.add('busy');e.textContent=t}};
   tick();const e=document.getElementById(stId);if(e&&e.scrollIntoView)e.scrollIntoView({block:'nearest'});prog[stId]={iv:setInterval(tick,1000),old}}
-function progStop(stId){const p=prog[stId];if(!p)return;clearInterval(p.iv);const e=document.getElementById(stId);if(e)e.classList.remove('busy');Object.entries(p.old).forEach(([id,t])=>{const b=document.getElementById(id);if(b)b.textContent=t});delete prog[stId]}
-const setSt=(id,t)=>{progStop(id);const e=document.getElementById(id);if(e)e.textContent=t};
+function progStop(stId){const p=prog[stId];if(!p)return;clearInterval(p.iv);const L=liveEl(stId),e=document.getElementById(stId);if(L)L.busy(false);else if(e)e.classList.remove('busy');
+  Object.entries(p.old).forEach(([id,t])=>{const b=document.getElementById(id);if(!b)return;const BL=window.JEPI_UI.live(b);if(BL)BL.label(null);else if(t!=null)b.textContent=t});delete prog[stId]}
+const setSt=(id,t)=>{progStop(id);const L=liveEl(id),e=document.getElementById(id);if(L)L.text(t);else if(e)e.textContent=t};
 function errText(e,what){return e&&e.code==='not_granted'?'AI 키가 맞지 않아서 할 수 없어요.':e&&e.code==='rate_limited'?'요청이 많아 잠시 쉬어야 해요. 조금 뒤에 다시 해 주세요.':`${what}. 다시 시도해 주세요.`}
 async function genPack(dest,btn){
   if(!sample){setSt('st_pack','AI가 연결되어 있지 않아요. 더보기 → 설정에서 키를 넣어 주세요.');return false}
@@ -662,7 +659,7 @@ Reply with only JSON: {"places":[{"name":"Korean name","local":"name in local la
     savePack(); setSt(stId,added?`새 장소 ${added}곳을 찾았어요. 장소 탭 맨 위 "✨ 방금 찾은 곳"에 모아 뒀어요.`:'이미 있는 곳과 겹쳐서 새로 추가할 장소가 없었어요. 찾는 말을 바꿔 보세요 (예: 현지인 맛집, 조용한 카페).'); return added;
   }catch(e){setSt(stId,e&&e.code==='cancelled'?'멈췄어요. 장소 블록 탭에서 언제든 다시 찾을 수 있어요.':errText(e,'장소를 찾지 못했어요'));return 0}
 }
-function setBusy(b){['onbNext','onbPrev','onbSkip','onbExample','genPack','meSave'].forEach(id=>{const e=document.getElementById(id);if(e)e.disabled=b||(id==='onbPrev'&&onbStep===0)})}
+function setBusy(b){['onbNext','onbPrev','onbSkip','onbExample','genPack','meSave'].forEach(id=>{const e=document.getElementById(id);if(!e)return;const v=b||(id==='onbPrev'&&onbStep===0),L=window.JEPI_UI.live(e);if(L)L.disabled(v);else e.disabled=v})}
 async function onbAdvance(){
   if(onbBusy) return;
   if(onbStep===0){
@@ -676,15 +673,12 @@ async function onbAdvance(){
   }
   if(onbStep<ONB.length-1){onbStep++;renderOnb()} else await finishOnb();
 }
-function fDest(p){
-  if(p.destMode==='find') return fDestFinder(p);
-  const tb='';
+// 여행지 (drawn by React: TripForms.tsx Dest). Not decided yet → the finder (still old HTML).
+function partDest(p){
+  if(p.destMode==='find') return oldPart(fDestFinder(p));
   const ready=PACK&&norm(PACK.city)===norm(p.dest||'');
-  return tb+`<div class="fsec"><h3>여행지</h3><label class="fg" style="display:block"><span class="hint">도시나 지역 이름 (국내, 해외 모두 돼요)</span>${inp('dest',p.dest,'text','maxlength="40" placeholder="예: 오사카, 제주, 파리, 방콕" style="margin-top:4px"')}</label>
-  <div class="row"><button class="small-btn" type="button" data-destmode="find">아직 못 정했어요 · 취향으로 추천받기</button></div>
-  <div class="row">${sample?`<button class="small-btn primary" type="button" id="genPack">AI로 여행지 준비하기</button>`:''}<span class="ai-status" id="st_pack">${ready?`${esc(PACK.city)} 준비됨 · 동네 ${Object.keys(AREAS).length}곳 · 장소 ${P.length}곳`:''}</span></div>
-  ${sample?`<p class="hint">AI가 동네, 공항·역, 화폐, 교통비를 정리해요. 여행지를 바꾸면 넣어 둔 블록은 지워져요.</p>`:`<p class="hint">새 여행지 정보는 AI를 연결해야 준비할 수 있어요 (더보기 → 설정). 지금은 장소 없이 블록을 직접 만들어 쓰거나, "예시로 둘러보기"로 도쿄 예시를 볼 수 있어요.</p>`}
-  ${ready&&PACK.currency!=='KRW'?`<div class="fg"><label>환율: 1 ${esc(PACK.currency)}는 몇 원?<input type="number" step="any" min="0" data-pk="rate" value="${esc(+KRW_PER_JPY.toFixed(4))}"></label></div><p class="hint">AI가 넣은 대략적인 값이에요. 바꾸면 비용 계산에 바로 반영돼요.</p>`:''}</div>`;
+  return {f:'dest',dest:p.dest??'',ai:!!sample,ready:ready?`${PACK.city} 준비됨 · 동네 ${Object.keys(AREAS).length}곳 · 장소 ${P.length}곳`:'',
+    rate:ready&&PACK.currency!=='KRW'?{cur:PACK.currency,val:+KRW_PER_JPY.toFixed(4)}:null};
 }
 
 // ---------- demo trip: a generic first-timer's Osaka, 3 nights / 4 days ----------
@@ -1224,17 +1218,9 @@ const TALK_MAX=5;
 const TALK_OPEN={q:'요즘 어떤 마음이 들어서 여행을 떠올리게 됐어요? 막연해도 괜찮아요.',o:['그냥 답답해서 벗어나고 싶어요','지쳐서 푹 쉬고 싶어요','새로운 자극이 필요해요','생각을 정리하고 싶어요']};
 let talk=null;
 function talkReset(){talk={msgs:[{role:'a',text:TALK_OPEN.q}],options:TALK_OPEN.o.slice(),n:0,busy:false,summary:null}}
-function talkBanner(p,next){return `<div class="t-banner"><span>🧭 ${esc(p.purpose||'이번 여행의 방향')}</span><small>${next}</small></div>`}
-function fJP(){return `${onbKeyBox()}${inClaude()?'':`<div class="fsec import-box"><h3>Claude에서 만든 계획이 있나요?</h3><p class="hint">Claude에서 "내 계획 → 백업 파일 받기"로 저장한 파일을 불러오면 그대로 이어서 쓸 수 있어요.</p><input type="file" accept=".json,application/json" class="importFile"><p class="ai-status" id="st_import"></p></div>`}<div class="choose jpc">
-    <button type="button" class="choose-btn jbtn" data-pickjp="J"><span class="big">J</span><b>계획파예요</b><small>미리 짜 두면 마음이 편해요. 시간·동선·예산까지 꼼꼼하게.</small></button>
-    <button type="button" class="choose-btn pbtn" data-pickjp="P"><span class="big">P</span><b>즉흥파예요</b><small>일단 가 보고 정해요. 어디·언제·누구랑만 고르면 끝.</small></button></div><p class="hint" style="text-align:center">언제든 위의 J ⇄ P 스위치로 바꿀 수 있어요.</p>`}
-function fChooser(){
-  return `<div class="choose">
-    <button type="button" class="choose-btn" data-startmode="quick"><b>가고 싶은 곳이 있어요</b><small>여행지·날짜·동행만 정하고 바로 시작해요</small></button>
-    <button type="button" class="choose-btn" data-startmode="talk"${sample?'':' disabled'}><b>아직 막연해요 · 이야기하면서 정할래요</b><small>${sample?'질문 몇 개로 이번 여행의 방향을 함께 찾아요':'AI를 연결하면 쓸 수 있어요'}</small></button>
-    <button type="button" class="choose-btn" data-startmode="quick" data-destmode="find"><b>여행지만 못 정했어요</b><small>취향과 조건으로 여행지를 추천받아요</small></button>
-    <button type="button" class="choose-btn" data-startmode="day"><b>☀️ 하루 코스 짜기</b><small>친구랑 혹은 혼자, 하루 놀 동네 코스를 가볍게 짜요</small></button></div>`;
-}
+// 처음 설정 parts drawn by React (app/screens/OnbBody.tsx)
+const partBanner=(p,next)=>({f:'banner',purpose:p.purpose||'',next});
+function partJP(){return {f:'jp',keyBox:!!(STANDALONE&&!sample),keyHelpHTML:KEY_HELP.anthropic,importBox:!inClaude()}}
 function fTalk(p){
   if(!talk) talkReset();
   const t=talk, S=t.summary, last=[...t.msgs].reverse().find(m=>m.role==='a'), hist=[];
@@ -1355,11 +1341,9 @@ let jp='J';
 function setJP(m,quiet){jp=m==='P'?'P':'J';{const ci=document.getElementById('chatInput');if(ci)ci.placeholder=jp==='P'?'뭐 하고 싶어요? 말로 해도 돼요':'AI에게 말로 부탁하기'}document.body.classList.toggle('mode-p',jp==='P');document.querySelectorAll('[data-jp]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.jp===jp)));if(!quiet)store.set('gp.jp',jp)}
 
 // ---------- one-day course ----------
-function fDay(p){const m=p.meet||{};
-  return `${fDest(p)}<div class="fsec" id="datesSec"><h3>언제, 어디서 만나요?</h3><div class="fg">
-  <label>날짜<input type="date" data-pf="startDate" value="${p.dateSet!==false?esc(p.startDate):''}"></label>
-  <label>만나는 시간${inp('meet.time',m.time||'11:00','time')}</label><label>헤어지는 시간${inp('meet.end',m.end||'20:00','time')}</label>
-  <label>만나는 동네<select data-pf="meet.area">${areaOpts(m.area)}</select></label></div><p class="ai-status" id="st_dates"></p></div>${fParty(p)}`}
+// 하루 코스: 여행지 + 언제·어디서 만나요 + 누구와 (drawn by React: TripForms.tsx)
+function partsDay(p){const m=p.meet||{};
+  return [partDest(p),{f:'day',date:p.dateSet!==false?String(p.startDate??''):'',time:m.time||'11:00',end:m.end||'20:00',area:m.area,areas:optsOf(AREAS)},partParty(p)]}
 
 // ---------- DICE: roll for an empty slot ----------
 const DICE_MOODS=[['any','상관없음'],['hungry','배고파'],['quiet','조용히'],['move','움직이고 싶어'],['drink','한잔'],['rain','비 와요']];
@@ -1446,19 +1430,11 @@ async function diceAI(){
 // ---------- quick start (P, and any one-day course): a few taps ----------
 const nextSat=()=>{const d=new Date();const add=(6-d.getDay()+7)%7||7;return isoPlus(d.getDay()===6?0:add)};
 const SLOTS=[['morning','오전부터',600,1080],['noon','점심부터',720,1200],['after','오후부터',840,1320],['eve','저녁만',1080,1380]];
-function chipRow(name,val,opts){return `<div class="radio">${opts.map(([v,l])=>`<button type="button" data-q="${name}" data-qv="${v}" aria-pressed="${String(val)===String(v)}">${l}</button>`).join('')}</div>`}
-function fQuick(p,dayOnly){
+// drawn by React: app/screens/OnbBody.tsx Quick
+function partQuick(p,dayOnly){
   const q=p.q||(p.q={when:'',len:dayOnly?'0':'',slot:'noon'});
-  return `<div class="fsec quick-start">
-  <label class="q-field"><span>어디로?</span>${inp('dest',p.dest,'text','maxlength="40" placeholder="예: 성수동, 부산, 오사카"')}</label>
-  <div class="q-field"><span>언제?</span>${chipRow('when',q.when,[['today','오늘'],['tomorrow','내일'],['weekend','이번 주말'],['pick','날짜 고르기']])}
-    ${q.when==='pick'?`<input type="date" data-pf="startDate" value="${p.dateSet!==false?esc(p.startDate):''}" style="margin-top:6px">`:''}</div>
-  ${dayOnly?'':`<div class="q-field"><span>얼마나?</span>${chipRow('len',q.len,[['0','하루'],['1','1박 2일'],['2','2박 3일'],['3','3박 4일'],['5','더 길게']])}</div>`}
-  ${q.len==='0'?`<div class="q-field"><span>몇 시쯤?</span>${chipRow('slot',q.slot,SLOTS.map(s=>[s[0],s[1]]))}</div>`:''}
-  <div class="q-field"><span>끌리는 것 <small class="hint">(선택, 안 골라도 돼요)</small></span><div class="chips">${['맛집','카페','산책','쇼핑','전시','한잔','사진','자연'].map(k=>`<button type="button" data-kwtoggle="${k}" aria-pressed="${kws.some(x=>norm(x)===norm(k))}">${k}</button>`).join('')}</div></div>
-  <div class="q-field"><span>누구랑?</span>${chipRow('party',p.party.type,[['solo','혼자'],['friends','친구'],['couple','연인'],['family','가족']])}</div>
-  <div class="row"><button type="button" class="dice-go" id="quickStart">${q.len==='0'?'하루 코스 시작하기':'🎲 시작하기'}</button><span class="ai-status" id="st_pack"></span></div>
-  <p class="hint">나머지는 필요할 때 물어볼게요.</p></div>`;
+  return {f:'quick',dest:p.dest??'',dayOnly:!!dayOnly,when:String(q.when??''),date:p.dateSet!==false?String(p.startDate??''):'',len:String(q.len??''),slot:String(q.slot??''),
+    slots:SLOTS.map(s=>[s[0],s[1]]),kws:['맛집','카페','산책','쇼핑','전시','한잔','사진','자연'].map(k=>({k,on:kws.some(x=>norm(x)===norm(k))})),party:p.party.type};
 }
 async function quickStart(){
   const q=draft.q||{}, dest=String(draft.dest||'').trim();
@@ -1902,11 +1878,11 @@ function meRows(p){
   const b=budgetParts&&budgetParts(p);
   const who=p.party.type==='solo'?'혼자':p.party.type==='couple'?'연인·부부':p.party.type==='family'?`가족 ${heads2(p.party)}명`:`친구 ${heads2(p.party)}명`;
   if(p.kind==='day') return [
-    ['day','코스',`${esc(PACK.city)} · ${esc(md(0))}`,()=>[oldPart(fDay(p))]],
+    ['day','코스',`${esc(PACK.city)} · ${esc(md(0))}`,()=>partsDay(p)],
     ['who','누구와',who,()=>[partParty(p)]],
     ['bud','예산',b?`1인 ${Math.round(b.total/10000)}만원`:'정하지 않음',()=>[partBudget(p)]]];
   return [
-    ['when','언제·어디',`${esc(PACK.city||p.dest||'미정')} · ${p.dateUnknown?'날짜 미정':`${esc(md(0))}–${esc(md(n))}`} (${n}박)`,()=>[oldPart(fDest(p)),partTrip(p)]],
+    ['when','언제·어디',`${esc(PACK.city||p.dest||'미정')} · ${p.dateUnknown?'날짜 미정':`${esc(md(0))}–${esc(md(n))}`} (${n}박)`,()=>[partDest(p),partTrip(p)]],
     ['who','누구와',who,()=>[partParty(p)]],
     ['way','오가는 길',flightTxt,()=>[partFlight(p),partHomeBox(p),partHome(p)].filter(Boolean)],
     ['stay','숙소',stayTxt,()=>[partStay(p)]],
@@ -2087,10 +2063,7 @@ document.addEventListener('change',e=>{if(e.target.closest&&e.target.closest('#m
 document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t||!t.closest('#meBox,#tasteStyle'))return;
   if(t.dataset.radio!=null||t.dataset.addstay!=null||t.dataset.delstay!=null||t.dataset.addev!=null||t.dataset.delev!=null||t.dataset.styletoggle!=null)setTimeout(autoSave,0)});
 // onboarding: connect AI right on the first screen
-function onbKeyBox(){if(!STANDALONE||sample)return '';
-  return `<div class="fsec"><h3>AI 연결하기 (처음 한 번)</h3><p class="hint">AI가 여행지 준비, 장소 추천, 일정 짜기를 해요. 키는 이 기기에만 저장돼요. 지금 건너뛰고 나중에 더보기 → 설정에서 넣어도 돼요.</p>
-  <div class="kin"><input id="onbKey_anthropic" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Claude API 키 (sk-ant-...)"><button class="small-btn primary" type="button" data-onbkey="anthropic">연결</button></div>
-  <details class="khelp"><summary>키 받는 법</summary>${KEY_HELP.anthropic}</details></div>`}
+
 
 setInterval(()=>{try{const el=document.getElementById('aiSec');if(!el)return;if(!aiState||aiState.status!=='loading'){el.textContent='';return}
   if(!aiState.t0)aiState.t0=Date.now();el.textContent=`${aiWho} · ${Math.round((Date.now()-aiState.t0)/1000)}초째`}catch(_){}},1000);
@@ -3213,7 +3186,7 @@ document.addEventListener('click',e=>{
     if(onbBusy){setSt('st_pack','이미 준비하는 중이에요. 잠시만 기다려 주세요.');return}
     setSt('st_pack','요청을 보내는 중이에요…');
     (async()=>{const inOnb=!$('#onb').hidden;if(await genPack(dest)){if(inOnb)renderOnb();else{commitProfile(draft);renderAll();renderMe();await morePlaces(24,'st_pack','');renderAll()}}})()
-      .catch(err=>{onbBusy=false;setBusy(false);t.textContent='AI로 여행지 준비하기';setSt('st_pack','문제가 생겼어요: '+((err&&(err.message||err.code))||err)+' · 다시 눌러 주세요.')});
+      .catch(err=>{onbBusy=false;setBusy(false);{const L=window.JEPI_UI.live(t);if(L)L.label(null);else t.textContent='AI로 여행지 준비하기'}setSt('st_pack','문제가 생겼어요: '+((err&&(err.message||err.code))||err)+' · 다시 눌러 주세요.')});
     return}
   if(t.id==='onbExample'){if(onbBusy)return;demoEnter();return}
   if(t.dataset.radio&&!t.closest('#helper')){if(t.dataset.radio.startsWith('style.'))styleOpen=true;let v=t.dataset.val;if(v==='true')v=true;else if(v==='false')v=false;if(draft){setPath(draft,t.dataset.radio,v);if(t.dataset.radio==='mode')draft.local=v==='car'?'car':'transit';if(t.dataset.radio==='party.type'){const q=draft.party;if(v==='couple')q.adults=2;if(v==='friends'&&q.adults<2)q.adults=3;if(v==='family'){if(q.adults<2)q.adults=2;if(!q.kids)q.kids=1;draft.pace='slow'}fixProfile(draft)}rerenderForm()}return}

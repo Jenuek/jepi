@@ -642,6 +642,44 @@ module.exports = [
     }
   },
   {
+    name: 'React screen: 처음 설정 (start paths, messages land in React status lines, 준비하기 button relabels and comes back)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      let p = await device(b, S); await p.click('[data-w="new"]'); await p.waitForTimeout(250);
+      const tap = async sel => { await p.click('#onbBody ' + sel); await p.waitForTimeout(250) };
+      ok(await vis(p, '#onbBody [data-pickjp="J"]') && await vis(p, '#onbBody .importFile'), 'J/P choice and backup import');
+      await tap('[data-pickjp="J"]'); await tap('[data-startmode="quick"]:not([data-destmode])');
+      ok(await vis(p, '#onbBody [data-pf="dest"]') && await vis(p, '#onbBody [data-pf="nights"]') && await vis(p, '#onbBody [data-radio="party.type"]'), '가고 싶은 곳: 여행지 · 날짜 · 동행');
+      await p.fill('#onbBody [data-pf="dest"]', '부산'); await p.click('#onbNext'); await p.waitForTimeout(300);
+      ok((await p.textContent('#st_dates')).includes('여행 날짜와 기간을 먼저'), '다음 without dates: the message shows under the dates');
+      ok(await p.inputValue('#onbBody [data-pf="dest"]') === '부산', 'what was typed stays');
+      await tap('[data-destmode="find"]');
+      ok(await vis(p, '#onbBody #destWant') && await vis(p, '#onbBody [data-pf="startDate"]'), '여행지 추천: dates + finder');
+      await p.ctx.close();
+      p = await device(b, S); await p.click('[data-w="new"]'); await p.waitForTimeout(250);
+      await tap('[data-pickjp="P"]'); await tap('[data-q="when"][data-qv="pick"]');
+      ok(await vis(p, '#onbBody [data-pf="startDate"]'), 'P: 날짜 고르기 shows a date box');
+      await tap('[data-q="len"][data-qv="0"]');
+      ok(await vis(p, '#onbBody [data-q="slot"]') && (await p.textContent('#quickStart')).includes('하루 코스 시작하기'), '하루: time slots, button says 하루 코스');
+      await tap('#quickStart');
+      ok((await p.textContent('#onbBody #st_pack')).includes('어디로 갈지'), 'no place: asks where');
+      await p.ctx.close();
+      // with an AI key: 준비하기 relabels the button and shows the time while it waits
+      p = await device(b, S); await p.click('[data-w="new"]'); await p.waitForTimeout(250);
+      if (await p.$('#onbKey_anthropic')) { await p.fill('#onbKey_anthropic', 'sk-ant-test-key'); await p.click('#onbBody [data-onbkey="anthropic"]'); await p.waitForTimeout(300) }
+      await p.route(/api\.anthropic\.com/, async r => { await new Promise(x => setTimeout(x, 2500)); r.fulfill({ status: 503, body: '{}' }) });
+      await tap('[data-pickjp="J"]'); await tap('[data-startmode="quick"]:not([data-destmode])');
+      ok(await vis(p, '#onbBody #genPack'), 'AI connected: 준비하기 button');
+      await p.fill('#onbBody [data-pf="dest"]', '부산'); await p.click('#onbBody #genPack'); await p.waitForTimeout(1300);
+      const busy = { btn: await p.textContent('#genPack'), st: await p.textContent('#st_pack'), cls: await p.getAttribute('#st_pack', 'class') };
+      ok(busy.btn.includes('준비하는 중') && busy.st.includes('초 지났어요') && busy.cls.includes('busy'), 'while waiting: button relabeled, time shown ' + JSON.stringify(busy));
+      await p.waitForTimeout(5000);
+      const done = { btn: await p.textContent('#genPack'), st: await p.textContent('#st_pack'), cls: await p.getAttribute('#st_pack', 'class') };
+      ok(done.btn === 'AI로 여행지 준비하기' && !done.cls.includes('busy') && !done.st.includes('초 지났어요') && done.st.length > 0, 'after it fails: button back, a message instead ' + JSON.stringify(done));
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
     name: 'friends: sharing again after a share that stopped half-way (trip on the server, no membership)',
     async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
       const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);

@@ -75,10 +75,7 @@ document.addEventListener('change',e=>{if(e.target.closest&&e.target.closest('#m
 document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t||!t.closest('#meBox,#tasteStyle'))return;
   if(t.dataset.radio!=null||t.dataset.addstay!=null||t.dataset.delstay!=null||t.dataset.addev!=null||t.dataset.delev!=null||t.dataset.styletoggle!=null)setTimeout(autoSave,0)});
 // onboarding: connect AI right on the first screen
-function onbKeyBox(){if(!STANDALONE||sample)return '';
-  return `<div class="fsec"><h3>AI 연결하기 (처음 한 번)</h3><p class="hint">AI가 여행지 준비, 장소 추천, 일정 짜기를 해요. 키는 이 기기에만 저장돼요. 지금 건너뛰고 나중에 더보기 → 설정에서 넣어도 돼요.</p>
-  <div class="kin"><input id="onbKey_anthropic" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Claude API 키 (sk-ant-...)"><button class="small-btn primary" type="button" data-onbkey="anthropic">연결</button></div>
-  <details class="khelp"><summary>키 받는 법</summary>${KEY_HELP.anthropic}</details></div>`}
+
 
 setInterval(()=>{try{const el=document.getElementById('aiSec');if(!el)return;if(!aiState||aiState.status!=='loading'){el.textContent='';return}
   if(!aiState.t0)aiState.t0=Date.now();el.textContent=`${aiWho} · ${Math.round((Date.now()-aiState.t0)/1000)}초째`}catch(_){}},1000);

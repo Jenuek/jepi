@@ -14,6 +14,8 @@ import { TasteKeywords, type TasteKeywordsProps } from './screens/TasteKeywords'
 import { FindSheet, type FindSheetProps } from './screens/FindSheet';
 import { MeRows, type MeRowsProps } from './screens/MeRows';
 import { TasteStyle, type TasteStyleProps } from './screens/TasteStyle';
+import { OnbBody, type OnbBodyProps } from './screens/OnbBody';
+import { liveOf, type LiveHandle } from './ui/live';
 
 // Every screen React owns, with the props the old code must pass.
 export interface Screens {
@@ -27,6 +29,7 @@ export interface Screens {
   find: FindSheetProps;
   me: MeRowsProps;
   tasteStyle: TasteStyleProps;
+  onb: OnbBodyProps;
 }
 
 const SCREENS: { [K in keyof Screens]: ComponentType<Screens[K]> } = {
@@ -40,10 +43,13 @@ const SCREENS: { [K in keyof Screens]: ComponentType<Screens[K]> } = {
   find: FindSheet,
   me: MeRows,
   tasteStyle: TasteStyle,
+  onb: OnbBody,
 };
 
 export interface JepiUI {
   mount<K extends keyof Screens>(name: K, el: Element, props: Screens[K]): void;
+  /** a status line / button React drew (app/ui/live.tsx), or null */
+  live(el: Element | null): LiveHandle | null;
 }
 
 declare global {
@@ -57,6 +63,7 @@ const roots = new WeakMap<Element, { root: Root; host: HTMLElement; name: string
 
 export function installBridge(): void {
   window.JEPI_UI = {
+    live: liveOf,
     mount(name, el, props) {
       let cur = roots.get(el);
       if (!cur || cur.host.parentNode !== el || cur.name !== name) {

@@ -1,19 +1,11 @@
 // ---------- quick start (P, and any one-day course): a few taps ----------
 const nextSat=()=>{const d=new Date();const add=(6-d.getDay()+7)%7||7;return isoPlus(d.getDay()===6?0:add)};
 const SLOTS=[['morning','오전부터',600,1080],['noon','점심부터',720,1200],['after','오후부터',840,1320],['eve','저녁만',1080,1380]];
-function chipRow(name,val,opts){return `<div class="radio">${opts.map(([v,l])=>`<button type="button" data-q="${name}" data-qv="${v}" aria-pressed="${String(val)===String(v)}">${l}</button>`).join('')}</div>`}
-function fQuick(p,dayOnly){
+// drawn by React: app/screens/OnbBody.tsx Quick
+function partQuick(p,dayOnly){
   const q=p.q||(p.q={when:'',len:dayOnly?'0':'',slot:'noon'});
-  return `<div class="fsec quick-start">
-  <label class="q-field"><span>어디로?</span>${inp('dest',p.dest,'text','maxlength="40" placeholder="예: 성수동, 부산, 오사카"')}</label>
-  <div class="q-field"><span>언제?</span>${chipRow('when',q.when,[['today','오늘'],['tomorrow','내일'],['weekend','이번 주말'],['pick','날짜 고르기']])}
-    ${q.when==='pick'?`<input type="date" data-pf="startDate" value="${p.dateSet!==false?esc(p.startDate):''}" style="margin-top:6px">`:''}</div>
-  ${dayOnly?'':`<div class="q-field"><span>얼마나?</span>${chipRow('len',q.len,[['0','하루'],['1','1박 2일'],['2','2박 3일'],['3','3박 4일'],['5','더 길게']])}</div>`}
-  ${q.len==='0'?`<div class="q-field"><span>몇 시쯤?</span>${chipRow('slot',q.slot,SLOTS.map(s=>[s[0],s[1]]))}</div>`:''}
-  <div class="q-field"><span>끌리는 것 <small class="hint">(선택, 안 골라도 돼요)</small></span><div class="chips">${['맛집','카페','산책','쇼핑','전시','한잔','사진','자연'].map(k=>`<button type="button" data-kwtoggle="${k}" aria-pressed="${kws.some(x=>norm(x)===norm(k))}">${k}</button>`).join('')}</div></div>
-  <div class="q-field"><span>누구랑?</span>${chipRow('party',p.party.type,[['solo','혼자'],['friends','친구'],['couple','연인'],['family','가족']])}</div>
-  <div class="row"><button type="button" class="dice-go" id="quickStart">${q.len==='0'?'하루 코스 시작하기':'🎲 시작하기'}</button><span class="ai-status" id="st_pack"></span></div>
-  <p class="hint">나머지는 필요할 때 물어볼게요.</p></div>`;
+  return {f:'quick',dest:p.dest??'',dayOnly:!!dayOnly,when:String(q.when??''),date:p.dateSet!==false?String(p.startDate??''):'',len:String(q.len??''),slot:String(q.slot??''),
+    slots:SLOTS.map(s=>[s[0],s[1]]),kws:['맛집','카페','산책','쇼핑','전시','한잔','사진','자연'].map(k=>({k,on:kws.some(x=>norm(x)===norm(k))})),party:p.party.type};
 }
 async function quickStart(){
   const q=draft.q||{}, dest=String(draft.dest||'').trim();

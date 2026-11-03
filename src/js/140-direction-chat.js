@@ -3,17 +3,9 @@ const TALK_MAX=5;
 const TALK_OPEN={q:'요즘 어떤 마음이 들어서 여행을 떠올리게 됐어요? 막연해도 괜찮아요.',o:['그냥 답답해서 벗어나고 싶어요','지쳐서 푹 쉬고 싶어요','새로운 자극이 필요해요','생각을 정리하고 싶어요']};
 let talk=null;
 function talkReset(){talk={msgs:[{role:'a',text:TALK_OPEN.q}],options:TALK_OPEN.o.slice(),n:0,busy:false,summary:null}}
-function talkBanner(p,next){return `<div class="t-banner"><span>🧭 ${esc(p.purpose||'이번 여행의 방향')}</span><small>${next}</small></div>`}
-function fJP(){return `${onbKeyBox()}${inClaude()?'':`<div class="fsec import-box"><h3>Claude에서 만든 계획이 있나요?</h3><p class="hint">Claude에서 "내 계획 → 백업 파일 받기"로 저장한 파일을 불러오면 그대로 이어서 쓸 수 있어요.</p><input type="file" accept=".json,application/json" class="importFile"><p class="ai-status" id="st_import"></p></div>`}<div class="choose jpc">
-    <button type="button" class="choose-btn jbtn" data-pickjp="J"><span class="big">J</span><b>계획파예요</b><small>미리 짜 두면 마음이 편해요. 시간·동선·예산까지 꼼꼼하게.</small></button>
-    <button type="button" class="choose-btn pbtn" data-pickjp="P"><span class="big">P</span><b>즉흥파예요</b><small>일단 가 보고 정해요. 어디·언제·누구랑만 고르면 끝.</small></button></div><p class="hint" style="text-align:center">언제든 위의 J ⇄ P 스위치로 바꿀 수 있어요.</p>`}
-function fChooser(){
-  return `<div class="choose">
-    <button type="button" class="choose-btn" data-startmode="quick"><b>가고 싶은 곳이 있어요</b><small>여행지·날짜·동행만 정하고 바로 시작해요</small></button>
-    <button type="button" class="choose-btn" data-startmode="talk"${sample?'':' disabled'}><b>아직 막연해요 · 이야기하면서 정할래요</b><small>${sample?'질문 몇 개로 이번 여행의 방향을 함께 찾아요':'AI를 연결하면 쓸 수 있어요'}</small></button>
-    <button type="button" class="choose-btn" data-startmode="quick" data-destmode="find"><b>여행지만 못 정했어요</b><small>취향과 조건으로 여행지를 추천받아요</small></button>
-    <button type="button" class="choose-btn" data-startmode="day"><b>☀️ 하루 코스 짜기</b><small>친구랑 혹은 혼자, 하루 놀 동네 코스를 가볍게 짜요</small></button></div>`;
-}
+// 처음 설정 parts drawn by React (app/screens/OnbBody.tsx)
+const partBanner=(p,next)=>({f:'banner',purpose:p.purpose||'',next});
+function partJP(){return {f:'jp',keyBox:!!(STANDALONE&&!sample),keyHelpHTML:KEY_HELP.anthropic,importBox:!inClaude()}}
 function fTalk(p){
   if(!talk) talkReset();
   const t=talk, S=t.summary, last=[...t.msgs].reverse().find(m=>m.role==='a'), hist=[];

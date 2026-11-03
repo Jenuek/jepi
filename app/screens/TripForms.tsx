@@ -2,8 +2,10 @@
 // The old code still reads them: field names (data-pf, data-radio, data-type) are the same, every input event goes to
 // the old onPf, and the old code redraws the whole form (a new rev) after it changes the draft. So the fields are
 // uncontrolled (defaultValue): they keep what the person types until the next redraw.
-// Pieces the old code still writes into (the AI paste box with its status line, the date status line) stay old HTML.
+// The AI paste box (the old code writes into it) stays old HTML. Status lines and the 준비하기 button are LiveLine/LiveButton
+// (app/ui/live.tsx): the old code updates them through a handle, not by writing into them.
 import type { CSSProperties, ReactNode } from 'react';
+import { LiveButton, LiveLine } from '../ui/live';
 
 export type Opt = [value: string | number | boolean, label: string];
 
@@ -18,6 +20,9 @@ export type FormPart =
   | { f: 'home'; mode: string; word: string; area: string; min: number | string; fare: number | string; byMin: number | string; byMinOpts: Opt[] }
   | { f: 'stay'; helper: boolean; stays: { name: string; area: string; checkin: string; checkout: string; from: number; to: number }[]; areas: Opt[]; nights: string[]; pasteHTML: string }
   | { f: 'budget'; man: number | string; trip: number | string; local: number | string; hint: string }
+  | { f: 'dest'; dest: string; ai: boolean; ready: string; rate: { cur: string; val: number } | null }
+  | { f: 'dates'; dates: DatesInfo }
+  | { f: 'day'; date: string; time: string; end: string; area: string; areas: Opt[] }
   | { f: 'events'; events: { name: string; day: number; start: string; end: string; area: string }[]; areas: Opt[]; days: string[] };
 
 export interface DatesInfo {
@@ -77,7 +82,7 @@ function Dates({ start, unknown, nights, maxN }: DatesInfo) {
         </select></label>
       </div>
       <label className="toggle" style={{ margin: '8px 0 0' }}><input type="checkbox" id="dateUnknown" defaultChecked={unknown} /> 날짜는 아직 몰라요 (대략 한 달 뒤로 생각할게요)</label>
-      <Old html={'<p class="ai-status" id="st_dates"></p>'} />
+      <LiveLine id="st_dates" />
     </>
   );
 }
@@ -231,6 +236,39 @@ function Budget(p: Extract<FormPart, { f: 'budget' }>) {
   );
 }
 
+function Dest(p: Extract<FormPart, { f: 'dest' }>) {
+  return (
+    <Fsec>
+      <h3>여행지</h3>
+      <label className="fg" style={{ display: 'block' }}><span className="hint">도시나 지역 이름 (국내, 해외 모두 돼요)</span><Inp pf="dest" val={p.dest} maxLength={40} placeholder="예: 오사카, 제주, 파리, 방콕" style={{ marginTop: 4 }} /></label>
+      <div className="row"><button className="small-btn" type="button" data-destmode="find">아직 못 정했어요 · 취향으로 추천받기</button></div>
+      <div className="row">{p.ai && <LiveButton className="small-btn primary" id="genPack">AI로 여행지 준비하기</LiveButton>}<LiveLine tag="span" id="st_pack" text={p.ready} /></div>
+      {p.ai
+        ? <p className="hint">AI가 동네, 공항·역, 화폐, 교통비를 정리해요. 여행지를 바꾸면 넣어 둔 블록은 지워져요.</p>
+        : <p className="hint">새 여행지 정보는 AI를 연결해야 준비할 수 있어요 (더보기 → 설정). 지금은 장소 없이 블록을 직접 만들어 쓰거나, "예시로 둘러보기"로 도쿄 예시를 볼 수 있어요.</p>}
+      {p.rate && <>
+        <div className="fg"><label>{`환율: 1 ${p.rate.cur}는 몇 원?`}<input type="number" step="any" min="0" data-pk="rate" defaultValue={String(p.rate.val)} /></label></div>
+        <p className="hint">AI가 넣은 대략적인 값이에요. 바꾸면 비용 계산에 바로 반영돼요.</p>
+      </>}
+    </Fsec>
+  );
+}
+
+function Day(p: Extract<FormPart, { f: 'day' }>) {
+  return (
+    <Fsec id="datesSec">
+      <h3>언제, 어디서 만나요?</h3>
+      <div className="fg">
+        <label>날짜<input type="date" data-pf="startDate" defaultValue={p.date} /></label>
+        <label>만나는 시간<Inp pf="meet.time" val={p.time} type="time" /></label>
+        <label>헤어지는 시간<Inp pf="meet.end" val={p.end} type="time" /></label>
+        <label>만나는 동네<Sel pf="meet.area" val={p.area} opts={p.areas} /></label>
+      </div>
+      <LiveLine id="st_dates" />
+    </Fsec>
+  );
+}
+
 /** One form part: a React form, or old HTML. */
 export function FormPiece({ part }: { part: FormPart }) {
   switch (part.f) {
@@ -243,5 +281,8 @@ export function FormPiece({ part }: { part: FormPart }) {
     case 'stay': return <Stay {...part} />;
     case 'budget': return <Budget {...part} />;
     case 'events': return <Events {...part} />;
+    case 'dest': return <Dest {...part} />;
+    case 'dates': return <Fsec id="datesSec"><h3>언제 가나요?</h3><Dates {...part.dates} /></Fsec>;
+    case 'day': return <Day {...part} />;
   }
 }

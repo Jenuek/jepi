@@ -3,11 +3,9 @@ let jp='J';
 function setJP(m,quiet){jp=m==='P'?'P':'J';{const ci=document.getElementById('chatInput');if(ci)ci.placeholder=jp==='P'?'뭐 하고 싶어요? 말로 해도 돼요':'AI에게 말로 부탁하기'}document.body.classList.toggle('mode-p',jp==='P');document.querySelectorAll('[data-jp]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.jp===jp)));if(!quiet)store.set('gp.jp',jp)}
 
 // ---------- one-day course ----------
-function fDay(p){const m=p.meet||{};
-  return `${fDest(p)}<div class="fsec" id="datesSec"><h3>언제, 어디서 만나요?</h3><div class="fg">
-  <label>날짜<input type="date" data-pf="startDate" value="${p.dateSet!==false?esc(p.startDate):''}"></label>
-  <label>만나는 시간${inp('meet.time',m.time||'11:00','time')}</label><label>헤어지는 시간${inp('meet.end',m.end||'20:00','time')}</label>
-  <label>만나는 동네<select data-pf="meet.area">${areaOpts(m.area)}</select></label></div><p class="ai-status" id="st_dates"></p></div>${fParty(p)}`}
+// 하루 코스: 여행지 + 언제·어디서 만나요 + 누구와 (drawn by React: TripForms.tsx)
+function partsDay(p){const m=p.meet||{};
+  return [partDest(p),{f:'day',date:p.dateSet!==false?String(p.startDate??''):'',time:m.time||'11:00',end:m.end||'20:00',area:m.area,areas:optsOf(AREAS)},partParty(p)]}
 
 // ---------- DICE: roll for an empty slot ----------
 const DICE_MOODS=[['any','상관없음'],['hungry','배고파'],['quiet','조용히'],['move','움직이고 싶어'],['drink','한잔'],['rain','비 와요']];

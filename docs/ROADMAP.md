@@ -48,9 +48,15 @@
   - [x] 예산 폼(`TripForms.tsx` Budget)과 취향 탭의 "어떤 여행을 원하나요?"(`TasteStyle.tsx`, #tasteStyle) — 예전과 같음(`tools/compare/taste.js` 8가지).
     예산 아래 안내는 예전엔 입력할 때 글자를 직접 바꿨는데, 이제 상태값(`meSetBudgetHint`)으로 바꿔요(입력 중인 칸은 그대로). fBudget·fStyle·styleOnly 문자열 버전은 지움.
     **아직 예전 HTML 두 벌**: styleMoreHTML(여행 스타일 더)은 처음 설정의 여행지 추천(fDestFinder)이 아직 문자열로 써서 남겨 둠. 점검 206개 통과.
-  - [ ] 다음: 처음 설정(#onbBody)을 리액트 자리로 — fJP·fChooser·fQuick·fTalk·fDates·fDest·fDestFinder·fDay를 같이 옮기고, 남은 두 벌(fParty·dateFields·styleMoreHTML)을 지워요.
-    조심할 것: 여행지 칸의 "AI로 여행지 준비하기" 버튼과 `st_pack`·`st_dates`·`st_onb` 안내를 예전 코드(genPack·progStart·380-events)가 직접 바꿔요 → 상태값으로 바꾸거나 예전 HTML 조각으로 남기기.
-    이번 여행의 언제·어디(fDest)와 하루 코스(fDay)도 같은 조각이라 이때 함께.
+  - [x] 처음 설정 본문(#onbBody, `OnbBody.tsx`): J/P 고르기(AI 키·백업 불러오기)·시작 방법·가고 싶은 곳(여행지·날짜·동행)·P 가볍게 시작·하루 코스,
+    그리고 이번 여행의 언제·어디(여행지)·하루 코스 폼 — 13가지 상태 모두 예전과 같음(`tools/compare/onb.js`).
+    **새 연결 방식**: 예전 코드가 안내 줄(`st_pack`·`st_dates`·`st_onb`·`st_import`)과 버튼("준비하는 중…", 잠그기)을 직접 바꾸던 걸
+    `app/ui/live.tsx`(LiveLine·LiveButton)로 — 예전 도우미(setSt·progStart·progStop·setBusy)가 `JEPI_UI.live(요소)`로 먼저 물어보고, 리액트가 그린 거면 그쪽으로 알려요.
+    앞으로 다른 화면도 이 방식으로 옮기면 돼요. 예전 문자열 버전 fParty·dateFields·fDates·fDest·fDay·fJP·fChooser·fQuick·talkBanner·onbKeyBox는 지움.
+    점검 추가(시작 방법별 화면, 날짜 먼저 안내, 어디로 안내, AI 준비하기 중 버튼·시간 표시와 실패 뒤 되돌림). 점검 218개 통과.
+    **아직 예전 HTML**: 이야기하면서 정하기(fTalk)와 여행지 추천(fDestFinder, styleMoreHTML 포함) — AI 대화·추천 카드를 예전 코드가 직접 많이 바꿔서 다음에.
+    처음 설정의 틀(#onb 제목·다음 버튼)은 body.html 그대로.
+  - [ ] 다음: 이야기하면서 정하기(fTalk)·여행지 추천(fDestFinder)을 LiveLine 방식으로 옮기기. 그다음 장소 탭(renderTray), 준비하기(renderChecks), 지도·DICE, 일정표(renderTimeline).
   - 참고(예전 계획): 입력 폼 조각들(`030-forms.js`의 fParty·fBudget·fStay·fFlight·fHome·fEvents·dateFields·fStyle…, `140`·`160`·`170`의 fDest·fJP·fQuick·fTalk…)을
     하나씩 리액트로. 처음 설정(`renderOnb`)·이번 여행·취향(renderTasteStyle)이 같이 써요.
     방법: 칸 이름(`data-pf`, `data-radio`)은 그대로, 폼 전체는 다시 그릴 때마다 새로(rev 키) — 예전 코드가 값을 바꾼 뒤 다시 그리는 방식과 같아서 안전해요.
