@@ -447,5 +447,29 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'React screen: 설정 frame (theme, time spacing, 모두 초기화 asks, old parts drawn fresh)',
+    async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await openSettings(p);
+      ok(await vis(p, '#setBox [data-sbmode="join"]') && await vis(p, '#setBox #backupAll'), 'sections shown: 동기화 (old part) and 데이터');
+      await p.click('[data-theme-set="dark"]'); await p.waitForTimeout(150);
+      ok(await p.getAttribute('html', 'data-theme') === 'dark' && await p.getAttribute('[data-theme-set="dark"]', 'aria-pressed') === 'true', '어둡게: page dark, button pressed');
+      await p.click('[data-theme-set="light"]');
+      await p.click('[data-zoom="100"]'); await p.waitForTimeout(150);
+      ok(await p.getAttribute('#setBox [data-zoom="100"]', 'aria-pressed') === 'true' && await p.getAttribute('#setBox [data-zoom="60"]', 'aria-pressed') === 'false', '넓게 pressed');
+      ok(await p.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--hour').trim()) === '100px', 'schedule spacing changed');
+      await p.click('[data-zoom="60"]');
+      await p.click('#wipeBtn'); await p.waitForTimeout(100);
+      ok((await p.textContent('#wipeBtn')).includes('한 번 더') && await vis(p, '#wipeCancel'), '모두 초기화 asks once more');
+      await p.click('#wipeCancel'); await p.waitForTimeout(100);
+      ok((await p.textContent('#wipeBtn')) === '모두 초기화', '취소 goes back');
+      await p.evaluate(() => { const x = document.querySelector('#setBox [data-sbmode="join"]'); x.disabled = true });
+      await p.click('[data-theme-set="light"]'); await p.waitForTimeout(100);
+      ok(!(await p.isDisabled('#setBox [data-sbmode="join"]')), 'old parts are drawn fresh on every redraw (like before)');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];

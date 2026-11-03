@@ -116,7 +116,7 @@ document.addEventListener('click',e=>{
   if(t.dataset.setarea){const k=t.dataset.setarea;profile.stayPicked=k;profile.stays.forEach((st,i)=>{if(i===0||profile.bookedStay===false){st.area=k;if(profile.bookedStay===false)st.name=`숙소 (미정 · ${AREAS[k][0]})`}});store.set('gp.profile',profile);buildDays();renderHelper();return}
   if(t.dataset.slot){const [a,d]=t.dataset.slot.split(',').map(Number);setSlot(a,d);return}
   if(t.closest('#helper')&&t.dataset.radio){let v=t.dataset.val==='true';profile[t.dataset.radio]=v;store.set('gp.profile',profile);renderHelper();return}
-  if(t.dataset.zoom){setZoom(+t.dataset.zoom);return}
+  if(t.dataset.zoom){setZoom(+t.dataset.zoom);if(tab==='settings')renderSettings();return}
   if(t.dataset.vote){toggleRec(t.dataset.vote);return}
   if(t.dataset.pick){selected=selected===t.dataset.pick?null:t.dataset.pick;
     if(selected&&!matchMedia('(min-width:900px)').matches){tab='timeline'}

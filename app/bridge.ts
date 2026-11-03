@@ -9,6 +9,7 @@ import { MoreMenu, type MoreMenuProps } from './screens/MoreMenu';
 import { PlansScreen, type PlansScreenProps } from './screens/PlansScreen';
 import { FriendsPanel, type FriendsPanelProps } from './screens/FriendsPanel';
 import { NotifyPanel, type NotifyPanelProps } from './screens/NotifyPanel';
+import { SettingsScreen, type SettingsScreenProps } from './screens/SettingsScreen';
 
 // Every screen React owns, with the props the old code must pass.
 export interface Screens {
@@ -17,6 +18,7 @@ export interface Screens {
   plans: PlansScreenProps;
   friends: FriendsPanelProps;
   notify: NotifyPanelProps;
+  settings: SettingsScreenProps;
 }
 
 const SCREENS: { [K in keyof Screens]: ComponentType<Screens[K]> } = {
@@ -25,6 +27,7 @@ const SCREENS: { [K in keyof Screens]: ComponentType<Screens[K]> } = {
   plans: PlansScreen,
   friends: FriendsPanel,
   notify: NotifyPanel,
+  settings: SettingsScreen,
 };
 
 export interface JepiUI {
