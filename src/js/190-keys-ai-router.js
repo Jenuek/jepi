@@ -1,6 +1,6 @@
 // ================= JEPI standalone: AI keys, model router, routes, map, panels =================
 const STANDALONE=!(window.claude&&window.claude.use);
-const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(_){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(_){}},del(k){try{localStorage.removeItem(k)}catch(_){}}};
+const LS=JD.storage; // saved data on this device: app/data/storage.ts
 let KEYS=LS.get('jepi.keys',{})||{};
 const KEY_DEF={
   anthropic:{name:'Claude',sub:'일정 짜기·대화·여행지 준비 (필수)',ph:'sk-ant-...',re:/^sk-ant-/},
@@ -12,7 +12,7 @@ const MODELS=Object.assign({heavy:'claude-sonnet-5-5',light:'claude-haiku-5-5',g
 let keyMsg={}, keyBad={};
 function saveKeys(quiet){LS.set('jepi.keys',KEYS);if(!quiet){LS.set('jepi.keysAt',Date.now());if(typeof syncSoon==='function')syncSoon()}}
 const maskKey=k=>k?k.slice(0,6)+'••••••'+k.slice(-4):'';
-function aiErr(code,msg,text){const e=new Error(msg||code);e.code=code;if(text!=null)e.text=text;return e}
+function aiErr(code,msg,text){return JD.appError(code,msg,text)}
 function pickJSON(text){
   const s=String(text||'').trim().replace(/^```(?:json)?\s*/i,'').replace(/```\s*$/,'');
   try{return JSON.parse(s)}catch(_){}

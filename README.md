@@ -23,6 +23,8 @@ app/                  ← 새 코드 (React + TypeScript)
   main.tsx            ← 시작점. 예전 코드보다 먼저 실행돼요.
   bridge.ts           ← 예전 코드가 리액트 화면을 부르는 다리 (window.JEPI_UI.mount)
   screens/*.tsx       ← 리액트로 옮긴 화면들
+  data/               ← 데이터: 기기 저장·서버 연결·키 암호화·데모 칸막이·데이터 모양(types.ts)
+                         예전 코드는 JD(= window.JEPI_DATA)로 써요 (src/js/001-data.js)
 src/                  ← 예전 코드
   html/head.html      ← <head> (메타, 폰트, 테마 깜빡임 방지)
   html/body.html      ← 화면 뼈대 (헤더, 일정표, 장소/더보기 패널, 시트, 첫 화면)
@@ -75,7 +77,7 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 
 | 하고 싶은 일 | 파일 |
 |---|---|
-| 첫 화면(새 여행·로그인·데모), 데모 시작/끝 | `381-welcome-demo.js`, 데모 격리 `005-demo-guard.js`, 데모 일정 `066-demo-osaka.js` |
+| 첫 화면(새 여행·로그인·데모), 데모 시작/끝 | `381-welcome-demo.js`, 데모 칸막이 `app/data/demo.ts`, 데모 일정 `066-demo-osaka.js` |
 | 일정표 그리기, 장소 카드 | `340-render.js` |
 | 일정 화면 요약 줄(이동·비용·확인할 것·빈 시간) | `382-tidy.js` |
 | 장소 찾기 화면 (모든 "찾기" 버튼이 여기로) | `385-find.js` |
@@ -93,7 +95,8 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 | AI 연결·모델 선택 | `190-keys-ai-router.js`, 실제 호출 `360-ai.js`, 채팅 `050-chat.js` |
 | 🎲 뭐 먹지 / 뭐 하지 | `280-dice-eat.js`, `290-dice-do.js` |
 | 내 계획 목록, 새 계획 | `180-plans.js` |
-| 로그인·기기 간 동기화·키 암호화 | `310-sync.js` |
+| 로그인·기기 간 동기화·키 암호화 | 로그인 화면 `310-sync.js`, 무엇을 보내고 어떻게 합칠지 `app/data/sync.ts`, 서버와 대화 `app/data/server.ts`, 암호화 `app/data/vault.ts` |
+| 기기에 저장 (localStorage) | `app/data/storage.ts` (여기로만 읽고 써요) |
 | 친구와 함께 (초대·합치기·가고 싶어요) | `384-trips.js` |
 | 알림 (일정별 🔔, 서버로 예약) | `386-notify.js`, 서버 `supabase/functions/jepi-push` |
 | 더보기 메뉴 / 설정 / 사용 안내 | `220-more-menu.js` / `230-settings.js` / `app/screens/HelpPanel.tsx` (리액트) |

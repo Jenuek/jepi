@@ -1,101 +1,48 @@
 // ================= 기기 간 동기화 (Supabase, 본인 계정 데이터만) =================
-// built-in sync server: the publishable key is meant to be public; RLS keeps each person's rows private
-const SB_DEFAULT={url:'https://qjzxhcvneorbskpebvca.supabase.co',key:'sb_publishable_-IUuxuXFsSJQFz4V0we-zA_OIi1AZQH'};
-let SYNC=Object.assign({url:'',key:'',email:'',sess:null,lastPull:0,sent:{},at:0,msg:''},LS.get('jepi.sync',{})||{});
-if(!SYNC.url||!SYNC.key){SYNC.url=SB_DEFAULT.url;SYNC.key=SB_DEFAULT.key}
-const saveSync=()=>LS.set('jepi.sync',{url:SYNC.url,key:SYNC.key,email:SYNC.email,sess:SYNC.sess,lastPull:SYNC.lastPull,sent:SYNC.sent,at:SYNC.at});
-let syncStep='', syncBusy=false, syncErr='';
-const syncOn=()=>!DEMO.on&&!!(SYNC.url&&SYNC.key&&SYNC.sess&&SYNC.sess.access);
-function hashStr(s){let h=5381;for(let i=0;i<s.length;i++)h=(h*33^s.charCodeAt(i))>>>0;return h.toString(36)+s.length.toString(36)}
-async function sbAuth(path,body){
-  let r;try{r=await fetch(SYNC.url.replace(/\/$/,'')+path,{method:'POST',headers:{apikey:SYNC.key,'content-type':'application/json'},body:JSON.stringify(body)})}catch(_){throw aiErr('network','서버에 연결하지 못했어요. 주소를 확인해 주세요.')}
-  let j={};try{j=await r.json()}catch(_){}
-  if(!r.ok){const m=j.msg||j.error_description||j.message||j.error||('HTTP '+r.status);throw aiErr(r.status===429?'rate_limited':'auth',/rate|seconds/i.test(m)?'잠시 뒤에 다시 시도해 주세요 (메일 발송 제한).':/invalid login|invalid_credentials|invalid_grant/i.test(m)?'이메일이나 비밀번호가 맞지 않아요.':/already registered|already exists/i.test(m)?'이미 가입된 이메일이에요. "로그인"으로 들어가 주세요.':/invalid|expired/i.test(m)?'링크가 틀렸거나 만료됐어요. 다시 받아 주세요.':m)}
-  return j;
-}
-function keepSess(j){SYNC.sess={access:j.access_token,refresh:j.refresh_token,exp:Date.now()+((+j.expires_in||3600)-60)*1000,user:(j.user&&j.user.id)||SYNC.sess&&SYNC.sess.user,email:(j.user&&j.user.email)||SYNC.email};saveSync()}
-async function sbToken(){
-  if(!syncOn()) throw aiErr('auth','로그인이 필요해요');
-  if(Date.now()<SYNC.sess.exp) return SYNC.sess.access;
-  try{keepSess(await sbAuth('/auth/v1/token?grant_type=refresh_token',{refresh_token:SYNC.sess.refresh}));return SYNC.sess.access}
-  catch(e){if(e.code==='auth'){SYNC.sess=null;saveSync()}throw e}
-}
-async function sbRest(method,q,body,prefer){return sbTable('jepi_docs',method,q,body,prefer)}
+// The server conversation (login, session, tables) is in app/data/server.ts, key encryption in app/data/vault.ts.
+// SYNC is the same object as JD.server.SYNC: the sync settings, saved as jepi.sync.
+const SB_DEFAULT=JD.server.SB_DEFAULT;
+const SYNC=JD.server.SYNC;
+const saveSync=JD.server.saveSync;
+let syncStep='', syncErr='';
+const syncOn=JD.server.syncOn;
+function hashStr(s){return JD.hashStr(s)}
+function sbAuth(path,body){return JD.server.sbAuth(path,body)}
+function keepSess(j){JD.server.keepSess(j)}
+function sbToken(){return JD.server.sbToken()}
+function sbRest(method,q,body,prefer){return JD.server.sbRest(method,q,body,prefer)}
 // any table (or rpc/<name>) in the project, as the logged-in person; rows are limited by RLS on the server
-async function sbTable(table,method,q,body,prefer){
-  const tk=await sbToken(); let r;
-  try{r=await fetch(SYNC.url.replace(/\/$/,'')+'/rest/v1/'+table+(q||''),{method,headers:Object.assign({apikey:SYNC.key,Authorization:'Bearer '+tk,'content-type':'application/json'},prefer?{Prefer:prefer}:{}),body:body?JSON.stringify(body):undefined})}
-  catch(_){throw aiErr('network','오프라인이에요')}
-  if(r.status===401){SYNC.sess.exp=0;throw aiErr('auth','로그인이 만료됐어요')}
-  if(!r.ok){let m='';try{m=(await r.json()).message}catch(_){}throw aiErr('upstream_error',m||('HTTP '+r.status))}
-  return r.status===204?null:r.json().catch(()=>null);
-}
-function syncDocs(){
-  const out=[];
-  plans.forEach(p=>{const d=store.get('gp.plan.'+p.id,null);if(!d||p.shared)return; // shared trips sync through jepi_trips
-   out.push({id:'plan:'+p.id,kind:'plan',data:{meta:p,data:d},updated:p.updated||Date.now()})});
-  out.push({id:'kw',kind:'kw',data:{kws},updated:LS.get('jepi.kwAt',1)});
-  out.push({id:'myplaces',kind:'myplaces',data:{MYP},updated:LS.get('jepi.mypAt',1)});
-  return out;
-}
+function sbTable(table,method,q,body,prefer){return JD.server.sbTable(table,method,q,body,prefer)}
 // AI·지도 키: 비밀번호에서 만든 열쇠로 암호화해서만 서버에 올려요 (열쇠는 이 기기에만)
-const b64e=u=>btoa(String.fromCharCode(...new Uint8Array(u))), b64d=t=>Uint8Array.from(atob(t),c=>c.charCodeAt(0));
-async function vaultMake(email,pw){const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveBits']);
-  const bits=await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:new TextEncoder().encode('jepi-keys:'+String(email).trim().toLowerCase()),iterations:210000},base,256);LS.set('jepi.vk',b64e(bits))}
-async function vaultKey(){const r=LS.get('jepi.vk',null);return r?crypto.subtle.importKey('raw',b64d(r),'AES-GCM',false,['encrypt','decrypt']):null}
-async function vaultSeal(obj){const k=await vaultKey();if(!k)return null;const iv=crypto.getRandomValues(new Uint8Array(12));const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},k,new TextEncoder().encode(JSON.stringify(obj)));return{v:1,iv:b64e(iv),ct:b64e(ct)}}
-async function vaultOpen(d){const k=await vaultKey();if(!k||!d||!d.ct)return null;const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64d(d.iv)},k,b64d(d.ct));return JSON.parse(new TextDecoder().decode(pt))}
-let keysLocked=false;
-let pushT=0;
-function syncSoon(ms){if(!syncOn())return;clearTimeout(pushT);pushT=setTimeout(syncPush,ms||2500)}
-async function syncPush(){
-  if(!syncOn()||syncBusy) return; syncBusy=true;
-  try{
-    const rows=[];
-    for(const d of syncDocs()){const h=hashStr(JSON.stringify(d.data.data||d.data));if(SYNC.sent[d.id]===h)continue;rows.push(Object.assign({user_id:SYNC.sess.user},d,{deleted:false,_h:h}))}
-    if(LS.get('jepi.vk',null)&&Object.keys(KEYS).length&&!keysLocked){const h=hashStr(JSON.stringify(KEYS));if(SYNC.sent.keys!==h){let at=LS.get('jepi.keysAt',0);if(!at){at=Date.now();LS.set('jepi.keysAt',at)}const sealed=await vaultSeal(KEYS);if(sealed)rows.push({user_id:SYNC.sess.user,id:'keys',kind:'keys',data:sealed,updated:at,deleted:false,_h:h})}}
-    for(const id of Object.keys(SYNC.sent)) if(id.startsWith('plan:')&&!plans.some(p=>'plan:'+p.id===id&&!p.shared)&&SYNC.sent[id]!=='x') rows.push({user_id:SYNC.sess.user,id,kind:'plan',data:{},updated:Date.now(),deleted:true,_h:'x'});
-    if(rows.length){await sbRest('POST','?on_conflict=user_id,id',rows.map(({_h,...r})=>r),'resolution=merge-duplicates,return=minimal');rows.forEach(r=>SYNC.sent[r.id]=r._h)}
-    SYNC.at=Date.now(); syncErr=''; saveSync();
-  }catch(e){syncErr=e.message;if(e.code!=='network')console.warn('sync push',e)}
-  syncBusy=false; if(tab==='settings') renderSettings();
-  for(const f of SYNC_AFTER_PUSH){try{await f()}catch(e){console.warn(e)}}
-}
-async function syncPull(){
-  if(!syncOn()||syncBusy) return; syncBusy=true; let changed=false, curChanged=null, keysPulled=false;
-  try{
-    const rows=await sbRest('GET',`?select=id,kind,data,updated,deleted&updated=gt.${Math.max(0,SYNC.lastPull-5000)}&order=updated.asc`)||[];
-    for(const r of rows){
-      SYNC.lastPull=Math.max(SYNC.lastPull,+r.updated||0);
-      if(r.kind==='plan'){const pid=r.id.slice(5), loc=plans.find(p=>p.id===pid);
-        if(loc&&loc.shared){SYNC.sent[r.id]=r.deleted?'x':SYNC.sent[r.id];continue}
-        if(r.deleted){if(loc&&pid!==curPlan){plans=plans.filter(p=>p.id!==pid);LS.del('gp.plan.'+pid);changed=true}SYNC.sent[r.id]='x';continue}
-        const v=r.data||{}, m=v.meta; if(!m||!v.data) continue; const h=hashStr(JSON.stringify(v.data));
-        if(loc&&SYNC.sent[r.id]===h) continue;
-        if(!loc||(+r.updated)>(loc.updated||0)){store.set('gp.plan.'+pid,v.data);if(loc)Object.assign(loc,m,{updated:+r.updated});else plans.push(Object.assign({},m,{updated:+r.updated}));SYNC.sent[r.id]=h;changed=true;if(pid===curPlan)curChanged=v.data}
-      }else if(r.kind==='kw'&&Array.isArray(r.data&&r.data.kws)&&(+r.updated)>LS.get('jepi.kwAt',0)){kws=r.data.kws.slice();store.set('gp.kw',kws);LS.set('jepi.kwAt',+r.updated);SYNC.sent.kw=hashStr(JSON.stringify(r.data));changed=true}
-      else if(r.kind==='keys'&&r.data&&r.data.ct&&LS.get('jepi.vk',null)&&(+r.updated)>LS.get('jepi.keysAt',0)){
-        let got=null;try{got=await vaultOpen(r.data)}catch(_){got=null}
-        if(!got){keysLocked=true;continue} keysLocked=false;
-        const merged=Object.assign({},KEYS,got), extra=Object.keys(KEYS).some(k=>!(k in got));
-        KEYS=merged;saveKeys(true);LS.set('jepi.keysAt',extra?Date.now():+r.updated);SYNC.sent.keys=extra?'':hashStr(JSON.stringify(got));keysPulled=true}
-      else if(r.kind==='myplaces'&&Array.isArray(r.data&&r.data.MYP)&&(+r.updated)>LS.get('jepi.mypAt',0)){MYP=r.data.MYP;LS.set('jepi.myplaces',MYP);LS.set('jepi.mypAt',+r.updated);SYNC.sent.myplaces=hashStr(JSON.stringify(r.data));changed=true}
-    }
-    if(changed){plans.sort((a,b)=>(b.updated||0)-(a.updated||0));store.set('gp.plans',plans)}
-    syncErr=''; SYNC.at=Date.now(); saveSync();
-  }catch(e){syncErr=e.message}
-  syncBusy=false;
-  if(curChanged){const ae=document.activeElement;const editing=(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))||!$('#sheetBg').hidden||!$('#onb').hidden;
-    if(!editing){applyPlanData(curChanged);showToast('다른 기기에서 바꾼 내용을 받아왔어요')} }
-  if(keysPulled){keyBad={};if(STANDALONE)sample=makeSample();renderAll();showToast('AI·지도 키도 받아왔어요')}
-  if(changed){renderPlans();renderExt()} if(tab==='settings')renderSettings();
-  for(const f of SYNC_AFTER_PULL){try{await f()}catch(e){console.warn(e)}}
-}
-async function syncNow(){await syncPull();await syncPush();await syncPull()}
-// hooks: every local save schedules a push; coming back to the app pulls
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')syncPull();else syncPush()});
-setInterval(()=>{if(document.visibilityState==='visible')syncPull()},60000);
-addEventListener('online',()=>syncNow());
+const b64e=JD.vault.b64e, b64d=JD.vault.b64d;
+function vaultMake(email,pw){return JD.vault.vaultMake(email,pw)}
+function vaultKey(){return JD.vault.vaultKey()}
+function vaultSeal(obj){return JD.vault.vaultSeal(obj)}
+function vaultOpen(d){return JD.vault.vaultOpen(d)}
+// What to send and how to merge what comes back: app/data/sync.ts. Here: our values, and redrawing after.
+const SYNC_STATUS=JD.sync.status; // .busy (sending or receiving), .keysLocked (server keys locked with another password)
+function syncSoon(ms){JD.sync.syncSoon(ms)}
+function syncPush(){return JD.sync.syncPush()}
+function syncPull(){return JD.sync.syncPull()}
+function syncNow(){return JD.sync.syncNow()}
+JD.sync.connectSync({
+  plans:()=>plans, setPlans(p){plans=p}, curPlan:()=>curPlan,
+  kws:()=>kws, setKws(k){kws=k},
+  myPlaces:()=>MYP, setMyPlaces(m){MYP=m},
+  keys:()=>KEYS, setKeys(k){KEYS=k;saveKeys(true)},
+  setErr(m){syncErr=m},
+  async afterPush(){
+    if(tab==='settings') renderSettings();
+    for(const f of SYNC_AFTER_PUSH){try{await f()}catch(e){console.warn(e)}}
+  },
+  async afterPull({changed,curChanged,keysPulled}){
+    if(curChanged){const ae=document.activeElement;const editing=(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))||!$('#sheetBg').hidden||!$('#onb').hidden;
+      if(!editing){applyPlanData(curChanged);showToast('다른 기기에서 바꾼 내용을 받아왔어요')} }
+    if(keysPulled){keyBad={};if(STANDALONE)sample=makeSample();renderAll();showToast('AI·지도 키도 받아왔어요')}
+    if(changed){renderPlans();renderExt()} if(tab==='settings')renderSettings();
+    for(const f of SYNC_AFTER_PULL){try{await f()}catch(e){console.warn(e)}}
+  }
+});
 function syncHTML(){
   if(!SYNC.url||!SYNC.key||syncStep==='setup') return `<div class="mgroup pad"><p class="hint" style="margin-top:0">Supabase 프로젝트의 <b>Project URL</b>과 <b>anon(또는 publishable) 키</b>를 넣어 주세요. 대시보드 → Project Settings → API에 있어요.</p>
     <label class="fg" style="display:block"><span class="hint">Project URL</span><input id="sbUrl" value="${esc(SYNC.url)}" placeholder="https://xxxx.supabase.co" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
@@ -117,9 +64,9 @@ function syncHTML(){
   }
   if(syncStep==='newpw') return `<div class="mgroup pad"><p class="hint" style="margin-top:0">새 비밀번호를 정해 주세요.</p><form id="sbPwForm" class="sb-form"><input id="sbNew" type="password" placeholder="새 비밀번호 (6자 이상)" autocomplete="new-password" minlength="6" required><button class="small-btn primary" type="submit">저장</button></form>${syncErr?`<small class="kmsg">✕ ${esc(syncErr)}</small>`:''}</div>`;
   const t=SYNC.at?new Date(SYNC.at):null;
-  return `<div class="mgroup pad"><div class="srow" style="margin:0"><span><b>☁️ ${esc(SYNC.sess.email||SYNC.email)}</b><br><small class="hint">${syncBusy?'맞추는 중…':syncErr?'✕ '+esc(syncErr):t?`마지막 동기화 ${t.getHours()}:${String(t.getMinutes()).padStart(2,'0')}`:'아직 동기화 전'}</small></span><span class="mchip ${syncErr?'warn':'ok'}">${syncErr?'확인 필요':'켜짐'}</span></div>
+  return `<div class="mgroup pad"><div class="srow" style="margin:0"><span><b>☁️ ${esc(SYNC.sess.email||SYNC.email)}</b><br><small class="hint">${SYNC_STATUS.busy?'맞추는 중…':syncErr?'✕ '+esc(syncErr):t?`마지막 동기화 ${t.getHours()}:${String(t.getMinutes()).padStart(2,'0')}`:'아직 동기화 전'}</small></span><span class="mchip ${syncErr?'warn':'ok'}">${syncErr?'확인 필요':'켜짐'}</span></div>
     <div class="row" style="margin-top:8px"><button class="small-btn primary" type="button" id="sbNow">지금 동기화</button><button class="small-btn" type="button" id="sbOut">로그아웃</button></div>
-    <p class="hint">계획, 취향 키워드, 내 장소, AI·지도 키가 맞춰져요. 키는 비밀번호로 암호화해서 올라가서 서버에서도 알아볼 수 없어요.</p>${!LS.get('jepi.vk',null)?'<p class="hint" style="color:var(--warn,#b45309)">키까지 맞추려면 로그아웃했다가 다시 로그인해 주세요.</p>':keysLocked?'<p class="hint" style="color:var(--warn,#b45309)">서버의 키가 다른 비밀번호로 잠겨 있어요. 비밀번호를 바꿨다면 키가 있는 기기에서 다시 로그인해 주세요.</p>':''}</div>`;
+    <p class="hint">계획, 취향 키워드, 내 장소, AI·지도 키가 맞춰져요. 키는 비밀번호로 암호화해서 올라가서 서버에서도 알아볼 수 없어요.</p>${!LS.get('jepi.vk',null)?'<p class="hint" style="color:var(--warn,#b45309)">키까지 맞추려면 로그아웃했다가 다시 로그인해 주세요.</p>':SYNC_STATUS.keysLocked?'<p class="hint" style="color:var(--warn,#b45309)">서버의 키가 다른 비밀번호로 잠겨 있어요. 비밀번호를 바꿨다면 키가 있는 기기에서 다시 로그인해 주세요.</p>':''}</div>`;
 }
 document.addEventListener('click',async e=>{const t=e.target.closest('button');if(!t)return;
   if(t.id==='sbSetup'){syncStep='setup';renderSettings();return}
@@ -134,7 +81,7 @@ document.addEventListener('click',async e=>{const t=e.target.closest('button');i
   if(t.id==='sbVerify'){const code=(($('#sbCode')||{}).value||'').trim();if(!code)return;t.disabled=true;
     try{const wasReset=syncStep==='reset';keepSess(await sbVerifyInput(code));syncStep=wasReset?'newpw':'';syncErr='';SYNC.sent={};SYNC.lastPull=0;saveSync();renderSettings();await syncNow();showToast('동기화를 켰어요')}catch(err){syncErr=err.message;renderSettings()}return}
   if(t.id==='sbNow'){syncNow();renderSettings();return}
-  if(t.id==='sbOut'){LS.del('jepi.vk');keysLocked=false;SYNC.sess=null;SYNC.sent={};SYNC.lastPull=0;saveSync();syncStep='';renderSettings();return}
+  if(t.id==='sbOut'){LS.del('jepi.vk');SYNC_STATUS.keysLocked=false;SYNC.sess=null;SYNC.sent={};SYNC.lastPull=0;saveSync();syncStep='';renderSettings();return}
 });
 
 async function sbVerifyInput(v){
@@ -167,7 +114,7 @@ async function syncBoot(){
 function sbErrText(m){return /already registered|already exists/i.test(m)?'이미 가입된 이메일이에요. "로그인"으로 들어가 주세요.':/invalid login|invalid_credentials|Invalid login/i.test(m)?'이메일이나 비밀번호가 맞지 않아요.':/Email not confirmed/i.test(m)?'메일 확인이 켜져 있어요. Supabase에서 Confirm email을 꺼 주세요.':/Password should|weak/i.test(m)?'비밀번호는 6자 이상으로 해 주세요.':/signups not allowed/i.test(m)?'가입이 꺼져 있어요 (Supabase 설정).':m}
 document.addEventListener('submit',async e=>{const f=e.target;if(!f||(f.id!=='sbForm'&&f.id!=='sbPwForm'))return;e.preventDefault();
   if(f.id==='sbPwForm'){const pw=($('#sbNew')||{}).value||'';try{const tk=await sbToken();const r=await fetch(SYNC.url+'/auth/v1/user',{method:'PUT',headers:{apikey:SYNC.key,Authorization:'Bearer '+tk,'content-type':'application/json'},body:JSON.stringify({password:pw})});
-      if(!r.ok){let m='';try{const j=await r.json();m=j.msg||j.message||''}catch(_){}throw aiErr('auth',sbErrText(m||'HTTP '+r.status))}try{await vaultMake(SYNC.sess.email||SYNC.email,pw);keysLocked=false;SYNC.sent.keys='';LS.set('jepi.keysAt',Date.now());syncSoon(500)}catch(_){}syncStep='';syncErr='';showToast('새 비밀번호를 저장했어요')}catch(err){syncErr=err.message}renderSettings();return}
+      if(!r.ok){let m='';try{const j=await r.json();m=j.msg||j.message||''}catch(_){}throw aiErr('auth',sbErrText(m||'HTTP '+r.status))}try{await vaultMake(SYNC.sess.email||SYNC.email,pw);SYNC_STATUS.keysLocked=false;SYNC.sent.keys='';LS.set('jepi.keysAt',Date.now());syncSoon(500)}catch(_){}syncStep='';syncErr='';showToast('새 비밀번호를 저장했어요')}catch(err){syncErr=err.message}renderSettings();return}
   const em=(($('#sbEmail')||{}).value||'').trim(), pw=($('#sbPw')||{}).value||'', join=syncStep==='join';
   if(em){SYNC.email=em;saveSync()}
   if(join&&pw!==(($('#sbPw2')||{}).value||'')){syncErr='두 비밀번호가 달라요.';renderSettings();return}
