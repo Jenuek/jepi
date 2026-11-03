@@ -308,31 +308,20 @@ function pasteBox(kind,hint){
   if(!sample) return `<p class="hint">더보기 → 설정에서 AI를 연결하면 예약 내용을 붙여 넣어 자동으로 채울 수 있어요.</p>`;
   return `<label class="fg" style="display:block"><span class="hint">${hint} 예약번호·결제 정보는 지우고 넣어도 돼요.</span><textarea id="paste_${kind}" rows="3" style="margin-top:4px"></textarea></label><div class="row"><button class="small-btn primary" type="button" data-aifill="${kind}">AI로 채우기</button><span class="ai-status" id="st_${kind}"></span></div>`;
 }
-function fTrip(p){return `<div class="fsec"><h3>예약 상태</h3>${radioRow('bookedFlight',p.bookedFlight!==false,[[true,'교통편 예약함'],[false,'아직 안 했어요']])}${radioRow('bookedStay',p.bookedStay!==false,[[true,'숙소 예약함'],[false,'아직 안 했어요']])}<p class="hint">아직이면 설정을 마친 뒤 예약 도우미가 숙소 동네와 시간대를 추천해요.</p></div><div class="fsec" id="datesSec"><h3>여행 기간</h3>${dateFields(p)}</div>`}
+// 더보기 → 이번 여행 forms are drawn by React (app/screens/TripForms.tsx): these build what each form shows.
+// fParty and dateFields below are still old HTML for 처음 설정 and the day course (they move with those screens).
+const optsOf=o=>Object.entries(o).map(([k,v])=>[k,Array.isArray(v)?v[0]:v.name]);
+const oldPart=html=>({f:'old',html});
+function datesInfo(p){const ds=p.dateSet!==false, ns=p.nightsSet!==false;return {start:ds&&!p.dateUnknown?String(p.startDate??''):'',unknown:!!p.dateUnknown,nights:ns?p.nights:null,maxN:MAX_N}}
+function partParty(p){const q=p.party;return {f:'party',type:q.type,adults:q.adults,kids:q.kids}}
+function partTrip(p){return {f:'trip',bookedFlight:p.bookedFlight!==false,bookedStay:p.bookedStay!==false,dates:datesInfo(p)}}
+function partFlight(p){return {f:'flight',mode:p.mode,word:MODE_WORD[p.mode],notBooked:p.bookedFlight===false,out:clone(p.out),back:clone(p.back),local:p.local,airports:optsOf(AIRPORTS),
+  pasteHTML:pasteBox('flight','예약 메일이나 e티켓 내용을 붙여 넣으면 AI가 위 칸을 채워요.')}}
+function partStay(p){const n=nightsOf(p);return {f:'stay',helper:p.bookedStay===false,stays:clone(p.stays),areas:optsOf(AREAS),nights:Array.from({length:n},(_,k)=>`${k+1}박째 (${mdOf(p,k)} 밤)`),
+  pasteHTML:pasteBox('stay','숙소 예약 확인 내용을 붙여 넣으면 이름, 동네, 체크인·체크아웃을 채워요.')}}
+function partHome(p){const h=p.home;return {f:'home',mode:p.mode,word:MODE_WORD[p.mode],area:h.area,min:h.min,fare:h.fare,byMin:h.byMin,byMinOpts:[60,90,120,150,180].map(m=>[m,'출발 '+durTxt(m)+' 전'])}}
+function partEvents(p){const n=nightsOf(p);return {f:'events',events:clone(p.events),areas:optsOf(AREAS),days:Array.from({length:n+1},(_,k)=>`Day ${k+1} (${mdOf(p,k)})`)}}
 const radioRow=(path,val,opts)=>`<div class="radio">${opts.map(([v,l])=>`<button type="button" data-radio="${path}" data-val="${v}" aria-pressed="${String(val)===String(v)}">${l}</button>`).join('')}</div>`;
-function fFlight(p){const M=p.mode, car=M==='car', word=MODE_WORD[M];
-  return `${p.bookedFlight===false?'<p class="hint" style="margin:0 0 8px">아직 예약 전이라면 교통수단만 고르고 시간은 그대로 두세요. 예약 도우미에서 시간대를 추천해요.</p>':''}<div class="fsec"><h3>가는 길, 오는 길</h3>${radioRow('mode',M,[['flight','비행기'],['train','기차'],['bus','버스'],['car','자동차']])}
-  <div class="fg"><label>가는 날 출발${inp('out.dep',p.out.dep,'time')}</label>${car?'':`<label>도착 ${word}<select data-pf="out.airport">${apOpts(p.out.airport)}</select></label>`}<label>도착${inp('out.arr',p.out.arr,'time')}</label>${car?'':`<label>편명 (선택)${inp('out.flight',p.out.flight,'text','maxlength="12" placeholder="예: KE 123"')}</label>`}</div>
-  <div class="fg">${car?'':`<label>돌아오는 ${word}<select data-pf="back.airport">${apOpts(p.back.airport)}</select></label>`}<label>오는 날 출발${inp('back.dep',p.back.dep,'time')}</label><label>도착${inp('back.arr',p.back.arr,'time')}</label>${car?'':`<label>편명 (선택)${inp('back.flight',p.back.flight,'text','maxlength="12"')}</label>`}</div>
-  <p class="hint">시각은 출발지와 도착지의 현지 시각 그대로 넣어요.${car?'':` 목록에 원하는 ${word}이 없으면 가장 가까운 곳을 고르세요.`}</p>
-  <span class="hint">여행지 안에서는</span>${radioRow('local',p.local,[['transit','대중교통·걷기'],['car','자동차']])}
-  ${car?'':pasteBox('flight','예약 메일이나 e티켓 내용을 붙여 넣으면 AI가 위 칸을 채워요.')}</div>`}
-function fStay(p){const n=nightsOf(p);const nl=k=>`${k+1}박째 (${mdOf(p,k)} 밤)`;
-  return `<div class="fsec"><h3>숙소</h3><p class="hint">숙소가 바뀌면 숙소를 추가해서 밤을 나눠 주세요. 위치는 가장 가까운 동네를 고르면 돼요.</p>${p.stays.map((s,i)=>`<div class="frow"><div class="fg">
-  <label>이름${inp(`stays.${i}.name`,s.name,'text','maxlength="30"')}</label><label>동네<select data-pf="stays.${i}.area">${areaOpts(s.area)}</select></label>
-  <label>체크인${inp(`stays.${i}.checkin`,s.checkin,'time')}</label><label>체크아웃${inp(`stays.${i}.checkout`,s.checkout,'time')}</label>
-  <label>첫 밤<select data-pf="stays.${i}.from" data-type="num">${Array.from({length:n},(_,k)=>opt(k,nl(k),s.from)).join('')}</select></label>
-  <label>마지막 밤<select data-pf="stays.${i}.to" data-type="num">${Array.from({length:n},(_,k)=>opt(k+1,nl(k),s.to)).join('')}</select></label></div>
-  ${p.stays.length>1?`<div class="row"><button class="small-btn danger" type="button" data-delstay="${i}">이 숙소 빼기</button></div>`:''}</div>`).join('')}
-  <div class="row"><button class="small-btn" type="button" data-addstay="1">+ 숙소 추가</button></div>${pasteBox('stay','숙소 예약 확인 내용을 붙여 넣으면 이름, 동네, 체크인·체크아웃을 채워요.')}</div>`}
-function fHome(p){
-  if(p.mode==='car') return `<div class="fsec"><h3>자동차 비용</h3><div class="fg"><label>편도 기름값·통행료 (1인 몫, 원)${inp('home.fare',p.home.fare,'number','min="0" step="1000" data-type="num"')}</label></div><p class="hint">가는 날과 오는 날 비용에 더해져요.</p></div>`;
-  const w=MODE_WORD[p.mode];
-  return `<div class="fsec"><h3>집에서 ${w}까지</h3><div class="fg"><label>출발 동네 (선택)${inp('home.area',p.home.area,'text','maxlength="20" placeholder="예: 마포구"')}</label><label>${w}까지 걸리는 시간 (분)${inp('home.min',p.home.min,'number','min="10" max="240" step="5" data-type="num"')}</label><label>${w} 가는 교통비 (1인, 원)${inp('home.fare',p.home.fare,'number','min="0" step="50" data-type="num"')}</label>${p.mode==='flight'?`<label>공항 도착<select data-pf="home.byMin" data-type="num">${[60,90,120,150,180].map(m=>opt(m,'출발 '+durTxt(m)+' 전',p.home.byMin)).join('')}</select></label>`:''}</div><p class="hint">집 주소는 받지 않아요. 동네 이름은 일정표에 표시만 돼요.</p></div>`}
-function fEvents(p){const n=nightsOf(p);return `<div class="fsec"><h3>미리 예약한 일정 (선택)</h3><p class="hint">공연, 투어, 식당 예약처럼 시간이 정해진 일정은 움직이지 않는 블록이 돼요.</p>${p.events.map((e,i)=>`<div class="frow"><div class="fg">
-  <label>이름${inp(`events.${i}.name`,e.name,'text','maxlength="30" placeholder="예: 콘서트"')}</label><label>날짜<select data-pf="events.${i}.day" data-type="num">${Array.from({length:n+1},(_,k)=>opt(k,`Day ${k+1} (${mdOf(p,k)})`,e.day)).join('')}</select></label>
-  <label>시작${inp(`events.${i}.start`,e.start,'time')}</label><label>끝${inp(`events.${i}.end`,e.end,'time')}</label><label>동네<select data-pf="events.${i}.area">${areaOpts(e.area)}</select></label></div>
-  <div class="row"><button class="small-btn danger" type="button" data-delev="${i}">빼기</button></div></div>`).join('')}<div class="row"><button class="small-btn" type="button" data-addev="1">+ 예약한 일정 추가</button></div></div>`}
 function fParty(p){const q=p.party, num=(path,val,min,max,label)=>`<label>${label}<input type="number" data-pf="${path}" data-type="num" min="${min}" max="${max}" value="${esc(val)}"></label>`;
   return `<div class="fsec"><h3>누구와 가나요?</h3>${radioRow('party.type',q.type,[['solo','혼자'],['couple','연인·부부'],['friends','친구'],['family','가족']])}
   ${q.type==='friends'||q.type==='family'?`<div class="fg">${num('party.adults',q.adults,1,20,q.type==='family'?'어른 (명)':'인원 (명)')}${q.type==='family'?num('party.kids',q.kids,0,10,'아이 (명)'):''}</div>`:''}</div>`}
@@ -374,9 +363,6 @@ async function finishOnb(){commitProfile(draft);day=0;
   $('#onb').hidden=true;renderAll();if(tab==='me'){draft=clone(profile);renderMe()}
   if(needBooking()) openHelper(0); else maybeCoach()}
 function renderMe(){renderMeRows()}
-function renderMeOld(){if(!draft) draft=clone(profile);fixProfile(draft);
-  $('#meBox').innerHTML=(draft.kind==='day'?fDay(draft)+fBudget(draft)+fEvents(draft)+fStyle(draft):fDest(draft)+fTrip(draft)+fBudget(draft)+fFlight(draft)+fStay(draft)+fHome(draft)+fEvents(draft)+fStyle(draft))+
-  `<div class="row" style="display:flex;gap:6px;flex-wrap:wrap"><button class="small-btn primary" type="button" id="meSave">저장하고 반영</button><button class="small-btn" type="button" id="meOnb">처음 설정 다시 하기</button><button class="small-btn" type="button" id="meHelper">예약 도우미</button></div><div class="fsec" style="margin-top:12px"><h3>모두 초기화</h3><p class="hint">저장한 계획 전부, 여행지, 내 정보, 일정 블록, 할 일 표시, ♥, 취향 키워드를 모두 지우고 처음 설정부터 다시 시작해요. 되돌릴 수 없어요. 다른 여행자에게 남긴 👍 추천은 지워지지 않아요.</p><div class="row"><button class="small-btn danger" type="button" id="wipeBtn">${wipeArm?'한 번 더 누르면 모두 지워요':'모든 데이터 지우고 처음부터'}</button>${wipeArm?'<button class="small-btn" type="button" id="wipeCancel">취소</button>':''}</div></div><p class="now-hint" id="meMsg"></p>`}
 function rerenderForm(){
   const ob=$('#onb'), sd=$('#panel-side'), wy=window.scrollY, oy=ob.scrollTop, sy=sd.scrollTop;
   if(!ob.hidden) renderOnb(); else {if(tab==='me'||matchMedia('(min-width:900px)').matches) renderMe(); if(tab==='pref') renderTasteStyle();}
@@ -1929,23 +1915,23 @@ function meRows(p){
   const b=budgetParts&&budgetParts(p);
   const who=p.party.type==='solo'?'혼자':p.party.type==='couple'?'연인·부부':p.party.type==='family'?`가족 ${heads2(p.party)}명`:`친구 ${heads2(p.party)}명`;
   if(p.kind==='day') return [
-    ['day','코스',`${esc(PACK.city)} · ${esc(md(0))}`,()=>fDay(p)],
-    ['who','누구와',who,()=>fParty(p)],
-    ['bud','예산',b?`1인 ${Math.round(b.total/10000)}만원`:'정하지 않음',()=>fBudget(p)]];
+    ['day','코스',`${esc(PACK.city)} · ${esc(md(0))}`,()=>[oldPart(fDay(p))]],
+    ['who','누구와',who,()=>[partParty(p)]],
+    ['bud','예산',b?`1인 ${Math.round(b.total/10000)}만원`:'정하지 않음',()=>[oldPart(fBudget(p))]]];
   return [
-    ['when','언제·어디',`${esc(PACK.city||p.dest||'미정')} · ${p.dateUnknown?'날짜 미정':`${esc(md(0))}–${esc(md(n))}`} (${n}박)`,()=>fDest(p)+fTrip(p)],
-    ['who','누구와',who,()=>fParty(p)],
-    ['way','오가는 길',flightTxt,()=>fFlight(p)+homeBoxHTML(p)+fHome(p)],
-    ['stay','숙소',stayTxt,()=>(p.bookedStay===false?`<div class="row"><button class="small-btn primary" type="button" id="meHelper2">예약 도우미로 동네·숙소 찾기</button></div>`:'')+fStay(p)],
-    ['bud','예산',b?`1인 ${Math.round(b.total/10000)}만원 <small>· 현지 하루 ${won(b.daily)}</small>`:'정하지 않음',()=>fBudget(p)],
-    ['ev','예약한 일정',p.events.length?`${p.events.length}개`:'없음',()=>fEvents(p)]];
+    ['when','언제·어디',`${esc(PACK.city||p.dest||'미정')} · ${p.dateUnknown?'날짜 미정':`${esc(md(0))}–${esc(md(n))}`} (${n}박)`,()=>[oldPart(fDest(p)),partTrip(p)]],
+    ['who','누구와',who,()=>[partParty(p)]],
+    ['way','오가는 길',flightTxt,()=>[partFlight(p),partHomeBox(p),partHome(p)].filter(Boolean)],
+    ['stay','숙소',stayTxt,()=>[partStay(p)]],
+    ['bud','예산',b?`1인 ${Math.round(b.total/10000)}만원 <small>· 현지 하루 ${won(b.daily)}</small>`:'정하지 않음',()=>[oldPart(fBudget(p))]],
+    ['ev','예약한 일정',p.events.length?`${p.events.length}개`:'없음',()=>[partEvents(p)]]];
 }
 // Drawn by React: app/screens/MeRows.tsx. meSetMsg changes only the message (the open form stays as it is).
 let meRev=0, meLast=null;
 function renderMeRows(){
   if(!draft) draft=clone(profile); fixProfile(draft);
   const rows=meRows(draft), op=rows.find(r=>r[0]===meOpen);
-  meLast={rows:rows.map(([id,k,v])=>({id,label:k,valueHTML:v})),open:op?meOpen:null,bodyHTML:op?op[3]():'',msg:autoMsg||'',dayCourse:profile.kind==='day',rev:++meRev};
+  meLast={rows:rows.map(([id,k,v])=>({id,label:k,valueHTML:v})),open:op?meOpen:null,body:op?op[3]():[],msg:autoMsg||'',dayCourse:profile.kind==='day',rev:++meRev};
   window.JEPI_UI.mount('me',$('#meBox'),meLast);
 }
 function meSetMsg(m){if(!meLast||!$('#meBox')){return}meLast=Object.assign({},meLast,{msg:m});window.JEPI_UI.mount('me',$('#meBox'),meLast)}
@@ -2314,10 +2300,9 @@ function eatMoodOk(p){const m=EAT_MOODS.find(x=>x[0]===eat.mood);if(!m||!m[2].le
 // trip departure from 집 (내 장소)
 const KR_AIR={gmp:['김포공항 국제선',37.5583,126.7906],icn1:['인천공항 T1',37.4492,126.4510],icn2:['인천공항 T2',37.4602,126.4407]};
 let homeMsg='';
-function homeBoxHTML(p){if(p.mode==='car')return '';const h=mypOf('home');
-  return `<div class="fsec home-box"><h3>출발지</h3>${h&&h.ll?`<p class="hint">🏠 ${esc(h.addr||'집')}${p.home.ll?' · 출발지로 쓰는 중':''}</p>
-    <div class="row">${p.home.ll?'':'<button class="small-btn primary" type="button" id="homeUse">🏠 집에서 출발</button>'}${KEYS.kakao?Object.entries(KR_AIR).map(([k,a])=>`<button class="small-btn" type="button" data-homeair="${k}">집→${a[0]} 시간 계산</button>`).join(''):''}</div>`
-    :`<p class="hint">더보기 → 설정 → 내 장소에서 집을 등록하면 출발지와 공항까지 시간을 자동으로 채울 수 있어요.</p>`}${homeMsg?`<p class="ai-status">${esc(homeMsg)}</p>`:''}</div>`}
+// 오가는 길 → 출발지 (drawn by React: TripForms.tsx HomeBox)
+function partHomeBox(p){if(p.mode==='car')return null;const h=mypOf('home');
+  return {f:'homeBox',hasHome:!!(h&&h.ll),addr:(h&&h.addr)||'',using:!!p.home.ll,kakao:KEYS.kakao?Object.entries(KR_AIR).map(([k,a])=>[k,a[0]]):[],msg:homeMsg}}
 document.addEventListener('click',async e=>{const t=e.target.closest('button');if(!t||!draft)return;
   if(t.id==='homeUse'){const h=mypOf('home');if(!h||!h.ll)return;draft.home.ll=h.ll;draft.home.area='집';homeMsg='출발지를 집으로 바꿨어요.';autoSave();renderMeRows();return}
   if(t.dataset.homeair){const h=mypOf('home'),a=KR_AIR[t.dataset.homeair];if(!h||!h.ll)return;homeMsg='경로를 계산하는 중…';renderMeRows();

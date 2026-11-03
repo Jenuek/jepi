@@ -40,7 +40,15 @@
     연결 부분(`bridge.ts`)이 화면마다 보이지 않는 자리(`.jepi-root`)를 만들고, 예전 코드가 그 자리를 덮어쓰면 다음에 새로 시작해요. 점검 176개 통과.
   - [x] 이번 여행의 틀 (`MeRows.tsx`: 줄·펼치기·저장 안내·버튼) — 예전과 같음. 펼친 안의 입력 칸은 아직 예전 HTML(다시 그릴 때마다 새로).
     "자동 저장됨"은 `meSetMsg`로 안내만 바꿔요(입력 중인 칸은 그대로). 점검 182개 통과.
-  - [ ] 다음: 입력 폼 조각들(`030-forms.js`의 fParty·fBudget·fStay·fFlight·fHome·fEvents·dateFields·fStyle…, `140`·`160`·`170`의 fDest·fJP·fQuick·fTalk…)을
+  - [x] 이번 여행의 입력 폼 (`TripForms.tsx`): 누구와·예약 상태·기간·오가는 길·출발지·숙소·예약한 일정 — 14가지 상태 모두 예전과 같음(`tools/compare/forms.js`).
+    예전 코드는 폼에 넣을 값만 만들어요(`030-forms.js`의 `partParty`·`partTrip`·`partFlight`·`partHome`·`partStay`·`partEvents`, `280`의 `partHomeBox`).
+    AI 붙여 넣기 칸과 날짜 안내 줄(`st_…`)은 예전 코드가 글자를 직접 바꿔서 아직 예전 HTML 조각으로 끼워 넣어요. 점검 추가(입력·자동차·숙소 추가·동네·예약한 일정·날짜 미정). 점검 200개 통과.
+    예전 문자열 버전 fFlight·fStay·fHome·fEvents·fTrip·homeBoxHTML·renderMeOld(안 쓰던 것)는 지움.
+    **아직 예전 HTML 두 벌**: fParty·dateFields는 처음 설정(renderOnb)과 하루 코스(fDay)가 아직 문자열로 써서 남겨 둠 → 그 화면을 옮길 때 지워요.
+  - [ ] 다음: 남은 폼 — 예산(fBudget: 입력할 때 `budgetHint` 글자를 직접 바꿈 → 안내를 상태값으로), 여행지(fDest: `st_pack`을 genPack이 직접 바꿈), 하루 코스(fDay),
+    취향(fStyle·styleOnly → renderTasteStyle), 처음 설정의 fJP·fQuick·fTalk·fDates·fDestFinder.
+    그다음 처음 설정 본문(#onbBody)을 리액트 자리로 바꾸면 fParty·dateFields 문자열 버전을 지울 수 있어요.
+  - 참고(예전 계획): 입력 폼 조각들(`030-forms.js`의 fParty·fBudget·fStay·fFlight·fHome·fEvents·dateFields·fStyle…, `140`·`160`·`170`의 fDest·fJP·fQuick·fTalk…)을
     하나씩 리액트로. 처음 설정(`renderOnb`)·이번 여행·취향(renderTasteStyle)이 같이 써요.
     방법: 칸 이름(`data-pf`, `data-radio`)은 그대로, 폼 전체는 다시 그릴 때마다 새로(rev 키) — 예전 코드가 값을 바꾼 뒤 다시 그리는 방식과 같아서 안전해요.
     처음 설정의 틀(#onb, body.html의 고정 HTML)은 옮겨도 얻는 게 적어 폼을 다 옮긴 뒤에.

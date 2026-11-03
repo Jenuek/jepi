@@ -589,6 +589,35 @@ module.exports = [
     }
   },
   {
+    name: 'React screen: 이번 여행 forms (typing saves, mode/stay/event buttons redraw the form)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="me"]'); await p.waitForTimeout(250);
+      const prof = () => p.evaluate(() => { const k = Object.keys(localStorage).find(x => x.endsWith('gp.profile')); return JSON.parse(localStorage.getItem(k)) });
+      await p.click('[data-meopen="way"]'); await p.waitForTimeout(150);
+      await p.fill('#meBox [data-pf="out.dep"]', '07:45'); await p.dispatchEvent('#meBox [data-pf="out.dep"]', 'change'); await p.waitForTimeout(900);
+      ok((await prof()).out.dep === '07:45' && (await p.textContent('#meMsg')).includes('자동 저장됨'), 'a time typed in 오가는 길 is saved');
+      ok(await vis(p, '#meBox .home-box') && await vis(p, '#meBox select[data-pf="out.airport"]'), 'flight form: airport list and 출발지 box');
+      await p.click('#meBox [data-radio="mode"][data-val="car"]'); await p.waitForTimeout(900);
+      ok(!(await p.$('#meBox select[data-pf="out.airport"]')) && !(await p.$('#meBox .home-box')) && (await p.textContent('#meBox .mebody')).includes('자동차 비용') && (await prof()).mode === 'car', 'car: no airport list, car cost form, saved');
+      await p.click('[data-meopen="stay"]'); await p.waitForTimeout(150);
+      await p.click('#meBox [data-addstay]'); await p.waitForTimeout(900);
+      ok(await p.$$eval('#meBox .frow', e => e.length) === 2 && (await prof()).stays.length === 2, '+ 숙소 추가: two stays, saved');
+      await p.selectOption('#meBox [data-pf="stays.1.area"]', { index: 2 }); await p.waitForTimeout(900);
+      const a2 = await p.inputValue('#meBox [data-pf="stays.1.area"]');
+      ok((await prof()).stays[1].area === a2, 'choosing a 동네 is saved');
+      await p.click('[data-meopen="ev"]'); await p.waitForTimeout(150);
+      await p.click('#meBox [data-addev]'); await p.waitForTimeout(900);
+      await p.fill('#meBox [data-pf="events.0.name"]', '콘서트'); await p.dispatchEvent('#meBox [data-pf="events.0.name"]', 'change'); await p.waitForTimeout(900);
+      ok((await prof()).events.length === 1 && (await prof()).events[0].name === '콘서트', 'a booked event is added and named');
+      await p.click('[data-meopen="when"]'); await p.waitForTimeout(150);
+      await p.click('#meBox #dateUnknown'); await p.waitForTimeout(900);
+      ok(await p.isDisabled('#meBox [data-pf="startDate"]') && await p.isChecked('#meBox #dateUnknown') && (await prof()).dateUnknown === true, '날짜는 아직 몰라요: date box locked, saved');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
     name: 'friends: sharing again after a share that stopped half-way (trip on the server, no membership)',
     async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
       const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);

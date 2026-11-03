@@ -101,6 +101,7 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 | 친구와 함께 (초대·합치기·가고 싶어요) | 화면 `app/screens/FriendsPanel.tsx` (리액트), 동작·서버 `384-trips.js` |
 | 알림 (일정별 🔔, 서버로 예약) | 화면 `app/screens/NotifyPanel.tsx` (리액트), 동작 `386-notify.js`, 서버 `supabase/functions/jepi-push` |
 | 더보기 메뉴 / 설정 / 사용 안내 | `app/screens/MoreMenu.tsx` (리액트, 숫자는 `220-more-menu.js`) / `app/screens/SettingsScreen.tsx`+`SyncSection`·`MyPlacesSection`·`AiKeysSection` (리액트, 값과 동작은 `230-settings.js`·`310-sync.js`·`270-my-places.js`·`250-phase-strip.js`) / `app/screens/HelpPanel.tsx` (리액트) |
+| 더보기 → 이번 여행 (줄 목록과 입력 폼) | 줄 `app/screens/MeRows.tsx`, 폼 `app/screens/TripForms.tsx` (리액트: 누구와·예약 상태·기간·오가는 길·출발지·숙소·예약한 일정). 폼에 넣을 값은 `030-forms.js`의 `part…`, 줄 목록은 `220-more-menu.js`. 여행지·예산·하루 코스 폼은 아직 예전 HTML |
 
 ### 서버 (Supabase)
 

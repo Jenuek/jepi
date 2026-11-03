@@ -30,23 +30,23 @@ function meRows(p){
   const b=budgetParts&&budgetParts(p);
   const who=p.party.type==='solo'?'혼자':p.party.type==='couple'?'연인·부부':p.party.type==='family'?`가족 ${heads2(p.party)}명`:`친구 ${heads2(p.party)}명`;
   if(p.kind==='day') return [
-    ['day','코스',`${esc(PACK.city)} · ${esc(md(0))}`,()=>fDay(p)],
-    ['who','누구와',who,()=>fParty(p)],
-    ['bud','예산',b?`1인 ${Math.round(b.total/10000)}만원`:'정하지 않음',()=>fBudget(p)]];
+    ['day','코스',`${esc(PACK.city)} · ${esc(md(0))}`,()=>[oldPart(fDay(p))]],
+    ['who','누구와',who,()=>[partParty(p)]],
+    ['bud','예산',b?`1인 ${Math.round(b.total/10000)}만원`:'정하지 않음',()=>[oldPart(fBudget(p))]]];
   return [
-    ['when','언제·어디',`${esc(PACK.city||p.dest||'미정')} · ${p.dateUnknown?'날짜 미정':`${esc(md(0))}–${esc(md(n))}`} (${n}박)`,()=>fDest(p)+fTrip(p)],
-    ['who','누구와',who,()=>fParty(p)],
-    ['way','오가는 길',flightTxt,()=>fFlight(p)+homeBoxHTML(p)+fHome(p)],
-    ['stay','숙소',stayTxt,()=>(p.bookedStay===false?`<div class="row"><button class="small-btn primary" type="button" id="meHelper2">예약 도우미로 동네·숙소 찾기</button></div>`:'')+fStay(p)],
-    ['bud','예산',b?`1인 ${Math.round(b.total/10000)}만원 <small>· 현지 하루 ${won(b.daily)}</small>`:'정하지 않음',()=>fBudget(p)],
-    ['ev','예약한 일정',p.events.length?`${p.events.length}개`:'없음',()=>fEvents(p)]];
+    ['when','언제·어디',`${esc(PACK.city||p.dest||'미정')} · ${p.dateUnknown?'날짜 미정':`${esc(md(0))}–${esc(md(n))}`} (${n}박)`,()=>[oldPart(fDest(p)),partTrip(p)]],
+    ['who','누구와',who,()=>[partParty(p)]],
+    ['way','오가는 길',flightTxt,()=>[partFlight(p),partHomeBox(p),partHome(p)].filter(Boolean)],
+    ['stay','숙소',stayTxt,()=>[partStay(p)]],
+    ['bud','예산',b?`1인 ${Math.round(b.total/10000)}만원 <small>· 현지 하루 ${won(b.daily)}</small>`:'정하지 않음',()=>[oldPart(fBudget(p))]],
+    ['ev','예약한 일정',p.events.length?`${p.events.length}개`:'없음',()=>[partEvents(p)]]];
 }
 // Drawn by React: app/screens/MeRows.tsx. meSetMsg changes only the message (the open form stays as it is).
 let meRev=0, meLast=null;
 function renderMeRows(){
   if(!draft) draft=clone(profile); fixProfile(draft);
   const rows=meRows(draft), op=rows.find(r=>r[0]===meOpen);
-  meLast={rows:rows.map(([id,k,v])=>({id,label:k,valueHTML:v})),open:op?meOpen:null,bodyHTML:op?op[3]():'',msg:autoMsg||'',dayCourse:profile.kind==='day',rev:++meRev};
+  meLast={rows:rows.map(([id,k,v])=>({id,label:k,valueHTML:v})),open:op?meOpen:null,body:op?op[3]():[],msg:autoMsg||'',dayCourse:profile.kind==='day',rev:++meRev};
   window.JEPI_UI.mount('me',$('#meBox'),meLast);
 }
 function meSetMsg(m){if(!meLast||!$('#meBox')){return}meLast=Object.assign({},meLast,{msg:m});window.JEPI_UI.mount('me',$('#meBox'),meLast)}

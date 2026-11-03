@@ -33,6 +33,7 @@
 .mebody{padding:12px 14px 14px;border-top:1px solid var(--line)}
 .mebody .fsec{margin:0 0 12px}
 .mebody .fsec:last-child{margin-bottom:0}
+.mebody>.old-part:not(:last-child)>.fsec:last-child{margin-bottom:12px}
 .wtxt{color:var(--warn)}
 .saved{font-size:12px;color:var(--ok);margin:2px 2px 0;min-height:18px}
 .linkbtn{all:unset;display:block;margin:4px auto;padding:10px 14px;color:var(--muted);cursor:pointer;font-size:13px;text-align:center}

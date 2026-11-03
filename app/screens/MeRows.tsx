@@ -1,6 +1,8 @@
 // 더보기 → 이번 여행: one row per topic, tap to open its form (it used to be renderMeRows in src/js/220-more-menu.js).
-// The row values and the open form are still old HTML (the forms move to React later). The open form is drawn
-// fresh on every full redraw (rev) like before; a message-only update keeps it as it is (same rev).
+// The row values are still old HTML. The open form is a list of parts (TripForms.tsx: React forms, or old HTML)
+// drawn fresh on every full redraw (rev) like before; a message-only update keeps it as it is (same rev).
+import { FormPiece, type FormPart } from './TripForms';
+
 export interface MeRowInfo {
   id: string;
   label: string;
@@ -12,8 +14,8 @@ export interface MeRowsProps {
   rows: MeRowInfo[];
   /** the open row */
   open: string | null;
-  /** the form of the open row (old HTML) */
-  bodyHTML: string;
+  /** the form of the open row */
+  body: FormPart[];
   /** "✓ 자동 저장됨 …" */
   msg: string;
   /** a day course: no 예약 도우미 */
@@ -24,8 +26,7 @@ export interface MeRowsProps {
 const Chev = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
 );
-const Old = ({ html, tag = 'span', className }: { html: string; tag?: 'span' | 'div'; className?: string }) =>
-  tag === 'div' ? <div className={className} dangerouslySetInnerHTML={{ __html: html }} /> : <span className={className} dangerouslySetInnerHTML={{ __html: html }} />;
+const Old = ({ html, className }: { html: string; className?: string }) => <span className={className} dangerouslySetInnerHTML={{ __html: html }} />;
 
 export function MeRows(p: MeRowsProps) {
   return (
@@ -35,7 +36,7 @@ export function MeRows(p: MeRowsProps) {
           <button key={r.id} className="merow" data-meopen={r.id} aria-expanded={p.open === r.id}>
             <span className="mk">{r.label}</span><Old className="mv" html={r.valueHTML} /><Chev />
           </button>,
-          p.open === r.id ? <Old key={r.id + ':body:' + p.rev} tag="div" className="mebody" html={p.bodyHTML} /> : null,
+          p.open === r.id ? <div key={r.id + ':body:' + p.rev} className="mebody">{p.body.map((x, i) => <FormPiece key={i} part={x} />)}</div> : null,
         ])}
       </div>
       <p className="saved" id="meMsg">{p.msg}</p>

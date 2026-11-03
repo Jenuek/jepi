@@ -127,10 +127,9 @@ function eatMoodOk(p){const m=EAT_MOODS.find(x=>x[0]===eat.mood);if(!m||!m[2].le
 // trip departure from 집 (내 장소)
 const KR_AIR={gmp:['김포공항 국제선',37.5583,126.7906],icn1:['인천공항 T1',37.4492,126.4510],icn2:['인천공항 T2',37.4602,126.4407]};
 let homeMsg='';
-function homeBoxHTML(p){if(p.mode==='car')return '';const h=mypOf('home');
-  return `<div class="fsec home-box"><h3>출발지</h3>${h&&h.ll?`<p class="hint">🏠 ${esc(h.addr||'집')}${p.home.ll?' · 출발지로 쓰는 중':''}</p>
-    <div class="row">${p.home.ll?'':'<button class="small-btn primary" type="button" id="homeUse">🏠 집에서 출발</button>'}${KEYS.kakao?Object.entries(KR_AIR).map(([k,a])=>`<button class="small-btn" type="button" data-homeair="${k}">집→${a[0]} 시간 계산</button>`).join(''):''}</div>`
-    :`<p class="hint">더보기 → 설정 → 내 장소에서 집을 등록하면 출발지와 공항까지 시간을 자동으로 채울 수 있어요.</p>`}${homeMsg?`<p class="ai-status">${esc(homeMsg)}</p>`:''}</div>`}
+// 오가는 길 → 출발지 (drawn by React: TripForms.tsx HomeBox)
+function partHomeBox(p){if(p.mode==='car')return null;const h=mypOf('home');
+  return {f:'homeBox',hasHome:!!(h&&h.ll),addr:(h&&h.addr)||'',using:!!p.home.ll,kakao:KEYS.kakao?Object.entries(KR_AIR).map(([k,a])=>[k,a[0]]):[],msg:homeMsg}}
 document.addEventListener('click',async e=>{const t=e.target.closest('button');if(!t||!draft)return;
   if(t.id==='homeUse'){const h=mypOf('home');if(!h||!h.ll)return;draft.home.ll=h.ll;draft.home.area='집';homeMsg='출발지를 집으로 바꿨어요.';autoSave();renderMeRows();return}
   if(t.dataset.homeair){const h=mypOf('home'),a=KR_AIR[t.dataset.homeair];if(!h||!h.ll)return;homeMsg='경로를 계산하는 중…';renderMeRows();
