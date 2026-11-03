@@ -17,6 +17,8 @@ export interface PlansScreenProps {
   delArm: string;
   /** message after an action ('' = none) */
   planMsg: string;
+  /** the plan whose name box is open ('' = none) */
+  renaming: string;
   /** the GitHub app (links), not inside Claude (codes) */
   standalone: boolean;
   lastLink: string;
@@ -29,12 +31,14 @@ export interface PlansScreenProps {
 
 const savedDay = (t: number) => new Date(t).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' });
 
-function PlanRow({ p, cur, armed }: { p: PlanItem; cur: boolean; armed: boolean }) {
+function PlanRow({ p, cur, armed, renaming }: { p: PlanItem; cur: boolean; armed: boolean; renaming: boolean }) {
   const info = (p.kind === 'day' ? '☀️ 하루 코스' : '✈️ 여행') + (p.dates ? ' · ' + p.dates : '') + ` · 블록 ${p.blocks || 0}개`
     + (p.updated ? ' · ' + savedDay(p.updated) + ' 저장' : '');
   return (
     <div className={'plan' + (cur ? ' cur' : '')}>
-      <div className="pl-top"><b>{p.name || '이름 없는 계획'}</b>{cur && <span className="tag r">지금 보는 계획</span>}</div>
+      <div className="pl-top">{renaming
+        ? <><input className="pl-name" maxLength={40} defaultValue={p.name || ''} /><button className="small-btn primary" data-planname={p.id}>저장</button></>
+        : <><b>{p.name || '이름 없는 계획'}</b>{cur && <span className="tag r">지금 보는 계획</span>}</>}</div>
       <small>{info}</small>
       <div className="row">
         {!cur && <button className="small-btn primary" data-planopen={p.id}>열기</button>}
@@ -53,7 +57,7 @@ export function PlansScreen(p: PlansScreenProps) {
       {p.planMsg && <p className="ai-status" style={{ margin: '0 0 8px' }}>{p.planMsg}</p>}
       <div className="plan-list">
         {p.plans.length
-          ? p.plans.map(x => <PlanRow key={x.id} p={x} cur={x.id === p.curPlan} armed={p.delArm === x.id} />)
+          ? p.plans.map(x => <PlanRow key={x.id} p={x} cur={x.id === p.curPlan} armed={p.delArm === x.id} renaming={p.renaming === x.id} />)
           : <p className="hint">저장된 계획이 없어요.</p>}
       </div>
       <div className="fsec" style={{ marginTop: 14 }}>

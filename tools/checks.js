@@ -381,6 +381,11 @@ module.exports = [
       ok(await count() === 1, 'second press deletes it');
       await p.click('#planText'); await p.waitForTimeout(200);
       ok((await p.$eval('#plansBox textarea.share-text', x => x.value)).includes('오사카'), '카톡용 글 shows the plan as text');
+      await p.click('#plansBox .plan.cur [data-planrename]'); await p.waitForTimeout(150);
+      ok(await p.evaluate(() => document.activeElement && document.activeElement.classList.contains('pl-name')), '이름 바꾸기 opens a name box, ready to type');
+      await p.fill('#plansBox .pl-name', '우리 오사카'); await p.click('#plansBox [data-planname]'); await p.waitForTimeout(250);
+      ok((await p.textContent('#plansBox .plan.cur .pl-top b')) === '우리 오사카' && !(await vis(p, '#plansBox .pl-name')), 'new name saved and shown');
+      ok((await p.textContent('#planName')).includes('우리 오사카'), 'the header shows the new name too');
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
@@ -418,6 +423,29 @@ module.exports = [
       const errs = A.errs.concat(B.errs);
       ok(errs.length === 0, 'no page errors ' + errs.join(' | '));
       await A.ctx.close(); await B.ctx.close();
+    }
+  },
+  {
+    name: 'React screen: 알림 (login prompt, options saved, test alert, buttons not stuck)',
+    async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
+      const openN = async p => { await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="notify"]'); await p.waitForTimeout(200) };
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await openN(p);
+      ok(await vis(p, '#notifyBox [data-tab="settings"]'), 'not logged in: asks to log in');
+      await openSettings(p); await p.click('[data-sbmode="join"]'); await p.fill('#sbEmail', 'nt@x.com'); await p.fill('#sbPw', 'pass123'); await p.fill('#sbPw2', 'pass123'); await p.click('#sbGo'); await p.waitForTimeout(1800);
+      await openN(p);
+      ok(await vis(p, '#notifyBox [data-ntf="on"]'), 'logged in: 켜기 button');
+      await p.click('[data-nset="lead"][data-val="30"]'); await p.click('[data-nset="morning"][data-val="false"]'); await p.waitForTimeout(150);
+      const st = await p.evaluate(() => JSON.parse(localStorage.getItem('jepi.notify')));
+      ok(st.lead === 30 && st.morning === false, 'options saved');
+      ok(await p.getAttribute('[data-nset="lead"][data-val="30"]', 'aria-pressed') === 'true' && await p.getAttribute('[data-nset="lead"][data-val="10"]', 'aria-pressed') === 'false', 'chosen option is shown pressed');
+      await p.evaluate(() => { const n = JSON.parse(localStorage.getItem('jepi.notify')); n.on = true; n.dev = 'dX'; localStorage.setItem('jepi.notify', JSON.stringify(n)) });
+      await p.reload(); await p.waitForTimeout(3500); await skipCoach(p); await openN(p);
+      await p.click('[data-ntf="test"]'); await p.waitForTimeout(800);
+      ok((await p.textContent('#notifyBox')).includes('테스트 알림을 보냈어요'), 'test alert sent');
+      ok(!(await p.isDisabled('[data-ntf="test"]')) && !(await p.isDisabled('[data-ntf="off"]')), 'buttons usable again afterwards');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
     }
   }
 ];

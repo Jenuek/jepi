@@ -80,8 +80,8 @@ document.addEventListener('click',e=>{
   if(t.dataset.planopen){openPlan(t.dataset.planopen);return}
   if(t.dataset.plandup){dupPlan(t.dataset.plandup);return}
   if(t.dataset.plandel){delPlan(t.dataset.plandel);return}
-  if(t.dataset.planrename){const p=plans.find(x=>x.id===t.dataset.planrename);const row=t.closest('.plan');if(p&&row){row.querySelector('.pl-top').innerHTML=`<input class="pl-name" maxlength="40" value="${esc(p.name||'')}"><button class="small-btn primary" data-planname="${p.id}">저장</button>`;row.querySelector('.pl-name').focus()}return}
-  if(t.dataset.planname){const v=(t.parentElement.querySelector('.pl-name')||{}).value||'';renamePlan(t.dataset.planname,v.trim());return}
+  if(t.dataset.planrename){if(plans.some(x=>x.id===t.dataset.planrename)){planRenaming=t.dataset.planrename;renderPlans();const i=$('#plansBox .pl-name');if(i)i.focus()}return}
+  if(t.dataset.planname){const v=(t.parentElement.querySelector('.pl-name')||{}).value||'';planRenaming='';renamePlan(t.dataset.planname,v.trim());renderPlans();return}
   if(t.id==='planShare'){shareCode();return}
   if(t.id==='planText'){showText=!showText;renderPlans();if(showText)copyText(planText());return}
   if(t.id==='planTxt'){downloadText(`${planName()}.txt`,planText());return}

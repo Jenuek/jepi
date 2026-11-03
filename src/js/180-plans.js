@@ -52,7 +52,7 @@ function dupPlan(id){snapshotCurrent();const d=store.get('gp.plan.'+id,null),src
 function delPlan(id){if(delArm!==id){delArm=id;renderPlans();return}delArm='';
   plans=plans.filter(x=>x.id!==id);JD.storage.del('gp.plan.'+id);clearTimeout(cloudTimers[id]);cloudDelete(id);
   if(id===curPlan){if(plans[0]){curPlan='';openPlan(plans[0].id)}else{curPlan='';newPlan()}}savePlans();renderPlans()}
-function renamePlan(id,name){const p=plans.find(x=>x.id===id);if(!p||!name)return;p.name=name.slice(0,40);p.custom_name=true;p.updated=Date.now();savePlans();cloudSave(p);renderPlans()}
+function renamePlan(id,name){const p=plans.find(x=>x.id===id);if(!p||!name)return;p.name=name.slice(0,40);p.custom_name=true;p.updated=Date.now();savePlans();cloudSave(p);renderPlans();renderPlanBtn()}
 // sharing
 const CODE_AB='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 async function shareCode(){
@@ -99,10 +99,11 @@ function importBackup(file,after){
 async function copyText(text){try{await navigator.clipboard.writeText(text);planMsg='복사했어요. 카톡에 붙여 넣으면 돼요.'}catch(_){planMsg='자동 복사가 막혀 있어요. 아래 글을 길게 눌러 복사해 주세요.'}renderPlans()}
 let showText=false;
 // The screen itself is drawn by React: app/screens/PlansScreen.tsx
+let planRenaming=''; // the plan whose name box is open
 function renderPlans(){
   const box=$('#plansBox'); if(!box) return;
   window.JEPI_UI.mount('plans',box,{plans:plans.map(p=>({id:p.id,name:p.name,kind:p.kind,dates:p.dates,blocks:p.blocks,updated:p.updated})),
-    curPlan,delArm,planMsg,standalone:!!STANDALONE,lastLink:lastLink||'',lastCode:lastCode||'',shareText:showText?planText():null,
+    curPlan,delArm,planMsg,renaming:planRenaming,standalone:!!STANDALONE,lastLink:lastLink||'',lastCode:lastCode||'',shareText:showText?planText():null,
     savedInAccount:!!(rdb&&recState==='on')});
 }
 

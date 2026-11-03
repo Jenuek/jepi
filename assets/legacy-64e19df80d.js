@@ -1603,7 +1603,7 @@ function dupPlan(id){snapshotCurrent();const d=store.get('gp.plan.'+id,null),src
 function delPlan(id){if(delArm!==id){delArm=id;renderPlans();return}delArm='';
   plans=plans.filter(x=>x.id!==id);JD.storage.del('gp.plan.'+id);clearTimeout(cloudTimers[id]);cloudDelete(id);
   if(id===curPlan){if(plans[0]){curPlan='';openPlan(plans[0].id)}else{curPlan='';newPlan()}}savePlans();renderPlans()}
-function renamePlan(id,name){const p=plans.find(x=>x.id===id);if(!p||!name)return;p.name=name.slice(0,40);p.custom_name=true;p.updated=Date.now();savePlans();cloudSave(p);renderPlans()}
+function renamePlan(id,name){const p=plans.find(x=>x.id===id);if(!p||!name)return;p.name=name.slice(0,40);p.custom_name=true;p.updated=Date.now();savePlans();cloudSave(p);renderPlans();renderPlanBtn()}
 // sharing
 const CODE_AB='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 async function shareCode(){
@@ -1650,10 +1650,11 @@ function importBackup(file,after){
 async function copyText(text){try{await navigator.clipboard.writeText(text);planMsg='복사했어요. 카톡에 붙여 넣으면 돼요.'}catch(_){planMsg='자동 복사가 막혀 있어요. 아래 글을 길게 눌러 복사해 주세요.'}renderPlans()}
 let showText=false;
 // The screen itself is drawn by React: app/screens/PlansScreen.tsx
+let planRenaming=''; // the plan whose name box is open
 function renderPlans(){
   const box=$('#plansBox'); if(!box) return;
   window.JEPI_UI.mount('plans',box,{plans:plans.map(p=>({id:p.id,name:p.name,kind:p.kind,dates:p.dates,blocks:p.blocks,updated:p.updated})),
-    curPlan,delArm,planMsg,standalone:!!STANDALONE,lastLink:lastLink||'',lastCode:lastCode||'',shareText:showText?planText():null,
+    curPlan,delArm,planMsg,renaming:planRenaming,standalone:!!STANDALONE,lastLink:lastLink||'',lastCode:lastCode||'',shareText:showText?planText():null,
     savedInAccount:!!(rdb&&recState==='on')});
 }
 
@@ -3337,8 +3338,8 @@ document.addEventListener('click',e=>{
   if(t.dataset.planopen){openPlan(t.dataset.planopen);return}
   if(t.dataset.plandup){dupPlan(t.dataset.plandup);return}
   if(t.dataset.plandel){delPlan(t.dataset.plandel);return}
-  if(t.dataset.planrename){const p=plans.find(x=>x.id===t.dataset.planrename);const row=t.closest('.plan');if(p&&row){row.querySelector('.pl-top').innerHTML=`<input class="pl-name" maxlength="40" value="${esc(p.name||'')}"><button class="small-btn primary" data-planname="${p.id}">저장</button>`;row.querySelector('.pl-name').focus()}return}
-  if(t.dataset.planname){const v=(t.parentElement.querySelector('.pl-name')||{}).value||'';renamePlan(t.dataset.planname,v.trim());return}
+  if(t.dataset.planrename){if(plans.some(x=>x.id===t.dataset.planrename)){planRenaming=t.dataset.planrename;renderPlans();const i=$('#plansBox .pl-name');if(i)i.focus()}return}
+  if(t.dataset.planname){const v=(t.parentElement.querySelector('.pl-name')||{}).value||'';planRenaming='';renamePlan(t.dataset.planname,v.trim());renderPlans();return}
   if(t.id==='planShare'){shareCode();return}
   if(t.id==='planText'){showText=!showText;renderPlans();if(showText)copyText(planText());return}
   if(t.id==='planTxt'){downloadText(`${planName()}.txt`,planText());return}
@@ -3944,24 +3945,13 @@ async function notifyTest(){
 BLOCK_BADGES.push((it,d)=>alertable(it)&&alertOn(it,d)&&NOTIFY.on?'<span class="mks" title="알림 켜짐">🔔</span> ':'');
 SHEET_EXTRAS.push((it,d)=>{if(!alertable(it)||DEMO.on)return '';const on=alertOn(it,d);
   return `<div class="row alert-row"><button class="small-btn${on?' primary':''}" type="button" data-alert="${on?'off':'on'}">🔔 ${on?'알림 켜짐':'알림 켜기'}</button><span class="hint">${!NOTIFY.on?'더보기 → 알림에서 이 기기 알림을 켜야 와요':on?(NOTIFY.depart&&it.travelIn?`출발 ${NOTIFY.lead}분 전에 알려 드려요`:`시작 ${NOTIFY.lead}분 전에 알려 드려요`):''}</span></div>`});
+// The panel itself is drawn by React: app/screens/NotifyPanel.tsx
+let notifyBusy=false;
 PANELS.notify={render(){
-  const box=$('#notifyBox'); if(!box) return; const msg=notifyMsg?`<p class="hint">${esc(notifyMsg)}</p>`:'';
-  if(DEMO.on){box.innerHTML='<div class="mgroup pad"><p class="hint" style="margin:0">데모에서는 알림을 쓸 수 없어요.</p></div>';return}
-  let dev;
-  if(!pushSupported()) dev=isIOS()&&!standaloneApp()?`<p class="hint" style="margin-top:0">아이폰·아이패드는 <b>홈 화면에 추가한 JEPI</b>에서만 알림을 받을 수 있어요 (iOS 16.4 이상).</p><ol class="hint fr-list"><li>사파리에서 공유 버튼 → <b>홈 화면에 추가</b></li><li>홈 화면의 JEPI를 열고 여기로 다시 오기</li><li>이 기기에서 알림 받기를 켜기</li></ol>`:'<p class="hint" style="margin:0">이 브라우저는 알림을 지원하지 않아요. 크롬이나 홈 화면에 추가한 앱에서 열어 주세요.</p>';
-  else if(!syncOn()) dev=`<p class="hint" style="margin-top:0">알림은 로그인한 기기로 보내요.</p><div class="row"><button class="small-btn primary" data-tab="settings">로그인하러 가기</button></div>`;
-  else dev=`<div class="srow" style="margin:0"><span><b>이 기기에서 알림 받기</b><br><small class="hint">${NOTIFY.on?'켜져 있어요':'꺼져 있어요'}</small></span><button class="small-btn${NOTIFY.on?'':' primary'}" type="button" data-ntf="${NOTIFY.on?'off':'on'}">${NOTIFY.on?'끄기':'켜기'}</button></div>
-    ${NOTIFY.on?'<div class="row"><button class="small-btn" type="button" data-ntf="test">테스트 알림 보내기</button></div>':''}`;
-  const R=(k,opts)=>`<div class="radio">${opts.map(([v,l])=>`<button type="button" data-nset="${k}" data-val="${v}" aria-pressed="${String(NOTIFY[k])===String(v)}">${l}</button>`).join('')}</div>`;
-  box.innerHTML=`<div class="mgroup pad">${dev}${msg}</div>
-    <div class="mgroup pad"><h3 class="taste-h">어떤 일정에 알릴까요</h3>
-      <div class="srow"><span>일정마다</span>${R('all',[['false','고른 일정만'],['true','모든 일정']])}</div>
-      <p class="hint">일정 블록을 누르면 🔔 알림 켜기로 하나씩 고를 수 있어요.</p>
-      <div class="srow"><span>언제</span>${R('lead',[[5,'5분 전'],[10,'10분 전'],[15,'15분 전'],[30,'30분 전']])}</div>
-      <div class="srow"><span>기준</span>${R('depart',[['true','출발할 때'],['false','시작할 때']])}</div>
-      <p class="hint">출발할 때: 다음 장소까지 이동 시간을 빼고 "이제 나가야 해요"를 알려요.</p>
-      <div class="srow"><span>아침 일정 요약</span>${R('morning',[['true','받기'],['false','안 받기']])}</div></div>
-    <p class="hint">알림은 지금 열어 둔 여행 기준으로 준비돼요. 시간은 여행지 현지 시간(${esc(tripTZ())})이에요. 저전력 모드에서는 조금 늦게 올 수 있어요.</p>`;
+  const box=$('#notifyBox'); if(!box) return;
+  const mode=DEMO.on?'demo':!pushSupported()?(isIOS()&&!standaloneApp()?'ios-home':'unsupported'):!syncOn()?'login':'ready';
+  window.JEPI_UI.mount('notify',box,{mode,busy:notifyBusy,msg:notifyMsg||'',tz:String(tripTZ()),
+    settings:{on:!!NOTIFY.on,all:!!NOTIFY.all,lead:+NOTIFY.lead||10,depart:!!NOTIFY.depart,morning:!!NOTIFY.morning}});
 }};
 document.addEventListener('click',async e=>{
   const a=e.target.closest('[data-alert]');
@@ -3969,10 +3959,10 @@ document.addEventListener('click',async e=>{
   const s=e.target.closest('[data-nset]');
   if(s){let v=s.dataset.val;v=v==='true'?true:v==='false'?false:+v;NOTIFY[s.dataset.nset]=v;saveNotify();alertsSoon(500);PANELS.notify.render();renderAll();return}
   const n=e.target.closest('[data-ntf]'); if(!n) return;
-  n.disabled=true; notifyMsg='';
+  if(notifyBusy) return; notifyBusy=true; notifyMsg=''; PANELS.notify.render();
   try{if(n.dataset.ntf==='on'){await notifyEnable();notifyMsg='알림을 켰어요'}else if(n.dataset.ntf==='off'){await notifyDisable();notifyMsg='알림을 껐어요'}else{await notifyTest();notifyMsg='테스트 알림을 보냈어요. 몇 초 안에 와요.'}}
   catch(err){notifyMsg='✕ '+err.message}
-  PANELS.notify.render(); renderMore(); renderAll();
+  notifyBusy=false; PANELS.notify.render(); renderMore(); renderAll();
 });
 // keep the server's list in step with the plan (cheap: only uploads when something changed)
 setInterval(()=>{if(NOTIFY.on&&!document.hidden)alertsSoon(100)},30000);
