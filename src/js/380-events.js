@@ -2,7 +2,7 @@
 document.addEventListener('click',e=>{
   const t=e.target.closest('button,input,label'); if(!t) return;
   if(t.dataset.day!=null){day=+t.dataset.day;renderAll();return}
-  if(t.dataset.tab){tab=t.dataset.tab;autoMsg='';if(tab==='me'){draft=clone(profile);meOpen=null;renderMe()}if(tab==='pref'){draft=clone(profile);renderTasteStyle()}if(tab==='plans'){snapshotCurrent();showText=false;renderPlans()}if(tab==='settings'){keyEdit=null;renderSettings()}if(tab==='more')renderMore();if(PANELS[tab])PANELS[tab].render();renderTabs();if(tab==='map')openMap();else mapState.on=false;window.scrollTo({top:0});return}
+  if(t.dataset.tab){tab=t.dataset.tab;autoMsg='';if(tab==='me'){draft=clone(profile);meOpen=null;renderMe()}if(tab==='pref'){draft=clone(profile);renderTasteStyle()}if(tab==='plans'){snapshotCurrent();showText=false;renderPlans()}if(tab==='settings'){keyEdit=null;renderSettings()}if(tab==='more')renderMore();if(PANELS[tab])PANELS[tab].render({opened:true});renderTabs();if(tab==='map')openMap();else mapState.on=false;window.scrollTo({top:0});return}
   if(t.id==='customBtn'){openCustom(null,null);return}
   if(t.dataset.newcustom!=null){openCustom(null,+t.dataset.newcustom);return}
   if(t.dataset.editcustom){openCustom(t.dataset.editcustom,null);return}

@@ -7,18 +7,21 @@ import { createRoot, type Root } from 'react-dom/client';
 import { HelpPanel, type HelpPanelProps } from './screens/HelpPanel';
 import { MoreMenu, type MoreMenuProps } from './screens/MoreMenu';
 import { PlansScreen, type PlansScreenProps } from './screens/PlansScreen';
+import { FriendsPanel, type FriendsPanelProps } from './screens/FriendsPanel';
 
 // Every screen React owns, with the props the old code must pass.
 export interface Screens {
   help: HelpPanelProps;
   more: MoreMenuProps;
   plans: PlansScreenProps;
+  friends: FriendsPanelProps;
 }
 
 const SCREENS: { [K in keyof Screens]: ComponentType<Screens[K]> } = {
   help: HelpPanel,
   more: MoreMenu,
   plans: PlansScreen,
+  friends: FriendsPanel,
 };
 
 export interface JepiUI {

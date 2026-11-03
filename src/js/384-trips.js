@@ -4,7 +4,7 @@
 // same trip, the three versions are merged per block / per place / per field, so a change to
 // day 1 and a change to day 2 both survive; only the very same block edited twice keeps the later one.
 // Server tables + rules: see supabase/schema.sql.
-var TRIPS={base:LS.get('jepi.tripBase',{}),members:{},marks:{},invite:null,msg:'',busy:false};
+var TRIPS={base:LS.get('jepi.tripBase',{}),members:{},marks:{},invite:null,msg:'',busy:false,stopArm:false};
 const saveTripBase=()=>LS.set('jepi.tripBase',TRIPS.base);
 const myName=()=>LS.get('jepi.myName','')||String((SYNC.sess&&SYNC.sess.email)||SYNC.email||'나').split('@')[0];
 const planOf=id=>plans.find(p=>p.id===id);
@@ -153,7 +153,7 @@ document.addEventListener('click',async e=>{
   const w=e.target.closest('[data-want]'); if(w){e.preventDefault();e.stopPropagation();try{await toggleWant(w.dataset.want)}catch(err){showToast('저장하지 못했어요: '+err.message)}
     if(!$('#sheetBg').hidden&&$('#sheet').dataset.uid)openSheet($('#sheet').dataset.uid);return}
   const t=e.target.closest('[data-trip]'); if(!t) return; const a=t.dataset.trip;
-  if(TRIPS.busy) return; TRIPS.busy=true; TRIPS.msg=''; PANELS.friends.render();
+  if(TRIPS.busy) return; if(a!=='stop') TRIPS.stopArm=false; TRIPS.busy=true; TRIPS.msg=''; PANELS.friends.render();
   try{
     if(a==='share'){await tripShare();TRIPS.invite={role:'edit',url:await tripInvite('edit')}}
     if(a==='invite-edit'||a==='invite-view'){const role=a.slice(7);TRIPS.invite={role,url:await tripInvite(role)}}
@@ -163,27 +163,18 @@ document.addEventListener('click',async e=>{
     if(a==='copy'&&TRIPS.invite){try{await navigator.clipboard.writeText(TRIPS.invite.url);TRIPS.msg='초대 링크를 복사했어요'}catch(_){TRIPS.msg='링크를 길게 눌러 복사해 주세요'}}
     if(a==='leave') await tripLeave();
     if(a==='kick') await tripLeave(t.dataset.uid);
-    if(a==='stop'){if(t.dataset.arm!=='1'){t.dataset.arm='1';TRIPS.busy=false;t.textContent='한 번 더 누르면 공유를 끝내요';return}await tripStop()}
+    if(a==='stop'){if(!TRIPS.stopArm){TRIPS.stopArm=true;TRIPS.busy=false;PANELS.friends.render();return}TRIPS.stopArm=false;await tripStop()}
     if(a==='name'){const v=(($('#myNameIn')||{}).value||'').trim().slice(0,20);LS.set('jepi.myName',v);
       if(curShared())await sbTable('jepi_trip_members','PATCH',`?trip_id=eq.${encodeURIComponent(curPlan)}&user_id=eq.${SYNC.sess.user}`,{name:myName()},'return=minimal');TRIPS.msg='이름을 바꿨어요';await tripsPull()}
   }catch(err){TRIPS.msg='✕ '+err.message}
   TRIPS.busy=false; PANELS.friends.render(); renderMore();
 });
 // ----- panel -----
-PANELS.friends={render(){
-  const box=$('#friendsBox'); if(!box) return; const p=curShared(), msg=TRIPS.msg?`<p class="hint">${esc(TRIPS.msg)}</p>`:'';
-  if(DEMO.on){box.innerHTML='<div class="mgroup pad"><p class="hint" style="margin:0">데모에서는 친구 초대를 쓸 수 없어요.</p></div>';return}
-  if(!syncOn()){box.innerHTML=`<div class="mgroup pad"><p class="hint" style="margin-top:0">친구와 함께 쓰려면 먼저 로그인해 주세요. 친구도 JEPI에 가입하면 같은 일정을 같이 보고 고칠 수 있어요.</p><div class="row"><button class="small-btn primary" data-tab="settings">로그인하러 가기</button></div></div>`;return}
-  const nameRow=`<div class="mgroup pad"><label class="fg" style="display:block"><span class="hint">친구에게 보일 내 이름</span><div class="kin"><input id="myNameIn" maxlength="20" value="${esc(myName())}"><button class="small-btn" data-trip="name">저장</button></div></label></div>`;
-  if(!p){box.innerHTML=`<div class="mgroup pad"><p style="margin-top:0"><b>${esc((planOf(curPlan)||{}).name||'이 여행')}</b>을 친구와 함께 짜요.</p>
-    <ul class="hint fr-list"><li>초대 링크를 받은 친구가 로그인하면 바로 참여해요.</li><li>누가 어느 날을 고쳐도 서로의 변경이 합쳐져요.</li><li>장소마다 👍 가고 싶어요를 눌러 의견을 모아요.</li><li>AI·지도 키와 취향, 내 장소는 공유되지 않아요.</li></ul>
-    <div class="row"><button class="small-btn primary" data-trip="share" ${TRIPS.busy?'disabled':''}>${TRIPS.busy?'준비 중…':'이 여행에 친구 초대하기'}</button></div>${msg}</div>${nameRow}`;return}
-  const mem=(TRIPS.members[curPlan]||[]).slice().sort((a,b)=>(a.role==='owner'?-1:0)-(b.role==='owner'?-1:0)), me=SYNC.sess.user, owner=p.role==='owner';
-  const roleTxt={owner:'만든 사람',edit:'같이 고침',view:'보기만'};
-  box.innerHTML=`<div class="mgroup">${mem.map(m=>`<div class="mrow static"><span class="mt"><b>${esc(m.name||'친구')}${m.user_id===me?' (나)':''}</b><small>${roleTxt[m.role]||''}</small></span>${owner&&m.user_id!==me?`<button class="small-btn" data-trip="kick" data-uid="${m.user_id}">내보내기</button>`:''}</div>`).join('')||'<p class="hint pad">멤버를 불러오는 중…</p>'}</div>
-    ${p.role!=='view'?`<div class="mgroup pad"><h3 class="taste-h">친구 초대</h3><div class="row"><button class="small-btn primary" data-trip="invite-edit">같이 고칠 친구 초대</button><button class="small-btn" data-trip="invite-view">보기만 할 친구 초대</button></div>
-      ${TRIPS.invite?`<p class="hint">${TRIPS.invite.role==='edit'?'같이 고칠 수 있는':'보기만 하는'} 초대 링크예요 · 14일 동안 쓸 수 있어요</p><input class="share-text" readonly value="${esc(TRIPS.invite.url)}"><div class="row"><button class="small-btn primary" data-trip="send">보내기</button><button class="small-btn" data-trip="copy">복사</button></div>`:''}${msg}</div>`
-      :`<div class="mgroup pad"><p class="hint" style="margin:0">보기만 할 수 있는 여행이에요. 고친 내용은 친구들에게 가지 않아요.</p>${msg}</div>`}
-    ${nameRow}
-    <div class="mgroup pad"><div class="row">${owner?'<button class="small-btn danger" data-trip="stop">공유 끝내기</button>':'<button class="small-btn danger" data-trip="leave">이 여행에서 나가기</button>'}</div></div>`;
+// The panel itself is drawn by React: app/screens/FriendsPanel.tsx
+PANELS.friends={render(opts){
+  const box=$('#friendsBox'); if(!box) return; const p=curShared();
+  if(opts&&opts.opened) TRIPS.stopArm=false; // opening the panel again forgets a first press of 공유 끝내기
+  const mode=DEMO.on?'demo':!syncOn()?'login':!p?'intro':'shared';
+  window.JEPI_UI.mount('friends',box,{mode,planName:(planOf(curPlan)||{}).name||'이 여행',busy:!!TRIPS.busy,msg:TRIPS.msg||'',myName:myName(),
+    members:mode==='shared'?(TRIPS.members[curPlan]||[]):[],me:syncOn()?SYNC.sess.user:'',role:p?p.role||'':'',invite:TRIPS.invite||null,stopArm:!!TRIPS.stopArm});
 }};

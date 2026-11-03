@@ -384,5 +384,40 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'React screen: 친구와 함께 (login prompt, invite links, view-only friend, 공유 끝내기 asks then ends)',
+    async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
+      const openF = async p => { await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="friends"]'); await p.waitForTimeout(200) };
+      const A = await device(b, S); await A.click('[data-w="new"]'); await A.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(A);
+      await openF(A);
+      ok(await vis(A, '#friendsBox [data-tab="settings"]'), 'not logged in: asks to log in');
+      await openSettings(A); await A.click('[data-sbmode="join"]'); await A.fill('#sbEmail', 'fa@x.com'); await A.fill('#sbPw', 'pass123'); await A.fill('#sbPw2', 'pass123'); await A.click('#sbGo'); await A.waitForTimeout(1800);
+      await openF(A);
+      ok(await vis(A, '#friendsBox [data-trip="share"]'), 'logged in: 이 여행에 친구 초대하기');
+      await A.fill('#myNameIn', '지수'); await A.click('#friendsBox [data-trip="name"]'); await A.waitForTimeout(500);
+      ok(await A.inputValue('#myNameIn') === '지수', 'my name saved and shown');
+      await A.click('[data-trip="share"]'); await A.waitForTimeout(1200);
+      ok((await A.textContent('#friendsBox')).includes('같이 고칠 수 있는 초대 링크') && /\?join=/.test(await A.inputValue('#friendsBox .share-text')), 'shared: edit invite link shown');
+      await A.click('[data-trip="invite-view"]'); await A.waitForTimeout(800);
+      ok((await A.textContent('#friendsBox')).includes('보기만 하는 초대 링크'), 'view-only invite link');
+      const url = await A.inputValue('#friendsBox .share-text');
+      const B = await device(b, S, { q: '?' + url.split('?')[1] });
+      await B.click('[data-w="mode-join"]'); await B.fill('#wEmail', 'fb@x.com'); await B.fill('#wPw', 'pass123'); await B.click('#wGo'); await B.waitForTimeout(2500); await skipCoach(B);
+      await openF(B);
+      ok((await B.textContent('#friendsBox')).includes('보기만 할 수 있는 여행') && await vis(B, '#friendsBox [data-trip="leave"]'), 'friend: view-only note and 나가기');
+      await A.evaluate(() => window.__jepi.sync()); await openF(A);
+      ok(await A.$$eval('#friendsBox .mrow.static', e => e.length) === 2 && await vis(A, '#friendsBox [data-trip="kick"]'), 'owner sees two members and 내보내기');
+      const mine = () => S.trips.filter(t => t.owner === 'U_fa@x.com').length;
+      await A.click('[data-trip="stop"]'); await A.waitForTimeout(300);
+      ok((await A.textContent('#friendsBox [data-trip="stop"]')).includes('한 번 더') && mine() === 1, '공유 끝내기 asks once more first');
+      await openF(A);
+      ok((await A.textContent('#friendsBox [data-trip="stop"]')) === '공유 끝내기', 'opening the panel again forgets the first press');
+      await A.click('[data-trip="stop"]'); await A.waitForTimeout(300); await A.click('[data-trip="stop"]'); await A.waitForTimeout(800);
+      ok(mine() === 0 && await vis(A, '#friendsBox [data-trip="share"]'), 'second press ends sharing');
+      const errs = A.errs.concat(B.errs);
+      ok(errs.length === 0, 'no page errors ' + errs.join(' | '));
+      await A.ctx.close(); await B.ctx.close();
+    }
   }
 ];
