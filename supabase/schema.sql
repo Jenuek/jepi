@@ -38,7 +38,8 @@ alter table public.jepi_trips enable row level security;
 alter table public.jepi_trip_members enable row level security;
 alter table public.jepi_trip_invites enable row level security;
 alter table public.jepi_trip_marks enable row level security;
-drop policy if exists trips_sel on public.jepi_trips;  create policy trips_sel on public.jepi_trips for select using (public.jepi_role(id) is not null);
+drop policy if exists trips_sel on public.jepi_trips;  create policy trips_sel on public.jepi_trips for select using (owner=auth.uid() or public.jepi_role(id) is not null);
+-- owner=auth.uid(): mem_ins below looks the trip up to check the owner; before the owner is a member, the trip has to be visible to them
 drop policy if exists trips_ins on public.jepi_trips;  create policy trips_ins on public.jepi_trips for insert with check (owner=auth.uid());
 drop policy if exists trips_upd on public.jepi_trips;  create policy trips_upd on public.jepi_trips for update using (public.jepi_role(id) in ('owner','edit')) with check (public.jepi_role(id) in ('owner','edit'));
 drop policy if exists trips_del on public.jepi_trips;  create policy trips_del on public.jepi_trips for delete using (owner=auth.uid());

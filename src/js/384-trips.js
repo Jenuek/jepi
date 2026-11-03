@@ -93,9 +93,15 @@ SYNC_AFTER_PULL.push(tripsPull);
 async function tripShare(){
   snapshotCurrent(); const p=planOf(curPlan), data=store.get('gp.plan.'+curPlan,null); if(!p||!data) return;
   stampMine(curPlan,data);
-  await sbTable('jepi_trips','POST','',{id:curPlan,owner:SYNC.sess.user,name:p.name,data,rev:1,updated:Date.now(),last_by:myName()},'return=minimal');
-  await sbTable('jepi_trip_members','POST','',{trip_id:curPlan,user_id:SYNC.sess.user,role:'owner',name:myName()},'return=minimal');
-  p.shared=true;p.role='owner';TRIPS.base[curPlan]={rev:1,data};saveTripBase();savePlans();
+  // ignore-duplicates: a share that stopped half-way (trip made, membership not) can simply be done again
+  await sbTable('jepi_trips','POST','?on_conflict=id',{id:curPlan,owner:SYNC.sess.user,name:p.name,data,rev:1,updated:Date.now(),last_by:myName()},'resolution=ignore-duplicates,return=minimal');
+  await sbTable('jepi_trip_members','POST','?on_conflict=trip_id,user_id',{trip_id:curPlan,user_id:SYNC.sess.user,role:'owner',name:myName()},'resolution=ignore-duplicates,return=minimal');
+  const srv=(await sbTable('jepi_trips','GET',`?id=eq.${encodeURIComponent(curPlan)}&select=rev,owner`)||[])[0];
+  if(!srv||srv.owner!==SYNC.sess.user) throw aiErr('auth','이 여행을 공유하지 못했어요. 다시 로그인한 뒤 해 주세요.');
+  // a trip left from an earlier try may hold older data: always send today's plan
+  const rev=(srv.rev||1)+1;
+  await sbTable('jepi_trips','PATCH',`?id=eq.${encodeURIComponent(curPlan)}`,{name:p.name,data,rev,updated:Date.now(),last_by:myName()},'return=minimal');
+  p.shared=true;p.role='owner';TRIPS.base[curPlan]={rev,data};saveTripBase();savePlans();
   TRIPS.members[curPlan]=[{trip_id:curPlan,user_id:SYNC.sess.user,role:'owner',name:myName()}];
 }
 async function tripInvite(role){
