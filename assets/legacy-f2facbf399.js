@@ -1666,7 +1666,7 @@ const KEY_DEF={
   anthropic:{name:'Claude',sub:'일정 짜기·대화·여행지 준비 (필수)',ph:'sk-ant-...',re:/^sk-ant-/},
   gemini:{name:'Gemini',sub:'가벼운 작업용 (선택 · 넣으면 비용이 줄어요)',ph:'AIza...',re:/^AIza/},
   gmaps:{name:'Google 지도',sub:'해외 경로 · 영업시간',ph:'AIza...',re:/^AIza/},
-  kakao:{name:'카카오 지도',sub:'국내 경로 자동 연결 (REST API 키)',ph:'32자리 영문·숫자',re:/^[0-9a-f]{32}$/i}
+  kakao:{name:'카카오 지도',sub:'국내 장소·주소 검색 (REST API 키)',ph:'32자리 영문·숫자',re:/^[0-9a-f]{32}$/i}
 };
 const MODELS=Object.assign({heavy:'claude-sonnet-5-5',light:'claude-haiku-5-5',gemini:'gemini-3.6-flash'},LS.get('jepi.models',{})||{});
 let keyMsg={}, keyBad={};
@@ -1752,28 +1752,27 @@ async function testKey(k){
 }
 
 async function kakaoDiag(){
-  const q='start_x=126.9779&start_y=37.5663&end_x=126.9769&end_y=37.5700', H={Authorization:'KakaoAK '+KEYS.kakao}, out=[];
-  for(const [ep,name] of [['walk','도보 경로'],['publictraffic','대중교통 경로']]){
-    let r;
-    try{r=await fetch(`https://dapi.kakao.com/v2/routing/${ep}?${q}`,{headers:H})}
-    catch(_){return `✕ ${name}: 카카오가 이 주소(${ORIGIN})의 요청을 막았어요. 카카오 디벨로퍼스 → 내 앱 → 플랫폼 → Web에 ${ORIGIN} 를 정확히(끝에 / 없이) 등록했는지, 카카오맵 사용 설정이 ON인지 확인해 주세요. 바꾼 뒤 몇 분 지나 다시 "확인"을 눌러 주세요.`}
-    let j={};try{j=await r.json()}catch(_){}
-    if(!r.ok){const m=j.msg||j.message||'';const c=j.code!=null?` (code ${j.code})`:'';
-      if(r.status===401)return `✕ ${name}: 키가 맞지 않아요. JavaScript 키가 아니라 REST API 키를 넣어 주세요.${c}`;
-      if(r.status===403)return `✕ ${name}: 카카오맵 사용 설정이 꺼져 있거나 권한이 없어요. 내 앱 → 카카오맵에서 ON으로 바꿔 주세요.${c}`;
-      out.push(`✕ ${name}: HTTP ${r.status}${c} ${m}`.trim());continue}
-    out.push(`✓ ${name}`);
-  }
-  return out.every(x=>x.startsWith('✓'))?'✓ 연결됐어요 (도보·대중교통 경로 모두 정상)':out.join(' · ');
+  // Kakao gives place search to outside apps, not walking / transit routes: check the search
+  let r;
+  try{r=await fetch('https://dapi.kakao.com/v2/local/search/keyword.json?query='+encodeURIComponent('서울역')+'&size=1',{headers:{Authorization:'KakaoAK '+KEYS.kakao}})}
+  catch(_){return `✕ 카카오가 이 주소(${ORIGIN})의 요청을 막았어요. 카카오 디벨로퍼스 → 내 앱 → 플랫폼 → Web에 ${ORIGIN} 를 정확히(끝에 / 없이) 등록했는지 확인해 주세요. 바꾼 뒤 몇 분 지나 다시 "확인"을 눌러 주세요.`}
+  let j={};try{j=await r.json()}catch(_){}
+  const c=j.code!=null?` (code ${j.code})`:'';
+  if(r.status===401)return `✕ 키가 맞지 않아요. JavaScript 키가 아니라 REST API 키를 넣어 주세요.${c}`;
+  if(r.status===403)return `✕ 이 키로 장소 검색을 쓸 수 없어요. 내 앱 → 제품 설정에서 카카오맵을 ON으로 바꿔 주세요.${c}`;
+  if(!r.ok)return `✕ 카카오 오류 (HTTP ${r.status})${c} ${j.msg||j.message||''}`.trim();
+  return '✓ 장소·주소 검색 연결됨 · 국내 이동 시간은 거리로 어림하고, "안내 시작"은 카카오맵으로 열어요';
 }
 function keysChanged(){saveKeys();keyBad={};if(STANDALONE){sample=makeSample()}renderAll();renderSettings();if(!$('#onb').hidden)renderOnb()}
 
 function blankPack(){return Object.assign(manualPack('새 여행'),{areas:[{key:'center',name:'시내',lat:37.5665,lng:126.978,zone:'center'}]})}
-// ---------- routes: Google Routes (abroad) / Kakao (Korea), cached on this device ----------
+// ---------- routes: Google Routes (abroad), cached on this device ----------
+// Korea: Kakao gives no walking / public-transport routes to outside apps, so trips in Korea use the
+// straight-line estimate (≈), and "안내 시작" opens Kakao Map with the start and the destination filled in.
 let RC=LS.get('jepi.routes',{})||{};
 let rcT=0; function rcSave(){clearTimeout(rcT);rcT=setTimeout(()=>{const ks=Object.keys(RC);if(ks.length>700)ks.sort((a,b)=>(RC[a].t||0)-(RC[b].t||0)).slice(0,ks.length-600).forEach(k=>delete RC[k]);LS.set('jepi.routes',RC)},800)}
 const inKR=ll=>!!ll&&ll[0]>33&&ll[0]<38.7&&ll[1]>124.4&&ll[1]<131.2;
-function routeProvider(a,b){if(inKR(a)&&inKR(b))return KEYS.kakao&&!keyBad.kakao?'kakao':null;return KEYS.gmaps&&!keyBad.gmaps?'google':null}
+function routeProvider(a,b){if(inKR(a)&&inKR(b))return null;return KEYS.gmaps&&!keyBad.gmaps?'google':null}
 const rkey=(m,a,b)=>`${m}|${(+a[0]).toFixed(4)},${(+a[1]).toFixed(4)}|${(+b[0]).toFixed(4)},${(+b[1]).toFixed(4)}`;
 const rq=[], rqSet=new Set(); let rqActive=0, routeStats={ok:0,fail:0};
 function routeGet(m,a,b){
@@ -1823,23 +1822,9 @@ async function fetchRoute(j){
       lines:[...new Set(lines)].slice(0,4).join(' → '),tf:Math.max(0,tr.length-1),fare:fare?(+fare.units||0)+(fare.nanos||0)/1e9:null,cur:fare?fare.currencyCode:'',
       poly:rt.polyline&&rt.polyline.encodedPolyline?thin(decodePoly(rt.polyline.encodedPolyline)):null,km:(rt.distanceMeters||0)/1000,src:'google'};
   }
-  // kakao
-  const walk=m==='walk'||m==='car';
-  const q=new URLSearchParams({start_x:String(a[1]),start_y:String(a[0]),end_x:String(b[1]),end_y:String(b[0])});
-  let r;try{r=await fetch(`https://dapi.kakao.com/v2/routing/${walk?'walk':'publictraffic'}?${q}`,{headers:{Authorization:'KakaoAK '+KEYS.kakao}})}catch(_){throw aiErr('network')}
-  if(r.status===401||r.status===403)throw aiErr('not_granted');
-  if(!r.ok)return null;
-  const jj=await r.json();
-  if(walk){const rt=jj.route;if(!rt||jj.status&&jj.status!=='OK')return null;const pts=[];(rt.legs||[]).forEach(l=>(l.steps||[]).forEach(s=>((s.path||{}).points||[]).forEach(p=>pts.push([p[1],p[0]]))));
-    return {min:Math.max(1,Math.ceil((rt.properties||{}).totalTime/60)),label:'도보',lines:'',tf:0,fare:0,cur:'KRW',poly:pts.length?thin(pts):null,km:((rt.properties||{}).totalDistance||0)/1000,src:'kakao'}}
-  if(jj.status&&jj.status!=='OK'){if(km(a,b)<2.5)return fetchRoute({m:'walk',a,b,pv});return null}
-  const rt=(jj.routes||[])[0]; if(!rt)return null; const pr=rt.properties||{};
-  const kinds=new Set(),lines=[],pts=[];
-  (rt.steps||[]).forEach(s=>{const sp=s.properties||{};(sp.vehicles||[]).slice(0,1).forEach(v=>{const t=String(v.type||'');kinds.add(/지하철|전철|호선|철/.test(t+v.name)?'지하철':'버스');if(v.name)lines.push(v.name)});((s.path||{}).points||[]).forEach(p=>pts.push([p[1],p[0]]))});
-  const fare=pr.fare&&(pr.fare.value!=null?+pr.fare.value:pr.fare.min!=null?+pr.fare.min:null);
-  return {min:Math.max(1,Math.ceil((+pr.totalTime||0)/60)),label:kinds.size===1?[...kinds][0]:kinds.size?'대중교통':'도보',lines:[...new Set(lines)].slice(0,4).join(' → '),tf:+pr.transfers||0,fare:fare,cur:'KRW',poly:pts.length?thin(pts):null,km:(+pr.totalDistance||0)/1000,src:'kakao'};
+  return null;
 }
-const navLink=(a,b,mode,name)=>inKR(a)&&inKR(b)?`https://map.kakao.com/link/to/${encodeURIComponent(name||'도착')},${b[0]},${b[1]}`:mapsLink(a,b,mode);
+const navLink=(a,b,mode,name)=>inKR(a)&&inKR(b)?`https://map.kakao.com/link/from/${encodeURIComponent('출발')},${a[0]},${a[1]}/to/${encodeURIComponent(name||'도착')},${b[0]},${b[1]}`:mapsLink(a,b,mode);
 
 // ---------- map (Leaflet + CARTO light tiles, loaded only when opened) ----------
 const mapState={on:false,map:null,layer:null,all:false,me:null,meMarker:null,watch:null,loading:null};
@@ -3470,7 +3455,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('submit',e=>{if(!e.target||e.target.id!=='wForm')return;e.preventDefault();
   welcomeLogin((($('#wEmail')||{}).value||'').trim(),($('#wPw')||{}).value||'')});
 // test hooks (local checks only)
-if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__jepi={demoEnter,sync:()=>syncNow(),state:()=>({cur:curPlan,plans:plans.map(p=>({id:p.id,shared:p.shared,role:p.role}))}),demoLikeTrip(){const d=demoOsaka();d.pack.demo=false;applyPlanData({profile:d.profile,pack:d.pack,placed:d.placed});$('#onb').hidden=true;snapshotCurrent();renderAll()}};
+if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__jepi={demoEnter,navLink,routeProvider,sync:()=>syncNow(),state:()=>({cur:curPlan,plans:plans.map(p=>({id:p.id,shared:p.shared,role:p.role}))}),demoLikeTrip(){const d=demoOsaka();d.pack.demo=false;applyPlanData({profile:d.profile,pack:d.pack,placed:d.placed});$('#onb').hidden=true;snapshotCurrent();renderAll()}};
 // ---------- tidy day screen: one summary line; details open on tap ----------
 // The route strip, today's cost, warnings, free gaps and "tell us more" nudges used to sit above the
 // timeline all at once. Now one line of chips shows the numbers and each chip opens its part.

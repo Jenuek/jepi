@@ -6,7 +6,7 @@ const KEY_DEF={
   anthropic:{name:'Claude',sub:'일정 짜기·대화·여행지 준비 (필수)',ph:'sk-ant-...',re:/^sk-ant-/},
   gemini:{name:'Gemini',sub:'가벼운 작업용 (선택 · 넣으면 비용이 줄어요)',ph:'AIza...',re:/^AIza/},
   gmaps:{name:'Google 지도',sub:'해외 경로 · 영업시간',ph:'AIza...',re:/^AIza/},
-  kakao:{name:'카카오 지도',sub:'국내 경로 자동 연결 (REST API 키)',ph:'32자리 영문·숫자',re:/^[0-9a-f]{32}$/i}
+  kakao:{name:'카카오 지도',sub:'국내 장소·주소 검색 (REST API 키)',ph:'32자리 영문·숫자',re:/^[0-9a-f]{32}$/i}
 };
 const MODELS=Object.assign({heavy:'claude-sonnet-5-5',light:'claude-haiku-5-5',gemini:'gemini-3.6-flash'},LS.get('jepi.models',{})||{});
 let keyMsg={}, keyBad={};
@@ -92,19 +92,16 @@ async function testKey(k){
 }
 
 async function kakaoDiag(){
-  const q='start_x=126.9779&start_y=37.5663&end_x=126.9769&end_y=37.5700', H={Authorization:'KakaoAK '+KEYS.kakao}, out=[];
-  for(const [ep,name] of [['walk','도보 경로'],['publictraffic','대중교통 경로']]){
-    let r;
-    try{r=await fetch(`https://dapi.kakao.com/v2/routing/${ep}?${q}`,{headers:H})}
-    catch(_){return `✕ ${name}: 카카오가 이 주소(${ORIGIN})의 요청을 막았어요. 카카오 디벨로퍼스 → 내 앱 → 플랫폼 → Web에 ${ORIGIN} 를 정확히(끝에 / 없이) 등록했는지, 카카오맵 사용 설정이 ON인지 확인해 주세요. 바꾼 뒤 몇 분 지나 다시 "확인"을 눌러 주세요.`}
-    let j={};try{j=await r.json()}catch(_){}
-    if(!r.ok){const m=j.msg||j.message||'';const c=j.code!=null?` (code ${j.code})`:'';
-      if(r.status===401)return `✕ ${name}: 키가 맞지 않아요. JavaScript 키가 아니라 REST API 키를 넣어 주세요.${c}`;
-      if(r.status===403)return `✕ ${name}: 카카오맵 사용 설정이 꺼져 있거나 권한이 없어요. 내 앱 → 카카오맵에서 ON으로 바꿔 주세요.${c}`;
-      out.push(`✕ ${name}: HTTP ${r.status}${c} ${m}`.trim());continue}
-    out.push(`✓ ${name}`);
-  }
-  return out.every(x=>x.startsWith('✓'))?'✓ 연결됐어요 (도보·대중교통 경로 모두 정상)':out.join(' · ');
+  // Kakao gives place search to outside apps, not walking / transit routes: check the search
+  let r;
+  try{r=await fetch('https://dapi.kakao.com/v2/local/search/keyword.json?query='+encodeURIComponent('서울역')+'&size=1',{headers:{Authorization:'KakaoAK '+KEYS.kakao}})}
+  catch(_){return `✕ 카카오가 이 주소(${ORIGIN})의 요청을 막았어요. 카카오 디벨로퍼스 → 내 앱 → 플랫폼 → Web에 ${ORIGIN} 를 정확히(끝에 / 없이) 등록했는지 확인해 주세요. 바꾼 뒤 몇 분 지나 다시 "확인"을 눌러 주세요.`}
+  let j={};try{j=await r.json()}catch(_){}
+  const c=j.code!=null?` (code ${j.code})`:'';
+  if(r.status===401)return `✕ 키가 맞지 않아요. JavaScript 키가 아니라 REST API 키를 넣어 주세요.${c}`;
+  if(r.status===403)return `✕ 이 키로 장소 검색을 쓸 수 없어요. 내 앱 → 제품 설정에서 카카오맵을 ON으로 바꿔 주세요.${c}`;
+  if(!r.ok)return `✕ 카카오 오류 (HTTP ${r.status})${c} ${j.msg||j.message||''}`.trim();
+  return '✓ 장소·주소 검색 연결됨 · 국내 이동 시간은 거리로 어림하고, "안내 시작"은 카카오맵으로 열어요';
 }
 function keysChanged(){saveKeys();keyBad={};if(STANDALONE){sample=makeSample()}renderAll();renderSettings();if(!$('#onb').hidden)renderOnb()}
 

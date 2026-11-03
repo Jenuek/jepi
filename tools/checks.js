@@ -605,5 +605,24 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'Korea: no Kakao route requests, 안내 시작 opens Kakao Map from → to, key check uses place search',
+    async run({ b, S, device, ok, skipCoach, openSettings }) {
+      const p = await device(b, S, { ls: { 'jepi.keys': { kakao: '0123456789abcdef0123456789abcdef' } } });
+      let routing = 0, search = 0;
+      await p.route(/dapi\.kakao\.com\/v2\/routing/, r => { routing++; r.abort() });
+      await p.route(/dapi\.kakao\.com\/v2\/local\/search/, r => { search++; r.fulfill({ status: 200, contentType: 'application/json', body: '{"documents":[{"place_name":"서울역"}],"meta":{}}' }) });
+      await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      const seoul = [37.5547, 126.9707], busan = [35.1151, 129.0415];
+      ok(await p.evaluate(([a, c]) => window.__jepi.routeProvider(a, c), [seoul, busan]) === null, 'in Korea no route provider: estimate only');
+      const link = await p.evaluate(([a, c]) => window.__jepi.navLink(a, c, '도보', '부산역'), [seoul, busan]);
+      ok(link.startsWith('https://map.kakao.com/link/from/') && link.includes(',37.5547,126.9707/to/') && link.includes(encodeURIComponent('부산역') + ',35.1151,129.0415'), '안내 시작: Kakao Map with start and destination');
+      await openSettings(p); await p.click('[data-keytest="kakao"]'); await p.waitForTimeout(400);
+      ok((await p.textContent('#setBox')).includes('✓ 장소·주소 검색 연결됨') && search === 1, '확인 tests place search and says so');
+      ok(routing === 0, 'no requests to the Kakao route address');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];
