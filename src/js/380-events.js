@@ -52,7 +52,7 @@ document.addEventListener('click',e=>{
   if(t.dataset.delev!=null&&draft){draft.events.splice(+t.dataset.delev,1);rerenderForm();return}
   if(t.dataset.aifill){aiFill(t.dataset.aifill);return}
   if(t.id==='aiKw'){aiKeywords();return}
-  if(t.id==='meSave'){commitProfile(draft);draft=clone(profile);renderAll();renderMe();const m=$('#meMsg');if(m)m.textContent='저장했어요. 고정 블록을 다시 만들었어요.';return}
+  if(t.id==='meSave'){commitProfile(draft);draft=clone(profile);renderAll();renderMe();meSetMsg('저장했어요. 고정 블록을 다시 만들었어요.');return}
   if(t.id==='meOnb'){openOnb();return}
   if(t.id==='wipeBtn'){if(!wipeArm){wipeArm=true;renderSettings();return}wipeAll();return}
   if(t.id==='wipeCancel'){wipeArm=false;renderSettings();return}

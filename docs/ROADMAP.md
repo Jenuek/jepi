@@ -38,8 +38,12 @@
   - [x] 취향 키워드 (`TasteKeywords.tsx`) — 예전과 같음. 앱이 다시 그려져도 입력 중인 글자가 남음(예전엔 지워질 수 있었음)
   - [x] 장소 찾기 (`FindSheet.tsx`) — 예전과 같음. 블록 시트와 같은 자리(#sheet)를 같이 써요.
     연결 부분(`bridge.ts`)이 화면마다 보이지 않는 자리(`.jepi-root`)를 만들고, 예전 코드가 그 자리를 덮어쓰면 다음에 새로 시작해요. 점검 176개 통과.
-  - [ ] 다음: 이번 여행 + 처음 설정(온보딩) + 입력 폼(`030-forms.js`, `220-more-menu.js` meRows, `renderOnb`)을 한 덩어리로 — 폼을 두 화면이 같이 써서 따로 옮기면 어긋나요.
-    취향의 여행 스타일(renderTasteStyle)도 같은 폼이라 이때 같이.
+  - [x] 이번 여행의 틀 (`MeRows.tsx`: 줄·펼치기·저장 안내·버튼) — 예전과 같음. 펼친 안의 입력 칸은 아직 예전 HTML(다시 그릴 때마다 새로).
+    "자동 저장됨"은 `meSetMsg`로 안내만 바꿔요(입력 중인 칸은 그대로). 점검 182개 통과.
+  - [ ] 다음: 입력 폼 조각들(`030-forms.js`의 fParty·fBudget·fStay·fFlight·fHome·fEvents·dateFields·fStyle…, `140`·`160`·`170`의 fDest·fJP·fQuick·fTalk…)을
+    하나씩 리액트로. 처음 설정(`renderOnb`)·이번 여행·취향(renderTasteStyle)이 같이 써요.
+    방법: 칸 이름(`data-pf`, `data-radio`)은 그대로, 폼 전체는 다시 그릴 때마다 새로(rev 키) — 예전 코드가 값을 바꾼 뒤 다시 그리는 방식과 같아서 안전해요.
+    처음 설정의 틀(#onb, body.html의 고정 HTML)은 옮겨도 얻는 게 적어 폼을 다 옮긴 뒤에.
   - [ ] 그다음: 장소 탭(renderTray), 준비하기(renderChecks), 지도·DICE 화면, 마지막으로 일정표(renderTimeline, 가장 큼)
   - 설정은 다른 기능의 조각(동기화·내 장소·AI 키·SETTINGS_EXTRA)이 모인 화면이라 조각을 먼저 옮기기로 순서를 바꿈.
 - [ ] **4단계 · 앱 포장**: Capacitor(아이폰·안드로이드), 폰 자체 알림(Firebase), 앱 안 계정 삭제, 개인정보처리방침, 안드로이드 빌드 자동화.

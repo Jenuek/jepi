@@ -569,5 +569,23 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'React screen: 이번 여행 rows (open/close, auto-save message keeps the box you type in)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="me"]'); await p.waitForTimeout(250);
+      ok(await p.$$eval('#meBox .merow', e => e.length) === 6, 'six rows for a trip');
+      await p.click('[data-meopen="bud"]'); await p.waitForTimeout(150);
+      ok(await vis(p, '#meBox .mebody') && await p.getAttribute('[data-meopen="bud"]', 'aria-expanded') === 'true', 'tapping a row opens it');
+      const box = '#meBox .mebody input[data-pf]:not([type="hidden"]) >> nth=0';
+      await p.click(box); await p.fill(box, '1234'); await p.dispatchEvent(box, 'change'); await p.waitForTimeout(800);
+      ok((await p.textContent('#meMsg')).includes('자동 저장됨'), 'auto-save message shown');
+      ok(await p.evaluate(() => document.activeElement && document.activeElement.matches('#meBox .mebody input[data-pf]')) && await p.inputValue(box) === '1234', 'the box you typed in stays (not redrawn)');
+      await p.click('[data-meopen="bud"]'); await p.waitForTimeout(150);
+      ok(!(await vis(p, '#meBox .mebody')), 'tapping again closes it');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];

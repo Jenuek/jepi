@@ -41,17 +41,19 @@ function meRows(p){
     ['bud','예산',b?`1인 ${Math.round(b.total/10000)}만원 <small>· 현지 하루 ${won(b.daily)}</small>`:'정하지 않음',()=>fBudget(p)],
     ['ev','예약한 일정',p.events.length?`${p.events.length}개`:'없음',()=>fEvents(p)]];
 }
+// Drawn by React: app/screens/MeRows.tsx. meSetMsg changes only the message (the open form stays as it is).
+let meRev=0, meLast=null;
 function renderMeRows(){
   if(!draft) draft=clone(profile); fixProfile(draft);
-  const chev='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
-  $('#meBox').innerHTML=`<div class="mgroup merows">${meRows(draft).map(([id,k,v,f])=>`<button class="merow" data-meopen="${id}" aria-expanded="${meOpen===id}"><span class="mk">${k}</span><span class="mv">${v}</span>${chev}</button>${meOpen===id?`<div class="mebody">${f()}</div>`:''}`).join('')}</div>
-  <p class="saved" id="meMsg">${autoMsg}</p>
-  <div class="row" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px"><button class="small-btn" type="button" id="meOnb">처음 설정 다시 하기</button>${profile.kind==='day'?'':'<button class="small-btn" type="button" id="meHelper">예약 도우미</button>'}</div>`;
+  const rows=meRows(draft), op=rows.find(r=>r[0]===meOpen);
+  meLast={rows:rows.map(([id,k,v])=>({id,label:k,valueHTML:v})),open:op?meOpen:null,bodyHTML:op?op[3]():'',msg:autoMsg||'',dayCourse:profile.kind==='day',rev:++meRev};
+  window.JEPI_UI.mount('me',$('#meBox'),meLast);
 }
+function meSetMsg(m){if(!meLast||!$('#meBox')){return}meLast=Object.assign({},meLast,{msg:m});window.JEPI_UI.mount('me',$('#meBox'),meLast)}
 let autoMsg='';
 function autoSave(){clearTimeout(autoT);autoT=setTimeout(()=>{if(!draft||!$('#onb').hidden)return;
   const prevDest=profile.dest;commitProfile(draft);if(prevDest!==profile.dest)draft.dest=profile.dest;
-  autoMsg='✓ 자동 저장됨 · 일정표에 바로 반영돼요';renderAll();const m=$('#meMsg');if(m)m.textContent=autoMsg},500)}
+  autoMsg='✓ 자동 저장됨 · 일정표에 바로 반영돼요';renderAll();meSetMsg(autoMsg)},500)}
 // taste: style rows + keywords + wishes (carried into new plans)
 function styleOnly(p){return fStyle(p).replace(/^\s*<div class="fsec"><h3>누구와 가나요\?<\/h3>[\s\S]*?<\/div>\s*(?=<div class="fsec">)/,'')}
 const TASTE_KEYS=['pace','social','breakfast','style'];
