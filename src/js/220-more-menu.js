@@ -9,29 +9,17 @@ function tripSummary(){
 }
 function prepLeft(){let n=0;document.querySelectorAll('#checks .check-group').forEach(g=>{const h=g.querySelector('h3');if(h&&/예약·준비/.test(h.textContent))n+=g.querySelectorAll('input[data-ck]:not(:checked)').length});return n}
 function warnTotal(){let n=0;for(let d=0;d<DAYS.length;d++)n+=analyze(d).items.reduce((a,it)=>a+it.warns.length,0);return n}
+// The menu itself is drawn by React: app/screens/MoreMenu.tsx. Here: the numbers it shows.
 function renderMore(){
   const box=$('#moreBox'); if(!box) return;
   const s=tripSummary(), pr=profile, b=budgetParts&&budgetParts(pr);
-  const chip=(t,c)=>`<span class="mchip ${c||''}">${t}</span>`;
-  const chips=pr.kind==='day'?[]:[pr.bookedFlight===false?chip('교통편 미정','warn'):chip('교통편 예약됨','ok'),pr.bookedStay===false?chip('숙소 미정','warn'):chip('숙소 예약됨','ok')];
-  if(b) chips.push(chip(`예산 1인 ${Math.round(b.total/10000)}만원`));
-  const w=warnTotal(), pl=prepLeft(), full=jp!=='P'||moreAll;
-  const arrow='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
-  box.innerHTML=`<button class="trip-card" data-tab="me"><span class="tc-top"><span class="tc-k">이번 여행</span><span class="tc-more">자세히${arrow}</span></span><b class="tc-city">${esc(s.city)}</b><span class="tc-line mono">${esc(s.line)}</span>${chips.length?`<span class="tc-chips">${chips.join('')}</span>`:''}</button>
-  <div class="mgroup">
-    <button class="mrow" type="button" id="nbOpen"><span class="mt"><b>📖 여행 노트로 보기</b><small>날짜별 제목 · 손글씨 메모 · PDF 저장 · 링크로 보내기</small></span>${arrow}</button>
-    <button class="mrow" type="button" id="lookOpen"><span class="mt"><b>🎨 여행 꾸미기</b><small>제목 · 테마 색 · 커버 · 스타일 · 날짜별 제목</small></span>${arrow}</button>
-    <button class="mrow" data-tab="check"><span class="mt"><b>준비하기</b><small>일정 경고 · 남은 예약 · 이 시기 팁</small></span>${w?chip('경고 '+w,'warn'):''}${pl?chip('남은 준비 '+pl,'acc'):''}${!w&&!pl?arrow:''}</button>
-    ${full?`<button class="mrow" data-tab="pref"><span class="mt"><b>나의 여행 취향</b><small>여행 스타일 · 취향 키워드 · ♥ 장소 — 모든 계획에 공통</small></span>${arrow}</button>
-    <button class="mrow" data-tab="plans"><span class="mt"><b>내 계획</b><small>${plans.length}개 저장됨 · 새 계획 · 공유</small></span>${arrow}</button>`:''}
-  </div>
-  <div class="mgroup">
-    <button class="mrow" data-tab="friends"><span class="mt"><b>친구와 함께</b><small>초대 링크 · 같이 고치기 · 👍 가고 싶어요</small></span>${(()=>{const sp=plans.find(x=>x.id===curPlan&&x.shared);return sp?chip('👥 '+(((TRIPS&&TRIPS.members[curPlan])||[]).length||'공유 중'),'ok'):arrow})()}</button>
-    <button class="mrow" data-tab="notify"><span class="mt"><b>알림</b><small>출발 시간 · 아침 일정 · 알림 받을 기기</small></span>${NOTIFY&&NOTIFY.on?chip('켜짐','ok'):arrow}</button>
-    <button class="mrow" data-tab="help"><span class="mt"><b>사용 안내</b><small>처음 쓰는 기능을 짧게 설명해요</small></span>${arrow}</button>
-  </div>
-  ${full?`<div class="mgroup"><button class="mrow" data-tab="settings"><span class="mt"><b>설정</b><small>화면 · AI·지도 연결 · 백업 · 초기화</small></span>${STANDALONE&&!sample?chip('AI 꺼짐','warn'):''}${arrow}</button></div>`:''}
-  ${jp==='P'?`<button class="linkbtn" id="moreAll">${moreAll?'간단히 보기':'전체 메뉴 보기'}</button>`:''}`;
+  const tripChips=pr.kind==='day'?[]:[pr.bookedFlight===false?{text:'교통편 미정',tone:'warn'}:{text:'교통편 예약됨',tone:'ok'},pr.bookedStay===false?{text:'숙소 미정',tone:'warn'}:{text:'숙소 예약됨',tone:'ok'}];
+  if(b) tripChips.push({text:`예산 1인 ${Math.round(b.total/10000)}만원`});
+  const w=warnTotal(), sp=plans.find(x=>x.id===curPlan&&x.shared);
+  window.JEPI_UI.mount('more',box,{city:s.city,line:s.line,tripChips,warnCount:w,prepLeft:prepLeft(),
+    full:jp!=='P'||moreAll,showToggle:jp==='P',moreAll,plansCount:plans.length,
+    friendsChip:sp?'👥 '+(((TRIPS&&TRIPS.members[curPlan])||[]).length||'공유 중'):null,
+    notifyOn:!!(NOTIFY&&NOTIFY.on),aiOff:!!(STANDALONE&&!sample)});
   const wc=$('#warnCount'); if(wc) wc.textContent=w?String(w):'';
 }
 // 이번 여행: one row per topic, opens only that part, saves on change
@@ -53,17 +41,19 @@ function meRows(p){
     ['bud','예산',b?`1인 ${Math.round(b.total/10000)}만원 <small>· 현지 하루 ${won(b.daily)}</small>`:'정하지 않음',()=>fBudget(p)],
     ['ev','예약한 일정',p.events.length?`${p.events.length}개`:'없음',()=>fEvents(p)]];
 }
+// Drawn by React: app/screens/MeRows.tsx. meSetMsg changes only the message (the open form stays as it is).
+let meRev=0, meLast=null;
 function renderMeRows(){
   if(!draft) draft=clone(profile); fixProfile(draft);
-  const chev='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
-  $('#meBox').innerHTML=`<div class="mgroup merows">${meRows(draft).map(([id,k,v,f])=>`<button class="merow" data-meopen="${id}" aria-expanded="${meOpen===id}"><span class="mk">${k}</span><span class="mv">${v}</span>${chev}</button>${meOpen===id?`<div class="mebody">${f()}</div>`:''}`).join('')}</div>
-  <p class="saved" id="meMsg">${autoMsg}</p>
-  <div class="row" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px"><button class="small-btn" type="button" id="meOnb">처음 설정 다시 하기</button>${profile.kind==='day'?'':'<button class="small-btn" type="button" id="meHelper">예약 도우미</button>'}</div>`;
+  const rows=meRows(draft), op=rows.find(r=>r[0]===meOpen);
+  meLast={rows:rows.map(([id,k,v])=>({id,label:k,valueHTML:v})),open:op?meOpen:null,bodyHTML:op?op[3]():'',msg:autoMsg||'',dayCourse:profile.kind==='day',rev:++meRev};
+  window.JEPI_UI.mount('me',$('#meBox'),meLast);
 }
+function meSetMsg(m){if(!meLast||!$('#meBox')){return}meLast=Object.assign({},meLast,{msg:m});window.JEPI_UI.mount('me',$('#meBox'),meLast)}
 let autoMsg='';
 function autoSave(){clearTimeout(autoT);autoT=setTimeout(()=>{if(!draft||!$('#onb').hidden)return;
   const prevDest=profile.dest;commitProfile(draft);if(prevDest!==profile.dest)draft.dest=profile.dest;
-  autoMsg='✓ 자동 저장됨 · 일정표에 바로 반영돼요';renderAll();const m=$('#meMsg');if(m)m.textContent=autoMsg},500)}
+  autoMsg='✓ 자동 저장됨 · 일정표에 바로 반영돼요';renderAll();meSetMsg(autoMsg)},500)}
 // taste: style rows + keywords + wishes (carried into new plans)
 function styleOnly(p){return fStyle(p).replace(/^\s*<div class="fsec"><h3>누구와 가나요\?<\/h3>[\s\S]*?<\/div>\s*(?=<div class="fsec">)/,'')}
 const TASTE_KEYS=['pace','social','breakfast','style'];

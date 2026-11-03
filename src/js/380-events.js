@@ -2,7 +2,7 @@
 document.addEventListener('click',e=>{
   const t=e.target.closest('button,input,label'); if(!t) return;
   if(t.dataset.day!=null){day=+t.dataset.day;renderAll();return}
-  if(t.dataset.tab){tab=t.dataset.tab;autoMsg='';if(tab==='me'){draft=clone(profile);meOpen=null;renderMe()}if(tab==='pref'){draft=clone(profile);renderTasteStyle()}if(tab==='plans'){snapshotCurrent();showText=false;renderPlans()}if(tab==='settings'){keyEdit=null;renderSettings()}if(tab==='more')renderMore();if(PANELS[tab])PANELS[tab].render();renderTabs();if(tab==='map')openMap();else mapState.on=false;window.scrollTo({top:0});return}
+  if(t.dataset.tab){tab=t.dataset.tab;autoMsg='';if(tab==='me'){draft=clone(profile);meOpen=null;renderMe()}if(tab==='pref'){draft=clone(profile);renderTasteStyle()}if(tab==='plans'){snapshotCurrent();showText=false;renderPlans()}if(tab==='settings'){keyEdit=null;renderSettings()}if(tab==='more')renderMore();if(PANELS[tab])PANELS[tab].render({opened:true});renderTabs();if(tab==='map')openMap();else mapState.on=false;window.scrollTo({top:0});return}
   if(t.id==='customBtn'){openCustom(null,null);return}
   if(t.dataset.newcustom!=null){openCustom(null,+t.dataset.newcustom);return}
   if(t.dataset.editcustom){openCustom(t.dataset.editcustom,null);return}
@@ -52,7 +52,7 @@ document.addEventListener('click',e=>{
   if(t.dataset.delev!=null&&draft){draft.events.splice(+t.dataset.delev,1);rerenderForm();return}
   if(t.dataset.aifill){aiFill(t.dataset.aifill);return}
   if(t.id==='aiKw'){aiKeywords();return}
-  if(t.id==='meSave'){commitProfile(draft);draft=clone(profile);renderAll();renderMe();const m=$('#meMsg');if(m)m.textContent='저장했어요. 고정 블록을 다시 만들었어요.';return}
+  if(t.id==='meSave'){commitProfile(draft);draft=clone(profile);renderAll();renderMe();meSetMsg('저장했어요. 고정 블록을 다시 만들었어요.');return}
   if(t.id==='meOnb'){openOnb();return}
   if(t.id==='wipeBtn'){if(!wipeArm){wipeArm=true;renderSettings();return}wipeAll();return}
   if(t.id==='wipeCancel'){wipeArm=false;renderSettings();return}
@@ -80,8 +80,8 @@ document.addEventListener('click',e=>{
   if(t.dataset.planopen){openPlan(t.dataset.planopen);return}
   if(t.dataset.plandup){dupPlan(t.dataset.plandup);return}
   if(t.dataset.plandel){delPlan(t.dataset.plandel);return}
-  if(t.dataset.planrename){const p=plans.find(x=>x.id===t.dataset.planrename);const row=t.closest('.plan');if(p&&row){row.querySelector('.pl-top').innerHTML=`<input class="pl-name" maxlength="40" value="${esc(p.name||'')}"><button class="small-btn primary" data-planname="${p.id}">저장</button>`;row.querySelector('.pl-name').focus()}return}
-  if(t.dataset.planname){const v=(t.parentElement.querySelector('.pl-name')||{}).value||'';renamePlan(t.dataset.planname,v.trim());return}
+  if(t.dataset.planrename){if(plans.some(x=>x.id===t.dataset.planrename)){planRenaming=t.dataset.planrename;renderPlans();const i=$('#plansBox .pl-name');if(i)i.focus()}return}
+  if(t.dataset.planname){const v=(t.parentElement.querySelector('.pl-name')||{}).value||'';planRenaming='';renamePlan(t.dataset.planname,v.trim());renderPlans();return}
   if(t.id==='planShare'){shareCode();return}
   if(t.id==='planText'){showText=!showText;renderPlans();if(showText)copyText(planText());return}
   if(t.id==='planTxt'){downloadText(`${planName()}.txt`,planText());return}
@@ -116,7 +116,7 @@ document.addEventListener('click',e=>{
   if(t.dataset.setarea){const k=t.dataset.setarea;profile.stayPicked=k;profile.stays.forEach((st,i)=>{if(i===0||profile.bookedStay===false){st.area=k;if(profile.bookedStay===false)st.name=`숙소 (미정 · ${AREAS[k][0]})`}});store.set('gp.profile',profile);buildDays();renderHelper();return}
   if(t.dataset.slot){const [a,d]=t.dataset.slot.split(',').map(Number);setSlot(a,d);return}
   if(t.closest('#helper')&&t.dataset.radio){let v=t.dataset.val==='true';profile[t.dataset.radio]=v;store.set('gp.profile',profile);renderHelper();return}
-  if(t.dataset.zoom){setZoom(+t.dataset.zoom);return}
+  if(t.dataset.zoom){setZoom(+t.dataset.zoom);if(tab==='settings')renderSettings();return}
   if(t.dataset.vote){toggleRec(t.dataset.vote);return}
   if(t.dataset.pick){selected=selected===t.dataset.pick?null:t.dataset.pick;
     if(selected&&!matchMedia('(min-width:900px)').matches){tab='timeline'}

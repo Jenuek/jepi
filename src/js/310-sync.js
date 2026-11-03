@@ -43,30 +43,11 @@ JD.sync.connectSync({
     for(const f of SYNC_AFTER_PULL){try{await f()}catch(e){console.warn(e)}}
   }
 });
-function syncHTML(){
-  if(!SYNC.url||!SYNC.key||syncStep==='setup') return `<div class="mgroup pad"><p class="hint" style="margin-top:0">Supabase 프로젝트의 <b>Project URL</b>과 <b>anon(또는 publishable) 키</b>를 넣어 주세요. 대시보드 → Project Settings → API에 있어요.</p>
-    <label class="fg" style="display:block"><span class="hint">Project URL</span><input id="sbUrl" value="${esc(SYNC.url)}" placeholder="https://xxxx.supabase.co" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
-    <label class="fg" style="display:block;margin-top:6px"><span class="hint">anon / publishable 키</span><input id="sbKey" type="password" value="" placeholder="${SYNC.key?'저장됨 · 바꿀 때만 입력':'eyJ… 또는 sb_publishable_…'}" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
-    <div class="row" style="margin-top:8px"><button class="small-btn primary" type="button" id="sbSave">저장</button>${SYNC.url&&SYNC.key?'<button class="small-btn" type="button" id="sbCancel">취소</button>':''}</div>${syncErr?`<small class="kmsg">✕ ${esc(syncErr)}</small>`:''}</div>`;
-  if(!syncOn()){
-    if(syncStep==='reset') return `<div class="mgroup pad"><p class="hint" style="margin-top:0"><b>${esc(SYNC.email)}</b>로 비밀번호 재설정 메일을 보냈어요. 메일의 링크를 이 기기에서 누르거나, 길게 눌러 복사해서 아래에 붙여 넣어 주세요.</p>
-      <div class="kin"><input id="sbCode" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://…supabase.co/auth/v1/verify?token=…"><button class="small-btn primary" type="button" id="sbVerify">확인</button></div>
-      ${syncErr?`<small class="kmsg">✕ ${esc(syncErr)}</small>`:''}<div class="row"><button class="small-btn" type="button" id="sbBack">로그인으로</button></div></div>`;
-    const join=syncStep==='join';
-    return `<div class="mgroup pad"><div class="radio" role="tablist" style="margin:0 0 8px"><button type="button" data-sbmode="login" aria-pressed="${!join}">로그인</button><button type="button" data-sbmode="join" aria-pressed="${join}">처음이에요 (가입)</button></div>
-      <p class="hint" style="margin-top:0">${join?'처음 한 번만 가입해요. 폰과 아이패드에서 같은 이메일·비밀번호로 로그인하면 계획이 맞춰져요.':'가입한 이메일과 비밀번호로 로그인해요. 한 번 로그인하면 이 기기에서는 계속 유지돼요.'}</p>
-      <form id="sbForm" class="sb-form"><input id="sbEmail" type="email" value="${esc(SYNC.email)}" placeholder="이메일" autocomplete="email" required>
-      <input id="sbPw" type="password" placeholder="${join?'비밀번호 (6자 이상)':'비밀번호'}" autocomplete="${join?'new-password':'current-password'}" minlength="6" required>
-      ${join?'<input id="sbPw2" type="password" placeholder="비밀번호 한 번 더" autocomplete="new-password" minlength="6" required>':''}
-      <button class="small-btn primary" type="submit" id="sbGo">${join?'가입하고 동기화 켜기':'로그인'}</button></form>
-      ${syncErr?`<small class="kmsg">✕ ${esc(syncErr)}</small>`:''}
-      <div class="row">${join?'':'<button class="small-btn" type="button" id="sbForgot">비밀번호를 잊었어요</button>'}<button class="small-btn" type="button" id="sbSetup">서버 주소 바꾸기</button></div></div>`;
-  }
-  if(syncStep==='newpw') return `<div class="mgroup pad"><p class="hint" style="margin-top:0">새 비밀번호를 정해 주세요.</p><form id="sbPwForm" class="sb-form"><input id="sbNew" type="password" placeholder="새 비밀번호 (6자 이상)" autocomplete="new-password" minlength="6" required><button class="small-btn primary" type="submit">저장</button></form>${syncErr?`<small class="kmsg">✕ ${esc(syncErr)}</small>`:''}</div>`;
-  const t=SYNC.at?new Date(SYNC.at):null;
-  return `<div class="mgroup pad"><div class="srow" style="margin:0"><span><b>☁️ ${esc(SYNC.sess.email||SYNC.email)}</b><br><small class="hint">${SYNC_STATUS.busy?'맞추는 중…':syncErr?'✕ '+esc(syncErr):t?`마지막 동기화 ${t.getHours()}:${String(t.getMinutes()).padStart(2,'0')}`:'아직 동기화 전'}</small></span><span class="mchip ${syncErr?'warn':'ok'}">${syncErr?'확인 필요':'켜짐'}</span></div>
-    <div class="row" style="margin-top:8px"><button class="small-btn primary" type="button" id="sbNow">지금 동기화</button><button class="small-btn" type="button" id="sbOut">로그아웃</button></div>
-    <p class="hint">계획, 취향 키워드, 내 장소, AI·지도 키가 맞춰져요. 키는 비밀번호로 암호화해서 올라가서 서버에서도 알아볼 수 없어요.</p>${!LS.get('jepi.vk',null)?'<p class="hint" style="color:var(--warn,#b45309)">키까지 맞추려면 로그아웃했다가 다시 로그인해 주세요.</p>':SYNC_STATUS.keysLocked?'<p class="hint" style="color:var(--warn,#b45309)">서버의 키가 다른 비밀번호로 잠겨 있어요. 비밀번호를 바꿨다면 키가 있는 기기에서 다시 로그인해 주세요.</p>':''}</div>`;
+// The section is drawn by React: app/screens/SyncSection.tsx. Here: what it shows.
+function syncView(){
+  const mode=(!SYNC.url||!SYNC.key||syncStep==='setup')?'setup':!syncOn()?(syncStep==='reset'?'reset':syncStep==='join'?'join':'login'):syncStep==='newpw'?'newpw':'on';
+  return {mode,url:SYNC.url||'',hasKey:!!SYNC.key,email:(mode==='on'&&SYNC.sess.email)||SYNC.email||'',err:syncErr||'',busy:!!SYNC_STATUS.busy,
+    lastAt:SYNC.at||0,vkMissing:!LS.get('jepi.vk',null),keysLocked:!!SYNC_STATUS.keysLocked};
 }
 document.addEventListener('click',async e=>{const t=e.target.closest('button');if(!t)return;
   if(t.id==='sbSetup'){syncStep='setup';renderSettings();return}

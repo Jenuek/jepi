@@ -6,8 +6,9 @@
 // so the check is free, offline and repeatable. It fails (exit 1) on any page error.
 const http = require('http'), fs = require('fs'), path = require('path');
 const { chromium } = require('playwright');
-const DIST = path.join(__dirname, '..');
-const PORT = 8790, BASE = `http://localhost:${PORT}/`;
+// JEPI_DIST / JEPI_PORT / JEPI_CHECKS: used by tools/compare.js to run other checks on another build
+const DIST = process.env.JEPI_DIST || path.join(__dirname, '..');
+const PORT = +process.env.JEPI_PORT || 8790, BASE = `http://localhost:${PORT}/`;
 let failed = 0;
 const ok = (cond, label) => { console.log((cond ? '  ✓ ' : '  ✗ ') + label); if (!cond) failed++; };
 
@@ -117,7 +118,7 @@ async function launch() {
 (async () => {
   const srv = serve(); const b = await launch(); const S = fakeServer();
   try {
-    for (const t of require('./checks')) {
+    for (const t of require(process.env.JEPI_CHECKS || './checks')) {
       console.log('▶ ' + t.name);
       try { await t.run({ b, S, device, ok, vis, skipCoach, openSettings }) }
       catch (e) { ok(false, 'threw: ' + e.message.split('\n')[0]) }

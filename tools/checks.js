@@ -337,5 +337,255 @@ module.exports = [
       ok(errs.length === 0, 'no page errors ' + errs.join(' | '));
       await A.ctx.close(); await B.ctx.close(); await C.ctx.close();
     }
+  },
+  {
+    name: 'React screen: 더보기 menu (trip card, chips, P-mode short menu, buttons open screens)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S);
+      await p.evaluate(() => window.__jepi.demoEnter()); await p.waitForTimeout(3600); await skipCoach(p);
+      await p.click('.tabs [data-tab="more"]'); await p.waitForTimeout(250);
+      ok((await p.textContent('#moreBox .tc-city')).includes('오사카'), 'trip card shows the city');
+      ok(await p.$$eval('#moreBox .tc-chips .mchip', e => e.length) >= 2, 'trip card chips (교통편 · 숙소)');
+      ok(await vis(p, '#moreBox [data-tab="plans"]') && await vis(p, '#moreBox [data-tab="settings"]'), 'J mode: full menu');
+      ok(!(await vis(p, '#moreAll')), 'J mode: no short-menu toggle');
+      await p.click('#moreBox [data-tab="help"]'); await p.waitForTimeout(250);
+      ok(await vis(p, '#side-help'), '사용 안내 opens from the menu');
+      await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="settings"]'); await p.waitForTimeout(250);
+      ok(await vis(p, '#setBox'), '설정 opens from the menu');
+      await p.click('[data-jp="P"]'); await p.waitForTimeout(250);
+      await p.click('.tabs [data-tab="more"]'); await p.waitForTimeout(250);
+      ok(!(await vis(p, '#moreBox [data-tab="plans"]')) && await vis(p, '#moreAll'), 'P mode: short menu with 전체 메뉴 보기');
+      await p.click('#moreAll'); await p.waitForTimeout(200);
+      ok(await vis(p, '#moreBox [data-tab="plans"]') && (await p.textContent('#moreAll')).includes('간단히'), '전체 메뉴 보기 shows everything');
+      await p.click('#moreBox #lookOpen'); await p.waitForTimeout(300);
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'React screen: 내 계획 (list, copy, delete twice, 카톡용 글, typed link kept)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S);
+      await p.evaluate(() => window.__jepi.demoEnter()); await p.waitForTimeout(3600); await skipCoach(p);
+      await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="plans"]'); await p.waitForTimeout(250);
+      const count = () => p.$$eval('#plansBox .plan', e => e.length);
+      ok(await count() === 1 && await vis(p, '#plansBox .plan.cur .tag'), 'one plan, marked 지금 보는 계획');
+      await p.fill('#codeIn', 'JP-TEST1');
+      await p.click('#plansBox [data-plandup]'); await p.waitForTimeout(250);
+      ok(await p.inputValue('#codeIn') === 'JP-TEST1', 'what you typed stays when the list redraws');
+      ok(await count() === 2 && (await p.textContent('#plansBox .ai-status')).includes('복사본'), '복제 adds a copy with a message');
+      const other = '#plansBox .plan:not(.cur) [data-plandel]';
+      await p.click(other); await p.waitForTimeout(150);
+      ok((await p.textContent(other)).includes('한 번 더'), '삭제 asks once more');
+      await p.click(other); await p.waitForTimeout(250);
+      ok(await count() === 1, 'second press deletes it');
+      await p.click('#planText'); await p.waitForTimeout(200);
+      ok((await p.$eval('#plansBox textarea.share-text', x => x.value)).includes('오사카'), '카톡용 글 shows the plan as text');
+      await p.click('#plansBox .plan.cur [data-planrename]'); await p.waitForTimeout(150);
+      ok(await p.evaluate(() => document.activeElement && document.activeElement.classList.contains('pl-name')), '이름 바꾸기 opens a name box, ready to type');
+      await p.fill('#plansBox .pl-name', '우리 오사카'); await p.click('#plansBox [data-planname]'); await p.waitForTimeout(250);
+      ok((await p.textContent('#plansBox .plan.cur .pl-top b')) === '우리 오사카' && !(await vis(p, '#plansBox .pl-name')), 'new name saved and shown');
+      ok((await p.textContent('#planName')).includes('우리 오사카'), 'the header shows the new name too');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'React screen: 친구와 함께 (login prompt, invite links, view-only friend, 공유 끝내기 asks then ends)',
+    async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
+      const openF = async p => { await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="friends"]'); await p.waitForTimeout(200) };
+      const A = await device(b, S); await A.click('[data-w="new"]'); await A.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(A);
+      await openF(A);
+      ok(await vis(A, '#friendsBox [data-tab="settings"]'), 'not logged in: asks to log in');
+      await openSettings(A); await A.click('[data-sbmode="join"]'); await A.fill('#sbEmail', 'fa@x.com'); await A.fill('#sbPw', 'pass123'); await A.fill('#sbPw2', 'pass123'); await A.click('#sbGo'); await A.waitForTimeout(1800);
+      await openF(A);
+      ok(await vis(A, '#friendsBox [data-trip="share"]'), 'logged in: 이 여행에 친구 초대하기');
+      await A.fill('#myNameIn', '지수'); await A.click('#friendsBox [data-trip="name"]'); await A.waitForTimeout(500);
+      ok(await A.inputValue('#myNameIn') === '지수', 'my name saved and shown');
+      await A.click('[data-trip="share"]'); await A.waitForTimeout(1200);
+      ok((await A.textContent('#friendsBox')).includes('같이 고칠 수 있는 초대 링크') && /\?join=/.test(await A.inputValue('#friendsBox .share-text')), 'shared: edit invite link shown');
+      await A.click('[data-trip="invite-view"]'); await A.waitForTimeout(800);
+      ok((await A.textContent('#friendsBox')).includes('보기만 하는 초대 링크'), 'view-only invite link');
+      const url = await A.inputValue('#friendsBox .share-text');
+      const B = await device(b, S, { q: '?' + url.split('?')[1] });
+      await B.click('[data-w="mode-join"]'); await B.fill('#wEmail', 'fb@x.com'); await B.fill('#wPw', 'pass123'); await B.click('#wGo'); await B.waitForTimeout(2500); await skipCoach(B);
+      await openF(B);
+      ok((await B.textContent('#friendsBox')).includes('보기만 할 수 있는 여행') && await vis(B, '#friendsBox [data-trip="leave"]'), 'friend: view-only note and 나가기');
+      await A.evaluate(() => window.__jepi.sync()); await openF(A);
+      ok(await A.$$eval('#friendsBox .mrow.static', e => e.length) === 2 && await vis(A, '#friendsBox [data-trip="kick"]'), 'owner sees two members and 내보내기');
+      const mine = () => S.trips.filter(t => t.owner === 'U_fa@x.com').length;
+      await A.click('[data-trip="stop"]'); await A.waitForTimeout(300);
+      ok((await A.textContent('#friendsBox [data-trip="stop"]')).includes('한 번 더') && mine() === 1, '공유 끝내기 asks once more first');
+      await openF(A);
+      ok((await A.textContent('#friendsBox [data-trip="stop"]')) === '공유 끝내기', 'opening the panel again forgets the first press');
+      await A.click('[data-trip="stop"]'); await A.waitForTimeout(300); await A.click('[data-trip="stop"]'); await A.waitForTimeout(800);
+      ok(mine() === 0 && await vis(A, '#friendsBox [data-trip="share"]'), 'second press ends sharing');
+      const errs = A.errs.concat(B.errs);
+      ok(errs.length === 0, 'no page errors ' + errs.join(' | '));
+      await A.ctx.close(); await B.ctx.close();
+    }
+  },
+  {
+    name: 'React screen: 알림 (login prompt, options saved, test alert, buttons not stuck)',
+    async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
+      const openN = async p => { await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="notify"]'); await p.waitForTimeout(200) };
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await openN(p);
+      ok(await vis(p, '#notifyBox [data-tab="settings"]'), 'not logged in: asks to log in');
+      await openSettings(p); await p.click('[data-sbmode="join"]'); await p.fill('#sbEmail', 'nt@x.com'); await p.fill('#sbPw', 'pass123'); await p.fill('#sbPw2', 'pass123'); await p.click('#sbGo'); await p.waitForTimeout(1800);
+      await openN(p);
+      ok(await vis(p, '#notifyBox [data-ntf="on"]'), 'logged in: 켜기 button');
+      await p.click('[data-nset="lead"][data-val="30"]'); await p.click('[data-nset="morning"][data-val="false"]'); await p.waitForTimeout(150);
+      const st = await p.evaluate(() => JSON.parse(localStorage.getItem('jepi.notify')));
+      ok(st.lead === 30 && st.morning === false, 'options saved');
+      ok(await p.getAttribute('[data-nset="lead"][data-val="30"]', 'aria-pressed') === 'true' && await p.getAttribute('[data-nset="lead"][data-val="10"]', 'aria-pressed') === 'false', 'chosen option is shown pressed');
+      await p.evaluate(() => { const n = JSON.parse(localStorage.getItem('jepi.notify')); n.on = true; n.dev = 'dX'; localStorage.setItem('jepi.notify', JSON.stringify(n)) });
+      await p.reload(); await p.waitForTimeout(3500); await skipCoach(p); await openN(p);
+      await p.click('[data-ntf="test"]'); await p.waitForTimeout(800);
+      ok((await p.textContent('#notifyBox')).includes('테스트 알림을 보냈어요'), 'test alert sent');
+      ok(!(await p.isDisabled('[data-ntf="test"]')) && !(await p.isDisabled('[data-ntf="off"]')), 'buttons usable again afterwards');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'React screen: 설정 frame (theme, time spacing, 모두 초기화 asks, old parts drawn fresh)',
+    async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await openSettings(p);
+      ok(await vis(p, '#setBox [data-sbmode="join"]') && await vis(p, '#setBox #backupAll'), 'sections shown: 동기화 (old part) and 데이터');
+      await p.click('[data-theme-set="dark"]'); await p.waitForTimeout(150);
+      ok(await p.getAttribute('html', 'data-theme') === 'dark' && await p.getAttribute('[data-theme-set="dark"]', 'aria-pressed') === 'true', '어둡게: page dark, button pressed');
+      await p.click('[data-theme-set="light"]');
+      await p.click('[data-zoom="100"]'); await p.waitForTimeout(150);
+      ok(await p.getAttribute('#setBox [data-zoom="100"]', 'aria-pressed') === 'true' && await p.getAttribute('#setBox [data-zoom="60"]', 'aria-pressed') === 'false', '넓게 pressed');
+      ok(await p.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--hour').trim()) === '100px', 'schedule spacing changed');
+      await p.click('[data-zoom="60"]');
+      await p.click('#wipeBtn'); await p.waitForTimeout(100);
+      ok((await p.textContent('#wipeBtn')).includes('한 번 더') && await vis(p, '#wipeCancel'), '모두 초기화 asks once more');
+      await p.click('#wipeCancel'); await p.waitForTimeout(100);
+      ok((await p.textContent('#wipeBtn')) === '모두 초기화', '취소 goes back');
+      await p.evaluate(() => { const x = document.querySelector('#setBox [data-sbmode="join"]'); x.disabled = true });
+      await p.click('[data-theme-set="light"]'); await p.waitForTimeout(100);
+      ok(!(await p.isDisabled('#setBox [data-sbmode="join"]')), 'old parts are drawn fresh on every redraw (like before)');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'React screen: 기기 간 동기화 (wrong password, boxes cleared, button not stuck, logout)',
+    async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
+      S.users['sy2@x.com'] = 'pass123';
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await openSettings(p);
+      await p.fill('#sbEmail', 'sy2@x.com'); await p.fill('#sbPw', 'wrong!!'); await p.click('#sbGo'); await p.waitForTimeout(800);
+      ok((await p.textContent('#setBox .kmsg')).includes('맞지 않아요'), 'wrong password: message shown');
+      ok(await p.inputValue('#sbPw') === '' && await p.inputValue('#sbEmail') === 'sy2@x.com', 'password box emptied, email kept');
+      ok(!(await p.isDisabled('#sbGo')) && (await p.textContent('#sbGo')) === '로그인', 'login button usable again');
+      await p.fill('#sbPw', 'pass123'); await p.click('#sbGo'); await p.waitForTimeout(1800);
+      ok(await vis(p, '#sbNow') && (await p.textContent('#setBox')).includes('sy2@x.com'), 'logged in: account and 지금 동기화 shown');
+      await p.click('#sbOut'); await p.waitForTimeout(300);
+      ok(await vis(p, '#sbForm'), 'logout: back to the login form');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'React screen: 내 장소 (add and name a place, clear home, saved on this device)',
+    async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
+      const p = await device(b, S, { ls: { 'jepi.myplaces': [{ id: 'home', name: '집', ll: [37.5665, 126.978], addr: '서울 중구 세종대로 110' }, { id: 'work', name: '회사', ll: null, addr: '' }] } });
+      await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await openSettings(p);
+      ok((await p.textContent('#setBox')).includes('세종대로 110'), 'saved address shown');
+      await p.click('#mypAdd'); await p.waitForTimeout(100);
+      ok(await vis(p, '#mypName') && await vis(p, '[data-myphere]'), 'new place opens for editing');
+      await p.fill('#mypName', '본가'); await p.click('#mypDone'); await p.waitForTimeout(100);
+      ok((await p.textContent('#setBox')).includes('📍 본가') && await p.evaluate(() => JSON.parse(localStorage.getItem('jepi.myplaces')).some(x => x.name === '본가')), 'named and saved');
+      await p.click('[data-mypedit="home"]'); await p.click('[data-mypclear="home"]'); await p.waitForTimeout(100);
+      ok(await p.evaluate(() => JSON.parse(localStorage.getItem('jepi.myplaces')).find(x => x.id === 'home').ll === null) && (await p.textContent('#setBox [data-mypedit="home"]')) === '등록', '위치 지우기 clears home');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'React screen: AI·지도 연결 (empty key asks, key saved and only shown masked, 보기 keeps typing, delete)',
+    async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await openSettings(p);
+      await p.click('[data-keyedit="kakao"]'); await p.waitForTimeout(100);
+      ok(await p.evaluate(() => document.activeElement && document.activeElement.id === 'keyIn') && await p.getAttribute('#keyIn', 'type') === 'password', 'key box opens, ready to type, hidden');
+      await p.click('[data-keysave="kakao"]'); await p.waitForTimeout(100);
+      ok((await p.textContent('#setBox')).includes('키를 붙여 넣어 주세요'), 'empty key: asks for one');
+      const key = '0123456789abcdef0123456789abcdef';
+      await p.fill('#keyIn', key); await p.click('#keyShow'); await p.waitForTimeout(100);
+      ok(await p.getAttribute('#keyIn', 'type') === 'text' && await p.inputValue('#keyIn') === key, '보기 shows what was typed');
+      await p.click('[data-keysave="kakao"]'); await p.waitForTimeout(400);
+      ok(await p.evaluate(k => JSON.parse(localStorage.getItem('jepi.keys')).kakao === k, key), 'key saved on this device');
+      const shown = await p.textContent('#setBox');
+      ok(!shown.includes(key) && shown.includes('012345••••••cdef'), 'the screen shows it only masked');
+      await p.click('[data-keydel="kakao"]'); await p.waitForTimeout(200);
+      ok(await vis(p, '[data-keyedit="kakao"]') && !(await p.evaluate(() => 'kakao' in JSON.parse(localStorage.getItem('jepi.keys') || '{}'))), '삭제 removes it');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'React screen: 취향 키워드 (add, typing kept while the app redraws, box empty after adding, remove)',
+    async run({ b, S, device, ok, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="pref"]'); await p.waitForTimeout(250);
+      const saved = () => p.evaluate(() => JSON.parse(localStorage.getItem('gp.kw') || '[]'));
+      await p.fill('#kwInput', '레코');
+      await p.evaluate(() => document.querySelector('[data-jp="P"]').click()); await p.waitForTimeout(150);   // the whole app redraws
+      await p.evaluate(() => document.querySelector('[data-jp="J"]').click()); await p.waitForTimeout(150);
+      ok(await p.inputValue('#kwInput') === '레코', 'what you typed stays while the app redraws');
+      await p.fill('#kwInput', '레코드'); await p.press('#kwInput', 'Enter'); await p.waitForTimeout(150);
+      ok((await saved()).includes('레코드') && (await p.textContent('#prefBox .kw-list')).includes('#레코드'), 'keyword added and saved');
+      ok(await p.inputValue('#kwInput') === '', 'box empty after adding');
+      const n = (await saved()).length;
+      await p.click('#prefBox [data-kwdel="0"]'); await p.waitForTimeout(150);
+      ok((await saved()).length === n - 1, '× removes one');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'React screen: 장소 찾기 (chips, typed words kept, no AI message, shares the sheet with the block sheet)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await p.evaluate(() => window.__jepi.openFind({ when: 'gap', into: 'sched' })); await p.waitForTimeout(150);
+      ok(await p.getAttribute('[data-find="when:gap"]', 'aria-pressed') === 'true', 'opens with 빈 시간에');
+      await p.fill('#findQ', '카페');
+      await p.click('[data-find="into:list"]'); await p.waitForTimeout(100);
+      ok(await p.getAttribute('[data-find="into:list"]', 'aria-pressed') === 'true' && await p.inputValue('#findQ') === '카페', 'chip switched, typed words kept');
+      await p.click('#findGo'); await p.waitForTimeout(300);
+      ok((await p.textContent('#findSt')).includes('AI가 연결되어 있지 않아요') && !(await p.isDisabled('#findGo')), 'no AI: says so, button usable');
+      await p.click('#sheet [data-close]'); await p.waitForTimeout(100);
+      await p.click('#grid .blk:has-text("구로몬")'); await p.waitForTimeout(200);
+      ok(await vis(p, '#sheet [data-mv="30"]') && !(await vis(p, '#findForm')), 'a block opens its own sheet in the same place');
+      await p.click('#sheet [data-close="1"]').catch(() => {});
+      await p.evaluate(() => window.__jepi.openFind({ where: 'city' })); await p.waitForTimeout(150);
+      ok(await vis(p, '#findForm') && await p.getAttribute('[data-find="where:city"]', 'aria-pressed') === 'true' && await p.inputValue('#findQ') === '', '찾기 opens again fresh after the block sheet');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'React screen: 이번 여행 rows (open/close, auto-save message keeps the box you type in)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="me"]'); await p.waitForTimeout(250);
+      ok(await p.$$eval('#meBox .merow', e => e.length) === 6, 'six rows for a trip');
+      await p.click('[data-meopen="bud"]'); await p.waitForTimeout(150);
+      ok(await vis(p, '#meBox .mebody') && await p.getAttribute('[data-meopen="bud"]', 'aria-expanded') === 'true', 'tapping a row opens it');
+      const box = '#meBox .mebody input[data-pf]:not([type="hidden"]) >> nth=0';
+      await p.click(box); await p.fill(box, '1234'); await p.dispatchEvent(box, 'change'); await p.waitForTimeout(800);
+      ok((await p.textContent('#meMsg')).includes('자동 저장됨'), 'auto-save message shown');
+      ok(await p.evaluate(() => document.activeElement && document.activeElement.matches('#meBox .mebody input[data-pf]')) && await p.inputValue(box) === '1234', 'the box you typed in stays (not redrawn)');
+      await p.click('[data-meopen="bud"]'); await p.waitForTimeout(150);
+      ok(!(await vis(p, '#meBox .mebody')), 'tapping again closes it');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];

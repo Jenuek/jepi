@@ -11,34 +11,17 @@ const KEY_HELP={
 };
 let keyEdit=null, keyShow=false;
 const isBad=k=>!!keyBad[k==='gmaps'?'google':k];
-function keyRow(k){const d=KEY_DEF[k], v=KEYS[k];
-  const st=keyMsg[k]?`<small class="kmsg">${esc(keyMsg[k])}</small>`:'';
-  if(keyEdit===k) return `<div class="krow open"><div class="kh"><b>${d.name}</b><small>${d.sub}</small></div>
-    <div class="kin"><input id="keyIn" type="${keyShow?'text':'password'}" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${d.ph}" value=""><button class="small-btn" type="button" id="keyShow">${keyShow?'숨기기':'보기'}</button></div>
-    <div class="row"><button class="small-btn primary" type="button" data-keysave="${k}">저장</button><button class="small-btn" type="button" id="keyCancel">취소</button></div>
-    <details class="khelp"><summary>키 받는 법</summary>${KEY_HELP[k]}</details>${st}</div>`;
-  return `<div class="krow"><div class="kh"><b>${d.name}</b><small>${v?`<span class="mono">${esc(maskKey(v))}</span>`:d.sub}</small>${st}</div>
-    ${v?`<span class="mchip ${isBad(k)?'warn':'ok'}">${isBad(k)?'확인 필요':'연결됨'}</span><button class="small-btn" type="button" data-keytest="${k}">확인</button><button class="small-btn" type="button" data-keyedit="${k}">바꾸기</button><button class="small-btn danger" type="button" data-keydel="${k}">삭제</button>`
-     :`<button class="small-btn primary" type="button" data-keyedit="${k}">연결</button>`}</div>`}
+// The frame is drawn by React: app/screens/SettingsScreen.tsx. The parts below are still old HTML.
+let settingsRev=0;
+// AI·지도 연결 is drawn by React: app/screens/AiKeysSection.tsx. Only the masked keys go there.
+function settingsAI(){return {standalone:!!STANDALONE,editing:keyEdit,show:!!keyShow,hasGemini:!!KEYS.gemini,routesOk:+routeStats.ok||0,
+  models:{heavy:MODELS.heavy,light:MODELS.light,gemini:MODELS.gemini},
+  hours:KEYS.gmaps?{use:+hoursUse(),cap:HOURS_CAP,off:hoursOff||''}:null,
+  keys:Object.keys(KEY_DEF).map(k=>{const d=KEY_DEF[k];return {k,name:d.name,sub:d.sub,ph:d.ph,masked:KEYS[k]?maskKey(KEYS[k]):'',bad:isBad(k),msg:keyMsg[k]||'',helpHTML:KEY_HELP[k]}})}}
 function renderSettings(){
   const el=$('#setBox'); if(!el) return;
-  const zoom=store.get('gp.zoom',60);
-  el.innerHTML=`<section class="sset"><h3>화면</h3><div class="mgroup pad">
-    <div class="srow"><span>테마</span><div class="radio">${[['light','밝게'],['dark','어둡게'],['system','기기 설정']].map(([v,l])=>`<button type="button" data-theme-set="${v}" aria-pressed="${themePref===v}">${l}</button>`).join('')}</div></div>
-    <div class="srow"><span>시간 간격</span><div class="radio"><button type="button" data-zoom="60" aria-pressed="${zoom!==100}">보통</button><button type="button" data-zoom="100" aria-pressed="${zoom===100}">넓게</button></div></div></div></section>
-  <section class="sset"><h3>기기 간 동기화</h3>${syncHTML()}</section>
-  <section class="sset"><h3>내 장소</h3>${mypHTML()}</section>
-  <section class="sset"><h3>AI·지도 연결 <small>· 로그인하면 비밀번호로 잠가서 기기끼리 맞춰요</small></h3>${STANDALONE?`<div class="mgroup">${Object.keys(KEY_DEF).map(keyRow).join('')}</div>
-    <p class="hint">무거운 작업(일정 짜기, 여행지 준비)은 Claude ${esc(MODELS.heavy)}, 가벼운 작업(키워드, 예약 내용 읽기)은 ${KEYS.gemini?'Gemini Flash':'Claude '+esc(MODELS.light)}가 맡아요. 경로는 국내는 카카오, 해외는 Google로 계산하고 한 번 계산한 구간은 이 기기에 저장해 다시 부르지 않아요${routeStats.ok?` (이번에 ${routeStats.ok}구간 계산)`:''}.</p>
-    ${hoursHint()}<details class="khelp"><summary>고급: 모델 이름</summary><div class="fg"><label>무거운 작업<input id="mHeavy" value="${esc(MODELS.heavy)}"></label><label>가벼운 작업 (Claude)<input id="mLight" value="${esc(MODELS.light)}"></label><label>Gemini<input id="mGem" value="${esc(MODELS.gemini)}"></label></div><div class="row"><button class="small-btn" type="button" id="mSave">모델 저장</button></div></details>`
-    :`<p class="hint">Claude 안에서는 AI가 자동으로 연결돼요. 지도 키는 깃허브 앱 버전에서 넣을 수 있어요.</p>`}</section>
-  ${SETTINGS_EXTRA.map(f=>f()).join('')}
-  <section class="sset"><h3>데이터</h3><div class="mgroup pad">
-    <div class="row"><button class="small-btn" type="button" id="backupAll">전체 백업 받기</button><label class="small-btn filebtn">백업 불러오기<input type="file" accept=".json,application/json" class="importFile"></label></div>
-    <p class="hint">로그인해 두면 계획은 서버에 자동으로 맞춰져요. 백업은 파일로 따로 보관하고 싶을 때 받아요.</p>
-    <hr><p class="hint">저장한 계획 전부, 취향, 일정 블록을 지우고 처음부터 시작해요. 되돌릴 수 없어요. 연결한 키는 남아요.</p>
-    <div class="row"><button class="small-btn danger" type="button" id="wipeBtn">${wipeArm?'한 번 더 누르면 모두 지워요':'모두 초기화'}</button>${wipeArm?'<button class="small-btn" type="button" id="wipeCancel">취소</button>':''}</div></div></section>
-  <p class="hint" style="text-align:center">JEPI · ${esc(location.host||'로컬')}</p>`;
+  window.JEPI_UI.mount('settings',el,{theme:themePref,zoom:store.get('gp.zoom',60),sync:syncView(),myPlaces:mypView(),ai:settingsAI(),
+    extrasHTML:SETTINGS_EXTRA.map(f=>f()).join(''),wipeArm:!!wipeArm,host:location.host||'로컬',rev:++settingsRev});
 }
 function backupAll(){
   snapshotCurrent();
