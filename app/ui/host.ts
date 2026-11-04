@@ -52,6 +52,8 @@ export interface AppHost {
   aibox(name: string, value?: string): void;
   /** 설정: theme, zoom, keyedit, keycancel, keysave (key name, typed key), keydel, keytest, models, backup, wipe, wipecancel */
   settings(name: string, value?: string, value2?: unknown): void;
+  /** 처음 설정 / 이번 여행 / 취향 forms: what was pressed (pickjp, q, startmode, talk…, dest…, radio, addstay, …) */
+  form(name: string, value?: string, more?: Record<string, unknown>): void;
   /** a backup file was chosen (처음 설정 · 내 계획 · 설정) */
   importFile(f: File | undefined): void;
 }

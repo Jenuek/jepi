@@ -349,6 +349,65 @@ function rerenderForm(){
   if(!ob.hidden) renderOnb(); else {if(tab==='me'||matchMedia('(min-width:900px)').matches) renderMe(); if(tab==='pref') renderTasteStyle();}
   ob.scrollTop=oy; sd.scrollTop=sy; window.scrollTo(0,wy);
 }
+// What was pressed in 처음 설정 / 이번 여행 / 취향 (OnbBody, OnbTalk, OnbFinder, TripForms, MeRows, TasteStyle tell:
+// its name, its value and a few extras). The forms change `draft`; rerenderForm draws them again.
+async function formAct(n,v,o){
+  o=o||{};
+  // 이번 여행 / 취향: these save themselves a moment later (autoSave does nothing while 처음 설정 is open)
+  if(['radio','addstay','delstay','addev','delev'].includes(n)) setTimeout(autoSave,0);
+  switch(n){
+  // 처음 설정
+  case 'onbkey': {const key=String(o.key||'').trim().replace(/\s+/g,'');if(!key)return;KEYS[v]=key;keysChanged();return}
+  case 'pickjp': if(!draft)return;draft.jpPicked=true;setJP(v);if(v==='P'){draft.startMode='pq';draft.q={when:'',len:'',slot:'noon'}}renderOnb();return;
+  case 'q': {if(!draft)return;const q=draft.q||(draft.q={}),k=o.q;if(k==='party'){draft.party.type=v;if(v==='friends'&&draft.party.adults<2)draft.party.adults=3;if(v==='couple')draft.party.adults=2;if(v==='family'&&draft.party.adults<2)draft.party.adults=2}else q[k]=v;if(k==='when'&&v!=='pick')draft.dateSet=true;if(k==='when'&&v==='pick')draft.dateSet=false;rerenderForm();return}
+  case 'quickStart': quickStart();return;
+  case 'startmode': if(!draft)return;draft.startMode=v;draft.kind=draft.startMode==='day'?'day':'trip';if(draft.kind==='day'){draft.nightsSet=true;draft.bookedFlight=true;draft.bookedStay=true;draft.flightSet=true;draft.staySet=true;draft.q={when:'',len:'0',slot:'noon'}}if(o.destmode!=null)draft.destMode=o.destmode;else if(v==='quick'&&!o.inChoose)draft.destMode=draft.dest?'':'find';if(draft.startMode==='talk'&&!talk)talkReset();renderOnb();return;
+  // 이야기하면서 정하기
+  case 'talkopt': if(talk)talkSend(talk.options[+v]);return;
+  case 'talkSend': {const x=String(v||'').trim();if(x)talkSend(x);return}
+  case 'talkFinish': talkSend('__finish__');return;
+  case 'talkRetry': talkSend(null,{retry:true});return;
+  case 'talkRedo': talkReset();rerenderForm();return;
+  case 'talkApply': if(talk&&talk.summary){const S=talk.summary;draft.startMode='quick';
+    if(S.dest){draft.dest=S.dest;draft.destMode='';draft.fromTalk=true;renderOnb()}
+    else{draft.destMode='find';draft.want=draft.purpose||'';draft.fromTalk=true;renderOnb()}}
+    return;
+  // 여행지 찾기
+  case 'destmode': if(!draft)return;draft.destMode=v;rerenderForm();return;
+  case 'destRec': if(!datesReady(draft)){needDates();return}recommendDest();return;
+  case 'destMore': recommendDest({more:true});return;
+  case 'destAsk': {const x=String(v||'').trim();if(x)recommendDest({ask:x});else setSt('st_ask','궁금한 여행지를 적어 주세요.');return}
+  case 'pickdest': case 'pickask': {if(!draft||(n==='pickdest'&&!destRecs))return;const dd=n==='pickask'?destAsked[+v]:destRecs[+v];if(!dd)return;draft.dest=dd.city;draft.destMode='';draft.bookedFlight=false;draft.bookedStay=false;draft.mode=dd.country&&dd.country!=='대한민국'&&dd.country!=='한국'?'flight':draft.mode;rerenderForm();
+    setTimeout(()=>{if(sample)formAct('genPack')},0);return}
+  case 'genPack': {
+    const dest=String((draft&&draft.dest)||($('[data-pf="dest"]')||{}).value||'').trim();
+    if(!dest){setSt('st_pack','여행지를 먼저 적어 주세요.');return}
+    if(draft) draft.dest=dest;
+    if(onbBusy){setSt('st_pack','이미 준비하는 중이에요. 잠시만 기다려 주세요.');return}
+    setSt('st_pack','요청을 보내는 중이에요…');
+    const btn=()=>$('#onb').hidden?$('#genPack'):$('#onb #genPack');
+    (async()=>{const inOnb=!$('#onb').hidden;if(await genPack(dest)){if(inOnb)renderOnb();else{commitProfile(draft);renderAll();renderMe();await morePlaces(24,'st_pack','');renderAll()}}})()
+      .catch(err=>{onbBusy=false;setBusy(false);{const L=window.JEPI_UI.live(btn());if(L)L.label(null)}setSt('st_pack','문제가 생겼어요: '+((err&&(err.message||err.code))||err)+' · 다시 눌러 주세요.')});
+    return}
+  // 고르기 (Radio): style.* opens the style box
+  case 'radio': {const path=v;if(path.startsWith('style.'))styleOpen=true;let x=o.val;if(x==='true')x=true;else if(x==='false')x=false;if(draft){setPath(draft,path,x);if(path==='mode')draft.local=x==='car'?'car':'transit';if(path==='party.type'){const q=draft.party;if(x==='couple')q.adults=2;if(x==='friends'&&q.adults<2)q.adults=3;if(x==='family'){if(q.adults<2)q.adults=2;if(!q.kids)q.kids=1;draft.pace='slow'}fixProfile(draft)}rerenderForm()}return}
+  // 이번 여행
+  case 'addstay': if(!draft)return;{const nn=nightsOf(draft);draft.stays.push({name:'숙소 '+(draft.stays.length+1),area:firstArea(),checkin:'15:00',checkout:'11:00',from:Math.max(0,nn-1),to:nn})}rerenderForm();return;
+  case 'delstay': if(!draft)return;draft.stays.splice(+v,1);rerenderForm();return;
+  case 'addev': if(!draft)return;draft.events.push({name:'',day:0,start:'19:00',end:'21:00',area:firstArea()});rerenderForm();return;
+  case 'delev': if(!draft)return;draft.events.splice(+v,1);rerenderForm();return;
+  case 'aifill': aiFill(v);return;
+  case 'meSave': commitProfile(draft);draft=clone(profile);renderAll();renderMe();meSetMsg('저장했어요. 고정 블록을 다시 만들었어요.');return;
+  case 'meOnb': openOnb();return;
+  case 'meHelper': openHelper(0);return;
+  case 'meopen': meOpen=meOpen===v?null:v;autoMsg='';pasteMsg={};renderMeRows();return;
+  case 'homeUse': {if(!draft)return;const h=mypOf('home');if(!h||!h.ll)return;draft.home.ll=h.ll;draft.home.area='집';homeMsg='출발지를 집으로 바꿨어요.';autoSave();renderMeRows();return}
+  case 'homeair': {if(!draft)return;const h=mypOf('home'),a=KR_AIR[v];if(!h||!h.ll)return;homeMsg='경로를 계산하는 중…';renderMeRows();
+    try{const r=await fetchRoute({m:'transit',a:h.ll,b:[a[1],a[2]],pv:'kakao'});if(!r)throw new Error('경로를 찾지 못했어요');
+      draft.home.ll=h.ll;draft.home.area='집';draft.home.min=Math.min(240,Math.max(10,Math.ceil(r.min/5)*5));homeMsg=`집 → ${a[0]}: ${r.label} 약 ${r.min}분${r.lines?` (${r.lines})`:''}으로 넣었어요.`;autoSave()}
+    catch(err){homeMsg=(err&&err.message)||'계산하지 못했어요'}renderMeRows();return}
+  }
+}
 function onPf(e){const el=e.target;if(el&&el.dataset&&el.dataset.pk&&e.type==='change'){const v=+el.value;if(v>0){PACK[el.dataset.pk]=v;KRW_PER_JPY=v;savePack();renderBudget()}return}
   if(!el||!el.dataset||!el.dataset.pf||!draft) return;let v=el.value;if(el.dataset.type==='num') v=+v;setPath(draft,el.dataset.pf,v);
   if(el.dataset.pf==='startDate'&&el.value){draft.dateSet=true;draft.dateUnknown=false} if(el.dataset.pf==='nights') draft.nightsSet=true;
@@ -1908,19 +1967,14 @@ function renderExt(){renderPhase();renderMore();renderPlanBtn();
 // events for the new panels (registered before the main handler; returns early only for its own controls)
 document.addEventListener('click',e=>{
   const t=e.target.closest('button,a,label,input'); if(!t) return;
-  if(t.dataset.meopen){meOpen=meOpen===t.dataset.meopen?null:t.dataset.meopen;autoMsg='';pasteMsg={};renderMeRows();return}
-  if(t.id==='meHelper2'){openHelper(0);return}
   if(t.id==='moreAll'){moreAll=!moreAll;renderMore();return}
   if(t.id==='wishGo'){cat='wish';tab='tray';renderTray();renderTabs();return}
   if(t.dataset.mapday!=null){mapState.all=t.dataset.mapday==='all';document.querySelectorAll('[data-mapday]').forEach(b=>b.setAttribute('aria-pressed',String((b.dataset.mapday==='all')===mapState.all)));drawMap(true);return}
   if(t.id==='mapMe'){locateMe();return}
-  if(t.dataset.onbkey){const k=t.dataset.onbkey,i=document.getElementById('onbKey_'+k),v=(i&&i.value||'').trim().replace(/\s+/g,'');if(!v)return;KEYS[k]=v;keysChanged();return}
 });
 document.addEventListener('click',e=>{const c=e.target.closest('.mcard');if(!c||e.target.closest('a'))return;const {stops}=mapLegs(day);const s=stops[+c.dataset.mapi];if(s&&mapState.map){mapState.map.setView(s.ll,16)}});
 // autosave for 이번 여행 / 취향 panels
 document.addEventListener('change',e=>{if(e.target.closest&&e.target.closest('#meBox,#tasteStyle')&&!e.target.classList.contains('importFile'))autoSave()});
-document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t||!t.closest('#meBox,#tasteStyle'))return;
-  if(t.dataset.radio!=null||t.dataset.addstay!=null||t.dataset.delstay!=null||t.dataset.addev!=null||t.dataset.delev!=null||t.dataset.styletoggle!=null)setTimeout(autoSave,0)});
 // onboarding: connect AI right on the first screen
 
 
@@ -2077,13 +2131,6 @@ let homeMsg='';
 // 오가는 길 → 출발지 (drawn by React: TripForms.tsx HomeBox)
 function partHomeBox(p){if(p.mode==='car')return null;const h=mypOf('home');
   return {f:'homeBox',hasHome:!!(h&&h.ll),addr:(h&&h.addr)||'',using:!!p.home.ll,kakao:KEYS.kakao?Object.entries(KR_AIR).map(([k,a])=>[k,a[0]]):[],msg:homeMsg}}
-document.addEventListener('click',async e=>{const t=e.target.closest('button');if(!t||!draft)return;
-  if(t.id==='homeUse'){const h=mypOf('home');if(!h||!h.ll)return;draft.home.ll=h.ll;draft.home.area='집';homeMsg='출발지를 집으로 바꿨어요.';autoSave();renderMeRows();return}
-  if(t.dataset.homeair){const h=mypOf('home'),a=KR_AIR[t.dataset.homeair];if(!h||!h.ll)return;homeMsg='경로를 계산하는 중…';renderMeRows();
-    try{const v=await fetchRoute({m:'transit',a:h.ll,b:[a[1],a[2]],pv:'kakao'});if(!v)throw new Error('경로를 찾지 못했어요');
-      draft.home.ll=h.ll;draft.home.area='집';draft.home.min=Math.min(240,Math.max(10,Math.ceil(v.min/5)*5));homeMsg=`집 → ${a[0]}: ${v.label} 약 ${v.min}분${v.lines?` (${v.lines})`:''}으로 넣었어요.`;autoSave()}
-    catch(err){homeMsg=(err&&err.message)||'계산하지 못했어요'}renderMeRows();return}
-});
 // ================= 뭐 하지? — anywhere, any area, one place or a whole course =================
 const DO_MOODS=NB.DO_MOODS, TYPE_ICON=NB.TYPE_ICON;   // app/data/nearby.ts
 let doS={base:null,org:'gps',area:null,when:'now',at:'18:00',clen:'short',mood:'any',pick:null,rolls:0,course:null,busy:false,msg:'',origin:null,where:'',src:'',hits:[],chosen:null,cond:false};
@@ -2812,43 +2859,7 @@ document.addEventListener('click',e=>{
   if(t.id==='onbPrev'){if(onbStep>0){onbStep--;renderOnb()}return}
   if(t.id==='onbSkip'&&placeCtl){placeCtl.abort();return}
   if(t.id==='onbNext'||t.id==='onbSkip'){onbAdvance();return}
-  if(t.dataset.pickjp&&draft){draft.jpPicked=true;setJP(t.dataset.pickjp);if(t.dataset.pickjp==='P'){draft.startMode='pq';draft.q={when:'',len:'',slot:'noon'}}renderOnb();return}
-  if(t.dataset.q&&draft){const q=draft.q||(draft.q={});const v=t.dataset.qv;if(t.dataset.q==='party'){draft.party.type=v;if(v==='friends'&&draft.party.adults<2)draft.party.adults=3;if(v==='couple')draft.party.adults=2;if(v==='family'&&draft.party.adults<2)draft.party.adults=2}else q[t.dataset.q]=v;if(t.dataset.q==='when'&&v!=='pick')draft.dateSet=true;if(t.dataset.q==='when'&&v==='pick')draft.dateSet=false;rerenderForm();return}
-  if(t.id==='quickStart'){quickStart();return}
-  if(t.dataset.startmode&&draft){draft.startMode=t.dataset.startmode;draft.kind=draft.startMode==='day'?'day':'trip';if(draft.kind==='day'){draft.nightsSet=true;draft.bookedFlight=true;draft.bookedStay=true;draft.flightSet=true;draft.staySet=true;draft.q={when:'',len:'0',slot:'noon'}}if(t.dataset.destmode!=null)draft.destMode=t.dataset.destmode;else if(t.dataset.startmode==='quick'&&!t.closest('.choose'))draft.destMode=draft.dest?'':'find';if(draft.startMode==='talk'&&!talk)talkReset();renderOnb();return}
-  if(t.dataset.talkopt!=null&&talk){talkSend(talk.options[+t.dataset.talkopt]);return}
-  if(t.id==='talkSend'){const v=(($('#talkInput')||{}).value||'').trim();if(v)talkSend(v);return}
-  if(t.id==='talkFinish'){talkSend('__finish__');return}
-  if(t.id==='talkRetry'){talkSend(null,{retry:true});return}
-  if(t.id==='talkRedo'){talkReset();rerenderForm();return}
-  if(t.id==='talkApply'&&talk&&talk.summary){const S=talk.summary;draft.startMode='quick';
-    if(S.dest){draft.dest=S.dest;draft.destMode='';draft.fromTalk=true;renderOnb()}
-    else{draft.destMode='find';draft.want=draft.purpose||'';draft.fromTalk=true;renderOnb()}
-    return}
-  if(t.dataset.destmode!=null&&draft){draft.destMode=t.dataset.destmode;rerenderForm();return}
-  if(t.id==='destRecBtn'){if(!datesReady(draft)){needDates();return}recommendDest();return}
-  if(t.id==='destMoreBtn'){recommendDest({more:true});return}
-  if(t.id==='destAskBtn'){const v=(($('#destAsk')||{}).value||'').trim();if(v)recommendDest({ask:v});else setSt('st_ask','궁금한 여행지를 적어 주세요.');return}
-  if((t.dataset.pickdest!=null&&destRecs||t.dataset.pickask!=null)&&draft){const dd=t.dataset.pickask!=null?destAsked[+t.dataset.pickask]:destRecs[+t.dataset.pickdest];if(!dd)return;draft.dest=dd.city;draft.destMode='';draft.bookedFlight=false;draft.bookedStay=false;draft.mode=dd.country&&dd.country!=='대한민국'&&dd.country!=='한국'?'flight':draft.mode;rerenderForm();
-    setTimeout(()=>{const b=$('#onb').hidden?$('#genPack'):$('#onb #genPack');if(b&&sample)b.click()},0);return}
-  if(t.id==='genPack'){
-    const dest=String((draft&&draft.dest)||($('[data-pf="dest"]')||{}).value||'').trim();
-    if(!dest){setSt('st_pack','여행지를 먼저 적어 주세요.');return}
-    if(draft) draft.dest=dest;
-    if(onbBusy){setSt('st_pack','이미 준비하는 중이에요. 잠시만 기다려 주세요.');return}
-    setSt('st_pack','요청을 보내는 중이에요…');
-    (async()=>{const inOnb=!$('#onb').hidden;if(await genPack(dest)){if(inOnb)renderOnb();else{commitProfile(draft);renderAll();renderMe();await morePlaces(24,'st_pack','');renderAll()}}})()
-      .catch(err=>{onbBusy=false;setBusy(false);{const L=window.JEPI_UI.live(t);if(L)L.label(null);else t.textContent='AI로 여행지 준비하기'}setSt('st_pack','문제가 생겼어요: '+((err&&(err.message||err.code))||err)+' · 다시 눌러 주세요.')});
-    return}
   if(t.id==='onbExample'){if(onbBusy)return;demoEnter();return}
-  if(t.dataset.radio){if(t.dataset.radio.startsWith('style.'))styleOpen=true;let v=t.dataset.val;if(v==='true')v=true;else if(v==='false')v=false;if(draft){setPath(draft,t.dataset.radio,v);if(t.dataset.radio==='mode')draft.local=v==='car'?'car':'transit';if(t.dataset.radio==='party.type'){const q=draft.party;if(v==='couple')q.adults=2;if(v==='friends'&&q.adults<2)q.adults=3;if(v==='family'){if(q.adults<2)q.adults=2;if(!q.kids)q.kids=1;draft.pace='slow'}fixProfile(draft)}rerenderForm()}return}
-  if(t.dataset.addstay&&draft){const n=nightsOf(draft);draft.stays.push({name:'숙소 '+(draft.stays.length+1),area:firstArea(),checkin:'15:00',checkout:'11:00',from:Math.max(0,n-1),to:n});rerenderForm();return}
-  if(t.dataset.delstay!=null&&draft){draft.stays.splice(+t.dataset.delstay,1);rerenderForm();return}
-  if(t.dataset.addev&&draft){draft.events.push({name:'',day:0,start:'19:00',end:'21:00',area:firstArea()});rerenderForm();return}
-  if(t.dataset.delev!=null&&draft){draft.events.splice(+t.dataset.delev,1);rerenderForm();return}
-  if(t.dataset.aifill){aiFill(t.dataset.aifill);return}
-  if(t.id==='meSave'){commitProfile(draft);draft=clone(profile);renderAll();renderMe();meSetMsg('저장했어요. 고정 블록을 다시 만들었어요.');return}
-  if(t.id==='meOnb'){openOnb();return}
   if(t.dataset.group){group=t.dataset.group;renderTray();return}
   if(t.dataset.jp){setJP(t.dataset.jp);renderAll();return}
   if(t.id==='diceFab'){openDiceTab(mealNow()==='snack'?'do':'eat',null);return}
@@ -2857,7 +2868,7 @@ document.addEventListener('click',e=>{
   if(t.id==='coachAgain'){showCoach(0);return}
   if(t.id==='moreHelper'){openHelper(wish.length?1:0);return}
   if(t.id==='fixWarnChip'){fixWarns();return}
-  if(t.id==='helperBtn'||t.id==='meHelper'){openHelper(0);return}
+  if(t.id==='helperBtn'){openHelper(0);return}
   if(t.id==='helperPrev'){if(hStep>0){hStep--;renderHelper();$('#helper').scrollTop=0}return}
   if(t.id==='helperNext'){if(hStep<H_STEPS.length-1){hStep++;renderHelper();$('#helper').scrollTop=0}else closeHelper();return}
   if(t.id==='helperClose'){closeHelper();return}
@@ -2876,7 +2887,6 @@ document.addEventListener('submit',e=>{const f=e.target;
   else if(f.id==='moreForm'){e.preventDefault();const v=$('#moreInput').value.trim();$('#moreInput').value='';openFind({where:'city',into:'list',q:v,autorun:true})}
   else if(f.id==='chatForm'){e.preventDefault();const v=$('#chatInput').value.trim();if(v){$('#chatInput').value='';sendChat(v)}}});
 document.addEventListener('input',onPf);
-document.addEventListener('keydown',e=>{if(e.target&&e.target.id==='talkInput'&&e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();const v=e.target.value.trim();if(v)talkSend(v)}});
 document.addEventListener('input',e=>{if(e.target&&e.target.id==='chatInput'){const x=e.target;x.style.height='auto';x.style.height=Math.min(120,x.scrollHeight)+'px'}}); document.addEventListener('change',onPf);
 document.addEventListener('keydown',e=>{if(e.target&&e.target.id==='chatInput'&&e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();const f=$('#chatForm');f.requestSubmit?f.requestSubmit():f.dispatchEvent(new Event('submit',{cancelable:true,bubbles:true}))}});
 // What was pressed in a block's sheet (BlockSheet.tsx; the sheet's block is #sheet's uid). Only changes that move the
@@ -3324,7 +3334,7 @@ function titleEditing(on){
 document.addEventListener('click',e=>{const t=e.target.closest('#dayTitleEdit');if(t&&!$('#dayTitleIn'))titleEditing(true)});
 // what React screens may ask of the old code (app/ui/host.ts)
 window.JEPI_UI.connectHost({renderAll:()=>renderAll(),closeSheet:()=>closeSheet(),reopenSheet:()=>{const u=$('#sheet').dataset.uid;if(u&&u!=='dice'&&!$('#sheetBg').hidden)openSheet(u)},toast:m=>showToast(m),day:()=>day,autoTitle:d=>String((DAYS[d]||{}).title||''),titleEditing,
-  closeNotebook:()=>closeNotebook(),renamePlan:nm=>lookRenamePlan(nm),aiDayTitles:n=>lookAiTitles(n),errText:(e,w)=>errText(e,w),welcomeNew:()=>{closeWelcome();openOnb()},welcomeDemo:()=>demoEnter(),welcomeLoggedIn:()=>welcomeLoggedIn(),dice:(n,v,m)=>diceAct(n,v,m),place:(n,v)=>placeAct(n,v),plans:(n,v,v2)=>plansAct(n,v,v2),helper:(n,v,v2)=>helperAct(n,v,v2),chat:(n,v)=>chatAct(n,v),pview:(n,v)=>pviewAct(n,v),kw:(n,v)=>kwAct(n,v),grid:(n,v)=>gridAct(n,v),block:(n,v,o)=>blockAct(n,v,o),checks:(n,v,o)=>checksAct(n,v,o),aibox:(n,v)=>aiboxAct(n,v),settings:(n,v,v2)=>settingsAct(n,v,v2),nudge:(n,v)=>nudgeAct(n,v),importFile:f=>importBackup(f,ok=>{if(ok){maybeCoach()}}),shareNotebook:async()=>{await shareLink(true);return planMsg||'링크를 만들었어요'}});
+  closeNotebook:()=>closeNotebook(),renamePlan:nm=>lookRenamePlan(nm),aiDayTitles:n=>lookAiTitles(n),errText:(e,w)=>errText(e,w),welcomeNew:()=>{closeWelcome();openOnb()},welcomeDemo:()=>demoEnter(),welcomeLoggedIn:()=>welcomeLoggedIn(),dice:(n,v,m)=>diceAct(n,v,m),place:(n,v)=>placeAct(n,v),plans:(n,v,v2)=>plansAct(n,v,v2),helper:(n,v,v2)=>helperAct(n,v,v2),chat:(n,v)=>chatAct(n,v),pview:(n,v)=>pviewAct(n,v),kw:(n,v)=>kwAct(n,v),grid:(n,v)=>gridAct(n,v),block:(n,v,o)=>blockAct(n,v,o),checks:(n,v,o)=>checksAct(n,v,o),aibox:(n,v)=>aiboxAct(n,v),settings:(n,v,v2)=>settingsAct(n,v,v2),form:(n,v,o)=>formAct(n,v,o),nudge:(n,v)=>nudgeAct(n,v),importFile:f=>importBackup(f,ok=>{if(ok){maybeCoach()}}),shareNotebook:async()=>{await shareLink(true);return planMsg||'링크를 만들었어요'}});
 // ---------- how a trip looks: theme colour, cover, style, handwriting; folding hero header ----------
 // profile.look = {color, cover:'city'|'sea'|'mountain'|'none'|'photo', photo:dataURL, tagline, style:'color'|'note', hand}
 // Lives in the plan's profile, so it syncs across devices and to friends on a shared trip.

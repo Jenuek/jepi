@@ -91,10 +91,3 @@ let homeMsg='';
 // 오가는 길 → 출발지 (drawn by React: TripForms.tsx HomeBox)
 function partHomeBox(p){if(p.mode==='car')return null;const h=mypOf('home');
   return {f:'homeBox',hasHome:!!(h&&h.ll),addr:(h&&h.addr)||'',using:!!p.home.ll,kakao:KEYS.kakao?Object.entries(KR_AIR).map(([k,a])=>[k,a[0]]):[],msg:homeMsg}}
-document.addEventListener('click',async e=>{const t=e.target.closest('button');if(!t||!draft)return;
-  if(t.id==='homeUse'){const h=mypOf('home');if(!h||!h.ll)return;draft.home.ll=h.ll;draft.home.area='집';homeMsg='출발지를 집으로 바꿨어요.';autoSave();renderMeRows();return}
-  if(t.dataset.homeair){const h=mypOf('home'),a=KR_AIR[t.dataset.homeair];if(!h||!h.ll)return;homeMsg='경로를 계산하는 중…';renderMeRows();
-    try{const v=await fetchRoute({m:'transit',a:h.ll,b:[a[1],a[2]],pv:'kakao'});if(!v)throw new Error('경로를 찾지 못했어요');
-      draft.home.ll=h.ll;draft.home.area='집';draft.home.min=Math.min(240,Math.max(10,Math.ceil(v.min/5)*5));homeMsg=`집 → ${a[0]}: ${v.label} 약 ${v.min}분${v.lines?` (${v.lines})`:''}으로 넣었어요.`;autoSave()}
-    catch(err){homeMsg=(err&&err.message)||'계산하지 못했어요'}renderMeRows();return}
-});

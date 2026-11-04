@@ -43,19 +43,14 @@ function renderExt(){renderPhase();renderMore();renderPlanBtn();
 // events for the new panels (registered before the main handler; returns early only for its own controls)
 document.addEventListener('click',e=>{
   const t=e.target.closest('button,a,label,input'); if(!t) return;
-  if(t.dataset.meopen){meOpen=meOpen===t.dataset.meopen?null:t.dataset.meopen;autoMsg='';pasteMsg={};renderMeRows();return}
-  if(t.id==='meHelper2'){openHelper(0);return}
   if(t.id==='moreAll'){moreAll=!moreAll;renderMore();return}
   if(t.id==='wishGo'){cat='wish';tab='tray';renderTray();renderTabs();return}
   if(t.dataset.mapday!=null){mapState.all=t.dataset.mapday==='all';document.querySelectorAll('[data-mapday]').forEach(b=>b.setAttribute('aria-pressed',String((b.dataset.mapday==='all')===mapState.all)));drawMap(true);return}
   if(t.id==='mapMe'){locateMe();return}
-  if(t.dataset.onbkey){const k=t.dataset.onbkey,i=document.getElementById('onbKey_'+k),v=(i&&i.value||'').trim().replace(/\s+/g,'');if(!v)return;KEYS[k]=v;keysChanged();return}
 });
 document.addEventListener('click',e=>{const c=e.target.closest('.mcard');if(!c||e.target.closest('a'))return;const {stops}=mapLegs(day);const s=stops[+c.dataset.mapi];if(s&&mapState.map){mapState.map.setView(s.ll,16)}});
 // autosave for 이번 여행 / 취향 panels
 document.addEventListener('change',e=>{if(e.target.closest&&e.target.closest('#meBox,#tasteStyle')&&!e.target.classList.contains('importFile'))autoSave()});
-document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t||!t.closest('#meBox,#tasteStyle'))return;
-  if(t.dataset.radio!=null||t.dataset.addstay!=null||t.dataset.delstay!=null||t.dataset.addev!=null||t.dataset.delev!=null||t.dataset.styletoggle!=null)setTimeout(autoSave,0)});
 // onboarding: connect AI right on the first screen
 
 

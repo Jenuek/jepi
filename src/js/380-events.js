@@ -6,43 +6,7 @@ document.addEventListener('click',e=>{
   if(t.id==='onbPrev'){if(onbStep>0){onbStep--;renderOnb()}return}
   if(t.id==='onbSkip'&&placeCtl){placeCtl.abort();return}
   if(t.id==='onbNext'||t.id==='onbSkip'){onbAdvance();return}
-  if(t.dataset.pickjp&&draft){draft.jpPicked=true;setJP(t.dataset.pickjp);if(t.dataset.pickjp==='P'){draft.startMode='pq';draft.q={when:'',len:'',slot:'noon'}}renderOnb();return}
-  if(t.dataset.q&&draft){const q=draft.q||(draft.q={});const v=t.dataset.qv;if(t.dataset.q==='party'){draft.party.type=v;if(v==='friends'&&draft.party.adults<2)draft.party.adults=3;if(v==='couple')draft.party.adults=2;if(v==='family'&&draft.party.adults<2)draft.party.adults=2}else q[t.dataset.q]=v;if(t.dataset.q==='when'&&v!=='pick')draft.dateSet=true;if(t.dataset.q==='when'&&v==='pick')draft.dateSet=false;rerenderForm();return}
-  if(t.id==='quickStart'){quickStart();return}
-  if(t.dataset.startmode&&draft){draft.startMode=t.dataset.startmode;draft.kind=draft.startMode==='day'?'day':'trip';if(draft.kind==='day'){draft.nightsSet=true;draft.bookedFlight=true;draft.bookedStay=true;draft.flightSet=true;draft.staySet=true;draft.q={when:'',len:'0',slot:'noon'}}if(t.dataset.destmode!=null)draft.destMode=t.dataset.destmode;else if(t.dataset.startmode==='quick'&&!t.closest('.choose'))draft.destMode=draft.dest?'':'find';if(draft.startMode==='talk'&&!talk)talkReset();renderOnb();return}
-  if(t.dataset.talkopt!=null&&talk){talkSend(talk.options[+t.dataset.talkopt]);return}
-  if(t.id==='talkSend'){const v=(($('#talkInput')||{}).value||'').trim();if(v)talkSend(v);return}
-  if(t.id==='talkFinish'){talkSend('__finish__');return}
-  if(t.id==='talkRetry'){talkSend(null,{retry:true});return}
-  if(t.id==='talkRedo'){talkReset();rerenderForm();return}
-  if(t.id==='talkApply'&&talk&&talk.summary){const S=talk.summary;draft.startMode='quick';
-    if(S.dest){draft.dest=S.dest;draft.destMode='';draft.fromTalk=true;renderOnb()}
-    else{draft.destMode='find';draft.want=draft.purpose||'';draft.fromTalk=true;renderOnb()}
-    return}
-  if(t.dataset.destmode!=null&&draft){draft.destMode=t.dataset.destmode;rerenderForm();return}
-  if(t.id==='destRecBtn'){if(!datesReady(draft)){needDates();return}recommendDest();return}
-  if(t.id==='destMoreBtn'){recommendDest({more:true});return}
-  if(t.id==='destAskBtn'){const v=(($('#destAsk')||{}).value||'').trim();if(v)recommendDest({ask:v});else setSt('st_ask','궁금한 여행지를 적어 주세요.');return}
-  if((t.dataset.pickdest!=null&&destRecs||t.dataset.pickask!=null)&&draft){const dd=t.dataset.pickask!=null?destAsked[+t.dataset.pickask]:destRecs[+t.dataset.pickdest];if(!dd)return;draft.dest=dd.city;draft.destMode='';draft.bookedFlight=false;draft.bookedStay=false;draft.mode=dd.country&&dd.country!=='대한민국'&&dd.country!=='한국'?'flight':draft.mode;rerenderForm();
-    setTimeout(()=>{const b=$('#onb').hidden?$('#genPack'):$('#onb #genPack');if(b&&sample)b.click()},0);return}
-  if(t.id==='genPack'){
-    const dest=String((draft&&draft.dest)||($('[data-pf="dest"]')||{}).value||'').trim();
-    if(!dest){setSt('st_pack','여행지를 먼저 적어 주세요.');return}
-    if(draft) draft.dest=dest;
-    if(onbBusy){setSt('st_pack','이미 준비하는 중이에요. 잠시만 기다려 주세요.');return}
-    setSt('st_pack','요청을 보내는 중이에요…');
-    (async()=>{const inOnb=!$('#onb').hidden;if(await genPack(dest)){if(inOnb)renderOnb();else{commitProfile(draft);renderAll();renderMe();await morePlaces(24,'st_pack','');renderAll()}}})()
-      .catch(err=>{onbBusy=false;setBusy(false);{const L=window.JEPI_UI.live(t);if(L)L.label(null);else t.textContent='AI로 여행지 준비하기'}setSt('st_pack','문제가 생겼어요: '+((err&&(err.message||err.code))||err)+' · 다시 눌러 주세요.')});
-    return}
   if(t.id==='onbExample'){if(onbBusy)return;demoEnter();return}
-  if(t.dataset.radio){if(t.dataset.radio.startsWith('style.'))styleOpen=true;let v=t.dataset.val;if(v==='true')v=true;else if(v==='false')v=false;if(draft){setPath(draft,t.dataset.radio,v);if(t.dataset.radio==='mode')draft.local=v==='car'?'car':'transit';if(t.dataset.radio==='party.type'){const q=draft.party;if(v==='couple')q.adults=2;if(v==='friends'&&q.adults<2)q.adults=3;if(v==='family'){if(q.adults<2)q.adults=2;if(!q.kids)q.kids=1;draft.pace='slow'}fixProfile(draft)}rerenderForm()}return}
-  if(t.dataset.addstay&&draft){const n=nightsOf(draft);draft.stays.push({name:'숙소 '+(draft.stays.length+1),area:firstArea(),checkin:'15:00',checkout:'11:00',from:Math.max(0,n-1),to:n});rerenderForm();return}
-  if(t.dataset.delstay!=null&&draft){draft.stays.splice(+t.dataset.delstay,1);rerenderForm();return}
-  if(t.dataset.addev&&draft){draft.events.push({name:'',day:0,start:'19:00',end:'21:00',area:firstArea()});rerenderForm();return}
-  if(t.dataset.delev!=null&&draft){draft.events.splice(+t.dataset.delev,1);rerenderForm();return}
-  if(t.dataset.aifill){aiFill(t.dataset.aifill);return}
-  if(t.id==='meSave'){commitProfile(draft);draft=clone(profile);renderAll();renderMe();meSetMsg('저장했어요. 고정 블록을 다시 만들었어요.');return}
-  if(t.id==='meOnb'){openOnb();return}
   if(t.dataset.group){group=t.dataset.group;renderTray();return}
   if(t.dataset.jp){setJP(t.dataset.jp);renderAll();return}
   if(t.id==='diceFab'){openDiceTab(mealNow()==='snack'?'do':'eat',null);return}
@@ -51,7 +15,7 @@ document.addEventListener('click',e=>{
   if(t.id==='coachAgain'){showCoach(0);return}
   if(t.id==='moreHelper'){openHelper(wish.length?1:0);return}
   if(t.id==='fixWarnChip'){fixWarns();return}
-  if(t.id==='helperBtn'||t.id==='meHelper'){openHelper(0);return}
+  if(t.id==='helperBtn'){openHelper(0);return}
   if(t.id==='helperPrev'){if(hStep>0){hStep--;renderHelper();$('#helper').scrollTop=0}return}
   if(t.id==='helperNext'){if(hStep<H_STEPS.length-1){hStep++;renderHelper();$('#helper').scrollTop=0}else closeHelper();return}
   if(t.id==='helperClose'){closeHelper();return}
@@ -70,7 +34,6 @@ document.addEventListener('submit',e=>{const f=e.target;
   else if(f.id==='moreForm'){e.preventDefault();const v=$('#moreInput').value.trim();$('#moreInput').value='';openFind({where:'city',into:'list',q:v,autorun:true})}
   else if(f.id==='chatForm'){e.preventDefault();const v=$('#chatInput').value.trim();if(v){$('#chatInput').value='';sendChat(v)}}});
 document.addEventListener('input',onPf);
-document.addEventListener('keydown',e=>{if(e.target&&e.target.id==='talkInput'&&e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();const v=e.target.value.trim();if(v)talkSend(v)}});
 document.addEventListener('input',e=>{if(e.target&&e.target.id==='chatInput'){const x=e.target;x.style.height='auto';x.style.height=Math.min(120,x.scrollHeight)+'px'}}); document.addEventListener('change',onPf);
 document.addEventListener('keydown',e=>{if(e.target&&e.target.id==='chatInput'&&e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();const f=$('#chatForm');f.requestSubmit?f.requestSubmit():f.dispatchEvent(new Event('submit',{cancelable:true,bubbles:true}))}});
 // What was pressed in a block's sheet (BlockSheet.tsx; the sheet's block is #sheet's uid). Only changes that move the

@@ -2,6 +2,7 @@
 // The row values are still old HTML. The open form is a list of parts (TripForms.tsx)
 // drawn fresh on every full redraw (rev) like before; a message-only update keeps it as it is (same rev).
 import { FormPiece, type FormPart } from './TripForms';
+import { app } from '../ui/host';
 
 export interface MeRowInfo {
   id: string;
@@ -33,7 +34,7 @@ export function MeRows(p: MeRowsProps) {
     <>
       <div className="mgroup merows">
         {p.rows.map(r => [
-          <button key={r.id} className="merow" data-meopen={r.id} aria-expanded={p.open === r.id}>
+          <button key={r.id} className="merow" data-meopen={r.id} aria-expanded={p.open === r.id} onClick={() => app().form('meopen', r.id)}>
             <span className="mk">{r.label}</span><Old className="mv" html={r.valueHTML} /><Chev />
           </button>,
           p.open === r.id ? <div key={r.id + ':body:' + p.rev} className="mebody">{p.body.map((x, i) => <FormPiece key={i} part={x} />)}</div> : null,
@@ -41,8 +42,8 @@ export function MeRows(p: MeRowsProps) {
       </div>
       <p className="saved" id="meMsg">{p.msg}</p>
       <div className="row" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
-        <button className="small-btn" type="button" id="meOnb">처음 설정 다시 하기</button>
-        {!p.dayCourse && <button className="small-btn" type="button" id="meHelper">예약 도우미</button>}
+        <button className="small-btn" type="button" id="meOnb" onClick={() => app().form('meOnb')}>처음 설정 다시 하기</button>
+        {!p.dayCourse && <button className="small-btn" type="button" id="meHelper" onClick={() => app().form('meHelper')}>예약 도우미</button>}
       </div>
     </>
   );

@@ -4,7 +4,7 @@
 //   window.JEPI_UI.live(element) → a handle when React drew that element, otherwise null (then they write the old way).
 // The state lives in the drawn element: when the screen is redrawn fresh (a new rev), it starts over, like before.
 import { flushSync } from 'react-dom';
-import { useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode, type RefObject } from 'react';
 import { app } from './host';
 
 export interface LiveHandle {
@@ -51,7 +51,7 @@ export function LiveLine({ id, tag = 'p', text = '', className = 'ai-status' }: 
 }
 
 /** A button the old code may relabel or lock while something runs. */
-export function LiveButton({ id, className, children, disabled = false, noType = false, data, onClick }: { id: string; className: string; children: ReactNode; disabled?: boolean; /** the old button had no type attribute */ noType?: boolean; /** data-… attributes */ data?: Record<string, string>; onClick?: () => void }) {
+export function LiveButton({ id, className, children, disabled = false, noType = false, data, onClick }: { id: string; className: string; children: ReactNode; disabled?: boolean; /** the old button had no type attribute */ noType?: boolean; /** data-… attributes */ data?: Record<string, string>; onClick?: (e: MouseEvent<HTMLButtonElement>) => void }) {
   const [l, setL] = useState<string | null>(null), [d, setD] = useState<boolean | null>(null);
   const ref = useHandle({ label: setL, disabled: setD });
   return <button className={className} type={noType ? undefined : 'button'} id={id} {...Object.fromEntries(Object.entries(data || {}).map(([k, v]) => ['data-' + k, v]))} disabled={d ?? disabled} onClick={onClick} ref={ref as RefObject<HTMLButtonElement>}>{l ?? children}</button>;
