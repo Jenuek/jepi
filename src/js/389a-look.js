@@ -53,40 +53,31 @@ function openLook(){
   lookDraft=Object.assign(lookOf(),{titles:DAYS.map((_,i)=>((profile.dayTitles||[])[i])||''),name:(plans.find(x=>x.id===curPlan)||{}).name||planName()});
   renderLookSheet(); $('#sheet').dataset.uid=''; $('#sheetBg').hidden=false;
 }
+// drawn by React: app/screens/LookSheet.tsx
+let lookRev=0;
 function renderLookSheet(){
-  const L=lookDraft, sw=(k,v,cur,inner,lbl,extra)=>`<button type="button" class="lk-opt ${k}" data-lk="${k}:${v}" aria-pressed="${cur===v}" aria-label="${esc(lbl)}"${extra||''}>${inner}</button>`;
-  $('#sheet').innerHTML=`<h3>여행 꾸미기</h3>
-  <form id="lookForm" class="look-form">
-    <label class="lk-f"><span class="hint">여행 제목</span><input id="lkName" maxlength="30" value="${esc(L.name)}" class="lk-title"></label>
-    <label class="lk-f"><span class="hint">한 줄 소개</span><input id="lkTag" maxlength="40" value="${esc(L.tagline)}" placeholder="예) 3박 4일 · 미나미 중심 · 둘이서"></label>
-    <div class="lk-f"><span class="hint">스타일</span><div class="lk-row">${sw('style','color',L.style,'<b>컬러 블록</b><small>깔끔하게, 여행 색으로</small>','컬러 블록',' style="flex:1"')}${sw('style','note',L.style,'<b>여행 수첩</b><small>종이·도장·손글씨</small>','여행 수첩',' style="flex:1"')}</div></div>
-    <div class="lk-f"><span class="hint">테마 색</span><div class="lk-row">${LOOK_COLORS.map(([c,n])=>sw('color',c,L.color,'',n,` style="--sw:${c}"`)).join('')}</div></div>
-    <div class="lk-f"><span class="hint">커버</span><div class="lk-row">${LOOK_COVERS.map(([c,n])=>sw('cover',c,L.cover,`<span class="lk-cv" style="--theme:${L.color}">${coverSVG(c,64,40)}</span><small>${n}</small>`,n)).join('')}
-      <label class="lk-opt cover lk-photo" aria-pressed="${L.cover==='photo'}"><span class="lk-cv"${L.photo?` style="background-image:url('${L.photo}')"`:''}></span><small>내 사진</small><input type="file" accept="image/*" id="lkPhoto" hidden></label></div></div>
-    <div class="lk-f"><span class="hint">손글씨 메모 글꼴</span><div class="lk-row">${LOOK_HANDS.map(([k,n,f])=>sw('hand',k,L.hand,`<span style="font-family:${f},cursive;font-size:20px">참치!</span><small>${n}</small>`,n)).join('')}</div></div>
-    <div class="lk-f"><div class="lk-h"><span class="hint">날짜별 제목</span>${sample?'<button type="button" class="small-btn" id="lkAi">AI로 지어 보기</button>':''}</div>
-      ${DAYS.map((D,i)=>`<label class="lk-day"><span class="mono">Day ${i+1}</span><input data-lkday="${i}" maxlength="40" value="${esc(L.titles[i]||'')}" placeholder="${esc(D.title)}"></label>`).join('')}
-      <p class="hint" id="lkSt">비워 두면 일정에 맞춰 자동으로 지어요.</p></div>
-    <div class="row"><button class="small-btn primary" type="submit">저장</button><button class="small-btn" type="button" data-close="1">취소</button></div>
-  </form>`;
+  const L=lookDraft;
+  window.JEPI_UI.mount('look',$('#sheet'),{name:L.name||'',tagline:L.tagline||'',style:L.style,color:L.color,cover:L.cover,hand:L.hand,photo:L.photo||'',
+    colors:LOOK_COLORS,covers:LOOK_COVERS.map(([k,n])=>({k,name:n,svg:coverSVG(k,64,40)})),hands:LOOK_HANDS,
+    days:DAYS.map((D,i)=>({title:L.titles[i]||'',placeholder:String(D.title)})),ai:!!sample,rev:++lookRev});
 }
 function lookCollect(){const L=lookDraft;if(!$('#lookForm'))return;L.name=$('#lkName').value;L.tagline=$('#lkTag').value;document.querySelectorAll('[data-lkday]').forEach(i=>L.titles[+i.dataset.lkday]=i.value)}
 async function lookAiTitles(){
-  const st=$('#lkSt'); st.textContent='제목을 짓는 중이에요 (보통 10~20초)';
+  setSt('lkSt','제목을 짓는 중이에요 (보통 10~20초)');
   const days=DAYS.map((D,i)=>`Day ${i+1}: `+analyze(i).items.filter(x=>!x.stay).map(x=>x.name).slice(0,8).join(', '));
   const prompt=`Write a short, evocative Korean title for each day of this trip to ${PACK.city}, like chapter titles of a travel journal (8-18 Korean characters, no emoji, no "Day N"). Trip title: "${lookDraft.name}".
 ${days.join('\n')}
 Reply with only JSON: {"titles":["...", ...]} with exactly ${DAYS.length} items.`;
   try{const r=await sample.json(prompt,{cache:false});const a=Array.isArray(r&&r.titles)?r.titles:[];
-    a.slice(0,DAYS.length).forEach((t,i)=>{lookDraft.titles[i]=String(t||'').slice(0,40)});renderLookSheet();$('#lkSt').textContent='마음에 들지 않는 건 고쳐 쓰면 돼요.'}
-  catch(e){st.textContent=errText(e,'제목을 짓지 못했어요')}
+    a.slice(0,DAYS.length).forEach((t,i)=>{lookDraft.titles[i]=String(t||'').slice(0,40)});renderLookSheet();setSt('lkSt','마음에 들지 않는 건 고쳐 쓰면 돼요.')}
+  catch(e){setSt('lkSt',errText(e,'제목을 짓지 못했어요'))}
 }
 function lookPhoto(file){ // shrink to at most 720 px wide so it syncs quickly
   const img=new Image(), url=URL.createObjectURL(file);
   img.onload=()=>{const s=Math.min(1,720/img.width), c=document.createElement('canvas'); c.width=Math.round(img.width*s); c.height=Math.round(img.height*s);
     c.getContext('2d').drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(url);
     lookCollect(); lookDraft.photo=c.toDataURL('image/jpeg',.72); lookDraft.cover='photo'; renderLookSheet()};
-  img.onerror=()=>{URL.revokeObjectURL(url);$('#lkSt').textContent='사진을 읽지 못했어요.'};
+  img.onerror=()=>{URL.revokeObjectURL(url);setSt('lkSt','사진을 읽지 못했어요.')};
   img.src=url;
 }
 function saveLook(){

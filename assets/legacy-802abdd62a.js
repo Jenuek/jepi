@@ -385,23 +385,15 @@ function addCustomToData(c){
   if(i>=0) P[i]=p; else P.push(p);
   PM[p.id]=p; COST[p.id]=[Math.max(0,+c.cost||0),+c.cost?'직접 입력한 금액':'']; TAGS[p.id]=String(c.tags||'').split(',').map(x=>x.trim()).filter(Boolean); ZONE_OF[p.id]=AREA_ZONE[c.area]||'outer';
 }
+let customLast=null;
 function openCustom(editId,startAt){
   const c=editId?custom.find(x=>x.id===editId):{id:'',name:'',area:firstArea(),cat:'walk',dur:60,cost:0,memo:'',drop:false,tags:''}; if(!c) return;
   const st=startAt!=null?startAt:Math.max(dayStart(day),600);
-  $('#sheet').innerHTML=`<h3>${editId?'블록 정보 수정':'직접 블록 만들기'}</h3><div class="when">${editId?'바꾼 내용은 이 블록이 들어간 모든 날에 반영돼요.':`Day ${day+1} (${DAYS[day].date}) 일정에 넣어요.`}</div>
-  <form id="customForm" data-edit="${esc(editId||'')}" class="fsec" style="margin-top:12px">
-    <div class="fg"><label>이름<input id="cfName" required maxlength="40" value="${esc(c.name)}" placeholder="예: 친구가 추천한 카페"></label>
-    <label>동네<select id="cfArea">${areaOpts(c.area)}</select></label>
-    <label>종류<select id="cfCat">${Object.entries(CATS).map(([k,v])=>opt(k,v,c.cat)).join('')}</select></label>
-    ${editId?'':`<label>시작<input id="cfStart" type="time" value="${fmt(st)}"></label>`}
-    <label>머무는 시간<select id="cfDur">${[15,30,45,60,90,120,150,180,240].map(m=>opt(m,durTxt(m),c.dur)).join('')}</select></label>
-    <label>1인 예상 비용 (${esc(PACK.currency)})<input id="cfCost" type="number" min="0" step="any" value="${esc(c.cost)}"></label></div>
-    <label class="fg" style="display:block"><span class="hint">메모</span><textarea id="cfMemo" rows="2" maxlength="200" style="margin-top:4px">${esc(c.memo)}</textarea></label>
-    <label class="fg" style="display:block"><span class="hint">키워드 (쉼표로 구분, 선택)</span><input id="cfTags" maxlength="80" value="${esc(c.tags)}" style="margin-top:4px"></label>
-    <label class="toggle"><input type="checkbox" id="cfDrop" ${c.drop?'checked':''}> 짐을 맡기는 곳이에요 (짐 보관함, 숙소 등)</label>
-    ${recState==='on'&&!PACK.manual?`<label class="toggle"><input type="checkbox" id="cfShare" ${c.share?'checked':''}> 다른 여행자에게도 이 장소 추천하기 (이름·동네·메모가 공유돼요)</label>`:''}
-    <div class="row"><button class="small-btn primary" type="submit">${editId?'저장':'일정에 넣기'}</button><button class="small-btn" type="button" data-close="1">취소</button></div>
-  </form><p class="hint">위치는 고른 동네의 중심으로 잡아서 이동 시간을 계산해요. 영업시간은 확인하지 않으니 직접 챙겨 주세요.</p>`;
+  // drawn by React: app/screens/CustomSheet.tsx (the same props again with dup while a new name is typed: 388-dedup.js)
+  customLast={edit:editId||'',dayLabel:`Day ${day+1} (${DAYS[day].date})`,name:c.name||'',area:c.area,cat:c.cat,dur:c.dur,cost:c.cost??'',memo:c.memo||'',tags:c.tags||'',drop:!!c.drop,
+    share:recState==='on'&&!PACK.manual?!!c.share:null,start:fmt(st),areas:optsOf(AREAS),cats:Object.entries(CATS),durs:[15,30,45,60,90,120,150,180,240].map(m=>[m,durTxt(m)]),
+    currency:String(PACK.currency),dup:null,rev:++sheetRev};
+  window.JEPI_UI.mount('custom',$('#sheet'),customLast);
   $('#sheet').dataset.uid=''; $('#sheetBg').hidden=false; setTimeout(()=>{const x=$('#cfName');x&&x.focus()},0);
 }
 function saveCustomForm(f){
@@ -3829,10 +3821,11 @@ document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)r
 // --- while typing a new place's name: show places that are already there ---
 document.addEventListener('input',e=>{
   if(e.target.id!=='cfName'||$('#customForm')?.dataset.edit) return;
-  let box=$('#cfDup'); if(!box){box=document.createElement('div');box.id='cfDup';box.className='dup-suggest';e.target.closest('.fg').after(box)}
-  const q=e.target.value.trim(); if(q.length<2){box.innerHTML='';return}
-  const hits=P.filter(p=>!p.drop&&(nameSim(p.name,q)>=.5||norm(p.name).includes(norm(q)))).slice(0,4);
-  box.innerHTML=hits.length?`<p class="hint" style="margin:6px 0 4px">이미 있는 장소예요. 같은 곳이면 이걸 쓰세요.</p>`+hits.map(p=>`<button type="button" class="dup-pick" data-dupuse="${p.id}"><b>${esc(p.name)}</b><span class="hint">${esc(p.area||'')}${p.shared?' · 여행자 추천':''}${placed.some(x=>x.id===p.id)?' · 이미 일정에 있어요':''}</span></button>`).join(''):'';
+  if(!customLast||!$('#customForm')) return;
+  const q=e.target.value.trim();
+  const hits=q.length<2?[]:P.filter(p=>!p.drop&&(nameSim(p.name,q)>=.5||norm(p.name).includes(norm(q)))).slice(0,4);
+  customLast=Object.assign({},customLast,{dup:hits.map(p=>({id:String(p.id),name:String(p.name),sub:`${p.area||''}${p.shared?' · 여행자 추천':''}${placed.some(x=>x.id===p.id)?' · 이미 일정에 있어요':''}`}))});
+  window.JEPI_UI.mount('custom',$('#sheet'),customLast);   // same rev: what is typed stays
 });
 // local test hooks (tools/checks.js)
 if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)&&window.__jepi) Object.assign(window.__jepi,{
@@ -3917,40 +3910,31 @@ function openLook(){
   lookDraft=Object.assign(lookOf(),{titles:DAYS.map((_,i)=>((profile.dayTitles||[])[i])||''),name:(plans.find(x=>x.id===curPlan)||{}).name||planName()});
   renderLookSheet(); $('#sheet').dataset.uid=''; $('#sheetBg').hidden=false;
 }
+// drawn by React: app/screens/LookSheet.tsx
+let lookRev=0;
 function renderLookSheet(){
-  const L=lookDraft, sw=(k,v,cur,inner,lbl,extra)=>`<button type="button" class="lk-opt ${k}" data-lk="${k}:${v}" aria-pressed="${cur===v}" aria-label="${esc(lbl)}"${extra||''}>${inner}</button>`;
-  $('#sheet').innerHTML=`<h3>여행 꾸미기</h3>
-  <form id="lookForm" class="look-form">
-    <label class="lk-f"><span class="hint">여행 제목</span><input id="lkName" maxlength="30" value="${esc(L.name)}" class="lk-title"></label>
-    <label class="lk-f"><span class="hint">한 줄 소개</span><input id="lkTag" maxlength="40" value="${esc(L.tagline)}" placeholder="예) 3박 4일 · 미나미 중심 · 둘이서"></label>
-    <div class="lk-f"><span class="hint">스타일</span><div class="lk-row">${sw('style','color',L.style,'<b>컬러 블록</b><small>깔끔하게, 여행 색으로</small>','컬러 블록',' style="flex:1"')}${sw('style','note',L.style,'<b>여행 수첩</b><small>종이·도장·손글씨</small>','여행 수첩',' style="flex:1"')}</div></div>
-    <div class="lk-f"><span class="hint">테마 색</span><div class="lk-row">${LOOK_COLORS.map(([c,n])=>sw('color',c,L.color,'',n,` style="--sw:${c}"`)).join('')}</div></div>
-    <div class="lk-f"><span class="hint">커버</span><div class="lk-row">${LOOK_COVERS.map(([c,n])=>sw('cover',c,L.cover,`<span class="lk-cv" style="--theme:${L.color}">${coverSVG(c,64,40)}</span><small>${n}</small>`,n)).join('')}
-      <label class="lk-opt cover lk-photo" aria-pressed="${L.cover==='photo'}"><span class="lk-cv"${L.photo?` style="background-image:url('${L.photo}')"`:''}></span><small>내 사진</small><input type="file" accept="image/*" id="lkPhoto" hidden></label></div></div>
-    <div class="lk-f"><span class="hint">손글씨 메모 글꼴</span><div class="lk-row">${LOOK_HANDS.map(([k,n,f])=>sw('hand',k,L.hand,`<span style="font-family:${f},cursive;font-size:20px">참치!</span><small>${n}</small>`,n)).join('')}</div></div>
-    <div class="lk-f"><div class="lk-h"><span class="hint">날짜별 제목</span>${sample?'<button type="button" class="small-btn" id="lkAi">AI로 지어 보기</button>':''}</div>
-      ${DAYS.map((D,i)=>`<label class="lk-day"><span class="mono">Day ${i+1}</span><input data-lkday="${i}" maxlength="40" value="${esc(L.titles[i]||'')}" placeholder="${esc(D.title)}"></label>`).join('')}
-      <p class="hint" id="lkSt">비워 두면 일정에 맞춰 자동으로 지어요.</p></div>
-    <div class="row"><button class="small-btn primary" type="submit">저장</button><button class="small-btn" type="button" data-close="1">취소</button></div>
-  </form>`;
+  const L=lookDraft;
+  window.JEPI_UI.mount('look',$('#sheet'),{name:L.name||'',tagline:L.tagline||'',style:L.style,color:L.color,cover:L.cover,hand:L.hand,photo:L.photo||'',
+    colors:LOOK_COLORS,covers:LOOK_COVERS.map(([k,n])=>({k,name:n,svg:coverSVG(k,64,40)})),hands:LOOK_HANDS,
+    days:DAYS.map((D,i)=>({title:L.titles[i]||'',placeholder:String(D.title)})),ai:!!sample,rev:++lookRev});
 }
 function lookCollect(){const L=lookDraft;if(!$('#lookForm'))return;L.name=$('#lkName').value;L.tagline=$('#lkTag').value;document.querySelectorAll('[data-lkday]').forEach(i=>L.titles[+i.dataset.lkday]=i.value)}
 async function lookAiTitles(){
-  const st=$('#lkSt'); st.textContent='제목을 짓는 중이에요 (보통 10~20초)';
+  setSt('lkSt','제목을 짓는 중이에요 (보통 10~20초)');
   const days=DAYS.map((D,i)=>`Day ${i+1}: `+analyze(i).items.filter(x=>!x.stay).map(x=>x.name).slice(0,8).join(', '));
   const prompt=`Write a short, evocative Korean title for each day of this trip to ${PACK.city}, like chapter titles of a travel journal (8-18 Korean characters, no emoji, no "Day N"). Trip title: "${lookDraft.name}".
 ${days.join('\n')}
 Reply with only JSON: {"titles":["...", ...]} with exactly ${DAYS.length} items.`;
   try{const r=await sample.json(prompt,{cache:false});const a=Array.isArray(r&&r.titles)?r.titles:[];
-    a.slice(0,DAYS.length).forEach((t,i)=>{lookDraft.titles[i]=String(t||'').slice(0,40)});renderLookSheet();$('#lkSt').textContent='마음에 들지 않는 건 고쳐 쓰면 돼요.'}
-  catch(e){st.textContent=errText(e,'제목을 짓지 못했어요')}
+    a.slice(0,DAYS.length).forEach((t,i)=>{lookDraft.titles[i]=String(t||'').slice(0,40)});renderLookSheet();setSt('lkSt','마음에 들지 않는 건 고쳐 쓰면 돼요.')}
+  catch(e){setSt('lkSt',errText(e,'제목을 짓지 못했어요'))}
 }
 function lookPhoto(file){ // shrink to at most 720 px wide so it syncs quickly
   const img=new Image(), url=URL.createObjectURL(file);
   img.onload=()=>{const s=Math.min(1,720/img.width), c=document.createElement('canvas'); c.width=Math.round(img.width*s); c.height=Math.round(img.height*s);
     c.getContext('2d').drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(url);
     lookCollect(); lookDraft.photo=c.toDataURL('image/jpeg',.72); lookDraft.cover='photo'; renderLookSheet()};
-  img.onerror=()=>{URL.revokeObjectURL(url);$('#lkSt').textContent='사진을 읽지 못했어요.'};
+  img.onerror=()=>{URL.revokeObjectURL(url);setSt('lkSt','사진을 읽지 못했어요.')};
   img.src=url;
 }
 function saveLook(){

@@ -961,6 +961,24 @@ module.exports = [
     }
   },
   {
+    name: 'React screen: 여행 꾸미기 · 직접 블록 만들기 (font previews use their font, typed titles survive a color tap, saving applies; a new block lands at its time)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await p.click('#lookBtn'); await p.waitForTimeout(300);
+      ok(await p.$eval('#sheet [data-lk="hand:gaegu"] span', e => getComputedStyle(e).fontFamily.includes('Gaegu')), 'each font choice shows in its own font');
+      await p.fill('#sheet [data-lkday="0"]', '첫날은 천천히'); await p.click('#sheet [data-lk^="color:"] >> nth=2'); await p.waitForTimeout(200);
+      ok(await p.inputValue('#sheet [data-lkday="0"]') === '첫날은 천천히' && await p.getAttribute('#sheet [data-lk^="color:"] >> nth=2', 'aria-pressed') === 'true', 'a typed day title stays when a color is tapped');
+      await p.click('#lookForm [type="submit"]'); await p.waitForTimeout(400);
+      ok((await p.textContent('#dayTitle')).includes('첫날은 천천히'), 'saving applies the day title');
+      await p.$eval('#grid .slot[data-t="1290"]', e => e.click()); await p.waitForTimeout(400);
+      await p.click('#sheet [data-newcustom]'); await p.waitForTimeout(300);
+      await p.fill('#cfName', '친구 카페'); await p.click('#customForm [type="submit"]'); await p.waitForTimeout(500);
+      ok(await vis(p, '#grid .blk:has-text("친구 카페")') && (await p.getAttribute('#grid .blk:has-text("친구 카페")', 'title')).startsWith('21:30'), 'a hand-made block lands at the tapped time');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
     name: 'friends: sharing again after a share that stopped half-way (trip on the server, no membership)',
     async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
       const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);

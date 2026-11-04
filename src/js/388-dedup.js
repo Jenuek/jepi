@@ -55,10 +55,11 @@ document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)r
 // --- while typing a new place's name: show places that are already there ---
 document.addEventListener('input',e=>{
   if(e.target.id!=='cfName'||$('#customForm')?.dataset.edit) return;
-  let box=$('#cfDup'); if(!box){box=document.createElement('div');box.id='cfDup';box.className='dup-suggest';e.target.closest('.fg').after(box)}
-  const q=e.target.value.trim(); if(q.length<2){box.innerHTML='';return}
-  const hits=P.filter(p=>!p.drop&&(nameSim(p.name,q)>=.5||norm(p.name).includes(norm(q)))).slice(0,4);
-  box.innerHTML=hits.length?`<p class="hint" style="margin:6px 0 4px">이미 있는 장소예요. 같은 곳이면 이걸 쓰세요.</p>`+hits.map(p=>`<button type="button" class="dup-pick" data-dupuse="${p.id}"><b>${esc(p.name)}</b><span class="hint">${esc(p.area||'')}${p.shared?' · 여행자 추천':''}${placed.some(x=>x.id===p.id)?' · 이미 일정에 있어요':''}</span></button>`).join(''):'';
+  if(!customLast||!$('#customForm')) return;
+  const q=e.target.value.trim();
+  const hits=q.length<2?[]:P.filter(p=>!p.drop&&(nameSim(p.name,q)>=.5||norm(p.name).includes(norm(q)))).slice(0,4);
+  customLast=Object.assign({},customLast,{dup:hits.map(p=>({id:String(p.id),name:String(p.name),sub:`${p.area||''}${p.shared?' · 여행자 추천':''}${placed.some(x=>x.id===p.id)?' · 이미 일정에 있어요':''}`}))});
+  window.JEPI_UI.mount('custom',$('#sheet'),customLast);   // same rev: what is typed stays
 });
 // local test hooks (tools/checks.js)
 if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)&&window.__jepi) Object.assign(window.__jepi,{
