@@ -11,6 +11,9 @@ import * as merge from './merge';
 import * as ai from './ai';
 import * as alerts from './alerts';
 import * as hours from './hours';
+import * as kakao from './kakao';
+import * as myplaces from './myplaces';
+import * as routes from './routes';
 import * as logic from '../logic';
 import * as trips from './trips';
 import { status, syncDocs, syncSoon, syncPush, syncPull, syncNow, connectSync } from './sync';
@@ -27,6 +30,12 @@ export const data = {
   alerts,
   /** 영업시간 from Google Places */
   hours,
+  /** Kakao places / addresses, and this device's location */
+  kakao,
+  /** 내 장소 (집·회사·…) */
+  myplaces,
+  /** real routes (Google, abroad) */
+  routes,
   /** calculations: time text, distances, the day check (app/logic) */
   logic,
   /** 친구와 함께 on the server */

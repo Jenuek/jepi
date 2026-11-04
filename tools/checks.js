@@ -1260,6 +1260,45 @@ module.exports = [
     }
   },
   {
+    name: 'React handles its own buttons: 내 장소 address search (pretend Kakao) → pick → saved and shown',
+    async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
+      const p = await device(b, S);
+      await p.route(/dapi\.kakao\.com/, r => { const u = r.request().url();
+        if (u.includes('address.json')) return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ documents: [{ address_name: '경기 성남시 분당구 판교역로 235', road_address: { address_name: '판교역로 235' }, y: '37.4021', x: '127.1086' }] }) });
+        r.fulfill({ status: 200, contentType: 'application/json', body: '{"documents":[]}' }) });
+      await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await p.evaluate(() => { const k = JSON.parse(localStorage.getItem('jepi.keys') || '{}'); k.kakao = '0123456789abcdef0123456789abcdef'; localStorage.setItem('jepi.keys', JSON.stringify(k)) });
+      await p.reload(); await p.waitForTimeout(1200); await skipCoach(p).catch(() => {});
+      await openSettings(p); await p.click('[data-mypedit="work"]'); await p.waitForTimeout(200);
+      await p.fill('#mypQ', '판교역로 235'); await p.press('#mypQ', 'Enter'); await p.waitForTimeout(500);
+      ok(await p.$$eval('[data-myppick]', e => e.length) === 1 && (await p.textContent('.kmsg')).includes('맞는 곳을 눌러'), 'Enter searches: one result to pick');
+      await p.click('[data-myppick]'); await p.waitForTimeout(300);
+      const saved = await p.evaluate(() => (JSON.parse(localStorage.getItem('jepi.myplaces')) || []).find(x => x.id === 'work'));
+      ok(saved && saved.addr === '판교역로 235' && saved.ll[0] === 37.4021 && (await p.textContent('.kmsg')).includes('저장했어요'), 'picking saves 회사 with the address');
+      await p.click('#mypDone'); await p.waitForTimeout(200);
+      ok((await p.textContent('#settingsBox, #side-settings').catch(() => '')).includes('판교역로 235'), 'the list shows the address');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'routes abroad (app/data/routes.ts): pretend Google answers → real times with line names replace the ≈ guess, saved on the device',
+    async run({ b, S, device, ok, skipCoach }) {
+      const p = await device(b, S); let asked = 0;
+      await p.route(/routes\.googleapis\.com/, r => { asked++; r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ routes: [{ duration: '780s', distanceMeters: 4200,
+        polyline: { encodedPolyline: '_p~iF~ps|U_ulLnnqC_mqNvxq`@' }, legs: [{ steps: [{ transitDetails: { transitLine: { nameShort: '미도스지선', vehicle: { type: 'SUBWAY' } } } }] }], travelAdvisory: { transitFare: { currencyCode: 'JPY', units: '240' } } }] }) }) });
+      await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      ok((await p.textContent('#grid')).includes('≈'), 'before routes arrive: the ≈ guess');
+      await p.evaluate(() => { const k = JSON.parse(localStorage.getItem('jepi.keys') || '{}'); k.gmaps = 'AIzaTestKey'; localStorage.setItem('jepi.keys', JSON.stringify(k)) });
+      await p.reload(); await p.waitForTimeout(4000); await skipCoach(p).catch(() => {});
+      const chips = await p.$$eval('#grid .trn .chip', e => e.map(x => x.textContent));
+      ok(asked > 0 && chips.some(t => t.includes('지하철 13분') && t.includes('미도스지선') && !t.startsWith('≈')), 'real time, line name, no ≈ (' + asked + ' asked) ' + chips.slice(0, 3).join(' / '));
+      ok(await p.evaluate(() => Object.values(JSON.parse(localStorage.getItem('jepi.routes') || '{}')).some(v => v.src === 'google' && v.poly && v.poly.length === 3)), 'saved on the device with the route line');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
     name: 'friends: sharing again after a share that stopped half-way (trip on the server, no membership)',
     async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
       const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);

@@ -98,7 +98,8 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 | 👍 모든 여행자의 추천 (서버 `jepi_recs`), 👍 많은 순 | `070-shared-recs.js` |
 | 블록 누르면 나오는 시트, 옮기기·길이 | `350-actions.js` |
 | 경고 계산(영업시간·이동시간) | 규칙 `app/logic/schedule.ts`, 날짜 항목 만들기 `330-helpers.js` (`analyze`) |
-| 이동 시간·경로 (해외 Google, 국내는 거리로 어림 + 카카오맵 연결) | `200-routes.js` |
+| 이동 시간·경로 (해외 Google, 국내는 거리로 어림 + 카카오맵 연결) | `app/data/routes.ts`, 링크·한국 판단 `app/logic/geo.ts` (예전 `200-routes.js`는 연결과 다시 그리기만) |
+| 내 장소, 카카오 장소·주소 검색, 지금 위치 | `app/data/myplaces.ts`, `app/data/kakao.ts` (화면 `MyPlacesSection.tsx`) |
 | 영업시간 확인 (Google Places, 월 900곳 한도) | `app/data/hours.ts`, 모양 바꾸기 `app/logic/hours.ts` (예전 `383-hours.js`는 연결만) |
 | 지도 | `210-map.js` |
 | AI 연결·모델 선택 | 연결(부르기·다시 시도·다른 AI) `app/data/ai.ts`, 키·모델 `190-keys-ai-router.js`, 실제 호출 `360-ai.js`, 채팅 `050-chat.js` (화면 `app/screens/ChatLog.tsx`), 빈 시간 추천 상자 `app/screens/AiBox.tsx` |

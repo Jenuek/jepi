@@ -31,3 +31,30 @@ export function travelGuess(a: LL | null | undefined, b: LL | null | undefined, 
   if (car) return { mode: '차', min: Math.ceil((10 + (d < 20 ? d * 2 : 20 + d)) / 5) * 5 };
   return { mode: tm, min: Math.ceil((d < 20 ? 12 + d * 2.4 : 36 + d * 1.2) / 5) * 5 };
 }
+
+/** inside South Korea (roughly) */
+export const inKorea = (ll: LL | null | undefined): boolean => !!ll && ll[0] > 33 && ll[0] < 38.7 && ll[1] > 124.4 && ll[1] < 131.2;
+
+/** Google's encoded polyline → points */
+export function decodePolyline(s: string): LL[] {
+  const out: LL[] = []; let i = 0, lat = 0, lng = 0;
+  while (i < s.length) {
+    let b, sh = 0, r = 0; do { b = s.charCodeAt(i++) - 63; r |= (b & 31) << sh; sh += 5 } while (b >= 32); lat += r & 1 ? ~(r >> 1) : r >> 1;
+    sh = 0; r = 0; do { b = s.charCodeAt(i++) - 63; r |= (b & 31) << sh; sh += 5 } while (b >= 32); lng += r & 1 ? ~(r >> 1) : r >> 1;
+    out.push([lat / 1e5, lng / 1e5]);
+  }
+  return out;
+}
+/** at most about 160 points, 5 decimals (enough for the map, small to save) */
+export function thinPolyline(pts: LL[]): LL[] {
+  const r = (p: LL): LL => [+p[0].toFixed(5), +p[1].toFixed(5)];
+  if (pts.length <= 160) return pts.map(r);
+  const st = Math.ceil(pts.length / 160), o: LL[] = []; for (let i = 0; i < pts.length; i += st) o.push(pts[i]); o.push(pts[pts.length - 1]);
+  return o.map(r);
+}
+
+/** "안내 시작": Kakao Map in Korea, Google Maps elsewhere */
+export function navLink(a: LL, b: LL, mode: string, name?: string): string {
+  if (inKorea(a) && inKorea(b)) return `https://map.kakao.com/link/from/${encodeURIComponent('출발')},${a[0]},${a[1]}/to/${encodeURIComponent(name || '도착')},${b[0]},${b[1]}`;
+  return `https://www.google.com/maps/dir/?api=1&origin=${a[0]},${a[1]}&destination=${b[0]},${b[1]}&travelmode=${mode === '도보' ? 'walking' : mode === '차' ? 'driving' : 'transit'}`;
+}

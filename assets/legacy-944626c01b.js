@@ -1646,65 +1646,18 @@ function keysChanged(){saveKeys();keyBad={};if(STANDALONE){sample=makeSample()}r
 
 function blankPack(){return Object.assign(manualPack('새 여행'),{areas:[{key:'center',name:'시내',lat:37.5665,lng:126.978,zone:'center'}]})}
 // ---------- routes: Google Routes (abroad), cached on this device ----------
-// Korea: Kakao gives no walking / public-transport routes to outside apps, so trips in Korea use the
-// straight-line estimate (≈), and "안내 시작" opens Kakao Map with the start and the destination filled in.
-let RC=LS.get('jepi.routes',{})||{};
-let rcT=0; function rcSave(){clearTimeout(rcT);rcT=setTimeout(()=>{const ks=Object.keys(RC);if(ks.length>700)ks.sort((a,b)=>(RC[a].t||0)-(RC[b].t||0)).slice(0,ks.length-600).forEach(k=>delete RC[k]);LS.set('jepi.routes',RC)},800)}
-const inKR=ll=>!!ll&&ll[0]>33&&ll[0]<38.7&&ll[1]>124.4&&ll[1]<131.2;
-function routeProvider(a,b){if(inKR(a)&&inKR(b))return null;return KEYS.gmaps&&!keyBad.gmaps?'google':null}
-const rkey=(m,a,b)=>`${m}|${(+a[0]).toFixed(4)},${(+a[1]).toFixed(4)}|${(+b[0]).toFixed(4)},${(+b[1]).toFixed(4)}`;
-const rq=[], rqSet=new Set(); let rqActive=0, routeStats={ok:0,fail:0};
-function routeGet(m,a,b){
-  if(!a||!b||!isFinite(a[0])||!isFinite(b[0])||(!a[0]&&!a[1])||(!b[0]&&!b[1])) return null;
-  const k=rkey(m,a,b), v=RC[k];
-  if(v&&!v.fail) return v;
-  if(v&&v.fail&&Date.now()-v.t<6*3600e3) return null;
-  const pv=routeProvider(a,b); if(!pv) return null;
-  if(!rqSet.has(k)){rqSet.add(k);rq.push({k,m,a,b,pv});pumpRoutes()}
-  return null;
-}
-function pumpRoutes(){
-  while(rqActive<2&&rq.length){const j=rq.shift();rqActive++;
-    fetchRoute(j).then(v=>{if(v){v.t=Date.now();RC[j.k]=v;routeStats.ok++}else{RC[j.k]={fail:1,t:Date.now()};routeStats.fail++}})
-      .catch(e=>{if(e&&e.code==='not_granted'){keyBad[j.pv]=true;keyMsg[j.pv==='google'?'gmaps':'kakao']='✕ 키가 맞지 않거나 이 API가 켜져 있지 않아요'}else RC[j.k]={fail:1,t:Date.now()};routeStats.fail++})
-      .finally(()=>{rqActive--;rqSet.delete(j.k);rcSave();routeDirty();pumpRoutes()})}
-}
+// Asking, the queue and the cache live in app/data/routes.ts; Korea checks and "안내 시작" links in app/logic/geo.ts.
+// Here: the names the rest of the old code uses, and when to redraw after routes arrive.
+const inKR=JD.logic.geo.inKorea, navLink=JD.logic.geo.navLink;
+const routeProvider=(a,b)=>JD.routes.provider(a,b), routeGet=(m,a,b)=>JD.routes.get(m,a,b), fetchRoute=j=>JD.routes.fetchRoute(j), routeStats=JD.routes.stats;
+JD.routes.connectRoutes({googleKey:()=>KEYS.gmaps||'',googleBad:()=>!!keyBad.gmaps,arrived:()=>routeDirty(),
+  keyBroken(){keyBad.google=true;keyMsg.gmaps='✕ 키가 맞지 않거나 이 API가 켜져 있지 않아요'}});
 let rdT=0;
 function routeDirty(){clearTimeout(rdT);rdT=setTimeout(()=>{
   const ae=document.activeElement; if(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)){routeDirty();return}
   if(!$('#onb').hidden||!$('#sheetBg').hidden){routeDirty();return}
   renderAll(); if(mapState.on) drawMap();
 },600)}
-function decodePoly(s){const out=[];let i=0,lat=0,lng=0;while(i<s.length){let b,sh=0,r=0;do{b=s.charCodeAt(i++)-63;r|=(b&31)<<sh;sh+=5}while(b>=32);lat+=r&1?~(r>>1):r>>1;sh=0;r=0;do{b=s.charCodeAt(i++)-63;r|=(b&31)<<sh;sh+=5}while(b>=32);lng+=r&1?~(r>>1):r>>1;out.push([lat/1e5,lng/1e5])}return out}
-const thin=pts=>{if(pts.length<=160)return pts.map(p=>[+p[0].toFixed(5),+p[1].toFixed(5)]);const st=Math.ceil(pts.length/160),o=[];for(let i=0;i<pts.length;i+=st)o.push(pts[i]);o.push(pts[pts.length-1]);return o.map(p=>[+p[0].toFixed(5),+p[1].toFixed(5)])};
-function middayAt(lng){const d=new Date(Date.now()+86400e3);const uh=12-Math.round(lng/15);d.setUTCHours(((uh%24)+24)%24,0,0,0);if(d.getTime()<Date.now()+3600e3)d.setTime(d.getTime()+86400e3);return d.toISOString()}
-const VEH={SUBWAY:'지하철',HEAVY_RAIL:'기차',COMMUTER_TRAIN:'전철',HIGH_SPEED_TRAIN:'고속열차',LONG_DISTANCE_TRAIN:'기차',METRO_RAIL:'지하철',MONORAIL:'모노레일',RAIL:'철도',TRAM:'트램',LIGHT_RAIL:'경전철',BUS:'버스',INTERCITY_BUS:'버스',TROLLEYBUS:'버스',FERRY:'페리',CABLE_CAR:'케이블카',FUNICULAR:'푸니쿨라',SHARE_TAXI:'택시'};
-async function fetchRoute(j){
-  const {m,a,b,pv}=j;
-  if(pv==='google'){
-    const mode=m==='walk'?'WALK':m==='car'?'DRIVE':'TRANSIT';
-    const body={origin:{location:{latLng:{latitude:+a[0],longitude:+a[1]}}},destination:{location:{latLng:{latitude:+b[0],longitude:+b[1]}}},travelMode:mode,languageCode:'ko'};
-    if(mode==='TRANSIT')body.departureTime=middayAt(+a[1]);
-    if(mode==='DRIVE')body.routingPreference='TRAFFIC_UNAWARE';
-    let r;try{r=await fetch('https://routes.googleapis.com/directions/v2:computeRoutes',{method:'POST',headers:{'content-type':'application/json','X-Goog-Api-Key':KEYS.gmaps,
-      'X-Goog-FieldMask':'routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline,routes.legs.steps.travelMode,routes.legs.steps.transitDetails.transitLine.nameShort,routes.legs.steps.transitDetails.transitLine.name,routes.legs.steps.transitDetails.transitLine.vehicle.type,routes.travelAdvisory.transitFare'},body:JSON.stringify(body)})}
-    catch(_){throw aiErr('network')}
-    if(r.status===401||r.status===403)throw aiErr('not_granted');
-    if(!r.ok)return null;
-    const jj=await r.json(), rt=(jj.routes||[])[0];
-    if(!rt){if(mode==='TRANSIT'&&km(a,b)<2.5)return fetchRoute({m:'walk',a,b,pv});return null}
-    const steps=((rt.legs||[])[0]||{}).steps||[], tr=steps.filter(s=>s.transitDetails&&s.transitDetails.transitLine);
-    const kinds=[...new Set(tr.map(s=>VEH[((s.transitDetails.transitLine.vehicle||{}).type)]||'대중교통'))];
-    const lines=tr.map(s=>{const L=s.transitDetails.transitLine;return L.nameShort||L.name||''}).filter(Boolean);
-    const fare=rt.travelAdvisory&&rt.travelAdvisory.transitFare;
-    return {min:Math.max(1,Math.ceil(parseInt(rt.duration||'0',10)/60)),label:mode==='WALK'||!tr.length?(mode==='DRIVE'?'차':'도보'):(kinds.length===1?kinds[0]:'대중교통'),
-      lines:[...new Set(lines)].slice(0,4).join(' → '),tf:Math.max(0,tr.length-1),fare:fare?(+fare.units||0)+(fare.nanos||0)/1e9:null,cur:fare?fare.currencyCode:'',
-      poly:rt.polyline&&rt.polyline.encodedPolyline?thin(decodePoly(rt.polyline.encodedPolyline)):null,km:(rt.distanceMeters||0)/1000,src:'google'};
-  }
-  return null;
-}
-const navLink=(a,b,mode,name)=>inKR(a)&&inKR(b)?`https://map.kakao.com/link/from/${encodeURIComponent('출발')},${a[0]},${a[1]}/to/${encodeURIComponent(name||'도착')},${b[0]},${b[1]}`:mapsLink(a,b,mode);
-
 // ---------- map (Leaflet + CARTO light tiles, loaded only when opened) ----------
 const mapState={on:false,map:null,layer:null,all:false,me:null,meMarker:null,watch:null,loading:null};
 function loadLeaflet(){
@@ -2029,36 +1982,17 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-cp]');if(!
   const g=document.getElementById('grid');if(g)g.scrollIntoView({block:'start',behavior:'smooth'});
 });
 
-// ================= 내 장소 (집·회사·…) — kept only on this device =================
-let MYP=LS.get('jepi.myplaces',null);
-if(!Array.isArray(MYP)) MYP=[{id:'home',name:'집',ll:null,addr:''},{id:'work',name:'회사',ll:null,addr:''}];
-const saveMYP=()=>{LS.set('jepi.myplaces',MYP);LS.set('jepi.mypAt',Date.now());syncSoon()};
-const mypOf=id=>MYP.find(x=>x.id===id);
-let mypEdit=null, mypMsg='', mypHits=[];
-function getPos(maxAge){return new Promise((res,rej)=>{if(!navigator.geolocation)return rej(new Error('이 기기에서는 위치를 쓸 수 없어요'));
-  navigator.geolocation.getCurrentPosition(p=>res([+p.coords.latitude.toFixed(6),+p.coords.longitude.toFixed(6)]),e=>rej(new Error(e.code===1?'위치 권한이 꺼져 있어요. 브라우저 설정에서 허용해 주세요.':'지금 위치를 찾지 못했어요')),{enableHighAccuracy:true,timeout:10000,maximumAge:maxAge||60000})})}
-async function kakaoGet(path,params){if(!KEYS.kakao)throw aiErr('nokey','카카오 키가 필요해요');
-  let r;try{r=await fetch(`https://dapi.kakao.com${path}?${new URLSearchParams(params)}`,{headers:{Authorization:'KakaoAK '+KEYS.kakao}})}catch(_){throw aiErr('network','카카오에 연결하지 못했어요 (설정 → 카카오 지도 → 확인)')}
-  if(r.status===401||r.status===403)throw aiErr('not_granted','카카오 키나 카카오맵 사용 설정을 확인해 주세요');
-  if(!r.ok)throw aiErr('upstream_error','카카오 오류 (HTTP '+r.status+')'); return r.json()}
-async function addrOf(ll){try{const j=await kakaoGet('/v2/local/geo/coord2address.json',{x:ll[1],y:ll[0]});const d=(j.documents||[])[0];return d?((d.road_address&&d.road_address.address_name)||(d.address&&d.address.address_name)||''):''}catch(_){return ''}}
-// The section is drawn by React: app/screens/MyPlacesSection.tsx. Here: what it shows.
-function mypView(){return {places:MYP.map(x=>({id:x.id,name:x.name,ll:x.ll||null,addr:x.addr||''})),editing:mypEdit,msg:mypMsg||'',
-  hits:mypHits.map(h=>({name:h.name,addr:h.addr})),hasKakao:!!KEYS.kakao}}
-document.addEventListener('click',async e=>{const t=e.target.closest('button');if(!t)return;
-  if(t.dataset.mypedit){mypEdit=t.dataset.mypedit;mypMsg='';mypHits=[];renderSettings();return}
-  if(t.id==='mypDone'){const n=$('#mypName'),x=mypOf(mypEdit);if(n&&x&&n.value.trim())x.name=n.value.trim().slice(0,12);saveMYP();mypEdit=null;renderSettings();return}
-  if(t.id==='mypAdd'){const id='p'+Date.now().toString(36);MYP.push({id,name:'새 장소',ll:null,addr:''});saveMYP();mypEdit=id;mypMsg='';mypHits=[];renderSettings();return}
-  if(t.dataset.mypclear){const id=t.dataset.mypclear;if(id==='home'||id==='work'){const x=mypOf(id);x.ll=null;x.addr=''}else MYP=MYP.filter(x=>x.id!==id);saveMYP();mypEdit=null;renderSettings();return}
-  if(t.dataset.myphere){const x=mypOf(t.dataset.myphere);mypMsg='지금 위치를 찾는 중…';renderSettings();
-    try{const ll=await getPos(0);x.ll=ll;x.addr=await addrOf(ll);saveMYP();mypMsg=`저장했어요${x.addr?' · '+x.addr:''}`}catch(err){mypMsg=err.message}renderSettings();return}
-  if(t.dataset.mypsearch){const q=(($('#mypQ')||{}).value||'').trim();if(!q)return;mypMsg='찾는 중…';renderSettings();
-    try{const a=await kakaoGet('/v2/local/search/address.json',{query:q,size:5});let hits=(a.documents||[]).map(d=>({name:d.address_name,addr:(d.road_address&&d.road_address.address_name)||d.address_name,ll:[+d.y,+d.x]}));
-      if(!hits.length){const k=await kakaoGet('/v2/local/search/keyword.json',{query:q,size:5});hits=(k.documents||[]).map(d=>({name:d.place_name,addr:d.road_address_name||d.address_name,ll:[+d.y,+d.x]}))}
-      mypHits=hits;mypMsg=hits.length?'맞는 곳을 눌러 주세요.':'찾지 못했어요. 다르게 적어 보세요.'}catch(err){mypMsg=err.message}renderSettings();return}
-  if(t.dataset.myppick){const [id,i]=t.dataset.myppick.split(':'),x=mypOf(id),h=mypHits[+i];if(x&&h){x.ll=h.ll;x.addr=h.addr;saveMYP();mypHits=[];mypMsg='저장했어요 · '+h.addr}renderSettings();return}
-});
-
+// ================= 내 장소 (집·회사·…) — on this device and the account, never in share links =================
+// The list, saving, location and address search live in app/data/myplaces.ts and app/data/kakao.ts; the section in 설정
+// handles its own buttons (app/screens/MyPlacesSection.tsx). Here: the names the rest of the old code uses.
+JD.kakao.connectKakao(()=>KEYS.kakao||'');
+JD.myplaces.connectMyPlaces({redraw:()=>renderSettings(),syncSoon:()=>syncSoon()});
+const MYP=JD.myplaces.list;   // the same array (changed in place)
+const saveMYP=()=>JD.myplaces.save(), mypOf=id=>JD.myplaces.of(id);
+const getPos=maxAge=>JD.kakao.here(maxAge), kakaoGet=(path,params)=>JD.kakao.get(path,params), addrOf=ll=>JD.kakao.addressAt(ll);
+// what the section shows
+function mypView(){const u=JD.myplaces.ui;return {places:MYP.map(x=>({id:x.id,name:x.name,ll:x.ll||null,addr:x.addr||''})),editing:u.edit,msg:u.msg||'',
+  hits:u.hits.map(h=>({name:h.name,addr:h.addr})),hasKakao:!!KEYS.kakao}}
 // ================= DICE: 뭐 하지? / 뭐 먹지? =================
 const EAT_MOODS=[['any','상관없음',[]],['full','든든하게',['국밥','백반','덮밥','돈까스']],['light','가볍게',['샐러드','샌드위치','김밥','죽']],['soup','국물',['국밥','찌개','칼국수','쌀국수','라멘']],['noodle','면',['국수','라멘','우동','냉면','파스타']],['meat','고기',['고기','삼겹살','갈비','스테이크']],['solo','혼밥 편한 곳',['라멘','덮밥','김밥','국밥','분식']],['new','안 가 본 곳',[]],['cafe','카페·디저트',[]]];
 let eat=Object.assign({walk:10,mood:'any'},LS.get('jepi.eat',{}),{base:null,org:null,pick:null,rolls:0,list:null,key:'',msg:'',busy:false,ll:null,where:'',meal:null,src:''});
@@ -2195,7 +2129,7 @@ document.addEventListener('click',async e=>{const t=e.target.closest('button');i
       draft.home.ll=h.ll;draft.home.area='집';draft.home.min=Math.min(240,Math.max(10,Math.ceil(v.min/5)*5));homeMsg=`집 → ${a[0]}: ${v.label} 약 ${v.min}분${v.lines?` (${v.lines})`:''}으로 넣었어요.`;autoSave()}
     catch(err){homeMsg=(err&&err.message)||'계산하지 못했어요'}renderMeRows();return}
 });
-document.addEventListener('click',e=>{const t=e.target.closest('#eatSetPlaces');if(!t)return;closeSheet();tab='settings';mypEdit=null;renderSettings();renderTabs()});
+document.addEventListener('click',e=>{const t=e.target.closest('#eatSetPlaces');if(!t)return;closeSheet();tab='settings';JD.myplaces.ui.edit=null;renderSettings();renderTabs()});
 
 // ================= 뭐 하지? — anywhere, any area, one place or a whole course =================
 const DO_MOODS=[['any','상관없음'],['quiet','조용히'],['move','움직이고 싶어'],['drink','한잔'],['rain','비 와요'],['hungry','배고파']];
@@ -2484,7 +2418,7 @@ function syncNow(){return JD.sync.syncNow()}
 JD.sync.connectSync({
   plans:()=>plans, setPlans(p){plans=p}, curPlan:()=>curPlan,
   kws:()=>kws, setKws(k){kws=k},
-  myPlaces:()=>MYP, setMyPlaces(m){MYP=m},
+  myPlaces:()=>MYP, setMyPlaces(m){JD.myplaces.setAll(m)},
   keys:()=>KEYS, setKeys(k){KEYS=k;saveKeys(true)},
   setErr(m){syncErr=m},
   async afterPush(){
@@ -2607,7 +2541,6 @@ function travel(a,b){const e=travelEst(a,b); if(!e) return e;
   const m=e.mode==='도보'?'walk':e.mode==='차'?'car':'transit'; const r=routeGet(m,a,b);
   if(!r) return Object.assign({},e,{est:routeProvider(a,b)?true:false,guess:true});
   return {mode:r.label||e.mode,min:r.min,real:true,lines:r.lines||'',tf:r.tf||0,fare:r.fare,cur:r.cur||'',poly:r.poly}}
-const mapsLink=(a,b,mode)=>`https://www.google.com/maps/dir/?api=1&origin=${a[0]},${a[1]}&destination=${b[0]},${b[1]}&travelmode=${mode==='도보'?'walking':mode==='차'?'driving':'transit'}`;
 const hoursFor=(p,wd)=>p.always?null:((p.hoursBy&&p.hoursBy[wd])||p.hours);
 const closedOn=(p,wd)=>!!(p.closed&&p.closed.includes(wd));
 

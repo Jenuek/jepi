@@ -1,5 +1,7 @@
 // 설정 → 내 장소 (it used to be mypHTML in src/js/270-my-places.js). Kept only on this device.
-// Buttons keep their data-myp* / id names: the old code finds the location and saves.
+// The buttons do the work themselves (app/data/myplaces.ts: location, address search, saving); names data-myp* / ids stay.
+import { useRef } from 'react';
+import * as myp from '../data/myplaces';
 export interface MyPlace {
   id: string;
   name: string;
@@ -27,20 +29,21 @@ function Pin({ x }: { x: MyPlace }) {
 }
 
 function Editing({ x, p }: { x: MyPlace; p: MyPlacesSectionProps }) {
+  const name = useRef<HTMLInputElement>(null), q = useRef<HTMLInputElement>(null);
   return (
     <div className="krow open">
       <div className="kh"><b>{x.name}</b><Pin x={x} /></div>
-      {!fixed(x.id) && <div className="kin"><input id="mypName" defaultValue={x.name} maxLength={12} placeholder="이름 (예: 본가, 헬스장)" /></div>}
-      <div className="row"><button className="small-btn primary" type="button" data-myphere={x.id}>📍 지금 위치로 저장</button></div>
+      {!fixed(x.id) && <div className="kin"><input id="mypName" ref={name} defaultValue={x.name} maxLength={12} placeholder="이름 (예: 본가, 헬스장)" /></div>}
+      <div className="row"><button className="small-btn primary" type="button" data-myphere={x.id} onClick={() => myp.useHere(x.id)}>📍 지금 위치로 저장</button></div>
       {p.hasKakao ? <>
-        <div className="kin"><input id="mypQ" placeholder="주소나 건물 이름 검색 (예: 판교역로 235)" autoComplete="off" /><button className="small-btn" type="button" data-mypsearch={x.id}>찾기</button></div>
+        <div className="kin"><input id="mypQ" ref={q} onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); myp.search(q.current?.value || '') } }} placeholder="주소나 건물 이름 검색 (예: 판교역로 235)" autoComplete="off" /><button className="small-btn" type="button" data-mypsearch={x.id} onClick={() => myp.search(q.current?.value || '')}>찾기</button></div>
         {p.hits.length > 0 && <div className="myp-hits">{p.hits.map((h, i) => (
-          <button key={i} className="mrow" type="button" data-myppick={`${x.id}:${i}`}><span className="mt"><b>{h.name}</b><small>{h.addr}</small></span></button>
+          <button key={i} className="mrow" type="button" data-myppick={`${x.id}:${i}`} onClick={() => myp.pick(x.id, i)}><span className="mt"><b>{h.name}</b><small>{h.addr}</small></span></button>
         ))}</div>}
       </> : <p className="hint">카카오 지도 키를 연결하면 주소로도 찾을 수 있어요.</p>}
       <div className="row">
-        {x.ll && <button className="small-btn danger" type="button" data-mypclear={x.id}>{fixed(x.id) ? '위치 지우기' : '삭제'}</button>}
-        <button className="small-btn" type="button" id="mypDone">닫기</button>
+        {x.ll && <button className="small-btn danger" type="button" data-mypclear={x.id} onClick={() => myp.clear(x.id)}>{fixed(x.id) ? '위치 지우기' : '삭제'}</button>}
+        <button className="small-btn" type="button" id="mypDone" onClick={() => myp.done(name.current?.value)}>닫기</button>
       </div>
       {p.msg && <small className="kmsg">{p.msg}</small>}
     </div>
@@ -54,10 +57,10 @@ export function MyPlacesSection(p: MyPlacesSectionProps) {
         {p.places.map(x => p.editing === x.id ? <Editing key={x.id} x={x} p={p} /> : (
           <div className="krow" key={x.id}>
             <div className="kh"><b>{icon(x.id) + x.name}</b><Pin x={x} /></div>
-            <button className={'small-btn' + (x.ll ? '' : ' primary')} type="button" data-mypedit={x.id}>{x.ll ? '바꾸기' : '등록'}</button>
+            <button className={'small-btn' + (x.ll ? '' : ' primary')} type="button" data-mypedit={x.id} onClick={() => myp.edit(x.id)}>{x.ll ? '바꾸기' : '등록'}</button>
           </div>
         ))}
-        <div className="krow"><button className="small-btn" type="button" id="mypAdd">+ 장소 추가</button></div>
+        <div className="krow"><button className="small-btn" type="button" id="mypAdd" onClick={() => myp.add()}>+ 장소 추가</button></div>
       </div>
       <p className="hint">"뭐 먹지?"에서 주변 식당을 찾는 기준과 여행 출발지로 써요. 이 기기에만 저장되고 공유 링크에는 들어가지 않아요.</p>
     </>

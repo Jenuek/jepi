@@ -134,5 +134,5 @@ document.addEventListener('click',async e=>{const t=e.target.closest('button');i
       draft.home.ll=h.ll;draft.home.area='집';draft.home.min=Math.min(240,Math.max(10,Math.ceil(v.min/5)*5));homeMsg=`집 → ${a[0]}: ${v.label} 약 ${v.min}분${v.lines?` (${v.lines})`:''}으로 넣었어요.`;autoSave()}
     catch(err){homeMsg=(err&&err.message)||'계산하지 못했어요'}renderMeRows();return}
 });
-document.addEventListener('click',e=>{const t=e.target.closest('#eatSetPlaces');if(!t)return;closeSheet();tab='settings';mypEdit=null;renderSettings();renderTabs()});
+document.addEventListener('click',e=>{const t=e.target.closest('#eatSetPlaces');if(!t)return;closeSheet();tab='settings';JD.myplaces.ui.edit=null;renderSettings();renderTabs()});
 
