@@ -4,6 +4,7 @@
 // What other features add to a card (CARD_EXTRAS, e.g. 친구와 함께 "가고 싶어요") is drawn by Extras.tsx.
 import { Fragment, type CSSProperties } from 'react';
 import { Extras, type Extra } from './Extras';
+import { LiveLine } from '../ui/live';
 
 export interface Tag { c: string; t: string }
 
@@ -36,6 +37,8 @@ export interface TrayCardsProps {
   /** nothing left: this message */
   empty: string | null;
   groups: CardGroup[];
+  /** P모드: the 장소 tab is where you collect 내 카드 (count, and whether the AI can suggest) */
+  pmode?: { count: number; ai: boolean } | null;
   rev: number;
 }
 
@@ -48,14 +51,18 @@ export interface TrayFiltersProps {
 
 const T = ({ x }: { x: Tag }) => <span className={x.c}>{x.t}</span>;
 
-function Card({ p }: { p: PlaceCard }) {
+function Card({ p, pm }: { p: PlaceCard; pm: boolean }) {
   return (
-    <div className={'card' + (p.sel ? ' sel' : '') + (p.off ? ' off' : '')} style={{ '--cc': `var(--c-${p.cat})` } as CSSProperties} draggable="true" data-id={p.id}>
-      <div className="nm">{p.name}</div><button className="small-btn primary" data-pick={p.id}>{p.sel ? '선택됨' : '넣기'}</button>
+    <div className={'card' + (p.sel ? ' sel' : '') + (p.off ? ' off' : '') + (pm && p.wish ? ' mine' : '')} style={{ '--cc': `var(--c-${p.cat})` } as CSSProperties} draggable="true" data-id={p.id}>
+      <div className="nm">{p.name}</div>
+      {pm
+        ? <button className={p.wish ? 'small-btn wish-go on' : 'small-btn primary wish-go'} data-wish={p.id} aria-pressed={p.wish}>{p.wish ? '담았어요 ✓' : '♥ 담기'}</button>
+        : <button className="small-btn primary" data-pick={p.id}>{p.sel ? '선택됨' : '넣기'}</button>}
       <div className="sub">{p.sub}</div>
       {p.dist && <div className="dist">{p.dist}</div>}
       <div className="tags">
-        <button className="vote" data-wish={p.id} aria-pressed={p.wish} aria-label="가고 싶어요">{p.wish ? '♥' : '♡'}</button>
+        {pm ? <button className="t-link" data-ppick={p.id}>일정에 바로 넣기</button>
+          : <button className="vote" data-wish={p.id} aria-pressed={p.wish} aria-label="가고 싶어요">{p.wish ? '♥' : '♡'}</button>}
         {p.vote && <button className="vote" data-vote={p.id} aria-pressed={p.vote.on} aria-label="추천하기" disabled={p.vote.locked}>{`👍 ${p.vote.n}`}</button>}
         <Extras xs={p.extras} />
         <span className="tag mono">{`${p.dur}분`}</span>
@@ -66,8 +73,8 @@ function Card({ p }: { p: PlaceCard }) {
   );
 }
 
-function Group({ g }: { g: CardGroup }) {
-  const cards = g.cards.map(p => <Card key={p.id} p={p} />);
+function Group({ g, pm }: { g: CardGroup; pm: boolean }) {
+  const cards = g.cards.map(p => <Card key={p.id} p={p} pm={pm} />);
   if (g.kind === 'list') return <>{cards}</>;
   const fresh = g.kind === 'fresh';
   return (
@@ -78,9 +85,27 @@ function Group({ g }: { g: CardGroup }) {
   );
 }
 
+/** P모드: the top of the 장소 tab — how many cards, and three ways to collect more */
+function Collect({ pm }: { pm: { count: number; ai: boolean } }) {
+  return (
+    <div className="pcollect">
+      <b>{`내 카드 ${pm.count}장 모았어요`}</b>
+      <small>판은 그날 아침에 열려요. 그 전엔 가고 싶은 곳을 ♥ 담기로 모아 두면, 그날 주사위로 뽑아요.</small>
+      <div className="row">
+        {pm.ai && <button type="button" className="small-btn primary" data-pairec="">✨ AI에게 추천받기</button>}
+        {pm.ai && <button type="button" className="small-btn" data-pfind="">🔍 찾아서 담기</button>}
+        <button type="button" className="small-btn" data-pnewcard="">✏️ 직접 적어 담기</button>
+      </div>
+      <LiveLine tag="p" id="st_pairec" className="ai-status" />
+    </div>
+  );
+}
+
 export function TrayCards(p: TrayCardsProps) {
+  const pm = !!p.pmode;
   return (
     <Fragment key={p.rev}>
+      {p.pmode && <Collect pm={p.pmode} />}
       {p.dups.map(d => (
         <div className="dup-card" key={d.a + '~' + d.b}>
           <div className="dup-h"><b>🔗 같은 곳 같아요</b><span className="hint">{d.why}</span></div>
@@ -92,7 +117,7 @@ export function TrayCards(p: TrayCardsProps) {
       {p.hidden > 0 && <p className="now-hint" style={{ margin: '0 0 4px' }}>{`일정에 넣은 ${p.hidden}곳은 목록에서 숨겼어요.`}</p>}
       {p.empty != null
         ? <p className="now-hint">{p.empty}</p>
-        : p.groups.map((g, i) => <Group key={(g.zone || g.kind) + i} g={g} />)}
+        : p.groups.map((g, i) => <Group key={(g.zone || g.kind) + i} g={g} pm={pm} />)}
     </Fragment>
   );
 }

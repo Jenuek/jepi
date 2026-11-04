@@ -26,6 +26,8 @@ export interface FindSheetProps {
   into: 'sched' | 'list' | string;
   q: string;
   busy: boolean;
+  /** P모드: "장소에만" keeps it as one of 내 카드 */
+  mine?: boolean;
   rows: FindRow[];
   /** changes on every full redraw: the boxes and the status line start fresh, like before */
   rev: number;
@@ -35,14 +37,14 @@ function Seg({ k, v, cur, label }: { k: string; v: string; cur: string; label: s
   return <button type="button" className="fchip" data-find={`${k}:${v}`} aria-pressed={cur === v}>{label}</button>;
 }
 
-function Row({ r, into, slot }: { r: FindRow; into: string; slot: string }) {
+function Row({ r, into, slot, mine }: { r: FindRow; into: string; slot: string; mine?: boolean }) {
   return (
     <div className={'cp' + (r.c === 'skip' ? ' off' : '')}>
       <div className="cp-t"><b>{r.name}</b>{r.meta && <small>{r.meta}</small>}{r.note && <p>{r.note}</p>}</div>
       {r.c ? <span className="cp-st">{r.txt}</span> : (
         <div className="cp-b">
           <button className={'small-btn' + (into === 'sched' ? ' primary' : '')} type="button" data-findr={`${r.id}:sched`}>{'일정에 넣기 ' + slot}</button>
-          <button className={'small-btn' + (into === 'list' ? ' primary' : '')} type="button" data-findr={`${r.id}:list`}>장소에만</button>
+          <button className={'small-btn' + (into === 'list' ? ' primary' : '')} type="button" data-findr={`${r.id}:list`}>{mine ? '♥ 내 카드에 담기' : '장소에만'}</button>
           <button className="small-btn" type="button" data-findr={`${r.id}:skip`}>안 함</button>
         </div>
       )}
@@ -77,14 +79,14 @@ export function FindSheet(p: FindSheetProps) {
         <div className="find-g"><span className="hint">넣을 곳</span>
           <div className="seg">
             <Seg k="into" v="sched" cur={p.into} label="일정에" />
-            <Seg k="into" v="list" cur={p.into} label="장소에만" />
+            <Seg k="into" v="list" cur={p.into} label={p.mine ? '내 카드에' : '장소에만'} />
           </div>
         </div>
         <input id="findQ" maxLength={60} defaultValue={p.q} placeholder="예) 카페, 비 오는 날 · 비워 두면 알아서" autoComplete="off" />
         <button className="small-btn primary" type="submit" id="findGo" disabled={p.busy}>{p.busy ? '찾는 중…' : '찾기'}</button>
       </form>
       <p className="ai-status" id="findSt" key={'st' + p.rev}></p>
-      <div className="cps" id="findRes">{p.rows.map(r => <Row key={r.id} r={r} into={p.into} slot={slot} />)}</div>
+      <div className="cps" id="findRes">{p.rows.map(r => <Row key={r.id} r={r} into={p.into} slot={slot} mine={p.mine} />)}</div>
       <div className="row"><button className="small-btn" type="button" data-close="1">닫기</button></div>
     </>
   );

@@ -138,7 +138,7 @@ function MyCards({ cards }: { cards: PMyCards }) {
   const click = (e: RMouseEvent) => { if (drag.current.moved) { e.stopPropagation(); e.preventDefault(); drag.current.moved = false } };
   return (
     <section className="pmine" aria-label="내 카드">
-      <div className="pmh"><b className="ph">{`내 카드 ${cards.count}장`}</b>{cards.count > 3 && <small>← 옆으로 밀어서 더 보기 →</small>}</div>
+      <div className="pmh"><b className="ph">{`내 카드 ${cards.count}장`}</b>{cards.count > 3 && <small>← 밀어서 더 보기 →</small>}{cards.count > 0 && <button type="button" className="pcol" data-tab="tray">+ 카드 모으기</button>}</div>
       {cards.count ? (
         <div className={cards.count > 3 ? 'pfan many' : 'pfan'} ref={row} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerLeave={up} onClickCapture={click}>
           {cards.list.map((c, i) => (
@@ -147,7 +147,7 @@ function MyCards({ cards }: { cards: PMyCards }) {
             </button>
           ))}
         </div>
-      ) : <p className="hint">장소 탭에서 ♥ 한 곳이 내 카드가 돼요.</p>}
+      ) : <button type="button" className="pcol big" data-tab="tray"><b>+ 카드 모으기</b><small>가고 싶은 곳을 ♥ 담아 두면, 그날 주사위로 뽑아요</small></button>}
     </section>
   );
 }

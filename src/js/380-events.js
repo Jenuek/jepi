@@ -23,6 +23,10 @@ document.addEventListener('click',e=>{
   if(t.dataset.pai!=null){pAI();return}
   if(t.dataset.pahead!=null){pAhead();return}
   if(t.dataset.pcard){pMood('mine');return}
+  if(t.dataset.pairec!=null){pAIRec();return}
+  if(t.dataset.pfind!=null){openFind({where:'city',into:'list'});return}
+  if(t.dataset.pnewcard!=null){openCustom(null,null,{card:true});return}
+  if(t.dataset.ppick){pPlaceNow(t.dataset.ppick);return}
   if(t.dataset.startmode&&draft){draft.startMode=t.dataset.startmode;draft.kind=draft.startMode==='day'?'day':'trip';if(draft.kind==='day'){draft.nightsSet=true;draft.bookedFlight=true;draft.bookedStay=true;draft.flightSet=true;draft.staySet=true;draft.q={when:'',len:'0',slot:'noon'}}if(t.dataset.destmode!=null)draft.destMode=t.dataset.destmode;else if(t.dataset.startmode==='quick'&&!t.closest('.choose'))draft.destMode=draft.dest?'':'find';if(draft.startMode==='talk'&&!talk)talkReset();renderOnb();return}
   if(t.dataset.talkopt!=null&&talk){talkSend(talk.options[+t.dataset.talkopt]);return}
   if(t.id==='talkSend'){const v=(($('#talkInput')||{}).value||'').trim();if(v)talkSend(v);return}
