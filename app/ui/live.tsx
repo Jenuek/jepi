@@ -5,6 +5,7 @@
 // The state lives in the drawn element: when the screen is redrawn fresh (a new rev), it starts over, like before.
 import { flushSync } from 'react-dom';
 import { useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { app } from './host';
 
 export interface LiveHandle {
   /** status line: its text */
@@ -15,8 +16,6 @@ export interface LiveHandle {
   label(l: string | null): void;
   /** button: locked or not */
   disabled(b: boolean): void;
-  /** toggle chip: pressed or not */
-  pressed(b: boolean): void;
   /** an extra class on or off (the time slot under a dragged card: "drop") */
   cls(name: string, on: boolean): void;
 }
@@ -33,7 +32,7 @@ function useHandle(h: Partial<LiveHandle>) {
     const el = ref.current; if (!el) return;
     // apply right away, like the old direct writes (the old code may read the element back)
     const now = <T,>(f?: (v: T) => void) => f ? (v: T) => flushSync(() => f(v)) : noop;
-    handles.set(el, { text: now(h.text), busy: now(h.busy), label: now(h.label), disabled: now(h.disabled), pressed: now(h.pressed),
+    handles.set(el, { text: now(h.text), busy: now(h.busy), label: now(h.label), disabled: now(h.disabled),
       cls: h.cls ? (n: string, on: boolean) => flushSync(() => h.cls!(n, on)) : noop });
     return () => { handles.delete(el) };
   }, []);   // the setters below never change
@@ -58,11 +57,10 @@ export function LiveButton({ id, className, children, disabled = false, noType =
   return <button className={className} type={noType ? undefined : 'button'} id={id} {...Object.fromEntries(Object.entries(data || {}).map(([k, v]) => ['data-' + k, v]))} disabled={d ?? disabled} onClick={onClick} ref={ref as RefObject<HTMLButtonElement>}>{l ?? children}</button>;
 }
 
-/** A taste keyword chip (data-kwtoggle): the old click handler flips it through the handle. */
+/** A taste keyword chip (data-kwtoggle): flips itself; the old code saves the keywords (app().kw). */
 export function LiveChip({ k, on }: { k: string; on: boolean }) {
   const [v, setV] = useState(on);
-  const ref = useHandle({ pressed: setV });
-  return <button type="button" data-kwtoggle={k} aria-pressed={v} ref={ref as RefObject<HTMLButtonElement>}>{k}</button>;
+  return <button type="button" data-kwtoggle={k} aria-pressed={v} onClick={() => setV(!!app().kw('toggle', k))}>{k}</button>;
 }
 
 /** A time slot in the 일정표 (button.slot): the old drag code marks the one under the pointer through the handle. */

@@ -9,5 +9,11 @@ module.exports = { name: 'keywords', async run(t) {
   await p.click('[data-kwdel="0"]'); await grab('removed', '#prefBox');
   for (let i = 0; i < 40 && await p.$('[data-kwdel]'); i++) await p.click('[data-kwdel="0"]');
   await grab('empty', '#prefBox');
+  await p.click('#kwReset'); await grab('reset', '#prefBox');
+  await p.fill('#kwInput', '골목'); await p.press('#kwInput', 'Enter'); await p.waitForTimeout(200);
+  const first = '골목';
+  await p.fill('#kwInput', first); await p.press('#kwInput', 'Enter'); await p.waitForTimeout(200);
+  await grab('dup_typed', '#prefBox');
+  await p.fill('#kwInput', '야시장'); await p.click('#kwForm [type=submit]'); await grab('added_button', '#prefBox');
   await p.ctx.close();
 } };

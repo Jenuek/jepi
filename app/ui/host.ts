@@ -40,6 +40,8 @@ export interface AppHost {
   nudge(name: string, value?: string): void;
   /** P모드 판: sq, gap, roll, mood, card, next, yes, keep, close, ai, ahead (and a square / gap / mood) */
   pview(name: string, value?: string): void;
+  /** 취향 키워드: toggle (returns: on now), del (its place), add (a word), reset */
+  kw(name: string, value?: string): boolean | void;
   /** a backup file was chosen (처음 설정 · 내 계획 · 설정) */
   importFile(f: File | undefined): void;
 }
