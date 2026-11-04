@@ -793,6 +793,8 @@ module.exports = [
       await p.evaluate(() => { let s = 7; Math.random = () => ((s = s * 16807 % 2147483647) / 2147483647) });   // the same rolls every time
       const blocks = () => p.evaluate(() => JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k => k.endsWith('gp.placed3'))) || '[]').length);
       await p.click('#diceFab'); await p.waitForTimeout(400);
+      // at meal times the button opens 뭐 먹지 first: go to 뭐 하지 for the rest of this check
+      if (!(await vis(p, '#sheet [data-dobase="near"]'))) { await p.click('#sheet [data-dicetab="do"]'); await p.waitForTimeout(300) }
       ok(await vis(p, '#sheet .dice-tabs') && await vis(p, '#sheet [data-dobase="near"]'), 'DICE opens with 뭐 하지/뭐 먹지 tabs');
       await p.click('#sheet [data-dobase="plan"]'); await p.waitForTimeout(300);
       ok((await p.textContent('#sheet h3')).includes('빈 시간에서 굴려요') && await vis(p, '#sheet [data-dicegap]'), 'plan view: free slots to pick');
@@ -1294,6 +1296,29 @@ module.exports = [
       const chips = await p.$$eval('#grid .trn .chip', e => e.map(x => x.textContent));
       ok(asked > 0 && chips.some(t => t.includes('지하철 13분') && t.includes('미도스지선') && !t.startsWith('≈')), 'real time, line name, no ≈ (' + asked + ' asked) ' + chips.slice(0, 3).join(' / '));
       ok(await p.evaluate(() => Object.values(JSON.parse(localStorage.getItem('jepi.routes') || '{}')).some(v => v.src === 'google' && v.poly && v.poly.length === 3)), 'saved on the device with the route line');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'React handles its own buttons: 여행 꾸미기 AI로 지어 보기 (pretend AI) and 내 사진 (made small), saved together',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S);
+      await p.route(/api\.anthropic\.com/, r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content: [{ type: 'text', text: JSON.stringify({ titles: ['네온 아래 첫 저녁', '성과 시장 사이', '바다 쪽으로', '안녕, 오사카'] }) }] }) }));
+      await p.click('[data-w="new"]'); await p.waitForTimeout(250);
+      if (await p.$('#onbKey_anthropic')) { await p.fill('#onbKey_anthropic', 'sk-ant-test-key'); await p.click('#onbBody [data-onbkey="anthropic"]'); await p.waitForTimeout(300) }
+      await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await p.click('#lookBtn'); await p.waitForTimeout(300);
+      await p.fill('#lkName', '우리 오사카'); await p.click('#lkAi'); await p.waitForTimeout(1500);
+      ok(await p.inputValue('#sheet [data-lkday="0"]') === '네온 아래 첫 저녁' && (await p.textContent('#lkSt')).includes('고쳐 쓰면') && await p.inputValue('#lkName') === '우리 오사카', 'AI titles fill the day boxes, the typed trip name stays');
+      // a 1×1 PNG as "my photo"
+      const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+      await p.setInputFiles('#lkPhoto', { name: 'me.png', mimeType: 'image/png', buffer: png }); await p.waitForTimeout(600);
+      ok(await p.getAttribute('#sheet .lk-photo', 'aria-pressed') === 'true', '내 사진 is chosen as the cover');
+      await p.click('#lookForm [type="submit"]'); await p.waitForTimeout(400);
+      const pr = await p.evaluate(() => JSON.parse(localStorage.getItem('gp.profile')));
+      ok(pr.look.cover === 'photo' && /^data:image\/jpeg/.test(pr.look.photo) && pr.dayTitles[0] === '네온 아래 첫 저녁' && (await p.textContent('#dayTitle')) === '네온 아래 첫 저녁', 'saved: photo cover (as a small JPEG) and the day titles');
+      ok((await p.textContent('#planName')).includes('우리 오사카'), 'the trip got its new name');
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }

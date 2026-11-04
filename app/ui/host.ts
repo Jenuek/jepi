@@ -16,6 +16,11 @@ export interface AppHost {
   titleEditing(on: boolean): void;
   /** 여행 노트: close it / make the share link (resolves with the message to show) */
   closeNotebook(): void;
+  /** 여행 꾸미기: rename the open plan ('' or the same name = no change), and AI day titles for this trip */
+  renamePlan(name: string): void;
+  aiDayTitles(tripName: string): Promise<string[]>;
+  /** what went wrong, in words the person can act on */
+  errText(e: unknown, what: string): string;
   shareNotebook(): Promise<string>;
 }
 let host: AppHost | null = null;

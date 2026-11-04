@@ -2394,7 +2394,8 @@ function fabDodge(){
 const SB_DEFAULT=JD.server.SB_DEFAULT;
 const SYNC=JD.server.SYNC;
 const saveSync=JD.server.saveSync;
-let syncStep='', syncErr='';
+// which part of the 동기화 section shows and the last error live in app/data/account.ts (ACC.state)
+const ACC=JD.account;
 const syncOn=JD.server.syncOn;
 function hashStr(s){return JD.hashStr(s)}
 function sbAuth(path,body){return JD.server.sbAuth(path,body)}
@@ -2420,7 +2421,7 @@ JD.sync.connectSync({
   kws:()=>kws, setKws(k){kws=k},
   myPlaces:()=>MYP, setMyPlaces(m){JD.myplaces.setAll(m)},
   keys:()=>KEYS, setKeys(k){KEYS=k;saveKeys(true)},
-  setErr(m){syncErr=m},
+  setErr(m){ACC.state.err=m},
   async afterPush(){
     if(tab==='settings') renderSettings();
     for(const f of SYNC_AFTER_PUSH){try{await f()}catch(e){console.warn(e)}}
@@ -2435,45 +2436,24 @@ JD.sync.connectSync({
 });
 // The section is drawn by React: app/screens/SyncSection.tsx. Here: what it shows.
 function syncView(){
-  const mode=(!SYNC.url||!SYNC.key||syncStep==='setup')?'setup':!syncOn()?(syncStep==='reset'?'reset':syncStep==='join'?'join':'login'):syncStep==='newpw'?'newpw':'on';
-  return {mode,url:SYNC.url||'',hasKey:!!SYNC.key,email:(mode==='on'&&SYNC.sess.email)||SYNC.email||'',err:syncErr||'',busy:!!SYNC_STATUS.busy,
+  const st=ACC.state.step, mode=(!SYNC.url||!SYNC.key||st==='setup')?'setup':!syncOn()?(st==='reset'?'reset':st==='join'?'join':'login'):st==='newpw'?'newpw':'on';
+  return {mode,url:SYNC.url||'',hasKey:!!SYNC.key,email:(mode==='on'&&SYNC.sess.email)||SYNC.email||'',err:ACC.state.err||'',busy:!!SYNC_STATUS.busy,
     lastAt:SYNC.at||0,vkMissing:!LS.get('jepi.vk',null),keysLocked:!!SYNC_STATUS.keysLocked};
 }
-document.addEventListener('click',async e=>{const t=e.target.closest('button');if(!t)return;
-  if(t.id==='sbSetup'){syncStep='setup';renderSettings();return}
-  if(t.id==='sbCancel'){syncStep='';renderSettings();return}
-  if(t.id==='sbSave'){const u=(($('#sbUrl')||{}).value||'').trim().replace(/\/+$/,''),k=(($('#sbKey')||{}).value||'').trim();
-    if(!/^https:\/\/[a-z0-9-]+\.supabase\.(co|in)$/i.test(u)){syncErr='주소는 https://xxxx.supabase.co 모양이에요.';renderSettings();return}
-    if(!k&&!SYNC.key){syncErr='키를 넣어 주세요.';renderSettings();return}
-    if(u!==SYNC.url){SYNC.sess=null;SYNC.sent={};SYNC.lastPull=0} SYNC.url=u; if(k)SYNC.key=k; syncErr='';syncStep='';saveSync();renderSettings();return}
-  if(t.id==='sbSend'){const em=(($('#sbEmail')||{}).value||'').trim();if(!/^\S+@\S+\.\S+$/.test(em)){syncErr='이메일을 확인해 주세요.';renderSettings();return}
-    SYNC.email=em;saveSync();t.disabled=true;try{const back=location.origin+location.pathname+'?sb='+encodeURIComponent(btoa(JSON.stringify({u:SYNC.url,k:SYNC.key,e:em})));await sbAuth('/auth/v1/otp?redirect_to='+encodeURIComponent(back),{email:em,create_user:true});syncStep='code';syncErr=''}catch(err){syncErr=err.message}renderSettings();return}
-  if(t.id==='sbBack'){syncStep='';renderSettings();return}
-  if(t.id==='sbVerify'){const code=(($('#sbCode')||{}).value||'').trim();if(!code)return;t.disabled=true;
-    try{const wasReset=syncStep==='reset';keepSess(await sbVerifyInput(code));syncStep=wasReset?'newpw':'';syncErr='';SYNC.sent={};SYNC.lastPull=0;saveSync();renderSettings();await syncNow();showToast('동기화를 켰어요')}catch(err){syncErr=err.message;renderSettings()}return}
-  if(t.id==='sbNow'){syncNow();renderSettings();return}
-  if(t.id==='sbOut'){LS.del('jepi.vk');SYNC_STATUS.keysLocked=false;SYNC.sess=null;SYNC.sent={};SYNC.lastPull=0;saveSync();syncStep='';renderSettings();return}
-});
+// the section's buttons and forms work by themselves (app/data/account.ts); they ask the old code to redraw and to sync
+ACC.connectAccount({redraw:()=>renderSettings(),toast:m=>showToast(m),syncNow:()=>syncNow()});
 
-async function sbVerifyInput(v){
-  let th=null, ty='email';
-  try{const u=new URL(v);th=u.searchParams.get('token')||u.searchParams.get('token_hash');ty=u.searchParams.get('type')||'magiclink'}catch(_){}
-  if(th){if(/^pkce_/.test(th))throw aiErr('auth','이 링크는 이 방식으로 쓸 수 없어요. 링크를 이 기기에서 직접 눌러 주세요.');
-    return sbAuth('/auth/v1/verify',{type:ty==='signup'?'signup':ty==='recovery'?'recovery':'magiclink',token_hash:th})}
-  const code=v.replace(/\s/g,''); if(!/^\d{6,10}$/.test(code)) throw aiErr('auth','메일의 Sign in 링크 주소를 통째로 붙여 넣어 주세요.');
-  return sbAuth('/auth/v1/verify',{type:'email',email:SYNC.email,token:code});
-}
 // a tapped login link comes back here: ?sb=<config>#access_token=…
 async function syncBoot(){
   try{
     const q=new URLSearchParams(location.search), sb=q.get('sb');
     if(sb){try{const c=JSON.parse(atob(sb));if(c.u&&!SYNC.url)SYNC.url=c.u;if(c.k&&!SYNC.key)SYNC.key=c.k;if(c.e)SYNC.email=c.e;saveSync()}catch(_){}}
     const h=new URLSearchParams((location.hash||'').replace(/^#/,''));
-    if(h.get('error_description')){syncErr=h.get('error_description').replace(/\+/g,' ');showToast('로그인 링크가 만료됐어요. 다시 받아 주세요.')}
+    if(h.get('error_description')){ACC.state.err=h.get('error_description').replace(/\+/g,' ');showToast('로그인 링크가 만료됐어요. 다시 받아 주세요.')}
     if(h.get('access_token')&&SYNC.url&&SYNC.key){
       const at=h.get('access_token');let user={};
       try{const r=await fetch(SYNC.url+'/auth/v1/user',{headers:{apikey:SYNC.key,Authorization:'Bearer '+at}});user=await r.json()}catch(_){}
-      keepSess({access_token:at,refresh_token:h.get('refresh_token'),expires_in:+h.get('expires_in')||3600,user});SYNC.sent={};SYNC.lastPull=0;saveSync();syncStep=h.get('type')==='recovery'?'newpw':'';if(syncStep==='newpw'){tab='settings';setTimeout(()=>{renderTabs();renderSettings()},300)}
+      keepSess({access_token:at,refresh_token:h.get('refresh_token'),expires_in:+h.get('expires_in')||3600,user});SYNC.sent={};SYNC.lastPull=0;saveSync();ACC.state.step=h.get('type')==='recovery'?'newpw':'';if(ACC.state.step==='newpw'){tab='settings';setTimeout(()=>{renderTabs();renderSettings()},300)}
       showToast('로그인했어요 · 동기화를 켰어요');
     }
     if(sb||h.get('access_token')||h.get('error_description')) history.replaceState(null,'',location.pathname);
@@ -2481,33 +2461,8 @@ async function syncBoot(){
   setTimeout(syncNow,800);
 }
 
-// email + password
-function sbErrText(m){return /already registered|already exists/i.test(m)?'이미 가입된 이메일이에요. "로그인"으로 들어가 주세요.':/invalid login|invalid_credentials|Invalid login/i.test(m)?'이메일이나 비밀번호가 맞지 않아요.':/Email not confirmed/i.test(m)?'메일 확인이 켜져 있어요. Supabase에서 Confirm email을 꺼 주세요.':/Password should|weak/i.test(m)?'비밀번호는 6자 이상으로 해 주세요.':/signups not allowed/i.test(m)?'가입이 꺼져 있어요 (Supabase 설정).':m}
-document.addEventListener('submit',async e=>{const f=e.target;if(!f||(f.id!=='sbForm'&&f.id!=='sbPwForm'))return;e.preventDefault();
-  if(f.id==='sbPwForm'){const pw=($('#sbNew')||{}).value||'';try{const tk=await sbToken();const r=await fetch(SYNC.url+'/auth/v1/user',{method:'PUT',headers:{apikey:SYNC.key,Authorization:'Bearer '+tk,'content-type':'application/json'},body:JSON.stringify({password:pw})});
-      if(!r.ok){let m='';try{const j=await r.json();m=j.msg||j.message||''}catch(_){}throw aiErr('auth',sbErrText(m||'HTTP '+r.status))}try{await vaultMake(SYNC.sess.email||SYNC.email,pw);SYNC_STATUS.keysLocked=false;SYNC.sent.keys='';LS.set('jepi.keysAt',Date.now());syncSoon(500)}catch(_){}syncStep='';syncErr='';showToast('새 비밀번호를 저장했어요')}catch(err){syncErr=err.message}renderSettings();return}
-  const em=(($('#sbEmail')||{}).value||'').trim(), pw=($('#sbPw')||{}).value||'', join=syncStep==='join';
-  if(em){SYNC.email=em;saveSync()}
-  if(join&&pw!==(($('#sbPw2')||{}).value||'')){syncErr='두 비밀번호가 달라요.';renderSettings();return}
-  const btn=$('#sbGo'); if(btn){btn.disabled=true;btn.textContent='잠시만요…'}
-  try{syncStep='';await sbSignIn(em,pw,join);renderSettings();await syncNow();showToast(join?'가입했어요 · 동기화를 켰어요':'로그인했어요 · 동기화를 켰어요')}
-  catch(err){if(join)syncStep='join';syncErr=sbErrText(err.message);renderSettings()}
-});
-// sign up or log in with email + password; also makes this device's key-unlocking key
-async function sbSignIn(em,pw,join){
-  SYNC.email=em; saveSync();
-  const j=join?await sbAuth('/auth/v1/signup',{email:em,password:pw}):await sbAuth('/auth/v1/token?grant_type=password',{email:em,password:pw});
-  const sess=j.access_token?j:(j.session||null);
-  if(!sess||!sess.access_token) throw aiErr('auth','메일 확인이 켜져 있어서 바로 로그인되지 않았어요. Supabase에서 Confirm email을 꺼 주세요.');
-  try{await vaultMake(em,pw)}catch(_){}
-  keepSess(Object.assign({},sess,{user:sess.user||j.user}));syncErr='';SYNC.sent={};SYNC.lastPull=0;saveSync();
-}
-document.addEventListener('click',async e=>{const t=e.target.closest('button');if(!t)return;
-  if(t.dataset.sbmode){syncStep=t.dataset.sbmode==='join'?'join':'';syncErr='';renderSettings();return}
-  if(t.id==='sbForgot'){const em=(($('#sbEmail')||{}).value||SYNC.email||'').trim();if(!/^\S+@\S+\.\S+$/.test(em)){syncErr='이메일을 먼저 넣어 주세요.';renderSettings();return}
-    SYNC.email=em;saveSync();try{await sbAuth('/auth/v1/recover?redirect_to='+encodeURIComponent(location.origin+location.pathname+'?sb='+encodeURIComponent(btoa(JSON.stringify({u:SYNC.url,k:SYNC.key,e:em})))),{email:em});syncStep='reset';syncErr=''}catch(err){syncErr=err.message}renderSettings();return}
-});
-
+// email + password (app/data/account.ts): the first screen uses these too
+const sbErrText=m=>ACC.errText(m), sbSignIn=(em,pw,join)=>ACC.signIn(em,pw,join);
 // ---------- state ----------
 const store=JD.storage; // same as LS (app/data/storage.ts)
 let uidN=1;
@@ -3478,7 +3433,7 @@ function titleEditing(on){
 document.addEventListener('click',e=>{const t=e.target.closest('#dayTitleEdit');if(t&&!$('#dayTitleIn'))titleEditing(true)});
 // what React screens may ask of the old code (app/ui/host.ts)
 window.JEPI_UI.connectHost({renderAll:()=>renderAll(),closeSheet:()=>closeSheet(),reopenSheet:()=>{const u=$('#sheet').dataset.uid;if(u&&u!=='dice'&&!$('#sheetBg').hidden)openSheet(u)},toast:m=>showToast(m),day:()=>day,autoTitle:d=>String((DAYS[d]||{}).title||''),titleEditing,
-  closeNotebook:()=>closeNotebook(),shareNotebook:async()=>{await shareLink(true);return planMsg||'링크를 만들었어요'}});
+  closeNotebook:()=>closeNotebook(),renamePlan:nm=>lookRenamePlan(nm),aiDayTitles:n=>lookAiTitles(n),errText:(e,w)=>errText(e,w),shareNotebook:async()=>{await shareLink(true);return planMsg||'링크를 만들었어요'}});
 // ---------- how a trip looks: theme colour, cover, style, handwriting; folding hero header ----------
 // profile.look = {color, cover:'city'|'sea'|'mountain'|'none'|'photo', photo:dataURL, tagline, style:'color'|'note', hand}
 // Lives in the plan's profile, so it syncs across devices and to friends on a shared trip.
@@ -3528,53 +3483,24 @@ document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)r
   if(t.dataset.mbday){const n=day+ +t.dataset.mbday;if(n>=0&&n<DAYS.length){day=n;renderAll()}return}
   if(t.id==='lookBtn'){openLook();return}
 });
-// --- 여행 꾸미기 sheet ---
-let lookDraft=null;
-function openLook(){
-  lookDraft=Object.assign(lookOf(),{titles:DAYS.map((_,i)=>((profile.dayTitles||[])[i])||''),name:(plans.find(x=>x.id===curPlan)||{}).name||planName()});
-  renderLookSheet(); $('#sheet').dataset.uid=''; $('#sheetBg').hidden=false;
-}
-// drawn by React: app/screens/LookSheet.tsx
+// --- 여행 꾸미기 sheet: drawn by React (app/screens/LookSheet.tsx), which keeps its own draft and saves itself ---
 let lookRev=0;
-function renderLookSheet(){
-  const L=lookDraft;
-  window.JEPI_UI.mount('look',$('#sheet'),{name:L.name||'',tagline:L.tagline||'',style:L.style,color:L.color,cover:L.cover,hand:L.hand,photo:L.photo||'',
+function openLook(){
+  const L=lookOf();
+  window.JEPI_UI.mount('look',$('#sheet'),{name:(plans.find(x=>x.id===curPlan)||{}).name||planName(),tagline:L.tagline||'',style:L.style,color:L.color,cover:L.cover,hand:L.hand,photo:L.photo||'',pop:L.pop,
     colors:LOOK_COLORS,covers:LOOK_COVERS.map(([k,n])=>({k,name:n,svg:coverSVG(k,64,40)})),hands:LOOK_HANDS,
-    days:DAYS.map((D,i)=>({title:L.titles[i]||'',placeholder:String(D.title)})),ai:!!sample,rev:++lookRev});
+    days:DAYS.map((D,i)=>({title:((profile.dayTitles||[])[i])||'',placeholder:String(D.title)})),ai:!!sample,rev:++lookRev});
+  $('#sheet').dataset.uid=''; $('#sheetBg').hidden=false;
 }
-function lookCollect(){const L=lookDraft;if(!$('#lookForm'))return;L.name=$('#lkName').value;L.tagline=$('#lkTag').value;document.querySelectorAll('[data-lkday]').forEach(i=>L.titles[+i.dataset.lkday]=i.value)}
-async function lookAiTitles(){
-  setSt('lkSt','제목을 짓는 중이에요 (보통 10~20초)');
+// the question for AI로 지어 보기 (asked by the sheet through the host)
+async function lookAiTitles(tripName){
   const days=DAYS.map((D,i)=>`Day ${i+1}: `+analyze(i).items.filter(x=>!x.stay).map(x=>x.name).slice(0,8).join(', '));
-  const prompt=`Write a short, evocative Korean title for each day of this trip to ${PACK.city}, like chapter titles of a travel journal (8-18 Korean characters, no emoji, no "Day N"). Trip title: "${lookDraft.name}".
+  const prompt=`Write a short, evocative Korean title for each day of this trip to ${PACK.city}, like chapter titles of a travel journal (8-18 Korean characters, no emoji, no "Day N"). Trip title: "${tripName}".
 ${days.join('\n')}
 Reply with only JSON: {"titles":["...", ...]} with exactly ${DAYS.length} items.`;
-  try{const r=await sample.json(prompt,{cache:false});const a=Array.isArray(r&&r.titles)?r.titles:[];
-    a.slice(0,DAYS.length).forEach((t,i)=>{lookDraft.titles[i]=String(t||'').slice(0,40)});renderLookSheet();setSt('lkSt','마음에 들지 않는 건 고쳐 쓰면 돼요.')}
-  catch(e){setSt('lkSt',errText(e,'제목을 짓지 못했어요'))}
+  const r=await sample.json(prompt,{cache:false}); return Array.isArray(r&&r.titles)?r.titles.slice(0,DAYS.length):[];
 }
-function lookPhoto(file){ // shrink to at most 720 px wide so it syncs quickly
-  const img=new Image(), url=URL.createObjectURL(file);
-  img.onload=()=>{const s=Math.min(1,720/img.width), c=document.createElement('canvas'); c.width=Math.round(img.width*s); c.height=Math.round(img.height*s);
-    c.getContext('2d').drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(url);
-    lookCollect(); lookDraft.photo=c.toDataURL('image/jpeg',.72); lookDraft.cover='photo'; renderLookSheet()};
-  img.onerror=()=>{URL.revokeObjectURL(url);setSt('lkSt','사진을 읽지 못했어요.')};
-  img.src=url;
-}
-function saveLook(){
-  lookCollect(); const L=lookDraft;
-  profile.look={color:L.color,pop:L.pop,cover:L.cover,tagline:L.tagline.trim().slice(0,40),style:L.style,hand:L.hand,photo:L.cover==='photo'?L.photo:''};
-  const t=L.titles.map(x=>String(x||'').trim().slice(0,40)); while(t.length&&!t[t.length-1])t.pop(); profile.dayTitles=t;
-  TRIP.save('profile',profile);
-  const p=plans.find(x=>x.id===curPlan), nm=L.name.trim().slice(0,30); if(p&&nm&&nm!==p.name){p.name=nm;p.custom_name=true;savePlans()}
-  closeSheet(); renderAll(); showToast('여행을 꾸몄어요');
-}
-document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t||!lookDraft||!$('#lookForm'))return;
-  if(t.dataset.lk){lookCollect();const [k,v]=t.dataset.lk.split(':');lookDraft[k]=v;renderLookSheet();return}
-  if(t.id==='lkAi'){lookCollect();lookAiTitles();return}
-});
-document.addEventListener('change',e=>{if(e.target.id==='lkPhoto'&&e.target.files&&e.target.files[0])lookPhoto(e.target.files[0])});
-document.addEventListener('submit',e=>{if(e.target.id!=='lookForm')return;e.preventDefault();saveLook()});
+function lookRenamePlan(nm){const p=plans.find(x=>x.id===curPlan);if(p&&nm&&nm!==p.name){p.name=nm;p.custom_name=true;savePlans()}}
 // ---------- handwritten memos: one line per block, one line per day ----------
 // The rules live in app/logic/memo.ts; the memo box in a block's sheet saves itself (app/screens/Extras.tsx MemoBox).
 const memoKey=(it,d)=>JD.logic.memo.blockKey(it.id,d);
