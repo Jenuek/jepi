@@ -809,6 +809,38 @@ module.exports = [
     }
   },
   {
+    name: '🎲 nearby (pretend Kakao map, location set): 뭐 하지 one place and a course, 뭐 먹지 a place to eat, 이걸로 remembers it',
+    async run({ b, S, device, ok, skipCoach }) {
+      const p = await device(b, S);
+      await p.ctx.grantPermissions(['geolocation']); await p.ctx.setGeolocation({ latitude: 37.544, longitude: 127.056 });
+      await p.route(/dapi\.kakao\.com/, r => { const u = new URL(r.request().url()), w = u.searchParams.get('query') || u.searchParams.get('category_group_code'), x = +u.searchParams.get('x'), y = +u.searchParams.get('y');
+        r.fulfill({ contentType: 'application/json', body: JSON.stringify({ meta: { is_end: true }, documents: [0, 1, 2, 3].map(i => ({ id: w + i, place_name: `${w} 가게 ${i}`, category_name: '음식점 > ' + w, distance: String(120 * (i + 1)), road_address_name: '성수이로 ' + i, x: String(x + i * 0.001), y: String(y + i * 0.001) })) }) }) });
+      await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await p.waitForTimeout(400); await skipCoach(p);
+      await p.evaluate(() => localStorage.setItem('jepi.keys', JSON.stringify(Object.assign(JSON.parse(localStorage.getItem('jepi.keys') || '{}'), { kakao: 'KakaoTestKey' }))));
+      await p.clock.setFixedTime(new Date('2027-03-10T15:20:00'));
+      await p.reload(); await p.waitForTimeout(3800); await skipCoach(p).catch(() => {}); await p.emulateMedia({ reducedMotion: 'reduce' });
+      await p.click('#diceFab'); await p.waitForTimeout(400);
+      if (!(await p.$('#sheet [data-dobase]'))) { await p.click('#sheet [data-dicetab="do"]'); await p.waitForTimeout(300) }
+      await p.click('#sheet [data-dobase="near"]'); await p.waitForTimeout(300);
+      await p.click('#sheet [data-dogo="one"] >> nth=0'); await p.waitForTimeout(1200);
+      const one = await p.textContent('#sheet');
+      ok(/가게 \d/.test(one) && one.includes('카카오 지도') && one.includes('지금 위치 기준'), '뭐 하지: one place from the map around me');
+      await p.click('#sheet [data-dogo="course"] >> nth=0'); await p.waitForTimeout(1800);
+      const stops = await p.$$eval('#sheet [data-doreroll]', e => e.length);
+      ok(stops >= 3 && (await p.textContent('#sheet')).includes('지금 위치에서 걸어서'), 'course of ' + stops + ' stops, walking times between them');
+      await p.click('#sheet [data-dicetab="eat"]'); await p.waitForTimeout(300);
+      await p.click('#sheet [data-eatbase="near"]').catch(() => {}); await p.waitForTimeout(200);
+      await p.click('#sheet [data-eatroll="go"]'); await p.waitForTimeout(1200);
+      const eat = await p.textContent('#sheet');
+      ok(/FD6 가게 \d/.test(eat) && eat.includes('걸어서 약'), '뭐 먹지: a restaurant within walking distance');
+      const nm = (eat.match(/FD6 가게 \d/) || [''])[0];
+      await p.click('#eatPick'); await p.waitForTimeout(300);
+      ok((await p.textContent('#sheet')).includes('맛있게 드세요') && await p.evaluate(n => JSON.parse(localStorage.getItem('gp.dice')).some(x => x.n === n), nm), '이걸로! is remembered (left out of the next rolls)');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
     name: 'React screen: 🎲 DICE (roll in a free slot → 이걸로 할래요 puts it in the schedule, 다시 counts down, tabs swap) and 지도 cards',
     async run({ b, S, device, ok, vis, skipCoach }) {
       const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
