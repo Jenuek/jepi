@@ -67,7 +67,11 @@
     세 가지 예전 화면이 같은 조각(탭·기준 버튼·조건 상자·주사위/카드·버튼 줄)을 값으로 넘겨요. "AI가 새로 찾아서 굴리기"는 live 연결.
     **고친 것**: 일정 빈 시간 보기에서 예전 코드가 그려진 시트 맨 위에 탭·기준 버튼을 끼워 넣던 것(insertAdjacentHTML) → 값으로 넘김.
     지도 자체(Leaflet)는 그대로 예전 코드. 점검 251개 통과.
-  - [ ] 다음: 마지막으로 일정표(renderTimeline — 가장 크고 중심이라 조각으로 나눠서: 요약 줄·경로 줄·예산 → 블록·빈칸 → 블록 시트·빈 시간 시트(openFill)). AI 붙여 넣기 칸(pasteBox·aiFill)도 live 방식으로.
+  - [x] 일정표 ① 위쪽(`DayTop.tsx`): 날짜 버튼(#days)·요약 줄(#daySum)과 펼친 내용(#sumBody)·동선(#route)·예산(#budgetSum·#budget) — 48가지 캡처 모두 예전과 같음(`tools/compare/daytop.js`, 예산 넘을 때·여럿일 때 포함).
+    굵은 글씨가 섞인 줄은 `segs(…)`로 글자 조각을 만들어 넘겨요(DayTop.tsx의 Line). 상자(#sumBody 숨기기, 패널의 sum-… 표시)는 예전 코드가 그대로 열고 닫아요.
+    점검 추가. 🎲 점검이 주사위 난수에 따라 가끔 실패하던 것도 고침(난수 고정 + "그래도 넣기" 경우). 점검 259개 통과.
+  - [ ] 다음: 일정표 ② 블록·빈칸·이동·권역 띠·일몰 선(#grid, renderTimeline 본체 — 손글씨 메모 blockMemoHTML·BLOCK_BADGES 포함), ③ 블록 시트·빈 시간 시트(openSheet·openFill, #sheet).
+    AI 붙여 넣기 칸(pasteBox·aiFill)도 live 방식으로.
   - 참고(예전 계획): 입력 폼 조각들(`030-forms.js`의 fParty·fBudget·fStay·fFlight·fHome·fEvents·dateFields·fStyle…, `140`·`160`·`170`의 fDest·fJP·fQuick·fTalk…)을
     하나씩 리액트로. 처음 설정(`renderOnb`)·이번 여행·취향(renderTasteStyle)이 같이 써요.
     방법: 칸 이름(`data-pf`, `data-radio`)은 그대로, 폼 전체는 다시 그릴 때마다 새로(rev 키) — 예전 코드가 값을 바꾼 뒤 다시 그리는 방식과 같아서 안전해요.

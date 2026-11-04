@@ -789,6 +789,7 @@ module.exports = [
     async run({ b, S, device, ok, vis, skipCoach }) {
       const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
       await p.emulateMedia({ reducedMotion: 'reduce' });
+      await p.evaluate(() => { let s = 7; Math.random = () => ((s = s * 16807 % 2147483647) / 2147483647) });   // the same rolls every time
       const blocks = () => p.evaluate(() => JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k => k.endsWith('gp.placed3'))) || '[]').length);
       await p.click('#diceFab'); await p.waitForTimeout(400);
       ok(await vis(p, '#sheet .dice-tabs') && await vis(p, '#sheet [data-dobase="near"]'), 'DICE opens with 뭐 하지/뭐 먹지 tabs');
@@ -800,6 +801,7 @@ module.exports = [
       ok((await p.textContent('#diceAgain')).includes('1번'), '다시 굴리기 counts down');
       const n0 = await blocks();
       await p.click('#diceFix'); await p.waitForTimeout(500);
+      if (await vis(p, '#diceForce')) { await p.click('#diceForce'); await p.waitForTimeout(500) }   // a pick that needs 그래도 넣기
       ok(await blocks() === n0 + 1 && !(await vis(p, '#sheetBg')), '이걸로 할래요: one more block, sheet closed');
       await p.click('#diceFab'); await p.waitForTimeout(400);
       await p.click('#sheet [data-dicetab="eat"]'); await p.waitForTimeout(300);
@@ -807,6 +809,28 @@ module.exports = [
       await p.click('#sheet [data-close]'); await p.waitForTimeout(200);
       await p.click('.tabs [data-tab="map"]'); await p.waitForTimeout(800);
       ok(await p.$$eval('#mapCards .mcard', e => e.length) > 2 && await p.$$eval('#mapCards .mcard a', e => e.length) > 0, '지도: a card per stop with 안내 시작');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'React screen: 일정표 위쪽 (day buttons switch day, 빈 시간 chip opens/closes its list, 간식비 + changes the total)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      ok(await p.$$eval('#days .day-btn', e => e.length) >= 2 && await p.getAttribute('#days [data-day="0"]', 'aria-pressed') === 'true', 'day buttons, Day 1 chosen');
+      await p.click('#days [data-day="1"]'); await p.waitForTimeout(300);
+      ok(await p.getAttribute('#days [data-day="1"]', 'aria-pressed') === 'true' && (await p.textContent('#daySub')).length > 0, 'tapping Day 2 switches');
+      await p.click('#days [data-day="0"]'); await p.waitForTimeout(300);
+      ok(!(await vis(p, '#sumBody')), 'summary details closed at first');
+      await p.click('#daySum [data-sum="gap"]'); await p.waitForTimeout(200);
+      ok(await vis(p, '#sumBody') && (await p.textContent('#sumBody')).includes('비어 있어요') && await p.getAttribute('#daySum [data-sum="gap"]', 'aria-expanded') === 'true', '빈 시간 chip opens the list');
+      await p.click('#daySum [data-sum="gap"]'); await p.waitForTimeout(200);
+      ok(!(await vis(p, '#sumBody')), 'tapping again closes it');
+      await p.click('#daySum [data-sum="budget"]'); await p.waitForTimeout(200);
+      const before = await p.textContent('#budget .bud-grid > div:nth-child(3) b');
+      await p.click('#budget [data-meal]:not([data-meal^="-"])'); await p.waitForTimeout(200);
+      ok(await p.textContent('#budget .bud-grid > div:nth-child(3) b') !== before && (await p.textContent('#budgetSum')).includes('자세히'), '간식비 + changes the number');
+      ok((await p.textContent('#route')).includes('이동 합계'), 'route line with the total');
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }

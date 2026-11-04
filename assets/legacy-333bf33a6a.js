@@ -2677,9 +2677,10 @@ function gapsOf(d){
 }
 
 // ---------- render ----------
+// The day buttons, the budget and the route line are drawn by React: app/screens/DayTop.tsx
 function renderDays(){
-  $('#days').innerHTML=DAYS.map((D,i)=>{const n=analyze(i).items.reduce((a,it)=>a+it.warns.length,0);
-    return `<button class="day-btn" data-day="${i}" aria-pressed="${i===day}"><b>${D.date} ${WD[D.wd]}</b><span>Day ${i+1}${n?` · 경고 ${n}`:''}</span></button>`}).join('');
+  window.JEPI_UI.mount('days',$('#days'),{days:DAYS.map((D,i)=>{const n=analyze(i).items.reduce((a,it)=>a+it.warns.length,0);
+    return {date:`${D.date} ${WD[D.wd]}`,label:`Day ${i+1}${n?` · 경고 ${n}`:''}`,on:i===day}})});
 }
 function setZoom(h,quiet){h=h===100?100:60;document.documentElement.style.setProperty('--hour',h+'px');document.querySelectorAll('[data-zoom]').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.zoom===h)));if(!quiet){store.set('gp.zoom',h);renderTimeline()}}
 function renderTimeline(){
@@ -2729,18 +2730,19 @@ function dayCost(d){
 function renderBudget(){
   const c=dayCost(day); let tY=0,tK=0; DAYS.forEach((_,i)=>{const x=dayCost(i);tY+=x.yen;tK+=x.krw});
   const bp=budgetParts(), dl=bp?bp.daily/(KRW_PER_JPY||1):0, pct=bp&&dl?Math.round(c.yen/dl*100):0;
-  $('#budgetSum').innerHTML=`💰 오늘 예상${heads()>1?' (1인)':''} <b>${yen(c.yen)}</b>${PACK.currency==='KRW'?'':` · 약 ${won(c.yen*KRW_PER_JPY+c.krw)}`}${bp?` · <span class="${pct>100?'over':''}">예산의 ${pct}%</span>`:''}<span class="more">자세히</span>`;
-  $('#budget').innerHTML=`<div class="bud-grid">
-      <div><span>입장·식사·활동</span><b class="mono">${yen(c.act)}</b></div>
-      <div><span>현지 교통</span><b class="mono">${yen(c.tr)}</b></div>
-      <div><span>간식·기타</span><b class="mono">${yen(c.meal)}</b><span class="adj"><button class="small-btn" data-meal="-${PACK.step}" aria-label="간식비 줄이기">−</button><button class="small-btn" data-meal="${PACK.step}" aria-label="간식비 늘리기">+</button></span></div>
-      ${c.krw?`<div><span>집 오가는 교통</span><b class="mono">${won(c.krw)}</b></div>`:''}
-    </div>
-    ${bp?`<div class="bud-bar${pct>100?' over':''}"><i style="width:${Math.min(100,pct)}%"></i></div><div class="bud-trip">하루 현지 예산 <b class="mono">${yen(dl)}</b> 중 ${pct}% 사용${pct>100?` · <span style="color:#c27a00">${yen(c.yen-dl)} 넘어요</span>`:''} · 여행 전체 현지 예산 <b class="mono">${yen(bp.local/(KRW_PER_JPY||1))}</b> 중 ${Math.round(tY/(bp.local/(KRW_PER_JPY||1))*100)}%</div>`:''}
-    <div class="bud-total"><span>오늘 예상${heads()>1?' (1인)':''}</span><b class="mono">${yen(c.yen)}</b><span class="mono">${PACK.currency==='KRW'?'집 오가는 교통 포함 '+won(c.yen+c.krw):'약 '+won(c.yen*KRW_PER_JPY+c.krw)}</span></div>
-    ${heads()>1?`<div class="bud-trip">${heads()}명 합계 오늘 <b class="mono">${yen(c.yen*heads())}</b>${PACK.currency==='KRW'?'':` (약 ${won((c.yen*KRW_PER_JPY+c.krw)*heads())})`} · 여행 전체 <b class="mono">${yen(tY*heads())}</b>${PACK.currency==='KRW'?'':` (약 ${won((tY*KRW_PER_JPY+tK)*heads())})`}</div>`:''}
-    <div class="bud-trip">여행 전체 현지 예상${heads()>1?' (1인)':''} <b class="mono">${yen(tY)}</b> ${PACK.currency==='KRW'?'':`(약 ${won(tY*KRW_PER_JPY+tK)}) `}· 쇼핑 제외 · 미리 결제한 교통편·숙소·예약은 제외${rateTxt()}</div>`;
+  const KRW=PACK.currency==='KRW', h=heads(), one=h>1?' (1인)':'', B=(t,cls)=>({t,tag:'b',cls});
+  window.JEPI_UI.mount('budgetSum',$('#budgetSum'),{segs:segs(`💰 오늘 예상${one} `,B(yen(c.yen)),KRW?'':` · 약 ${won(c.yen*KRW_PER_JPY+c.krw)}`,
+    ...(bp?[' · ',{t:`예산의 ${pct}%`,tag:'span',cls:pct>100?'over':''}]:[]))});
+  const local=bp?bp.local/(KRW_PER_JPY||1):0;
+  window.JEPI_UI.mount('budget',$('#budget'),{act:yen(c.act),tr:yen(c.tr),meal:yen(c.meal),step:PACK.step,home:c.krw?won(c.krw):'',
+    bar:bp?{pct,over:pct>100,line:segs('하루 현지 예산 ',B(yen(dl),'mono'),` 중 ${pct}% 사용`,...(pct>100?[' · ',{t:`${yen(c.yen-dl)} 넘어요`,tag:'span',color:'#c27a00'}]:[]),
+      ' · 여행 전체 현지 예산 ',B(yen(local),'mono'),` 중 ${Math.round(tY/local*100)}%`)}:null,
+    totalLabel:`오늘 예상${one}`,total:yen(c.yen),totalSub:KRW?'집 오가는 교통 포함 '+won(c.yen+c.krw):'약 '+won(c.yen*KRW_PER_JPY+c.krw),
+    group:h>1?segs(`${h}명 합계 오늘 `,B(yen(c.yen*h),'mono'),KRW?'':` (약 ${won((c.yen*KRW_PER_JPY+c.krw)*h)})`,' · 여행 전체 ',B(yen(tY*h),'mono'),KRW?'':` (약 ${won((tY*KRW_PER_JPY+tK)*h)})`):null,
+    trip:segs(`여행 전체 현지 예상${one} `,B(yen(tY),'mono'),` ${KRW?'':`(약 ${won(tY*KRW_PER_JPY+tK)}) `}· 쇼핑 제외 · 미리 결제한 교통편·숙소·예약은 제외${rateTxt()}`)});
 }
+// a line of text and bold/colored parts for React (DayTop.tsx Line): neighbouring text is merged, empty text dropped
+function segs(...xs){const out=[];xs.forEach(x=>{if(x==null||x==='')return;if(typeof x==='string'&&typeof out[out.length-1]==='string')out[out.length-1]+=x;else out.push(x)});return out}
 function renderRoute(items,trans){
   const stops=[];
   if(day>0) stops.push({area:LOC_AREA[DAYS[day].startLoc]});
@@ -2749,8 +2751,7 @@ function renderRoute(items,trans){
   const total=trans.reduce((a,t)=>a+t.min,0);
   const zs=items.filter(i=>!i.stay&&!i.drop).map(i=>i.zone).filter((z,i,a)=>i===0||z!==a[i-1]);
   const seen=new Set(), back=new Set(); zs.forEach(z=>{if(seen.has(z))back.add(z);seen.add(z)});
-  $('#route').innerHTML=seq.map((s,i)=>`${i?'<span class="ln" aria-hidden="true"></span>':''}<span class="st"><i aria-hidden="true"></i>${esc(s.area)}</span>`).join('')+
-    `<div class="sum mono">이동 합계 약 ${durTxt(total)}${back.size?` · <b>${[...back].map(z=>ZONES[z].split('·')[0]).join(', ')} 쪽을 두 번 오가요</b>`:''}</div>`;
+  window.JEPI_UI.mount('route',$('#route'),{stops:seq.map(x=>String(x.area)),total:durTxt(total),back:back.size?[...back].map(z=>ZONES[z].split('·')[0]).join(', '):''});
 }
 function dayRefs(){
   const refs=dayItems(day).map(i=>({id:i.id,name:i.stay?`${i.area} 숙소`:i.name,ll:i.ll}));
@@ -3343,21 +3344,18 @@ function renderDaySum(items,trans,gaps){
   const box=$('#daySum'); if(!box) return;
   const total=trans.reduce((a,t)=>a+t.min,0), c=dayCost(day), warns=items.filter(i=>i.warns.length);
   const nudge=($('#nudges')&&$('#nudges').textContent.trim())?1:0;
-  const chip=(k,txt,cls)=>`<button type="button" class="sum-chip${cls?' '+cls:''}" data-sum="${k}" aria-expanded="${sumOpen===k}">${txt}</button>`;
-  box.innerHTML=[
-    chip('route',`이동 ${durTxt(total)}`),
-    chip('budget',`${heads()>1?'1인 ':''}${yen(c.yen)}`),
-    warns.length?chip('warn',`확인할 것 ${warns.reduce((a,i)=>a+i.warns.length,0)}`,'warn'):'',
-    gaps.length?chip('gap',`빈 시간 ${gaps.length}`):'',
-    nudge?chip('nudge','💡 더 정확하게'):''].join('');
+  // drawn by React: app/screens/DayTop.tsx
+  const chip=(k,t,warn)=>({k,t,warn:!!warn,open:sumOpen===k});
+  window.JEPI_UI.mount('daySum',box,{chips:[chip('route',`이동 ${durTxt(total)}`),chip('budget',`${heads()>1?'1인 ':''}${yen(c.yen)}`),
+    ...(warns.length?[chip('warn',`확인할 것 ${warns.reduce((a,i)=>a+i.warns.length,0)}`,true)]:[]),...(gaps.length?[chip('gap',`빈 시간 ${gaps.length}`)]:[]),...(nudge?[chip('nudge','💡 더 정확하게')]:[])]});
   if(sumOpen==='warn'&&!warns.length||sumOpen==='gap'&&!gaps.length||sumOpen==='nudge'&&!nudge) sumOpen=null;
   const P0=$('#panel-timeline'); ['route','budget','nudge'].forEach(k=>P0.classList.toggle('sum-'+k,sumOpen===k));
   if(sumOpen==='budget'&&$('#budgetBox')) $('#budgetBox').open=true;
   const body=$('#sumBody');
-  if(sumOpen==='warn') body.innerHTML=warns.map(i=>`<button type="button" class="sum-row warn" data-sumuid="${i.uid}"><b class="mono">${fmt(i.start)}</b> ${esc(i.name)}<span>${esc(i.warns[0])}</span></button>`).join('');
-  else if(sumOpen==='gap') body.innerHTML=gaps.map(g=>`<div class="sum-row"><b class="mono">${fmt(g[0])}–${fmt(g[1])}</b> 비어 있어요${sample&&!PACK.manual?`<button type="button" class="small-btn" data-findgap="${g[0]}-${g[1]}">채울 곳 찾기</button>`:''}</div>`).join('');
-  else body.innerHTML='';
-  body.hidden=!body.innerHTML;
+  const sw=sumOpen==='warn'?warns.map(i=>({uid:String(i.uid),time:fmt(i.start),name:String(i.name),warn:String(i.warns[0])})):[];
+  const sg=sumOpen==='gap'?gaps.map(g=>({range:`${fmt(g[0])}–${fmt(g[1])}`,find:sample&&!PACK.manual?`${g[0]}-${g[1]}`:null})):[];
+  window.JEPI_UI.mount('sumBody',body,{warns:sw,gaps:sg});
+  body.hidden=!(sw.length||sg.length);
 }
 document.addEventListener('click',e=>{
   const t=e.target.closest('[data-sum],[data-sumuid]'); if(!t) return;
