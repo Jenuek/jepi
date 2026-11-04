@@ -38,6 +38,8 @@ export interface AppHost {
   chat(name: string, value?: string): void;
   /** the "알려 주세요" box: a button id, or off with its row */
   nudge(name: string, value?: string): void;
+  /** P모드 판: sq, gap, roll, mood, card, next, yes, keep, close, ai, ahead (and a square / gap / mood) */
+  pview(name: string, value?: string): void;
   /** a backup file was chosen (처음 설정 · 내 계획 · 설정) */
   importFile(f: File | undefined): void;
 }
