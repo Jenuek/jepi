@@ -1,10 +1,13 @@
 // 예약 도우미 (#helperBody): ① 가고 싶은 곳 ♥ ② 숙소 동네 ③ 교통편 시간대 ④ 예약하고 일정에 넣기.
 // It used to be renderHelper / hotelRecHTML / routeHTML (100-booking.js, 150-lodging.js). The frame (#helper: 제목, 이전/다음) is
 // still body.html. The old code works out every number and redraws fresh (rev); AI buttons and their status lines are Live.
-import { Fragment } from 'react';
+// Buttons say what was pressed through app().helper(name, value).
+import { Fragment, useRef } from 'react';
 import { LiveButton, LiveLine } from '../ui/live';
 import { app } from '../ui/host';
 import { Radio } from './TripForms';
+
+const go = (n: string, v?: string, v2?: string) => app().helper(n, v, v2);
 
 type Link = [name: string, url: string];
 const Links = ({ l }: { l: Link[] }) => l.length ? <div className="links">{l.map(([n, u], i) => <a key={i} className="small-btn" href={u} target="_blank" rel="noopener">{`${n} ↗`}</a>)}</div> : null;
@@ -29,10 +32,11 @@ function Hotels({ hs }: { hs: Hotel[] }) {
 }
 
 function Step({ st, ai }: { st: HelperStep; ai: boolean }) {
+  const paste = useRef<HTMLTextAreaElement>(null);
   if (st.s === 0) return <>
     <p className="onb-sub">끌리는 곳에 ♥만 누르세요. 고른 곳을 기준으로 숙소 동네를 추천해요. 3곳 이상 고르면 정확해져요. <b>{`지금 ♥ ${st.count}곳`}</b></p>
-    {ai && <div className="fsec"><h3>미리 찾아 둔 곳이 있다면</h3><textarea id="wishPaste" rows={3} placeholder="가고 싶은 곳 이름을 줄마다 하나씩 붙여 넣으세요 (지도 저장 목록, 메모 등)" />
-      <div className="row"><LiveButton className="small-btn primary" id="wishPasteBtn">목록에서 ♥ 붙이기</LiveButton><LiveLine tag="span" id="st_wish" /></div></div>}
+    {ai && <div className="fsec"><h3>미리 찾아 둔 곳이 있다면</h3><textarea id="wishPaste" ref={paste} rows={3} placeholder="가고 싶은 곳 이름을 줄마다 하나씩 붙여 넣으세요 (지도 저장 목록, 메모 등)" />
+      <div className="row"><LiveButton className="small-btn primary" id="wishPasteBtn" onClick={() => go('paste', paste.current ? paste.current.value : '')}>목록에서 ♥ 붙이기</LiveButton><LiveLine tag="span" id="st_wish" /></div></div>}
     <div className="wish-list">{st.list.length ? st.list.map(p => (
       <button key={p.id} type="button" className="wish-item" data-wish={p.id} aria-pressed={p.on} onClick={() => app().place('wish', p.id)}><span className="hrt">{p.on ? '♥' : '♡'}</span><span><b>{p.name}</b><small>{p.sub}</small><small>{p.note}</small></span></button>
     )) : <p className="hint">아직 장소 후보가 없어요. 위 칸에 붙여 넣거나 장소 블록 탭에서 AI로 찾아 주세요.</p>}</div>
@@ -44,24 +48,24 @@ function Step({ st, ai }: { st: HelperStep; ai: boolean }) {
         <h3>{`${i + 1}. ${a.name}${a.sel ? ' · 선택함' : ''}`}</h3>
         <p className="mono hint">{a.line}</p>
         {a.vibe && <><p>{a.vibe.vibe}</p><p className="hint">{a.vibe.good}</p></>}
-        <div className="row"><button className={a.sel ? 'small-btn' : 'small-btn primary'} type="button" data-setarea={a.k}>{a.sel ? '선택한 동네예요' : '이 동네로 정하기'}</button></div>
+        <div className="row"><button className={a.sel ? 'small-btn' : 'small-btn primary'} type="button" data-setarea={a.k} onClick={() => go('setarea', a.k)}>{a.sel ? '선택한 동네예요' : '이 동네로 정하기'}</button></div>
         {a.cap && <p className="hint">{a.cap}</p>}
         <Links l={a.links} />
-        {ai && <div className="row" style={{ marginTop: 8 }}><LiveButton className="small-btn" id={'hotelBtn_' + a.k} data={{ hotels: a.k }}>{a.hotelLabel}</LiveButton><LiveLine tag="span" id={'st_hotel_' + a.k} /></div>}
+        {ai && <div className="row" style={{ marginTop: 8 }}><LiveButton className="small-btn" id={'hotelBtn_' + a.k} data={{ hotels: a.k }} onClick={() => go('hotels', a.k)}>{a.hotelLabel}</LiveButton><LiveLine tag="span" id={'st_hotel_' + a.k} /></div>}
         {a.hotels && <Hotels hs={a.hotels} />}
       </div>
     ))}
-    {ai && <div className="row"><LiveButton className="small-btn" id="vibeBtn">AI에게 동네 분위기 물어보기</LiveButton><LiveLine tag="span" id="st_vibe" /></div>}
+    {ai && <div className="row"><LiveButton className="small-btn" id="vibeBtn" onClick={() => go('vibe')}>AI에게 동네 분위기 물어보기</LiveButton><LiveLine tag="span" id="st_vibe" /></div>}
     <p className="hint">링크를 누르면 날짜·인원·동네가 채워진 검색 결과가 새 창으로 열려요. 사이트에 따라 일부 조건은 다시 골라야 할 수 있어요.</p>
   </>;
   if (st.s === 2) return <>
     <p className="onb-sub">{st.intro}</p>
     {!st.car && st.slots.map(s => (
       <div key={s.key} className="fsec"><h3>{s.title}</h3><p className="mono hint">{s.line}</p>{s.notes && <p className="hint">{s.notes}</p>}
-        <div className="row"><button className={s.picked ? 'small-btn primary' : 'small-btn'} type="button" data-slot={s.key}>{s.picked ? '이 시간대로 가정했어요' : '이 시간대로 가정하기'}</button></div></div>
+        <div className="row"><button className={s.picked ? 'small-btn primary' : 'small-btn'} type="button" data-slot={s.key} onClick={() => go('slot', s.key)}>{s.picked ? '이 시간대로 가정했어요' : '이 시간대로 가정하기'}</button></div></div>
     ))}
     <p className="hint">보통 인기 시간대가 더 비싸요. 가격 차이와 자유 시간을 같이 보고 고르세요.</p>
-    {st.routeLabel && <div className="row"><LiveButton className="small-btn primary" id="routeBtn">{st.routeLabel}</LiveButton><LiveLine tag="span" id="st_route" /></div>}
+    {st.routeLabel && <div className="row"><LiveButton className="small-btn primary" id="routeBtn" onClick={() => go('route')}>{st.routeLabel}</LiveButton><LiveLine tag="span" id="st_route" /></div>}
     {st.route && <div className="fsec"><h3>이렇게 갈 수 있어요</h3>
       {st.route.routes.map((x, i) => <div key={i} className="h-item"><b>{x.title}</b>{' '}<span className="tag">{x.type}</span>{x.duration && <>{' '}<span className="tag mono">{x.duration}</span></>}<p>{x.carriers}</p>{x.note && <p className="hint">{x.note}</p>}</div>)}
       {st.route.tips.length > 0 && <ul className="tips-list">{st.route.tips.map((t, i) => <li key={i}>{t}</li>)}</ul>}
@@ -70,8 +74,8 @@ function Step({ st, ai }: { st: HelperStep; ai: boolean }) {
   </>;
   return <>
     <p className="onb-sub">예약을 마쳤다면 확인 메일이나 e티켓 내용을 붙여 넣어 주세요. 정확한 시간과 숙소가 일정표에 들어가요.</p>
-    <div className="fsec"><h3>예약 상태</h3><Radio path="bookedFlight" val={st.bookedFlight} opts={[[true, '교통편 예약함'], [false, '아직']]} /><Radio path="bookedStay" val={st.bookedStay} opts={[[true, '숙소 예약함'], [false, '아직']]} /></div>
-    <div className="row"><button className="small-btn primary" type="button" id="helperToMe">"내 정보"에서 예약 내용 붙여 넣기</button></div>
+    <div className="fsec"><h3>예약 상태</h3><Radio path="bookedFlight" val={st.bookedFlight} opts={[[true, '교통편 예약함'], [false, '아직']]} onPick={v => go('radio', 'bookedFlight', v)} /><Radio path="bookedStay" val={st.bookedStay} opts={[[true, '숙소 예약함'], [false, '아직']]} onPick={v => go('radio', 'bookedStay', v)} /></div>
+    <div className="row"><button className="small-btn primary" type="button" id="helperToMe" onClick={() => go('toMe')}>"내 정보"에서 예약 내용 붙여 넣기</button></div>
   </>;
 }
 

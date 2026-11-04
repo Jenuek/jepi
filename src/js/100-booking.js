@@ -68,6 +68,19 @@ Reply with only JSON: {"areas":[{"key":"area key","vibe":"one Korean sentence on
     hVibe={}; (Array.isArray(r&&r.areas)?r.areas:[]).forEach(a=>{if(AREAS[a.key])hVibe[a.key]=a}); progStop('st_vibe');
   }catch(e){setSt('st_vibe',errText(e,'정리하지 못했어요'))} finally{hBusy=false;renderHelper()}
 }
+// What was pressed inside the 예약 도우미 (HelperBody.tsx tells: its name and value)
+function helperAct(n,v,v2){
+  switch(n){
+  case 'paste': resolveWishes(v||'','st_wish');return;   // ① the pasted list of names
+  case 'vibe': askVibes();return;
+  case 'hotels': askHotels(v);return;
+  case 'route': askRoutes();return;
+  case 'setarea': {const k=v;profile.stayPicked=k;profile.stays.forEach((st,i)=>{if(i===0||profile.bookedStay===false){st.area=k;if(profile.bookedStay===false)st.name=`숙소 (미정 · ${AREAS[k][0]})`}});TRIP.save('profile',profile);buildDays();renderHelper();return}
+  case 'slot': {const [a,d]=String(v).split(',').map(Number);setSlot(a,d);return}
+  case 'radio': profile[v]=v2==='true';TRIP.save('profile',profile);renderHelper();return;   // ④ 예약 상태
+  case 'toMe': closeHelper();tab='me';draft=clone(profile);renderMe();renderTabs();return;
+  }
+}
 function openHelper(step){hStep=step||0;slotPicked=null;$('#meBox').innerHTML='';$('#helper').hidden=false;renderHelper()}
 function closeHelper(){$('#helper').hidden=true;renderAll();maybeCoach();if(tab==='me'){draft=clone(profile);renderMe()}}
 const H_STEPS=['가고 싶은 곳 고르기','숙소 동네 정하기','교통편 시간대 정하기','예약하고 일정에 넣기'];

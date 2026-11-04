@@ -46,10 +46,10 @@ function PasteBox({ p }: { p: Paste }) {
   </>;
 }
 
-export function Radio({ path, val, opts }: { path: string; val: unknown; opts: Opt[] }) {
+export function Radio({ path, val, opts, onPick }: { path: string; val: unknown; opts: Opt[]; /** handled here (otherwise the old code reads the click) */ onPick?: (v: string) => void }) {
   return (
     <div className="radio">
-      {opts.map(([v, l]) => <button key={String(v)} type="button" data-radio={path} data-val={String(v)} aria-pressed={String(val) === String(v)}>{l}</button>)}
+      {opts.map(([v, l]) => <button key={String(v)} type="button" data-radio={path} data-val={String(v)} aria-pressed={String(val) === String(v)} onClick={onPick && (() => onPick(String(v)))}>{l}</button>)}
     </div>
   );
 }

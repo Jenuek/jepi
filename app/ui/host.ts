@@ -32,6 +32,8 @@ export interface AppHost {
   place(name: string, value: string): void;
   /** 내 계획: something was pressed (new, open, dup, del, rename, name, share, text, txt, json, code), a plan id, a typed name */
   plans(name: string, value?: string, value2?: string): void;
+  /** 예약 도우미: something was pressed (paste, vibe, hotels, route, setarea, slot, radio, toMe) */
+  helper(name: string, value?: string, value2?: string): void;
   /** a backup file was chosen (처음 설정 · 내 계획 · 설정) */
   importFile(f: File | undefined): void;
 }
