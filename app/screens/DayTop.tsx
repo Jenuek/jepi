@@ -3,11 +3,13 @@
 // stay in body.html; the old code still opens/closes them (hidden, the panel's sum-… class) and works out every number.
 import { Fragment } from 'react';
 
-/** a line of text with bold/colored parts. The old code merges neighbouring text, so each string is one text piece. */
-export type Seg = string | { t: string; tag: 'b' | 'span'; cls?: string; color?: string };
+/** a line of text with bold/colored parts and links. The old code merges neighbouring text, so each string is one text piece. */
+export type Seg = string | { t: string; tag: 'b' | 'span'; cls?: string; color?: string } | { t: string; tag: 'a'; href: string };
 export const Line = ({ segs }: { segs: Seg[] }) => <>{segs.map((s, i) => typeof s === 'string'
   ? <Fragment key={i}>{s}</Fragment>
-  : s.tag === 'b' ? <b key={i} className={s.cls}>{s.t}</b> : <span key={i} className={s.cls} style={s.color ? { color: s.color } : undefined}>{s.t}</span>)}</>;
+  : s.tag === 'a' ? <a key={i} href={s.href} target="_blank" rel="noopener">{s.t}</a>
+  : s.tag === 'b' ? <b key={i} className={s.cls} style={s.color ? { color: s.color } : undefined}>{s.t}</b>
+  : <span key={i} className={s.cls} style={s.color ? { color: s.color } : undefined}>{s.t}</span>)}</>;
 
 export interface DaysProps { days: { date: string; label: string; on: boolean }[] }
 export function DayButtons({ days }: DaysProps) {

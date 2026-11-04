@@ -35,21 +35,22 @@ function renderPView(){
   const box=$('#pview'); if(!box) return;
   const on=jp==='P'; box.hidden=!on; $('.grid-wrap').hidden=on; if(!on) return;
   const {items}=analyze(day), lo=day===0?arrEnd()-60:dayStart(day), hi=profile.kind==='day'?tmin(profile.meet.end,1200)+15:1440;
-  let h='';
+  // drawn by React: app/screens/PView.tsx
+  const buckets=[];
   for(const [nm,bs,be] of BUCKETS){
     if(be<=lo||bs>=hi) continue;
     const its=items.filter(i=>!i.stay&&i.start<be&&i.start>=bs), g=pGap(nm);
-    h+=`<section class="pb"><h3>${nm}</h3>${its.map(pItem).join('')}${g?pTile(nm):''}${!its.length&&!g?'<p class="hint">여유 시간이 없어요.</p>':''}</section>`;
+    buckets.push({nm,items:its.map(pItem),tile:g?pTile(nm):null});
   }
-  box.innerHTML=h||'<p class="hint">이 날은 채울 시간이 없어요.</p>';
+  window.JEPI_UI.mount('pview',box,{buckets,rev:++pviewRev});
 }
+let pviewRev=0;
 function pItem(i){const crit=i.warns.filter(w=>/휴관|겹쳐|기간|찾아야/.test(w));
-  return `<button type="button" class="pi${i.kind==='fixed'?' fx':''}" data-puid="${i.uid}" style="--cc:${i.cc}"><span class="pt">${fuzzy(i.start)}</span><b>${i.marks&&i.marks.length?[...new Set(i.marks.map(m=>MARKS[m][0]))].join('')+' ':''}${esc(i.name)}</b><small>${esc(i.locName||'')}${crit.length?` · <span class="w">⚠ ${esc(crit[0])}</span>`:''}</small></button>`}
+  return {uid:String(i.uid),fixed:i.kind==='fixed',cc:String(i.cc),time:fuzzy(i.start),name:`${i.marks&&i.marks.length?[...new Set(i.marks.map(m=>MARKS[m][0]))].join('')+' ':''}${i.name}`,loc:String(i.locName||''),warn:crit.length?String(crit[0]):''}}
 function pTile(nm){const k=day+'|'+nm, st=pRoll[k];
-  if(st&&st.cand){const c=st.cand;return `<div class="ptile on"><div class="pc" style="--cc:var(--c-${c.p.cat})"><b>${esc(c.p.name)}</b><small>${fuzzy(c.arr)}쯤 · ${esc(c.p.area)}${c.tm?` · ${c.mode} ${c.tm}분`:''}${isWish(c.p.id)?' · ♥':''}</small>${c.p.note?`<p>${esc(c.p.note)}</p>`:''}</div>
-    <div class="row"><button type="button" class="small-btn primary" data-pyes="${k}">좋아요</button><button type="button" class="small-btn" data-pnext="${k}">다음 →</button><button type="button" class="t-link" data-pclose="${k}">그만</button></div></div>`}
-  if(st&&st.empty) return `<div class="ptile"><p>${nm}에 맞는 곳은 다 봤어요.</p><div class="row">${sample&&!PACK.manual?`<button type="button" class="small-btn" data-pai="${k}">AI에게 더 찾아 달라기</button>`:''}<button type="button" class="t-link" data-pclose="${k}">닫기</button><span class="ai-status" id="st_p_${BUCKETS.findIndex(b=>b[0]===nm)}"></span></div></div>`;
-  return `<button type="button" class="ptile" data-proll="${k}"><span class="die-s">🎲</span><span>${nm}, 뭐 할까요?<small>눌러서 굴려 보기</small></span></button>`;
+  if(st&&st.cand){const c=st.cand;return {s:'cand',k,cat:String(c.p.cat),name:String(c.p.name),line:`${fuzzy(c.arr)}쯤 · ${c.p.area}${c.tm?` · ${c.mode} ${c.tm}분`:''}${isWish(c.p.id)?' · ♥':''}`,note:c.p.note||''}}
+  if(st&&st.empty) return {s:'empty',k,nm,ai:!!(sample&&!PACK.manual),stId:'st_p_'+BUCKETS.findIndex(b=>b[0]===nm)};
+  return {s:'roll',k,nm};
 }
 function pRollDo(k){
   const nm=k.split('|')[1], g=pGap(nm); if(!g){delete pRoll[k];renderPView();return}

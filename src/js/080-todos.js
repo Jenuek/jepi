@@ -40,13 +40,15 @@ function openPairOf(it){ // which pair types start at this block and are still m
   const {W}=markWarnings(); const ws=W.get(day+':'+it.uid)||[];
   return Object.keys(PAIRS).filter(T=>ws.includes(PAIRS[T].need)&&(hasMark(it,T+'+')||(T==='bag'&&implicitBagDrop(it))));
 }
-function marksHTML(it){
+// 할 일 표시 box in a block's sheet (drawn by React: BlockSheet.tsx)
+function marksInfo(it,forceOpen){
   const mk=it.marks||[]; const pend=openPairOf(it);
-  const row=(T,a,b)=>`<div class="mk-row"><span>${MARKS[a][0]}</span><button class="small-btn" data-mark="${a}" aria-pressed="${mk.includes(a)}">${MARKS[a][1]}</button>${b?`<button class="small-btn" data-mark="${b}" aria-pressed="${mk.includes(b)}">${MARKS[b][1]}</button>`:''}</div>`;
-  return `<details class="marks"${mk.length||pend.length?' open':''}><summary>할 일 표시${mk.length?` · ${mk.map(m=>MARKS[m][0]+' '+MARKS[m][1]).join(', ')}`:''}</summary>
-    <p class="hint">시간을 따로 잡지 않고 이 블록에 붙는 일이에요. 짝이 있는 일은 끝내는 표시가 없으면 경고해요.</p>
-    ${row('bag','bag+','bag-')}${(()=>{const nb=P.filter(p=>p.drop&&km(p.ll,it.ll)<1.2).map(p=>({p,d:km(p.ll,it.ll)})).sort((a,b)=>a.d-b.d).slice(0,2);return nb.length?`<p class="hint" style="margin:0 0 6px 28px">근처 짐 보관: ${nb.map(x=>`${esc(x.p.name)} (${x.d<0.1?'바로 옆':Math.round(x.d*1000)+'m'})`).join(', ')}</p>`:''})()}${row('wait','wait+','wait-')}${row('order','order+','order-')}${row('rent','rent+','rent-')}${row('ship','ship+','ship-')}${row('x','cash','tax')}
-    ${pend.map(T=>`<div class="row"><button class="small-btn primary" data-pairblock="${T}">${MARKS[T+'-'][0]} ${PAIRS[T].pair} 블록 만들기</button></div>`).join('')}</details>`;
+  const row=(a,b)=>({icon:MARKS[a][0],btns:[a,...(b?[b]:[])].map(m=>({m,label:MARKS[m][1],on:mk.includes(m)}))});
+  const nb=P.filter(p=>p.drop&&km(p.ll,it.ll)<1.2).map(p=>({p,d:km(p.ll,it.ll)})).sort((a,b)=>a.d-b.d).slice(0,2);
+  return {open:!!(mk.length||pend.length||forceOpen),summary:`할 일 표시${mk.length?` · ${mk.map(m=>MARKS[m][0]+' '+MARKS[m][1]).join(', ')}`:''}`,
+    rows:[row('bag+','bag-'),row('wait+','wait-'),row('order+','order-'),row('rent+','rent-'),row('ship+','ship-'),row('cash','tax')],
+    bagHint:nb.length?`근처 짐 보관: ${nb.map(x=>`${x.p.name} (${x.d<0.1?'바로 옆':Math.round(x.d*1000)+'m'})`).join(', ')}`:'',
+    pairs:pend.map(T=>({T,label:`${MARKS[T+'-'][0]} ${PAIRS[T].pair} 블록 만들기`}))};
 }
 function toggleMark(uid,m){
   const b=placed.find(x=>x.uid===uid);

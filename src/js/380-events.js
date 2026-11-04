@@ -138,7 +138,7 @@ document.addEventListener('click',e=>{
   if(sh){const uid=sh.dataset.uid, b=placed.find(x=>x.uid===uid);
     if(t.dataset.close){closeSheet();return}
     if(t.dataset.swap&&b){b.id=t.dataset.swap;b.start=+t.dataset.start;b.dur=+t.dataset.dur;save();renderAll();openSheet(uid);return}
-    if(t.dataset.mark){toggleMark(uid,t.dataset.mark);renderAll();openSheet(uid);const m=$('#sheet .marks');if(m)m.open=true;return}
+    if(t.dataset.mark){toggleMark(uid,t.dataset.mark);renderAll();openSheet(uid,{marksOpen:true});return}
     if(t.dataset.pairblock){makePairBlock(uid,t.dataset.pairblock);return}
     if(t.dataset.home){profile.home.min=Math.max(10,Math.min(240,(+profile.home.min||60)+ +t.dataset.home));store.set('gp.profile',profile);buildDays();renderAll();openSheet('f0a');return}
     if(!b) return;

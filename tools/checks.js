@@ -861,6 +861,55 @@ module.exports = [
     }
   },
   {
+    name: 'React screen: 일정표 시트 (30분 뒤로 moves the block, 할 일 표시 stays open, 대안 swaps, 빈 시간 → 넣기 places it)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      const placedNow = () => p.evaluate(() => JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k => k.endsWith('gp.placed3'))) || '[]'));
+      const uid = await p.getAttribute('#grid .blk:not(.fixed) >> nth=1', 'data-uid');
+      await p.click(`#grid .blk[data-uid="${uid}"]`); await p.waitForTimeout(300);
+      ok(await vis(p, '#sheet [data-mv="30"]') && await vis(p, '#sheet .alt') && await vis(p, '#sheet #bmIn'), 'a place block: time buttons, 대안, memo box');
+      const t0 = (await p.textContent('#sheet .when'));
+      await p.click('#sheet [data-mv="30"]'); await p.waitForTimeout(300);
+      ok((await p.textContent('#sheet .when')) !== t0, '30분 뒤로: the time in the sheet changes');
+      await p.click('#sheet details.marks summary'); await p.click('#sheet [data-mark="wait+"]'); await p.waitForTimeout(300);
+      ok(await p.getAttribute('#sheet [data-mark="wait+"]', 'aria-pressed') === 'true' && await p.evaluate(() => document.querySelector('#sheet details.marks').open), '할 일 표시 on, the box stays open');
+      const before = (await placedNow()).map(x => x.id).sort().join();
+      const alt = await p.getAttribute('#sheet [data-swap] >> nth=0', 'data-swap');
+      await p.click('#sheet [data-swap] >> nth=0'); await p.waitForTimeout(400);
+      ok((await placedNow()).some(x => x.id === alt) && (await placedNow()).map(x => x.id).sort().join() !== before && (await p.textContent('#sheet h3')).length > 0, '대안 바꾸기: swapped, the sheet shows the new place');
+      const n0 = (await placedNow()).length;
+      await p.click('#sheet [data-close] >> nth=-1'); await p.waitForTimeout(300);
+      await p.$eval('#grid .slot[data-t="1290"]', e => e.click()); await p.waitForTimeout(400);
+      ok((await p.textContent('#sheet h3')).includes('비어 있음') && await p.$$eval('#sheet [data-fill]', e => e.length) > 0, '빈 시간: places that fit');
+      await p.click('#sheet [data-fill] >> nth=0'); await p.waitForTimeout(400);
+      ok((await placedNow()).length === n0 + 1 && !(await vis(p, '#sheetBg')), '넣기: one more block, sheet closed');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'React screen: P 모드 일정 (time-of-day sections, 🎲 tile rolls a place, 다음 → another, 좋아요 adds it)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await p.evaluate(() => { let s = 7; Math.random = () => ((s = s * 16807 % 2147483647) / 2147483647) });
+      const count = () => p.evaluate(() => JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k => k.endsWith('gp.placed3'))) || '[]').length);
+      await p.click('[data-jp="P"]'); await p.waitForTimeout(400); await skipCoach(p);
+      ok(await vis(p, '#pview') && !(await vis(p, '#grid')) && await p.$$eval('#pview section.pb', e => e.length) >= 2, 'P: sections instead of the hour grid');
+      ok(await vis(p, '#pview [data-proll]'), 'a free part has a 🎲 tile');
+      await p.click('#pview [data-proll] >> nth=0'); await p.waitForTimeout(300);
+      const a = await p.textContent('#pview .ptile.on b');
+      await p.click('#pview [data-pnext]'); await p.waitForTimeout(300);
+      ok(a && (await p.textContent('#pview .ptile.on b')) !== a, '다음 → shows another place');
+      const n0 = await count();
+      await p.click('#pview [data-pyes]'); await p.waitForTimeout(400);
+      ok(await count() === n0 + 1, '좋아요 adds it to the day');
+      await p.click('[data-jp="J"]'); await p.waitForTimeout(300);
+      ok(await vis(p, '#grid') && !(await vis(p, '#pview')), 'back to J: the hour grid');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
     name: 'friends: sharing again after a share that stopped half-way (trip on the server, no membership)',
     async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
       const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);

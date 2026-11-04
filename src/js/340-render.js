@@ -152,16 +152,12 @@ function openFill(t){
   const fit=fitAll.slice(0,7); const rest=fitAll.slice(7);
   if(rest.length){const r=rest[Math.floor(Math.random()*rest.length)];r.random=true;fit.push(r)}
   const dim=rows.filter(r=>r.why).sort((a,b)=>a.extra-b.extra).slice(0,4);
-  const row=(r,ok)=>`<div class="fill-row${ok?'':' dim'}" style="--cc:var(--c-${r.p.cat})"><div><b>${esc(r.p.name)}</b>${r.random?'<span class="rnd">랜덤</span>':''}${MUST[r.p.id]?'<span class="rnd" style="border-style:solid;color:var(--accent);border-color:var(--accent)">★ 꼭 추천</span>':''}
-    ${r.mk&&r.mk.length?`<div>${r.mk.map(k=>`<span class="kwm">#${esc(k)}</span>`).join('')}</div>`:''}
-    <div class="m">${esc(r.p.area)} · ${r.p.dur}분 · ${costOf(r.p.id)[0]?yen(costOf(r.p.id)[0]):'무료'} · 앞 일정에서 ${r.tin?`약 ${r.tin}분`:'바로'}${next?` · 다음 일정까지 ${r.tout?`약 ${r.tout}분`:'바로'}`:''}</div></div>
-    ${ok?`<button class="small-btn primary" data-fill="${r.p.id}" data-start="${r.start}"><span class="t">${fmt(r.start)}</span> 넣기</button>`:`<span class="m">${esc(r.why)}</span>`}</div>`;
-  $('#sheet').innerHTML=`<h3>${fmt(gS)}–${fmt(gE)} 비어 있음</h3>
-    <div class="when">${durTxt(len)} · 앞: ${esc(pName)}${next?` · 뒤: ${esc(next.stay?`${next.area} 숙소`:next.name)}`:''}</div>
-    ${carrying?`<p style="color:var(--warn);font-size:12.5px;font-weight:600">이 시간에는 캐리어를 들고 있어요. 짐 맡길 곳을 먼저 넣고, 미술관이나 매장은 그 뒤에 넣으세요.</p>`:''}
-    <p style="color:var(--muted);font-size:12.5px">취향 키워드가 많이 겹치고 이동이 적게 늘어나는 순서예요. 마지막 하나는 랜덤 추천이에요. 시작 시간은 탭한 ${fmt(t)} 이후, 이동 시간을 뺀 뒤로 잡았어요.</p>
-    <div class="fill-list">${fit.map(r=>row(r,true)).join('')||'<p class="now-hint">이 빈 시간에 들어가는 장소가 없어요. 앞뒤 블록을 옮겨 보세요.</p>'}${dim.map(r=>row(r,false)).join('')}</div>
-    <div class="row"><button class="small-btn primary" data-dicefrom="${t}">🎲 굴리기</button><button class="small-btn" data-totray="1">다른 장소 고르기</button><button class="small-btn" data-newcustom="${t}">직접 만들기</button><button class="small-btn" data-close="1">닫기</button></div>`;
+  // drawn by React: app/screens/BlockSheet.tsx FillSheet
+  const row=r=>({id:String(r.p.id),cat:String(r.p.cat),name:String(r.p.name),random:!!r.random,star:!!MUST[r.p.id],kws:(r.mk||[]).map(String),mustNote:'',
+    line:[`${r.p.area} · ${r.p.dur}분 · ${costOf(r.p.id)[0]?yen(costOf(r.p.id)[0]):'무료'} · 앞 일정에서 ${r.tin?`약 ${r.tin}분`:'바로'}${next?` · 다음 일정까지 ${r.tout?`약 ${r.tout}분`:'바로'}`:''}`],
+    act:r.why?{k:'why',t:r.why}:{k:'fill',start:r.start,time:fmt(r.start)}});
+  window.JEPI_UI.mount('fill',$('#sheet'),{rev:++sheetRev,title:`${fmt(gS)}–${fmt(gE)} 비어 있음`,when:`${durTxt(len)} · 앞: ${pName}${next?` · 뒤: ${next.stay?`${next.area} 숙소`:next.name}`:''}`,
+    carrying,t,tapped:fmt(t),fit:fit.map(row),dim:dim.map(row)});
   $('#sheet').dataset.uid=''; $('#sheetBg').hidden=false;
   setTimeout(()=>{const b=$('#sheet button');b&&b.focus()},0);
 }

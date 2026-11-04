@@ -20,6 +20,8 @@ import { Checks, type ChecksProps } from './screens/Checks';
 import { Dice, MapCards, type DiceProps, type MapCardsProps } from './screens/Dice';
 import { DayButtons, DaySum, SumBody, Route, BudgetSum, Budget, type DaysProps, type DaySumProps, type SumBodyProps, type RouteProps, type BudgetSumProps, type BudgetProps } from './screens/DayTop';
 import { DayGrid, type DayGridProps } from './screens/DayGrid';
+import { BlockSheet, FillSheet, type BlockSheetProps, type FillSheetProps } from './screens/BlockSheet';
+import { PView, type PViewProps } from './screens/PView';
 import { liveOf, type LiveHandle } from './ui/live';
 
 // Every screen React owns, with the props the old code must pass.
@@ -47,6 +49,9 @@ export interface Screens {
   budgetSum: BudgetSumProps;
   budget: BudgetProps;
   grid: DayGridProps;
+  block: BlockSheetProps;
+  fill: FillSheetProps;
+  pview: PViewProps;
 }
 
 const SCREENS: { [K in keyof Screens]: ComponentType<Screens[K]> } = {
@@ -73,6 +78,9 @@ const SCREENS: { [K in keyof Screens]: ComponentType<Screens[K]> } = {
   budgetSum: BudgetSum,
   budget: Budget,
   grid: DayGrid,
+  block: BlockSheet,
+  fill: FillSheet,
+  pview: PView,
 };
 
 export interface JepiUI {
