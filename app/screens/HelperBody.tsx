@@ -3,6 +3,7 @@
 // still body.html. The old code works out every number and redraws fresh (rev); AI buttons and their status lines are Live.
 import { Fragment } from 'react';
 import { LiveButton, LiveLine } from '../ui/live';
+import { app } from '../ui/host';
 import { Radio } from './TripForms';
 
 type Link = [name: string, url: string];
@@ -33,7 +34,7 @@ function Step({ st, ai }: { st: HelperStep; ai: boolean }) {
     {ai && <div className="fsec"><h3>미리 찾아 둔 곳이 있다면</h3><textarea id="wishPaste" rows={3} placeholder="가고 싶은 곳 이름을 줄마다 하나씩 붙여 넣으세요 (지도 저장 목록, 메모 등)" />
       <div className="row"><LiveButton className="small-btn primary" id="wishPasteBtn">목록에서 ♥ 붙이기</LiveButton><LiveLine tag="span" id="st_wish" /></div></div>}
     <div className="wish-list">{st.list.length ? st.list.map(p => (
-      <button key={p.id} type="button" className="wish-item" data-wish={p.id} aria-pressed={p.on}><span className="hrt">{p.on ? '♥' : '♡'}</span><span><b>{p.name}</b><small>{p.sub}</small><small>{p.note}</small></span></button>
+      <button key={p.id} type="button" className="wish-item" data-wish={p.id} aria-pressed={p.on} onClick={() => app().place('wish', p.id)}><span className="hrt">{p.on ? '♥' : '♡'}</span><span><b>{p.name}</b><small>{p.sub}</small><small>{p.note}</small></span></button>
     )) : <p className="hint">아직 장소 후보가 없어요. 위 칸에 붙여 넣거나 장소 블록 탭에서 AI로 찾아 주세요.</p>}</div>
   </>;
   if (st.s === 1) return <>

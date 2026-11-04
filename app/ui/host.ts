@@ -28,6 +28,8 @@ export interface AppHost {
   shareNotebook(): Promise<string>;
   /** 🎲 sheet: something was pressed (its name, its value, its other data-… values) */
   dice(name: string, value: string, more?: Record<string, string>): void;
+  /** a place card / the 장소 tab: something was pressed (wish, vote, pick, cat, zone, dupmerge …) and its value */
+  place(name: string, value: string): void;
 }
 let host: AppHost | null = null;
 export function connectHost(h: AppHost): void { host = h }

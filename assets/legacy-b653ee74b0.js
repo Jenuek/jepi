@@ -2784,10 +2784,6 @@ document.addEventListener('click',e=>{
   if(t.dataset.pai!=null){pAI();return}
   if(t.dataset.pahead!=null){pAhead();return}
   if(t.dataset.pcard){pMood('mine');return}
-  if(t.dataset.pairec!=null){pAIRec();return}
-  if(t.dataset.pfind!=null){openFind({where:'city',into:'list'});return}
-  if(t.dataset.pnewcard!=null){openCustom(null,null,{card:true});return}
-  if(t.dataset.ppick){pPlaceNow(t.dataset.ppick);return}
   if(t.dataset.startmode&&draft){draft.startMode=t.dataset.startmode;draft.kind=draft.startMode==='day'?'day':'trip';if(draft.kind==='day'){draft.nightsSet=true;draft.bookedFlight=true;draft.bookedStay=true;draft.flightSet=true;draft.staySet=true;draft.q={when:'',len:'0',slot:'noon'}}if(t.dataset.destmode!=null)draft.destMode=t.dataset.destmode;else if(t.dataset.startmode==='quick'&&!t.closest('.choose'))draft.destMode=draft.dest?'':'find';if(draft.startMode==='talk'&&!talk)talkReset();renderOnb();return}
   if(t.dataset.talkopt!=null&&talk){talkSend(talk.options[+t.dataset.talkopt]);return}
   if(t.id==='talkSend'){const v=(($('#talkInput')||{}).value||'').trim();if(v)talkSend(v);return}
@@ -2829,7 +2825,6 @@ document.addEventListener('click',e=>{
   if(t.dataset.chatapply!=null){applyChat(+t.dataset.chatapply);return}
   if(t.dataset.chatcancel!=null){const m=chat[+t.dataset.chatcancel];if(m){m.state='cancelled';renderChat()}return}
   if(t.dataset.chatundo!=null){undoChat(+t.dataset.chatundo);return}
-  if(t.dataset.cat){cat=t.dataset.cat;renderTray();return}
   if(t.dataset.group){group=t.dataset.group;renderTray();return}
   if(t.dataset.kwdel!=null){kws.splice(+t.dataset.kwdel,1);saveKw();return}
   if(t.dataset.kwadd){if(!kws.some(k=>norm(k)===norm(t.dataset.kwadd)))kws.push(t.dataset.kwadd);saveKw();return}
@@ -2873,15 +2868,10 @@ document.addEventListener('click',e=>{
   if(t.id==='vibeBtn'){askVibes();return}
   if(t.dataset.hotels){askHotels(t.dataset.hotels);return}
   if(t.id==='routeBtn'){askRoutes();return}
-  if(t.dataset.wish){toggleWish(t.dataset.wish);if(!$('#helper').hidden)renderHelper();renderTray();renderPView();return}
   if(t.dataset.setarea){const k=t.dataset.setarea;profile.stayPicked=k;profile.stays.forEach((st,i)=>{if(i===0||profile.bookedStay===false){st.area=k;if(profile.bookedStay===false)st.name=`숙소 (미정 · ${AREAS[k][0]})`}});TRIP.save('profile',profile);buildDays();renderHelper();return}
   if(t.dataset.slot){const [a,d]=t.dataset.slot.split(',').map(Number);setSlot(a,d);return}
   if(t.closest('#helper')&&t.dataset.radio){let v=t.dataset.val==='true';profile[t.dataset.radio]=v;TRIP.save('profile',profile);renderHelper();return}
   if(t.dataset.zoom){setZoom(+t.dataset.zoom);if(tab==='settings')renderSettings();return}
-  if(t.dataset.vote){toggleRec(t.dataset.vote);return}
-  if(t.dataset.pick){selected=selected===t.dataset.pick?null:t.dataset.pick;
-    if(selected&&!matchMedia('(min-width:900px)').matches){tab='timeline'}
-    renderAll();return}
   if(t.classList.contains('slot')){
     if(!selected){openFill(+t.dataset.t);return}
     place(selected,+t.dataset.t); selected=null; renderAll(); return}
@@ -2913,7 +2903,6 @@ document.addEventListener('change',e=>{
   if(e.target.id==='openOnly'){renderTray();return}
   if(e.target.id==='dateUnknown'&&draft){draft.dateUnknown=e.target.checked;if(draft.dateUnknown){draft.startDate=isoPlus(30);draft.dateSet=true}else draft.dateSet=false;rerenderForm();return}
   if(e.target.classList&&e.target.classList.contains('importFile')){importBackup(e.target.files&&e.target.files[0],ok=>{if(ok){maybeCoach()}});return}
-  if(e.target.id==='catSel'){cat=e.target.value||'all';renderTray();return}
   if(e.target.dataset.ck){done[e.target.dataset.ck]=e.target.checked;TRIP.save('done',done);renderChecks()}
 });
 $('#sheetBg').addEventListener('click',e=>{if(e.target.id==='sheetBg')closeSheet()});
@@ -2927,7 +2916,22 @@ document.addEventListener('input',onPf);
 document.addEventListener('keydown',e=>{if(e.target&&e.target.id==='talkInput'&&e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();const v=e.target.value.trim();if(v)talkSend(v)}});
 document.addEventListener('input',e=>{if(e.target&&e.target.id==='chatInput'){const x=e.target;x.style.height='auto';x.style.height=Math.min(120,x.scrollHeight)+'px'}}); document.addEventListener('change',onPf);
 document.addEventListener('keydown',e=>{if(e.target&&e.target.id==='chatInput'&&e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();const f=$('#chatForm');f.requestSubmit?f.requestSubmit():f.dispatchEvent(new Event('submit',{cancelable:true,bubbles:true}))}});
-document.addEventListener('toggle',e=>{const d=e.target;if(d&&d.classList&&d.classList.contains('zone'))zoneOpen[d.dataset.zone]=d.open},true);
+// What was pressed on a place card or in the 장소 tab (Tray.tsx, also ♥ in the helper and 👍 in a block's sheet)
+function placeAct(n,v){
+  switch(n){
+  case 'wish': toggleWish(v);if(!$('#helper').hidden)renderHelper();renderTray();renderPView();return;
+  case 'vote': toggleRec(v);return;
+  case 'pick': selected=selected===v?null:v; if(selected&&!matchMedia('(min-width:900px)').matches){tab='timeline'} renderAll();return;   // 넣기: then a time slot
+  case 'ppick': pPlaceNow(v);return;
+  case 'pairec': pAIRec();return;
+  case 'pfind': openFind({where:'city',into:'list'});return;
+  case 'pnewcard': openCustom(null,null,{card:true});return;
+  case 'cat': cat=v||'all';renderTray();return;   // a filter chip or the 분류 list
+  case 'zone': {const [z,open]=v.split('~');zoneOpen[z]=open==='1';return}   // a 동네 group folded / unfolded
+  case 'dupmerge': {const [a,b]=v.split('~');mergePlaces(a,b);return}
+  case 'dupno': {const [a,b]=v.split('~');const no=store.get('gp.dupNo',[])||[];no.push(dupNoKey(a,b));store.set('gp.dupNo',no.slice(-200));renderTray();return}
+  }
+}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('#sheetBg').hidden)closeSheet();else if(selected){selected=null;renderAll()}}});
 // drag & drop (desktop)
 let drag=null;
@@ -3242,8 +3246,6 @@ function mergePlaces(aId,bId){
   save(); renderAll(); showToast(`"${a.name}" 하나로 묶었어요`);
 }
 document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
-  if(t.dataset.dupmerge){const [a,b]=t.dataset.dupmerge.split('~');mergePlaces(a,b);return}
-  if(t.dataset.dupno){const [a,b]=t.dataset.dupno.split('~');const no=store.get('gp.dupNo',[])||[];no.push(dupNoKey(a,b));store.set('gp.dupNo',no.slice(-200));renderTray();return}
   if(t.dataset.dupuse){ // typing a name in "직접 만들기" found a place that is already there → schedule that one instead
     const p=PM[t.dataset.dupuse]; if(!p) return; const st=$('#cfStart')?parse($('#cfStart').value):null;
     placed.push({uid:'u'+(uidN++),id:p.id,day,start:Math.max(dayStart(day),Math.min(1410,st??600)),dur:p.dur});save();closeSheet();renderAll();showToast(`이미 있는 "${p.name}"을(를) 일정에 넣었어요`);return}
@@ -3274,7 +3276,7 @@ function titleEditing(on){
 document.addEventListener('click',e=>{const t=e.target.closest('#dayTitleEdit');if(t&&!$('#dayTitleIn'))titleEditing(true)});
 // what React screens may ask of the old code (app/ui/host.ts)
 window.JEPI_UI.connectHost({renderAll:()=>renderAll(),closeSheet:()=>closeSheet(),reopenSheet:()=>{const u=$('#sheet').dataset.uid;if(u&&u!=='dice'&&!$('#sheetBg').hidden)openSheet(u)},toast:m=>showToast(m),day:()=>day,autoTitle:d=>String((DAYS[d]||{}).title||''),titleEditing,
-  closeNotebook:()=>closeNotebook(),renamePlan:nm=>lookRenamePlan(nm),aiDayTitles:n=>lookAiTitles(n),errText:(e,w)=>errText(e,w),welcomeNew:()=>{closeWelcome();openOnb()},welcomeDemo:()=>demoEnter(),welcomeLoggedIn:()=>welcomeLoggedIn(),dice:(n,v,m)=>diceAct(n,v,m),shareNotebook:async()=>{await shareLink(true);return planMsg||'링크를 만들었어요'}});
+  closeNotebook:()=>closeNotebook(),renamePlan:nm=>lookRenamePlan(nm),aiDayTitles:n=>lookAiTitles(n),errText:(e,w)=>errText(e,w),welcomeNew:()=>{closeWelcome();openOnb()},welcomeDemo:()=>demoEnter(),welcomeLoggedIn:()=>welcomeLoggedIn(),dice:(n,v,m)=>diceAct(n,v,m),place:(n,v)=>placeAct(n,v),shareNotebook:async()=>{await shareLink(true);return planMsg||'링크를 만들었어요'}});
 // ---------- how a trip looks: theme colour, cover, style, handwriting; folding hero header ----------
 // profile.look = {color, cover:'city'|'sea'|'mountain'|'none'|'photo', photo:dataURL, tagline, style:'color'|'note', hand}
 // Lives in the plan's profile, so it syncs across devices and to friends on a shared trip.

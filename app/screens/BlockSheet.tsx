@@ -5,6 +5,7 @@
 import { Fragment, type CSSProperties, type ReactNode } from 'react';
 import { Line, type Seg } from './DayTop';
 import { Extras, type Extra } from './Extras';
+import { app } from '../ui/host';
 
 export interface FillRow {
   id: string; cat: string; name: string; random: boolean; star: boolean; kws: string[];
@@ -131,7 +132,7 @@ export function BlockSheet(p: BlockSheetProps) {
       <div className="when">{p.when}</div>
       {p.note && <p>{p.note}</p>}
       {p.mapLink && <p><a href={p.mapLink} target="_blank" rel="noopener">지도에서 위치·영업시간 확인</a></p>}
-      {p.vote && <div className="row"><button className="vote" data-vote={p.vote.id} aria-pressed={p.vote.on} disabled={p.vote.locked}>{`👍 추천 ${p.vote.n}`}</button><span className="hint">{p.vote.on ? '추천했어요. 다시 누르면 취소돼요.' : '좋았던 곳이면 다른 여행자에게 추천해 주세요.'}</span></div>}
+      {p.vote && <div className="row"><button className="vote" data-vote={p.vote.id} aria-pressed={p.vote.on} disabled={p.vote.locked} onClick={() => app().place('vote', p.vote!.id)}>{`👍 추천 ${p.vote.n}`}</button><span className="hint">{p.vote.on ? '추천했어요. 다시 누르면 취소돼요.' : '좋았던 곳이면 다른 여행자에게 추천해 주세요.'}</span></div>}
       {p.hours && <p className="mono" style={{ color: 'var(--muted)', fontSize: '12px' }}>{p.hours}</p>}
       {p.cost && <p><Line segs={p.cost} /></p>}
       {p.krw && <p>예상 비용 <b className="mono">{p.krw}</b> · 원화 기준</p>}

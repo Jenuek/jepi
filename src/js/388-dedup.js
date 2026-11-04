@@ -35,8 +35,6 @@ function mergePlaces(aId,bId){
   save(); renderAll(); showToast(`"${a.name}" 하나로 묶었어요`);
 }
 document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
-  if(t.dataset.dupmerge){const [a,b]=t.dataset.dupmerge.split('~');mergePlaces(a,b);return}
-  if(t.dataset.dupno){const [a,b]=t.dataset.dupno.split('~');const no=store.get('gp.dupNo',[])||[];no.push(dupNoKey(a,b));store.set('gp.dupNo',no.slice(-200));renderTray();return}
   if(t.dataset.dupuse){ // typing a name in "직접 만들기" found a place that is already there → schedule that one instead
     const p=PM[t.dataset.dupuse]; if(!p) return; const st=$('#cfStart')?parse($('#cfStart').value):null;
     placed.push({uid:'u'+(uidN++),id:p.id,day,start:Math.max(dayStart(day),Math.min(1410,st??600)),dur:p.dur});save();closeSheet();renderAll();showToast(`이미 있는 "${p.name}"을(를) 일정에 넣었어요`);return}
