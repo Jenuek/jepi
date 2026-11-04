@@ -979,6 +979,25 @@ module.exports = [
     }
   },
   {
+    name: 'React screen: 여행 노트 · 여행 단계 띠 (a chapter per day with memos; during the trip: 지금 / 다음 / 안내 시작)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      ok((await p.textContent('#phase')).includes('D-'), 'before the trip: D-day');
+      await p.click('#grid .blk:not(.fixed) >> nth=0'); await p.waitForTimeout(300); await p.fill('#bmIn', '사진!'); await p.click('#bmSave'); await p.waitForTimeout(300);
+      await p.click('.tabs [data-tab="more"]'); await p.waitForTimeout(200); await p.click('#nbOpen'); await p.waitForTimeout(400);
+      const days = await p.$$eval('#days .day-btn', e => e.length);
+      ok(await vis(p, '#notebook') && await p.$$eval('#notebook .nb-page', e => e.length) === days + 1 && (await p.textContent('#notebook')).includes('사진!'), '노트: cover + a chapter per day, the memo is there');
+      await p.click('#nbClose'); await p.waitForTimeout(200);
+      ok(!(await vis(p, '#notebook')), '닫기 closes it');
+      const start = await p.evaluate(() => JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k => k.endsWith('gp.profile')))).startDate);
+      await p.clock.setFixedTime(new Date(start + 'T16:20:00'));
+      await p.click('.tabs [data-tab="timeline"]'); await p.click('#days [data-day="0"]'); await p.waitForTimeout(300);
+      ok((await p.textContent('#phase')).includes('지금') && (await p.textContent('#phase')).includes('다음') && await vis(p, '#phase a.small-btn'), 'during the trip: 지금 · 다음 · 안내 시작');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
     name: 'friends: sharing again after a share that stopped half-way (trip on the server, no membership)',
     async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
       const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);

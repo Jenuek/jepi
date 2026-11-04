@@ -88,8 +88,11 @@
        ~~예약 도우미(`HelperBody.tsx`, 4단계)~~ — 예전과 같음(`tools/compare/helper.js`, 가짜 AI로 ♥ 붙여 넣기·동네 분위기·숙소 후보·노선).
        **고친 것**: 시간대를 고르면 예전 코드가 그 버튼 글자를 직접 바꿨고 다음 다시 그리기에 사라졌음 → 상태값(slotPicked)으로 남아요.
        ~~AI 빈 시간 추천 상자(`AiBox.tsx`)~~ — "○초째" 시계는 live 연결. 예전과 같음(`tools/compare/aibox.js`: 기다림·못 찾음·실패).
-    4. ~~채팅(`ChatLog.tsx`: #chatLog 제안·적용·되돌리기·장소 제안, #nudges 더 정확하게)~~ — 예전과 같음(`tools/compare/chat.js`, 가짜 AI). 남은 것: 첫 화면(`381`), 계획 메뉴(`300`), 여행 단계 띠(`250`), 날짜 제목 고치기(`389-titles`), 여행 노트(`389c`), 장소 탭 추천 안내(#recSt).
-    5. 그다음 2단계 뒷부분 ②(여행 데이터를 한 곳으로)와 친구 합치기 규칙 → 4단계 앱 포장.
+    4. ~~채팅(`ChatLog.tsx`, 더 정확하게 줄 포함)~~, ~~첫 화면(`Welcome.tsx`)~~, ~~계획 메뉴(`PlanMenu.tsx`)~~, ~~여행 단계 띠(`Phase.tsx`)~~, ~~여행 노트(`Notebook.tsx`)~~ —
+       모두 예전과 같음(`tools/compare/` chat·welcome·planmenu·phase(시계를 여행 날로 옮겨서)·notebook). 점검 298개 통과.
+       **예전 HTML로 남겨 둔 것(일부러)**: 날짜 제목 고치기 폼(`389-titles`, 머리글 틀에 붙는 작은 폼), 장소 탭 추천 안내 한 줄(#recSt, 글자만),
+       body.html의 고정 틀(머리글·아래 탭·처음 설정/예약 도우미의 제목과 이전·다음 버튼). 리액트 화면 안을 예전 코드가 직접 고치는 곳은 이제 없어요.
+    5. **다음**: 실제 기기 확인(배포 뒤) → 2단계 뒷부분 ②(여행 데이터를 한 곳으로)와 친구 합치기 규칙 → 4단계 앱 포장.
   - 참고(예전 계획): 입력 폼 조각들(`030-forms.js`의 fParty·fBudget·fStay·fFlight·fHome·fEvents·dateFields·fStyle…, `140`·`160`·`170`의 fDest·fJP·fQuick·fTalk…)을
     하나씩 리액트로. 처음 설정(`renderOnb`)·이번 여행·취향(renderTasteStyle)이 같이 써요.
     방법: 칸 이름(`data-pf`, `data-radio`)은 그대로, 폼 전체는 다시 그릴 때마다 새로(rev 키) — 예전 코드가 값을 바꾼 뒤 다시 그리는 방식과 같아서 안전해요.

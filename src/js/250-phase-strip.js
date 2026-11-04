@@ -1,32 +1,27 @@
 // ---------- phase strip: before / during / after the trip ----------
 const isoOf=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 function todayIdx(){const t=isoOf(new Date());return DAYS.findIndex(D=>D.iso===t)}
+// drawn by React: app/screens/Phase.tsx
 function renderPhase(){
   const el=$('#phase'); if(!el) return;
-  const pr=profile, t=isoOf(new Date()), D0=DAYS[0], Dn=DAYS[DAYS.length-1]; const parts=[];
+  const pr=profile, t=isoOf(new Date()), D0=DAYS[0], Dn=DAYS[DAYS.length-1];
+  const show=v=>{window.JEPI_UI.mount('phase',el,v);el.hidden=v.s==='none'};
   // AI 꺼짐 now lives on the 더보기 → 설정 row only (tidy day screen)
-  if(!D0||!D0.iso||pr.dateUnknown){el.innerHTML=parts.join('');el.hidden=!parts.length;return}
+  if(!D0||!D0.iso||pr.dateUnknown){show({s:'none'});return}
   const ti=todayIdx();
   if(ti>=0){
     const now=new Date(), nm=now.getHours()*60+now.getMinutes();
     const items=analyze(ti).items.filter(i=>!i.stay||i.start>=nm);
     const cur=items.find(i=>i.start<=nm&&nm<i.end), nx=items.find(i=>i.start>nm);
-    let h=`<div class="ph-now">`;
-    h+=cur?`<span><small>지금</small> <b>${esc(cur.name)}</b> <span class="mono">~${fmt(cur.end)}</span></span>`:'';
+    let next=null;
     if(nx){const from=cur||[...items].reverse().find(i=>i.end<=nm)||null; const tr=from&&from.ll&&nx.ll?travel(from.ll,nx.ll):null;
-      h+=`<span><small>다음</small> <b class="mono">${fmt(nx.start)}</b> <b>${esc(nx.name)}</b>${tr?` <span class="mono">${tr.real?'':'≈'}${esc(tr.mode)} ${tr.min}분</span>`:''}</span>`;
-      if(from&&from.ll&&nx.ll) h+=`<a class="small-btn primary" href="${navLink(from.ll,nx.ll,tr?tr.mode:'도보',nx.name)}" target="_blank" rel="noopener">안내 시작</a>`;
-    } else h+=`<span>오늘 일정은 여기까지예요. 푹 쉬세요!</span>`;
-    h+=`</div>${day!==ti?`<button class="ph-chip" data-day="${ti}">오늘(Day ${ti+1}) 보기</button>`:''}`;
-    parts.unshift(h);
+      next={time:fmt(nx.start),name:String(nx.name),travel:tr?`${tr.real?'':'≈'}${tr.mode} ${tr.min}분`:'',nav:from&&from.ll&&nx.ll?navLink(from.ll,nx.ll,tr?tr.mode:'도보',nx.name):''}}
+    show({s:'now',cur:cur?{name:String(cur.name),end:fmt(cur.end)}:null,next,todayDay:day!==ti?ti:null});
   } else if(D0.iso>t){
     const dd=Math.round((new Date(D0.iso+'T00:00:00')-new Date(t+'T00:00:00'))/864e5);
-    const w=warnTotal(), pl=prepLeft(), miss=[pr.kind!=='day'&&pr.bookedFlight===false?'교통편 미정':'',pr.kind!=='day'&&pr.bookedStay===false?'숙소 미정':''].filter(Boolean);
-    parts.unshift(`<button class="ph-before" data-tab="check"><b class="mono">D-${dd}</b>${w?`<span class="warn">경고 ${w}</span>`:''}${pl?`<span>남은 준비 ${pl}</span>`:''}${miss.map(x=>`<span class="warn">${x}</span>`).join('')}${!w&&!pl&&!miss.length?'<span>준비 끝!</span>':''}</button>`);
-  } else if(Dn&&Dn.iso<t){
-    parts.unshift(`<div class="ph-after"><span>여행 어땠어요?</span><button class="ph-chip" data-tab="plans">새 계획 만들기</button></div>`);
-  }
-  el.innerHTML=parts.join(''); el.hidden=!parts.length;
+    show({s:'before',dd,warns:warnTotal(),prepLeft:prepLeft(),miss:[pr.kind!=='day'&&pr.bookedFlight===false?'교통편 미정':'',pr.kind!=='day'&&pr.bookedStay===false?'숙소 미정':''].filter(Boolean)});
+  } else if(Dn&&Dn.iso<t) show({s:'after'});
+  else show({s:'none'});
 }
 // open the plan whose dates include today, then today's day, scrolled to now
 function planCovers(id,t){const d=store.get('gp.plan.'+id,null);const p=d&&d.profile;if(!p||!p.startDate||p.dateUnknown)return false;

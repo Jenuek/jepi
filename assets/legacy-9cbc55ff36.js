@@ -1931,32 +1931,27 @@ function showToast(m){const b=document.getElementById('toast');if(!b)return;b.te
 // ---------- phase strip: before / during / after the trip ----------
 const isoOf=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 function todayIdx(){const t=isoOf(new Date());return DAYS.findIndex(D=>D.iso===t)}
+// drawn by React: app/screens/Phase.tsx
 function renderPhase(){
   const el=$('#phase'); if(!el) return;
-  const pr=profile, t=isoOf(new Date()), D0=DAYS[0], Dn=DAYS[DAYS.length-1]; const parts=[];
+  const pr=profile, t=isoOf(new Date()), D0=DAYS[0], Dn=DAYS[DAYS.length-1];
+  const show=v=>{window.JEPI_UI.mount('phase',el,v);el.hidden=v.s==='none'};
   // AI 꺼짐 now lives on the 더보기 → 설정 row only (tidy day screen)
-  if(!D0||!D0.iso||pr.dateUnknown){el.innerHTML=parts.join('');el.hidden=!parts.length;return}
+  if(!D0||!D0.iso||pr.dateUnknown){show({s:'none'});return}
   const ti=todayIdx();
   if(ti>=0){
     const now=new Date(), nm=now.getHours()*60+now.getMinutes();
     const items=analyze(ti).items.filter(i=>!i.stay||i.start>=nm);
     const cur=items.find(i=>i.start<=nm&&nm<i.end), nx=items.find(i=>i.start>nm);
-    let h=`<div class="ph-now">`;
-    h+=cur?`<span><small>지금</small> <b>${esc(cur.name)}</b> <span class="mono">~${fmt(cur.end)}</span></span>`:'';
+    let next=null;
     if(nx){const from=cur||[...items].reverse().find(i=>i.end<=nm)||null; const tr=from&&from.ll&&nx.ll?travel(from.ll,nx.ll):null;
-      h+=`<span><small>다음</small> <b class="mono">${fmt(nx.start)}</b> <b>${esc(nx.name)}</b>${tr?` <span class="mono">${tr.real?'':'≈'}${esc(tr.mode)} ${tr.min}분</span>`:''}</span>`;
-      if(from&&from.ll&&nx.ll) h+=`<a class="small-btn primary" href="${navLink(from.ll,nx.ll,tr?tr.mode:'도보',nx.name)}" target="_blank" rel="noopener">안내 시작</a>`;
-    } else h+=`<span>오늘 일정은 여기까지예요. 푹 쉬세요!</span>`;
-    h+=`</div>${day!==ti?`<button class="ph-chip" data-day="${ti}">오늘(Day ${ti+1}) 보기</button>`:''}`;
-    parts.unshift(h);
+      next={time:fmt(nx.start),name:String(nx.name),travel:tr?`${tr.real?'':'≈'}${tr.mode} ${tr.min}분`:'',nav:from&&from.ll&&nx.ll?navLink(from.ll,nx.ll,tr?tr.mode:'도보',nx.name):''}}
+    show({s:'now',cur:cur?{name:String(cur.name),end:fmt(cur.end)}:null,next,todayDay:day!==ti?ti:null});
   } else if(D0.iso>t){
     const dd=Math.round((new Date(D0.iso+'T00:00:00')-new Date(t+'T00:00:00'))/864e5);
-    const w=warnTotal(), pl=prepLeft(), miss=[pr.kind!=='day'&&pr.bookedFlight===false?'교통편 미정':'',pr.kind!=='day'&&pr.bookedStay===false?'숙소 미정':''].filter(Boolean);
-    parts.unshift(`<button class="ph-before" data-tab="check"><b class="mono">D-${dd}</b>${w?`<span class="warn">경고 ${w}</span>`:''}${pl?`<span>남은 준비 ${pl}</span>`:''}${miss.map(x=>`<span class="warn">${x}</span>`).join('')}${!w&&!pl&&!miss.length?'<span>준비 끝!</span>':''}</button>`);
-  } else if(Dn&&Dn.iso<t){
-    parts.unshift(`<div class="ph-after"><span>여행 어땠어요?</span><button class="ph-chip" data-tab="plans">새 계획 만들기</button></div>`);
-  }
-  el.innerHTML=parts.join(''); el.hidden=!parts.length;
+    show({s:'before',dd,warns:warnTotal(),prepLeft:prepLeft(),miss:[pr.kind!=='day'&&pr.bookedFlight===false?'교통편 미정':'',pr.kind!=='day'&&pr.bookedStay===false?'숙소 미정':''].filter(Boolean)});
+  } else if(Dn&&Dn.iso<t) show({s:'after'});
+  else show({s:'none'});
 }
 // open the plan whose dates include today, then today's day, scrolled to now
 function planCovers(id,t){const d=store.get('gp.plan.'+id,null);const p=d&&d.profile;if(!p||!p.startDate||p.dateUnknown)return false;
@@ -2407,12 +2402,15 @@ function introRun(){const el=document.getElementById('intro');if(!el)return;
   el.addEventListener('click',end); setTimeout(end,hold);}
 
 // ---------- header plan switcher (drop-down) ----------
-function planMenuHTML(){
+// drawn by React: app/screens/PlanMenu.tsx
+let planMenuRev=0;
+function planMenuInfo(){
   const list=plans.slice().sort((a,b)=>(a.id===curPlan?-1:b.id===curPlan?1:(b.updated||0)-(a.updated||0)));
-  return `<div class="pm-list">${list.map(p=>`<button type="button" class="pm-item pm-card${p.id===curPlan?' cur':''}${pmPast(p)?' past':''}" style="--theme:${pmLook(p).color}" role="menuitemradio" aria-checked="${p.id===curPlan}" data-pmopen="${p.id}"><span class="pm-art" aria-hidden="true">${pmPast(p)?'':coverSVG(pmLook(p).cover,150,90)}</span>${pmDday(p)}<span class="pm-t"><b>${esc(p.name||'이름 없는 계획')}</b><small>${esc(p.dates||'')}${p.blocks?` · 블록 ${p.blocks}개`:''}</small></span>${p.id===curPlan?'<span class="pm-ck" aria-hidden="true">✓</span>':''}</button>`).join('')||'<p class="hint">저장된 계획이 없어요.</p>'}</div>
-  <div class="pm-acts"><button type="button" class="small-btn primary" data-pmact="new">+ 새 계획</button><button type="button" class="small-btn" data-pmact="manage">계획 관리·공유</button></div>`}
+  return {rev:++planMenuRev,plans:list.map(p=>({id:String(p.id),cur:p.id===curPlan,past:!!pmPast(p),color:String(pmLook(p).color),coverSVG:pmPast(p)?'':coverSVG(pmLook(p).cover,150,90),
+    dday:pmDday(p),name:String(p.name||'이름 없는 계획'),sub:`${p.dates||''}${p.blocks?` · 블록 ${p.blocks}개`:''}`}))};
+}
 function planMenu(open){const m=document.getElementById('planMenu'),b=document.getElementById('planBtn');if(!m||!b)return;
-  if(open){snapshotCurrent();m.innerHTML=planMenuHTML();m.style.top=Math.round(b.getBoundingClientRect().bottom+6)+'px';m.hidden=false;b.setAttribute('aria-expanded','true');const f=m.querySelector('.pm-item.cur,.pm-item');if(f)f.focus({preventScroll:true})}
+  if(open){snapshotCurrent();window.JEPI_UI.mount('planMenu',m,planMenuInfo());m.style.top=Math.round(b.getBoundingClientRect().bottom+6)+'px';m.hidden=false;b.setAttribute('aria-expanded','true');const f=m.querySelector('.pm-item.cur,.pm-item');if(f)f.focus({preventScroll:true})}
   else{m.hidden=true;b.setAttribute('aria-expanded','false')}}
 document.addEventListener('click',e=>{
   const b=e.target.closest('#planBtn'); if(b){planMenu(document.getElementById('planMenu').hidden);return}
@@ -2454,7 +2452,7 @@ function diceCloseAnim(){
 function pmProfile(p){return p.id===curPlan?profile:((store.get('gp.plan.'+p.id,null)||{}).profile||{})}
 function pmLook(p){return Object.assign({color:'#2448c9',cover:'city'},pmProfile(p).look||{})}
 function pmPast(p){const pr=pmProfile(p);if(!pr.startDate||pr.dateUnknown)return false;const e=new Date(pr.startDate+'T00:00:00');e.setDate(e.getDate()+(pr.kind==='day'?0:(+pr.nights||0)));return e<new Date(new Date().toDateString())}
-function pmDday(p){const pr=pmProfile(p);if(!pr.startDate||pr.dateUnknown||pmPast(p))return '';const n=Math.round((new Date(pr.startDate+'T00:00:00')-new Date(new Date().toDateString()))/864e5);return `<span class="pm-dday mono">${n>0?'D-'+n:n===0?'D-DAY':'여행 중'}</span>`}
+function pmDday(p){const pr=pmProfile(p);if(!pr.startDate||pr.dateUnknown||pmPast(p))return '';const n=Math.round((new Date(pr.startDate+'T00:00:00')-new Date(new Date().toDateString()))/864e5);return n>0?'D-'+n:n===0?'D-DAY':'여행 중'}   // the D-day label (PlanMenu.tsx)
 // ================= 기기 간 동기화 (Supabase, 본인 계정 데이터만) =================
 // The server conversation (login, session, tables) is in app/data/server.ts, key encryption in app/data/vault.ts.
 // SYNC is the same object as JD.server.SYNC: the sync settings, saved as jepi.sync.
@@ -3242,31 +3240,11 @@ matchMedia('(min-width:900px)').addEventListener?.('change',renderTabs);
 var welcomeView='pick', welcomeErr='', welcomeBusy=false, welcomeJoin=false;
 function openWelcome(){welcomeView='pick';welcomeErr='';renderWelcome();$('#welcome').hidden=false}
 function closeWelcome(){$('#welcome').hidden=true}
+// drawn by React: app/screens/Welcome.tsx
+let welcomeRev=0;
 function renderWelcome(){
   const box=$('#welcomeBox'); if(!box) return;
-  if(welcomeView==='login'||welcomeView==='join'){
-    const inv=welcomeView==='join';
-    box.innerHTML=`${inv?'':'<button class="linkbtn w-back" data-w="back">← 처음으로</button>'}
-      <h2 class="w-h">${inv?'친구가 여행에 초대했어요':'로그인'}</h2><p class="w-sub">${inv?'로그인하거나 처음이면 가입하면 바로 같은 일정에 참여해요.':'다른 기기에서 만든 계획과 AI·지도 연결을 그대로 가져와요.'}</p>
-      ${inv?`<div class="radio" style="margin:0 0 8px"><button type="button" data-w="mode-login" aria-pressed="${!welcomeJoin}">로그인</button><button type="button" data-w="mode-join" aria-pressed="${welcomeJoin}">처음이에요 (가입)</button></div>`:''}
-      <form id="wForm" class="sb-form"><input id="wEmail" type="email" placeholder="이메일" autocomplete="email" value="${esc(SYNC.email||'')}" required>
-      <input id="wPw" type="password" placeholder="${welcomeJoin?'비밀번호 (6자 이상)':'비밀번호'}" autocomplete="${welcomeJoin?'new-password':'current-password'}" minlength="6" required>
-      <button class="w-go" type="submit" id="wGo" ${welcomeBusy?'disabled':''}>${welcomeBusy?'잠시만요…':welcomeJoin?'가입하고 참여하기':inv?'로그인하고 참여하기':'로그인'}</button></form>
-      ${welcomeErr?`<p class="w-err">✕ ${esc(welcomeErr)}</p>`:''}
-      <div class="w-links"><button class="linkbtn" data-w="forgot">비밀번호를 잊었어요</button><button class="linkbtn" data-w="new">계정 없이 시작하기</button></div>`;
-    return;
-  }
-  if(welcomeView==='sent'){
-    box.innerHTML=`<button class="linkbtn w-back" data-w="login">← 로그인으로</button><h2 class="w-h">메일을 보냈어요</h2>
-      <p class="w-sub"><b>${esc(SYNC.email)}</b>로 비밀번호 재설정 링크를 보냈어요. 이 기기에서 링크를 누르면 새 비밀번호를 정할 수 있어요.</p>`;
-    return;
-  }
-  box.innerHTML=`<div class="w-logo"><b>JEPI</b><span>우리의 삶은 계획과 우연의 연속</span></div>
-    <div class="w-choices">
-      <button class="w-card primary" data-w="new"><b>새 여행 만들기</b><small>어디로 갈지 아직 몰라도 괜찮아요</small></button>
-      <button class="w-card" data-w="login"><b>이미 계정이 있어요</b><small>로그인하면 다른 기기의 계획을 가져와요</small></button>
-      <button class="w-card" data-w="demo"><b>데모 둘러보기</b><small>오사카 3박 4일 예시 · 끝내면 아무것도 남지 않아요</small></button>
-    </div>`;
+  window.JEPI_UI.mount('welcome',box,{view:['login','join','sent'].includes(welcomeView)?welcomeView:'pick',joinMode:!!welcomeJoin,email:String(SYNC.email||''),busy:!!welcomeBusy,err:String(welcomeErr||''),rev:++welcomeRev});
 }
 async function welcomeLogin(em,pw){
   welcomeBusy=true; welcomeErr=''; renderWelcome();
@@ -3961,27 +3939,26 @@ document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='bmIn'
 // ---------- 여행 노트 보기: the whole trip as one notebook (cover + a chapter per day) ----------
 // Read-only. "PDF로 저장" uses the browser's print (print CSS in 17-look.css keeps only the notebook).
 // "링크로 보내기" sends the usual share link with &note=1, so the receiver opens straight into the notebook.
-function notebookHTML(){
+// drawn by React: app/screens/Notebook.tsx
+let notebookRev=0;
+function notebookInfo(){
   const L=lookOf(), name=(plans.find(x=>x.id===curPlan)||{}).name||planName();
   const D0=DAYS[0]||{}, Dn=DAYS[DAYS.length-1]||{};
   const photo=L.cover==='photo'&&L.photo;
-  const cover=`<section class="nb-page nb-cover"${photo?` style="background-image:linear-gradient(rgba(0,0,0,.25),rgba(0,0,0,.55)),url('${L.photo}')"`:''}>
-    ${photo?'':`<div class="nb-art" aria-hidden="true">${coverSVG(L.cover,260,156)}</div>`}
-    <div class="nb-stamp" aria-hidden="true"><span>${esc((PACK.city||'TRIP').slice(0,8))}</span><b>${esc(String(D0.date||'').replace(/\s.*/,''))}</b><span>JEPI</span></div>
-    <h1>${esc(name)}</h1><p>${esc([D0.date&&Dn.date?`${D0.date} — ${Dn.date}`:'',DAYS.length>1?`${DAYS.length-1}박 ${DAYS.length}일`:'하루',L.tagline].filter(Boolean).join(' · '))}</p></section>`;
+  const cover={photo:photo?String(L.photo):'',svg:photo?'':coverSVG(L.cover,260,156),city:String((PACK.city||'TRIP').slice(0,8)),date:String(D0.date||'').replace(/\s.*/,''),name:String(name),
+    line:[D0.date&&Dn.date?`${D0.date} — ${Dn.date}`:'',DAYS.length>1?`${DAYS.length-1}박 ${DAYS.length}일`:'하루',L.tagline].filter(Boolean).join(' · ')};
   const days=DAYS.map((D,d)=>{
     const {items,trans}=analyze(d), list=items.filter(i=>!(i.stay&&i!==items[items.length-1]));
     const rows=list.map((it,k)=>{
-      const prev=k?list[k-1]:null, t=prev?trans.find(x=>x.from>=prev.end-5&&x.from<=it.start):null, memo=blockMemoOf(it,d);
-      return `${t?`<li class="mvrow"><span></span><span class="mv">↓ ${esc(t.mode)} ${t.min}분${t.fare?' · '+yen(t.fare):''}</span></li>`:''}<li><span class="t">${fmt(it.start)}</span><b>${esc(it.name)}</b><span class="m">${esc(memo)}</span></li>`}).join('');
-    const dm=dayMemoOf(d);
-    return `<section class="nb-page"><div class="nb-ch">CHAPTER ${d+1} · ${esc(D.date)} ${WD[D.wd]}</div><h2>${esc(dayTitleOf(d))}</h2>${dm?`<p class="nb-dmemo">“${esc(dm)}”</p>`:''}<ul class="nb-list">${rows||'<li><span></span><span class="mv">아직 일정이 없어요</span></li>'}</ul></section>`;
-  }).join('');
-  return `<div class="nb-bar"><button class="small-btn" type="button" id="nbPrint">PDF로 저장</button><button class="small-btn" type="button" id="nbShare">링크로 보내기</button><button class="small-btn" type="button" id="nbClose">닫기</button></div>${cover}${days}`;
+      const prev=k?list[k-1]:null, t=prev?trans.find(x=>x.from>=prev.end-5&&x.from<=it.start):null;
+      return {mv:t?`↓ ${t.mode} ${t.min}분${t.fare?' · '+yen(t.fare):''}`:'',time:fmt(it.start),name:String(it.name),memo:String(blockMemoOf(it,d)||'')}});
+    return {ch:`CHAPTER ${d+1} · ${D.date} ${WD[D.wd]}`,title:String(dayTitleOf(d)),memo:String(dayMemoOf(d)||''),rows};
+  });
+  return {cover,days,rev:++notebookRev};
 }
 function openNotebook(){
   let nb=$('#notebook'); if(!nb){nb=document.createElement('div');nb.id='notebook';nb.className='notebook';nb.setAttribute('role','dialog');nb.setAttribute('aria-label','여행 노트');document.body.appendChild(nb)}
-  nb.innerHTML=notebookHTML(); nb.hidden=false; nb.scrollTop=0; document.body.style.overflow='hidden';
+  window.JEPI_UI.mount('notebook',nb,notebookInfo()); nb.hidden=false; nb.scrollTop=0; document.body.style.overflow='hidden';
 }
 function closeNotebook(){const nb=$('#notebook');if(nb)nb.hidden=true;document.body.style.overflow=''}
 document.addEventListener('click',async e=>{const t=e.target.closest('button');if(!t)return;

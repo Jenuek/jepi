@@ -77,8 +77,9 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 
 | 하고 싶은 일 | 파일 |
 |---|---|
-| 첫 화면(새 여행·로그인·데모), 데모 시작/끝 | `381-welcome-demo.js`, 데모 칸막이 `app/data/demo.ts`, 데모 일정 `066-demo-osaka.js` |
+| 첫 화면(새 여행·로그인·데모), 데모 시작/끝 | 화면 `app/screens/Welcome.tsx` (리액트), 동작 `381-welcome-demo.js`, 데모 칸막이 `app/data/demo.ts`, 데모 일정 `066-demo-osaka.js` |
 | 일정표 그리기 / 장소 탭 카드·필터 | `340-render.js` / 화면 `app/screens/Tray.tsx` (리액트, 카드에 넣을 값은 `340-render.js`의 `cardInfo`) |
+| 직접 블록 만들기 / 예약 도우미 / 계획 메뉴 / 여행 단계 띠 | `app/screens/CustomSheet.tsx` (`040-manual-blocks.js`, 같은 장소 제안 `388-dedup.js`) / `HelperBody.tsx` (`100-booking.js`·`150-lodging.js`) / `PlanMenu.tsx` (`300-intro-header.js`) / `Phase.tsx` (`250-phase-strip.js`) |
 | 일정표 시트 (블록 누름·빈 시간 누름) / P 모드 일정 | 화면 `app/screens/BlockSheet.tsx` / `PView.tsx` (리액트), 값은 `350-actions.js`(openSheet·altsInfo)·`080-todos.js`(marksInfo)·`340-render.js`(openFill) / `170-quick-start-pview.js` |
 | 일정표 본체 (시간 줄·블록·이동·권역 띠·일몰 선) | 화면 `app/screens/DayGrid.tsx` (리액트), 값은 `340-render.js`의 renderTimeline, 끌어다 놓기 `380-events.js` |
 | 일정표 위쪽 (날짜 버튼·요약 줄·동선·예산) | 화면 `app/screens/DayTop.tsx` (리액트), 값은 `340-render.js`(renderDays·renderBudget·renderRoute)·`382-tidy.js`(요약 줄) |
@@ -88,16 +89,16 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 | 장소 찾기 화면 (모든 "찾기" 버튼이 여기로) | 화면 `app/screens/FindSheet.tsx` (리액트), 동작 `385-find.js` |
 | 같은 장소 묶기, 직접 추가할 때 기존 장소 제안 | `388-dedup.js` (장소 탭의 카드는 `Tray.tsx`) |
 | 날짜별 제목 바꾸기 | `389-titles.js` |
-| 여행 꾸미기(테마 색·커버·스타일·손글씨 글꼴), 접히는 헤더, 아래 탭 | `389a-look.js`, 스타일 `17-look.css` |
-| 손글씨 메모 (일정 블록별·날짜별) | `389b-memo.js` |
-| 여행 노트 보기 (PDF 저장·링크) | `389c-notebook.js` |
+| 여행 꾸미기(테마 색·커버·스타일·손글씨 글꼴), 접히는 헤더, 아래 탭 | 꾸미기 시트 `app/screens/LookSheet.tsx` (리액트), 동작 `389a-look.js`, 스타일 `17-look.css` |
+| 손글씨 메모 (일정 블록별·날짜별) | `389b-memo.js` (블록 시트의 메모 칸은 `app/screens/Extras.tsx`) |
+| 여행 노트 보기 (PDF 저장·링크) | 화면 `app/screens/Notebook.tsx` (리액트), 값 `389c-notebook.js` |
 | 👍 모든 여행자의 추천 (서버 `jepi_recs`), 👍 많은 순 | `070-shared-recs.js` |
 | 블록 누르면 나오는 시트, 옮기기·길이 | `350-actions.js` |
 | 경고 계산(영업시간·이동시간) | `330-helpers.js` (`analyze`) |
 | 이동 시간·경로 (해외 Google, 국내는 거리로 어림 + 카카오맵 연결) | `200-routes.js` |
 | 영업시간 확인 (Google Places, 월 900곳 한도) | `383-hours.js` |
 | 지도 | `210-map.js` |
-| AI 연결·모델 선택 | `190-keys-ai-router.js`, 실제 호출 `360-ai.js`, 채팅 `050-chat.js` |
+| AI 연결·모델 선택 | `190-keys-ai-router.js`, 실제 호출 `360-ai.js`, 채팅 `050-chat.js` (화면 `app/screens/ChatLog.tsx`), 빈 시간 추천 상자 `app/screens/AiBox.tsx` |
 | 🎲 뭐 먹지 / 뭐 하지 | `280-dice-eat.js`, `290-dice-do.js` |
 | 내 계획 목록, 새 계획 | 화면 `app/screens/PlansScreen.tsx` (리액트), 동작 `180-plans.js` |
 | 로그인·기기 간 동기화·키 암호화 | 로그인 화면 `310-sync.js`, 무엇을 보내고 어떻게 합칠지 `app/data/sync.ts`, 서버와 대화 `app/data/server.ts`, 암호화 `app/data/vault.ts` |
