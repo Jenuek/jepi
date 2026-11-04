@@ -672,9 +672,10 @@ module.exports = [
       await p.fill('#onbBody [data-pf="dest"]', '부산'); await p.click('#onbBody #genPack'); await p.waitForTimeout(1300);
       const busy = { btn: await p.textContent('#genPack'), st: await p.textContent('#st_pack'), cls: await p.getAttribute('#st_pack', 'class') };
       ok(busy.btn.includes('준비하는 중') && busy.st.includes('초 지났어요') && busy.cls.includes('busy'), 'while waiting: button relabeled, time shown ' + JSON.stringify(busy));
-      await p.waitForTimeout(5000);
+      await p.waitForTimeout(13000);   // a busy server is tried 3 times (2.5 s each here) before it gives up
       const done = { btn: await p.textContent('#genPack'), st: await p.textContent('#st_pack'), cls: await p.getAttribute('#st_pack', 'class') };
       ok(done.btn === 'AI로 여행지 준비하기' && !done.cls.includes('busy') && !done.st.includes('초 지났어요') && done.st.length > 0, 'after it fails: button back, a message instead ' + JSON.stringify(done));
+      ok(done.st.includes('바빠요'), 'the message says the AI server is busy');
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
@@ -905,6 +906,93 @@ module.exports = [
       ok(await count() === n0 + 1, '좋아요 adds it to the day');
       await p.click('[data-jp="J"]'); await p.waitForTimeout(300);
       ok(await vis(p, '#grid') && !(await vis(p, '#pview')), 'back to J: the hour grid');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'AI: a busy server (529) or a broken reply is tried again; a wrong key is not; the message says why',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); let calls = 0, mode = 'busy2';
+      await p.route(/api\.anthropic\.com/, r => {
+        calls++;
+        if (mode === 'busy2' && calls <= 2) return r.fulfill({ status: 529, body: '{"error":{"message":"Overloaded"}}' });
+        if (mode === 'badjson' && calls === 1) return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content: [{ type: 'text', text: '{"sunrise": "06:3' }] }) });
+        if (mode === 'key') return r.fulfill({ status: 401, body: '{}' });
+        if (mode === 'busy') return r.fulfill({ status: 529, body: '{}' });
+        r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content: [{ type: 'text', text: JSON.stringify({ sunrise: '06:30', sunset: '17:10', weather: '맑아요', notes: ['겉옷'], events: [] }) }] }) });
+      });
+      await p.click('[data-w="new"]'); await p.waitForTimeout(250);
+      if (await p.$('#onbKey_anthropic')) { await p.fill('#onbKey_anthropic', 'sk-ant-test-key'); await p.click('#onbBody [data-onbkey="anthropic"]'); await p.waitForTimeout(300) }
+      await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      const open = async () => { await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="check"]'); await p.waitForTimeout(300) };
+      const ask = async (m, wait) => { mode = m; calls = 0; await open(); await p.click('#seasonBtn'); await p.waitForTimeout(wait); await open() };
+      await ask('busy2', 6000);
+      ok((await p.textContent('#checks')).includes('겉옷') && calls === 3, 'busy twice, then it answers: tips arrive (' + calls + ' tries)');
+      await ask('badjson', 4000);
+      ok(calls === 2 && (await p.textContent('#checks')).includes('겉옷'), 'a cut-off reply is asked again once (' + calls + ' tries)');
+      await ask('key', 2500);
+      ok(calls === 1, 'a wrong key is not asked again (' + calls + ' tries)');
+      mode = 'busy'; calls = 0; await open(); await p.click('#seasonBtn'); await p.waitForTimeout(9000);
+      ok(calls === 3 && (await p.textContent('#st_season')).includes('바빠요'), 'still busy after 3 tries: says the server is busy (' + calls + ' tries) ' + await p.textContent('#st_season'));
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'React screen: 예약 내용 붙여 넣기 (empty → asks for text, AI fills the times, says so)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const say = (r, o) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content: [{ type: 'text', text: JSON.stringify(o) }] }) });
+      const p = await device(b, S);
+      await p.route(/api\.anthropic\.com/, r => (r.request().postData() || '').includes('round trip') ? say(r, { mode: 'flight', out: { dep: '09:10', arr: '11:05', flight: 'KE 723' }, back: { dep: '18:40', arr: '20:35', flight: 'KE 724' } }) : r.fulfill({ status: 503, body: '{}' }));
+      await p.click('[data-w="new"]'); await p.waitForTimeout(250);
+      if (await p.$('#onbKey_anthropic')) { await p.fill('#onbKey_anthropic', 'sk-ant-test-key'); await p.click('#onbBody [data-onbkey="anthropic"]'); await p.waitForTimeout(300) }
+      await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="me"]'); await p.waitForTimeout(250);
+      await p.click('[data-meopen="way"]'); await p.waitForTimeout(200);
+      await p.click('#meBox [data-aifill="flight"]'); await p.waitForTimeout(200);
+      ok((await p.textContent('#st_flight')).includes('붙여 넣은 내용이 없어요'), 'nothing pasted: says so');
+      await p.fill('#paste_flight', 'KE723 09:10'); await p.click('#meBox [data-aifill="flight"]'); await p.waitForTimeout(1500);
+      ok(await p.inputValue('#meBox [data-pf="out.dep"]') === '09:10' && await p.inputValue('#meBox [data-pf="out.flight"]') === 'KE 723' && (await p.textContent('#st_flight')).includes('채웠어요'), 'AI filled the times and says so');
+      await p.evaluate(() => window.__jepi.sync()); await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="me"]'); await p.waitForTimeout(300); await p.click('[data-meopen="way"]').catch(() => {}); await p.waitForTimeout(200);
+      ok(!(await p.textContent('#st_flight')).includes('채웠어요'), 'the message is gone once the row is opened again');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'React screen: 여행 꾸미기 · 직접 블록 만들기 (font previews use their font, typed titles survive a color tap, saving applies; a new block lands at its time)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await p.click('#lookBtn'); await p.waitForTimeout(300);
+      ok(await p.$eval('#sheet [data-lk="hand:gaegu"] span', e => getComputedStyle(e).fontFamily.includes('Gaegu')), 'each font choice shows in its own font');
+      await p.fill('#sheet [data-lkday="0"]', '첫날은 천천히'); await p.click('#sheet [data-lk^="color:"] >> nth=2'); await p.waitForTimeout(200);
+      ok(await p.inputValue('#sheet [data-lkday="0"]') === '첫날은 천천히' && await p.getAttribute('#sheet [data-lk^="color:"] >> nth=2', 'aria-pressed') === 'true', 'a typed day title stays when a color is tapped');
+      await p.click('#lookForm [type="submit"]'); await p.waitForTimeout(400);
+      ok((await p.textContent('#dayTitle')).includes('첫날은 천천히'), 'saving applies the day title');
+      await p.$eval('#grid .slot[data-t="1290"]', e => e.click()); await p.waitForTimeout(400);
+      await p.click('#sheet [data-newcustom]'); await p.waitForTimeout(300);
+      await p.fill('#cfName', '친구 카페'); await p.click('#customForm [type="submit"]'); await p.waitForTimeout(500);
+      ok(await vis(p, '#grid .blk:has-text("친구 카페")') && (await p.getAttribute('#grid .blk:has-text("친구 카페")', 'title')).startsWith('21:30'), 'a hand-made block lands at the tapped time');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'React screen: 여행 노트 · 여행 단계 띠 (a chapter per day with memos; during the trip: 지금 / 다음 / 안내 시작)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      ok((await p.textContent('#phase')).includes('D-'), 'before the trip: D-day');
+      await p.click('#grid .blk:not(.fixed) >> nth=0'); await p.waitForTimeout(300); await p.fill('#bmIn', '사진!'); await p.click('#bmSave'); await p.waitForTimeout(300);
+      await p.click('.tabs [data-tab="more"]'); await p.waitForTimeout(200); await p.click('#nbOpen'); await p.waitForTimeout(400);
+      const days = await p.$$eval('#days .day-btn', e => e.length);
+      ok(await vis(p, '#notebook') && await p.$$eval('#notebook .nb-page', e => e.length) === days + 1 && (await p.textContent('#notebook')).includes('사진!'), '노트: cover + a chapter per day, the memo is there');
+      await p.click('#nbClose'); await p.waitForTimeout(200);
+      ok(!(await vis(p, '#notebook')), '닫기 closes it');
+      const start = await p.evaluate(() => JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k => k.endsWith('gp.profile')))).startDate);
+      await p.clock.setFixedTime(new Date(start + 'T16:20:00'));
+      await p.click('.tabs [data-tab="timeline"]'); await p.click('#days [data-day="0"]'); await p.waitForTimeout(300);
+      ok((await p.textContent('#phase')).includes('지금') && (await p.textContent('#phase')).includes('다음') && await vis(p, '#phase a.small-btn'), 'during the trip: 지금 · 다음 · 안내 시작');
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }

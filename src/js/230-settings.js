@@ -21,7 +21,7 @@ function settingsAI(){return {standalone:!!STANDALONE,editing:keyEdit,show:!!key
 function renderSettings(){
   const el=$('#setBox'); if(!el) return;
   window.JEPI_UI.mount('settings',el,{theme:themePref,zoom:store.get('gp.zoom',60),sync:syncView(),myPlaces:mypView(),ai:settingsAI(),
-    extrasHTML:SETTINGS_EXTRA.map(f=>f()).join(''),wipeArm:!!wipeArm,host:location.host||'로컬',rev:++settingsRev});
+    wipeArm:!!wipeArm,host:location.host||'로컬',rev:++settingsRev});
 }
 function backupAll(){
   snapshotCurrent();

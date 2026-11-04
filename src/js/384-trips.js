@@ -143,13 +143,14 @@ async function toggleWant(pid){
   else{(t[pid]=t[pid]||[]).push({trip_id:curPlan,place_id:pid,user_id:me,name:myName()});renderTray();
     await sbTable('jepi_trip_marks','POST','',{trip_id:curPlan,place_id:pid,user_id:me,name:myName()},'return=minimal')}
 }
+// 가고 싶어요 chip, card tag, sheet row, block badge (drawn by React: app/screens/Extras.tsx)
 function wantChip(pid){
   const m=wantsOf(pid), on=iWant(pid), who=m.map(x=>x.user_id===SYNC.sess.user?'나':x.name).join(', ');
-  return `<button class="want" type="button" data-want="${esc(pid)}" aria-pressed="${on}" title="${esc(who||'가고 싶어요')}">👍 가고 싶어요${m.length?` ${m.length}`:''}</button>${m.length?`<span class="want-who">${esc(who)}</span>`:''}`;
+  return {k:'want',pid:String(pid),on:!!on,n:m.length,who};
 }
-CARD_EXTRAS.push(p=>curShared()?wantChip(p.id)+(p.by?`<span class="tag usr">${esc(p.by===myName()?'내가':p.by+'님')} 추천</span>`:''):'');
-SHEET_EXTRAS.push(it=>curShared()&&it.kind==='place'?`<div class="row">${wantChip(it.id)}${it.p.by?`<span class="hint">${esc(it.p.by)} 추천</span>`:''}</div>`:'');
-BLOCK_BADGES.push(it=>{if(!curShared()||it.kind!=='place')return '';const n=wantsOf(it.id).length;return n?`<span class="mks" title="가고 싶어요 ${n}">👍${n}</span> `:''});
+CARD_EXTRAS.push(p=>curShared()?[wantChip(p.id),...(p.by?[{k:'tag',cls:'tag usr',t:`${p.by===myName()?'내가':p.by+'님'} 추천`}]:[])]:null);
+SHEET_EXTRAS.push(it=>curShared()&&it.kind==='place'?{k:'wantRow',want:wantChip(it.id),by:it.p.by||''}:null);
+BLOCK_BADGES.push(it=>{if(!curShared()||it.kind!=='place')return null;const n=wantsOf(it.id).length;return n?{k:'badge',t:`👍${n}`,title:`가고 싶어요 ${n}`}:null});
 document.addEventListener('click',async e=>{
   const w=e.target.closest('[data-want]'); if(w){e.preventDefault();e.stopPropagation();try{await toggleWant(w.dataset.want)}catch(err){showToast('저장하지 못했어요: '+err.message)}
     if(!$('#sheetBg').hidden&&$('#sheet').dataset.uid)openSheet($('#sheet').dataset.uid);return}

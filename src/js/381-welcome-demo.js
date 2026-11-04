@@ -2,31 +2,11 @@
 var welcomeView='pick', welcomeErr='', welcomeBusy=false, welcomeJoin=false;
 function openWelcome(){welcomeView='pick';welcomeErr='';renderWelcome();$('#welcome').hidden=false}
 function closeWelcome(){$('#welcome').hidden=true}
+// drawn by React: app/screens/Welcome.tsx
+let welcomeRev=0;
 function renderWelcome(){
   const box=$('#welcomeBox'); if(!box) return;
-  if(welcomeView==='login'||welcomeView==='join'){
-    const inv=welcomeView==='join';
-    box.innerHTML=`${inv?'':'<button class="linkbtn w-back" data-w="back">← 처음으로</button>'}
-      <h2 class="w-h">${inv?'친구가 여행에 초대했어요':'로그인'}</h2><p class="w-sub">${inv?'로그인하거나 처음이면 가입하면 바로 같은 일정에 참여해요.':'다른 기기에서 만든 계획과 AI·지도 연결을 그대로 가져와요.'}</p>
-      ${inv?`<div class="radio" style="margin:0 0 8px"><button type="button" data-w="mode-login" aria-pressed="${!welcomeJoin}">로그인</button><button type="button" data-w="mode-join" aria-pressed="${welcomeJoin}">처음이에요 (가입)</button></div>`:''}
-      <form id="wForm" class="sb-form"><input id="wEmail" type="email" placeholder="이메일" autocomplete="email" value="${esc(SYNC.email||'')}" required>
-      <input id="wPw" type="password" placeholder="${welcomeJoin?'비밀번호 (6자 이상)':'비밀번호'}" autocomplete="${welcomeJoin?'new-password':'current-password'}" minlength="6" required>
-      <button class="w-go" type="submit" id="wGo" ${welcomeBusy?'disabled':''}>${welcomeBusy?'잠시만요…':welcomeJoin?'가입하고 참여하기':inv?'로그인하고 참여하기':'로그인'}</button></form>
-      ${welcomeErr?`<p class="w-err">✕ ${esc(welcomeErr)}</p>`:''}
-      <div class="w-links"><button class="linkbtn" data-w="forgot">비밀번호를 잊었어요</button><button class="linkbtn" data-w="new">계정 없이 시작하기</button></div>`;
-    return;
-  }
-  if(welcomeView==='sent'){
-    box.innerHTML=`<button class="linkbtn w-back" data-w="login">← 로그인으로</button><h2 class="w-h">메일을 보냈어요</h2>
-      <p class="w-sub"><b>${esc(SYNC.email)}</b>로 비밀번호 재설정 링크를 보냈어요. 이 기기에서 링크를 누르면 새 비밀번호를 정할 수 있어요.</p>`;
-    return;
-  }
-  box.innerHTML=`<div class="w-logo"><b>JEPI</b><span>우리의 삶은 계획과 우연의 연속</span></div>
-    <div class="w-choices">
-      <button class="w-card primary" data-w="new"><b>새 여행 만들기</b><small>어디로 갈지 아직 몰라도 괜찮아요</small></button>
-      <button class="w-card" data-w="login"><b>이미 계정이 있어요</b><small>로그인하면 다른 기기의 계획을 가져와요</small></button>
-      <button class="w-card" data-w="demo"><b>데모 둘러보기</b><small>오사카 3박 4일 예시 · 끝내면 아무것도 남지 않아요</small></button>
-    </div>`;
+  window.JEPI_UI.mount('welcome',box,{view:['login','join','sent'].includes(welcomeView)?welcomeView:'pick',joinMode:!!welcomeJoin,email:String(SYNC.email||''),busy:!!welcomeBusy,err:String(welcomeErr||''),rev:++welcomeRev});
 }
 async function welcomeLogin(em,pw){
   welcomeBusy=true; welcomeErr=''; renderWelcome();

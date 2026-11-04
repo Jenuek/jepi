@@ -5,12 +5,15 @@ function introRun(){const el=document.getElementById('intro');if(!el)return;
   el.addEventListener('click',end); setTimeout(end,hold);}
 
 // ---------- header plan switcher (drop-down) ----------
-function planMenuHTML(){
+// drawn by React: app/screens/PlanMenu.tsx
+let planMenuRev=0;
+function planMenuInfo(){
   const list=plans.slice().sort((a,b)=>(a.id===curPlan?-1:b.id===curPlan?1:(b.updated||0)-(a.updated||0)));
-  return `<div class="pm-list">${list.map(p=>`<button type="button" class="pm-item pm-card${p.id===curPlan?' cur':''}${pmPast(p)?' past':''}" style="--theme:${pmLook(p).color}" role="menuitemradio" aria-checked="${p.id===curPlan}" data-pmopen="${p.id}"><span class="pm-art" aria-hidden="true">${pmPast(p)?'':coverSVG(pmLook(p).cover,150,90)}</span>${pmDday(p)}<span class="pm-t"><b>${esc(p.name||'이름 없는 계획')}</b><small>${esc(p.dates||'')}${p.blocks?` · 블록 ${p.blocks}개`:''}</small></span>${p.id===curPlan?'<span class="pm-ck" aria-hidden="true">✓</span>':''}</button>`).join('')||'<p class="hint">저장된 계획이 없어요.</p>'}</div>
-  <div class="pm-acts"><button type="button" class="small-btn primary" data-pmact="new">+ 새 계획</button><button type="button" class="small-btn" data-pmact="manage">계획 관리·공유</button></div>`}
+  return {rev:++planMenuRev,plans:list.map(p=>({id:String(p.id),cur:p.id===curPlan,past:!!pmPast(p),color:String(pmLook(p).color),coverSVG:pmPast(p)?'':coverSVG(pmLook(p).cover,150,90),
+    dday:pmDday(p),name:String(p.name||'이름 없는 계획'),sub:`${p.dates||''}${p.blocks?` · 블록 ${p.blocks}개`:''}`}))};
+}
 function planMenu(open){const m=document.getElementById('planMenu'),b=document.getElementById('planBtn');if(!m||!b)return;
-  if(open){snapshotCurrent();m.innerHTML=planMenuHTML();m.style.top=Math.round(b.getBoundingClientRect().bottom+6)+'px';m.hidden=false;b.setAttribute('aria-expanded','true');const f=m.querySelector('.pm-item.cur,.pm-item');if(f)f.focus({preventScroll:true})}
+  if(open){snapshotCurrent();window.JEPI_UI.mount('planMenu',m,planMenuInfo());m.style.top=Math.round(b.getBoundingClientRect().bottom+6)+'px';m.hidden=false;b.setAttribute('aria-expanded','true');const f=m.querySelector('.pm-item.cur,.pm-item');if(f)f.focus({preventScroll:true})}
   else{m.hidden=true;b.setAttribute('aria-expanded','false')}}
 document.addEventListener('click',e=>{
   const b=e.target.closest('#planBtn'); if(b){planMenu(document.getElementById('planMenu').hidden);return}
@@ -52,4 +55,4 @@ function diceCloseAnim(){
 function pmProfile(p){return p.id===curPlan?profile:((store.get('gp.plan.'+p.id,null)||{}).profile||{})}
 function pmLook(p){return Object.assign({color:'#2448c9',cover:'city'},pmProfile(p).look||{})}
 function pmPast(p){const pr=pmProfile(p);if(!pr.startDate||pr.dateUnknown)return false;const e=new Date(pr.startDate+'T00:00:00');e.setDate(e.getDate()+(pr.kind==='day'?0:(+pr.nights||0)));return e<new Date(new Date().toDateString())}
-function pmDday(p){const pr=pmProfile(p);if(!pr.startDate||pr.dateUnknown||pmPast(p))return '';const n=Math.round((new Date(pr.startDate+'T00:00:00')-new Date(new Date().toDateString()))/864e5);return `<span class="pm-dday mono">${n>0?'D-'+n:n===0?'D-DAY':'여행 중'}</span>`}
+function pmDday(p){const pr=pmProfile(p);if(!pr.startDate||pr.dateUnknown||pmPast(p))return '';const n=Math.round((new Date(pr.startDate+'T00:00:00')-new Date(new Date().toDateString()))/864e5);return n>0?'D-'+n:n===0?'D-DAY':'여행 중'}   // the D-day label (PlanMenu.tsx)

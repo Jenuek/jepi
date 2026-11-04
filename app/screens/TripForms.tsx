@@ -2,7 +2,7 @@
 // The old code still reads them: field names (data-pf, data-radio, data-type) are the same, every input event goes to
 // the old onPf, and the old code redraws the whole form (a new rev) after it changes the draft. So the fields are
 // uncontrolled (defaultValue): they keep what the person types until the next redraw.
-// The AI paste box (the old code writes into it) stays old HTML. Status lines and the 준비하기 button are LiveLine/LiveButton
+// Status lines (AI로 채우기, dates) and the 준비하기 button are LiveLine/LiveButton
 // (app/ui/live.tsx): the old code updates them through a handle, not by writing into them.
 import type { CSSProperties, ReactNode } from 'react';
 import { LiveButton, LiveLine } from '../ui/live';
@@ -10,15 +10,18 @@ import { DestFinder, type FinderPart } from './OnbFinder';
 
 export type Opt = [value: string | number | boolean, label: string];
 
+/** 예약 내용 붙여 넣기 → AI로 채우기 (without AI: a hint instead) */
+export interface Paste { kind: string; hint: string; ai: boolean; /** the last message (kept across redraws) */ msg: string }
+
 export interface Time2 { dep: string; arr: string; airport: string; flight: string }
 
 export type FormPart =
   | { f: 'party'; type: string; adults: number; kids: number }
   | { f: 'trip'; bookedFlight: boolean; bookedStay: boolean; dates: DatesInfo }
-  | { f: 'flight'; mode: string; word: string; notBooked: boolean; out: Time2; back: Time2; local: string; airports: Opt[]; pasteHTML: string }
+  | { f: 'flight'; mode: string; word: string; notBooked: boolean; out: Time2; back: Time2; local: string; airports: Opt[]; paste: Paste }
   | { f: 'homeBox'; hasHome: boolean; addr: string; using: boolean; kakao: Opt[]; msg: string }
   | { f: 'home'; mode: string; word: string; area: string; min: number | string; fare: number | string; byMin: number | string; byMinOpts: Opt[] }
-  | { f: 'stay'; helper: boolean; stays: { name: string; area: string; checkin: string; checkout: string; from: number; to: number }[]; areas: Opt[]; nights: string[]; pasteHTML: string }
+  | { f: 'stay'; helper: boolean; stays: { name: string; area: string; checkin: string; checkout: string; from: number; to: number }[]; areas: Opt[]; nights: string[]; paste: Paste }
   | { f: 'budget'; man: number | string; trip: number | string; local: number | string; hint: string }
   | { f: 'dest'; dest: string; ai: boolean; ready: string; rate: { cur: string; val: number } | null }
   | { f: 'dates'; dates: DatesInfo }
@@ -35,7 +38,13 @@ export interface DatesInfo {
   maxN: number;
 }
 
-const Old = ({ html }: { html: string }) => <div className="old-part" style={{ display: 'contents' }} dangerouslySetInnerHTML={{ __html: html }} />;
+function PasteBox({ p }: { p: Paste }) {
+  if (!p.ai) return <p className="hint">더보기 → 설정에서 AI를 연결하면 예약 내용을 붙여 넣어 자동으로 채울 수 있어요.</p>;
+  return <>
+    <label className="fg" style={{ display: 'block' }}><span className="hint">{`${p.hint} 예약번호·결제 정보는 지우고 넣어도 돼요.`}</span><textarea id={'paste_' + p.kind} rows={3} style={{ marginTop: 4 }} /></label>
+    <div className="row"><button className="small-btn primary" type="button" data-aifill={p.kind}>AI로 채우기</button><LiveLine tag="span" id={'st_' + p.kind} text={p.msg} /></div>
+  </>;
+}
 
 export function Radio({ path, val, opts }: { path: string; val: unknown; opts: Opt[] }) {
   return (
@@ -125,7 +134,7 @@ function Flight(p: Extract<FormPart, { f: 'flight' }>) {
         <p className="hint">{`시각은 출발지와 도착지의 현지 시각 그대로 넣어요.${car ? '' : ` 목록에 원하는 ${w}이 없으면 가장 가까운 곳을 고르세요.`}`}</p>
         <span className="hint">여행지 안에서는</span>
         <Radio path="local" val={p.local} opts={[['transit', '대중교통·걷기'], ['car', '자동차']]} />
-        {!car && <Old html={p.pasteHTML} />}
+        {!car && <PasteBox p={p.paste} />}
       </Fsec>
     </>
   );
@@ -194,7 +203,7 @@ function Stay(p: Extract<FormPart, { f: 'stay' }>) {
           </div>
         ))}
         <div className="row"><button className="small-btn" type="button" data-addstay="1">+ 숙소 추가</button></div>
-        <Old html={p.pasteHTML} />
+        <PasteBox p={p.paste} />
       </Fsec>
     </>
   );

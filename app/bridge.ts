@@ -22,6 +22,15 @@ import { DayButtons, DaySum, SumBody, Route, BudgetSum, Budget, type DaysProps, 
 import { DayGrid, type DayGridProps } from './screens/DayGrid';
 import { BlockSheet, FillSheet, type BlockSheetProps, type FillSheetProps } from './screens/BlockSheet';
 import { PView, type PViewProps } from './screens/PView';
+import { CustomSheet, type CustomSheetProps } from './screens/CustomSheet';
+import { LookSheet, type LookSheetProps } from './screens/LookSheet';
+import { HelperBody, type HelperBodyProps } from './screens/HelperBody';
+import { AiBox, type AiBoxProps } from './screens/AiBox';
+import { ChatLog, Nudges, type ChatLogProps, type NudgesProps } from './screens/ChatLog';
+import { Welcome, type WelcomeProps } from './screens/Welcome';
+import { PlanMenu, type PlanMenuProps } from './screens/PlanMenu';
+import { Phase, type PhaseProps } from './screens/Phase';
+import { Notebook, type NotebookProps } from './screens/Notebook';
 import { liveOf, type LiveHandle } from './ui/live';
 
 // Every screen React owns, with the props the old code must pass.
@@ -52,6 +61,16 @@ export interface Screens {
   block: BlockSheetProps;
   fill: FillSheetProps;
   pview: PViewProps;
+  custom: CustomSheetProps;
+  look: LookSheetProps;
+  helper: HelperBodyProps;
+  aiBox: AiBoxProps;
+  chat: ChatLogProps;
+  nudges: NudgesProps;
+  welcome: WelcomeProps;
+  planMenu: PlanMenuProps;
+  phase: PhaseProps;
+  notebook: NotebookProps;
 }
 
 const SCREENS: { [K in keyof Screens]: ComponentType<Screens[K]> } = {
@@ -81,6 +100,16 @@ const SCREENS: { [K in keyof Screens]: ComponentType<Screens[K]> } = {
   block: BlockSheet,
   fill: FillSheet,
   pview: PView,
+  custom: CustomSheet,
+  look: LookSheet,
+  helper: HelperBody,
+  aiBox: AiBox,
+  chat: ChatLog,
+  nudges: Nudges,
+  welcome: Welcome,
+  planMenu: PlanMenu,
+  phase: Phase,
+  notebook: Notebook,
 };
 
 export interface JepiUI {

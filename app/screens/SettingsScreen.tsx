@@ -1,15 +1,10 @@
 // 더보기 → 설정 (the frame; it used to be renderSettings in src/js/230-settings.js).
-// 화면, 동기화, 내 장소, AI·지도 연결 and 데이터 are React. Sections other features add (SETTINGS_EXTRA)
-// are still drawn by the old code and come in as HTML: they move to React one by one.
+// 화면, 동기화, 내 장소, AI·지도 연결 and 데이터. (Other features used to add sections as HTML through
+// SETTINGS_EXTRA; none did any more, so that slot is gone. A new section is added here as a React part.)
 // Buttons keep their id / data-* names: the old code handles the clicks.
 import { SyncSection, type SyncSectionProps } from './SyncSection';
 import { MyPlacesSection, type MyPlacesSectionProps } from './MyPlacesSection';
 import { AiKeysSection, type AiKeysSectionProps } from './AiKeysSection';
-
-/** HTML from the old code, redrawn from scratch on every render like before (rev changes each time) */
-function Old({ html, rev }: { html: string; rev: number }) {
-  return <div className="old-part" style={{ display: 'contents' }} key={rev} dangerouslySetInnerHTML={{ __html: html }} />;
-}
 
 export interface SettingsScreenProps {
   theme: 'light' | 'dark' | 'system' | string;
@@ -18,12 +13,10 @@ export interface SettingsScreenProps {
   sync: SyncSectionProps;
   myPlaces: MyPlacesSectionProps;
   ai: AiKeysSectionProps;
-  /** sections added by other features (SETTINGS_EXTRA) */
-  extrasHTML: string;
   /** 모두 초기화 was pressed once: asks again */
   wipeArm: boolean;
   host: string;
-  /** changes on every render: old parts are drawn fresh */
+  /** changes on every render: the login part is drawn fresh (SyncSection) */
   rev: number;
 }
 
@@ -48,7 +41,6 @@ export function SettingsScreen(p: SettingsScreenProps) {
           and expects the password boxes to be empty again afterwards */}<SyncSection key={p.rev} {...p.sync} /></section>
       <section className="sset"><h3>내 장소</h3><MyPlacesSection {...p.myPlaces} /></section>
       <section className="sset"><h3>AI·지도 연결 <small>· 로그인하면 비밀번호로 잠가서 기기끼리 맞춰요</small></h3><AiKeysSection {...p.ai} /></section>
-      <Old html={p.extrasHTML} rev={p.rev} />
       <section className="sset">
         <h3>데이터</h3>
         <div className="mgroup pad">
