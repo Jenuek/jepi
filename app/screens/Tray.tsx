@@ -1,8 +1,9 @@
 // 장소 탭: the filter chips (#filters) and the place cards (#cards). They used to be renderTray / cardHTML / dupHTML
 // in src/js (340-render.js, 388-dedup.js). The old code works out every card (tags, distance, hours) and redraws
 // the whole list fresh (rev) after anything changes, like before. Clicks (♥ 👍 넣기 묶기, drag) are read by the old code.
-// What other features add to a card (CARD_EXTRAS, e.g. 친구와 함께 "가고 싶어요") is still old HTML.
+// What other features add to a card (CARD_EXTRAS, e.g. 친구와 함께 "가고 싶어요") is drawn by Extras.tsx.
 import { Fragment, type CSSProperties } from 'react';
+import { Extras, type Extra } from './Extras';
 
 export interface Tag { c: string; t: string }
 
@@ -13,7 +14,7 @@ export interface PlaceCard {
   wish: boolean;
   /** 👍 여행자 추천 (null when recommendations are off) */
   vote: null | { on: boolean; n: number; locked: boolean };
-  extrasHTML: string;
+  extras: Extra[];
   dur: number;
   key: Tag | null;
   det: Tag[];
@@ -45,7 +46,6 @@ export interface TrayFiltersProps {
   rev: number;
 }
 
-const Old = ({ html }: { html: string }) => html ? <span className="old-part" style={{ display: 'contents' }} dangerouslySetInnerHTML={{ __html: html }} /> : null;
 const T = ({ x }: { x: Tag }) => <span className={x.c}>{x.t}</span>;
 
 function Card({ p }: { p: PlaceCard }) {
@@ -57,7 +57,7 @@ function Card({ p }: { p: PlaceCard }) {
       <div className="tags">
         <button className="vote" data-wish={p.id} aria-pressed={p.wish} aria-label="가고 싶어요">{p.wish ? '♥' : '♡'}</button>
         {p.vote && <button className="vote" data-vote={p.id} aria-pressed={p.vote.on} aria-label="추천하기" disabled={p.vote.locked}>{`👍 ${p.vote.n}`}</button>}
-        <Old html={p.extrasHTML} />
+        <Extras xs={p.extras} />
         <span className="tag mono">{`${p.dur}분`}</span>
         {p.key && <T x={p.key} />}
       </div>

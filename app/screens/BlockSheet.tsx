@@ -1,9 +1,10 @@
 // The sheets the 일정표 opens in #sheet: a block's sheet (tap a block) and the free-time sheet (tap an empty slot).
 // They used to be openSheet / altsHTML / marksHTML (350-actions.js, 080-todos.js) and openFill (340-render.js).
 // The old code works out every row and opens the sheet again after each change (a new rev).
-// What other features add to a block's sheet (SHEET_EXTRAS: 손글씨 메모, 🔔 알림, 가고 싶어요) is still old HTML.
+// What other features add to a block's sheet (SHEET_EXTRAS: 손글씨 메모, 🔔 알림, 가고 싶어요) is drawn by Extras.tsx.
 import { Fragment, type CSSProperties, type ReactNode } from 'react';
 import { Line, type Seg } from './DayTop';
+import { Extras, type Extra } from './Extras';
 
 export interface FillRow {
   id: string; cat: string; name: string; random: boolean; star: boolean; kws: string[];
@@ -13,7 +14,6 @@ export interface FillRow {
   act: { k: 'fill'; start: number; time: string } | { k: 'why'; t: string } | { k: 'swap'; start: number; dur: number };
 }
 
-const Old = ({ html }: { html: string }) => html ? <div className="old-part" style={{ display: 'contents' }} dangerouslySetInnerHTML={{ __html: html }} /> : null;
 const STAR = { borderStyle: 'solid', color: 'var(--accent)', borderColor: 'var(--accent)' };
 
 export function Row({ r, dim }: { r: FillRow; dim?: boolean }) {
@@ -72,7 +72,7 @@ export interface BlockSheetProps {
   vote: null | { id: string; on: boolean; n: number; locked: boolean };
   hours: string; cost: Seg[] | null; krw: string; check: string; tips: string;
   season: Seg[] | null;
-  extrasHTML: string;
+  extras: Extra[];
   warns: string[];
   travel: Seg[] | null;
   marks: MarksBox | null;
@@ -138,7 +138,7 @@ export function BlockSheet(p: BlockSheetProps) {
       {p.check && <p><b>준비:</b>{` ${p.check}`}</p>}
       {p.tips && <div className="tips">{p.tips}</div>}
       {p.season && <p><Line segs={p.season} /></p>}
-      <Old html={p.extrasHTML} />
+      <Extras xs={p.extras} />
       {p.warns.length > 0 && <div className="warns">{p.warns.map((w, i) => <div key={i}>{w}</div>)}</div>}
       {p.travel && <p><Line segs={p.travel} /></p>}
       {p.marks && <Marks m={p.marks} />}

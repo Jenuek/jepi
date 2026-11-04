@@ -77,7 +77,8 @@
     할 일 표시를 누른 뒤 예전 코드가 상자를 직접 열던 것 → `openSheet(uid,{marksOpen:true})`. 시트에 다른 기능이 더하는 것(SHEET_EXTRAS: 손글씨 메모·🔔·가고 싶어요)은 예전 HTML 조각.
   - [x] P 모드 일정(`PView.tsx`, #pview): 시간 구간·🎲 칸·다음·그만·다 봤어요·좋아요 — 7가지 상태 모두 예전과 같음(`tools/compare/pview.js`). 점검 278개 통과.
   - **이제 주요 화면은 모두 리액트예요.** 남은 예전 HTML(작은 것들, 다음 순서 추천):
-    1. 다른 기능이 끼워 넣는 조각: SHEET_EXTRAS(메모·🔔·가고 싶어요), BLOCK_BADGES, CARD_EXTRAS, SETTINGS_EXTRA → 각각 작은 리액트 조각으로.
+    1. ~~다른 기능이 끼워 넣는 조각~~ — 완료: BLOCK_BADGES·CARD_EXTRAS·SHEET_EXTRAS가 HTML 대신 조각 값(`{k:'badge'|'want'|'tag'|'wantRow'|'alert'|'memo',…}`)을 돌려주고
+       `Extras.tsx`가 그려요. 아무도 안 쓰던 SETTINGS_EXTRA와 설정 화면의 예전 HTML 칸은 지움. 예전과 같음(`tools/compare/extras.js` — 친구 공유 여행의 가고 싶어요 카드·블록·시트, `sheets.js` — 메모·🔔).
     2. AI 붙여 넣기 칸(pasteBox·aiFill — 예전 코드가 안내 글을 직접 바꿈 → live 방식).
     3. 다른 시트: 직접 블록 만들기(`040`), 여행 꾸미기(`389a`), 예약 도우미(`100`), AI 빈 시간 추천 상자(`340`의 aiState), 같은 장소 제안(`388`).
     4. 채팅(`050` #chatLog·#nudges), 첫 화면(`381`), 계획 메뉴(`300`), 여행 단계 띠(`250`), 날짜 제목 고치기(`389-titles`), 여행 노트(`389c`), 장소 탭 추천 안내(#recSt).

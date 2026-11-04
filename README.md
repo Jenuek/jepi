@@ -70,8 +70,7 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 | 연결점 (`007-panels.js`) | 쓰는 법 |
 |---|---|
 | `PANELS.name={render(){…}}` | 더보기 아래 새 화면. `body.html`에 `<div id="side-name" hidden>`을 두고, 버튼에 `data-tab="name"` |
-| `SETTINGS_EXTRA.push(()=>html)` | 설정 화면에 섹션 추가 |
-| `BLOCK_BADGES` / `CARD_EXTRAS` / `SHEET_EXTRAS` | 일정 블록·장소 카드·블록 상세 시트에 작은 표시 추가 |
+| `BLOCK_BADGES` / `CARD_EXTRAS` / `SHEET_EXTRAS` | 일정 블록·장소 카드·블록 상세 시트에 작은 표시 추가. HTML이 아니라 조각 값을 돌려줘요(`{k:'badge',…}` 등, 종류는 `app/screens/Extras.tsx`). 설정 화면 섹션은 `SettingsScreen.tsx`에 리액트로 |
 | `SYNC_AFTER_PUSH` / `SYNC_AFTER_PULL` | 계정 동기화 직후에 할 일 |
 
 ### 무엇이 어디 있나

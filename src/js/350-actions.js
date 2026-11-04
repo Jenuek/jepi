@@ -19,7 +19,7 @@ function openSheet(uid,opt){
     krw:it.krw?won(it.krw):'',check:isP&&it.p.check?String(it.p.check):'',tips:it.tips&&it.tips.length?`💡 ${it.tips.join(' · ')}`:'',
     season:isP&&it.p.season?segs('🗓 ',{t:String(it.p.season),tag:'b'},it.p.dates?` · ${mdTxt(it.p.dates[0])||'?'}~${mdTxt(it.p.dates[1])||'?'}`:'',
       ...(it.p.conf!=='high'?[' · ',{t:'올해 날짜 확인',tag:'a',href:`https://www.google.com/search?q=${encodeURIComponent((it.p.local||it.p.name)+' '+(DAYS[0].iso||'').slice(0,4))}`}]:[])):null,
-    extrasHTML:extras(SHEET_EXTRAS,it,day),warns:it.warns.map(String),
+    extras:extras(SHEET_EXTRAS,it,day),warns:it.warns.map(String),
     travel:ti?segs(`이동: ${ti.fromName}에서 ${ti.real?'':'약 '}${ti.mode} ${ti.min}분${ti.lines?` (${ti.lines}${ti.tf?` · 환승 ${ti.tf}회`:''})`:''}${ti.fare?` · ${yen(ti.fare)}`:''} · `,{t:'안내 시작',tag:'a',href:String(ti.link)}):null,
     marks:!it.stay&&!['f0a','f0b','f0c','f8','f9'].includes(it.uid)?marksInfo(it,opt&&opt.marksOpen):null,
     place:isP?{customId:it.p.custom?String(it.id):null,alts:altsInfo(it)}:null,

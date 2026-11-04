@@ -17,13 +17,13 @@ function demoRestore(){JD.demo.demoRestore()}
 // A feature adds a panel with: PANELS.name={render(){…}}  plus  <div id="side-name" hidden> in body.html.
 // Opening it: any button with data-tab="name". It is shown under the 더보기 tab.
 const PANELS={};
-// Extra settings sections: SETTINGS_EXTRA.push(()=>`<section class="sset">…</section>`)
-const SETTINGS_EXTRA=[];
 // Features that ride on the account sync: run after every push / pull (310-sync.js)
 const SYNC_AFTER_PUSH=[], SYNC_AFTER_PULL=[];
-// Little extras drawn by features: on a timeline block, a place card, and the block sheet
+// Little extras drawn by features: on a timeline block, a place card, and the block sheet.
+// Each function returns a piece (or a list of pieces, or nothing); React draws them: app/screens/Extras.tsx
+//   {k:'badge',t,title} {k:'want',pid,on,n,who} {k:'tag',cls,t} {k:'wantRow',want,by} {k:'alert',on,hint} {k:'memo',key,value}
 const BLOCK_BADGES=[], CARD_EXTRAS=[], SHEET_EXTRAS=[];
-const extras=(list,...a)=>list.map(f=>{try{return f(...a)||''}catch(_){return ''}}).join('');
+const extras=(list,...a)=>list.flatMap(f=>{try{const r=f(...a);return r?[].concat(r):[]}catch(_){return []}});
 const WD=['일','월','화','수','목','금','토'];
 const DAY_START=7*60, DAY_END=24*60;
 let LOC={};
@@ -1907,7 +1907,7 @@ function settingsAI(){return {standalone:!!STANDALONE,editing:keyEdit,show:!!key
 function renderSettings(){
   const el=$('#setBox'); if(!el) return;
   window.JEPI_UI.mount('settings',el,{theme:themePref,zoom:store.get('gp.zoom',60),sync:syncView(),myPlaces:mypView(),ai:settingsAI(),
-    extrasHTML:SETTINGS_EXTRA.map(f=>f()).join(''),wipeArm:!!wipeArm,host:location.host||'로컬',rev:++settingsRev});
+    wipeArm:!!wipeArm,host:location.host||'로컬',rev:++settingsRev});
 }
 function backupAll(){
   snapshotCurrent();
@@ -2725,7 +2725,7 @@ function renderTimeline(){
     const cls=['blk',it.kind==='fixed'?'fixed':'',it.warns.length?'bad':'',hgt<48?'compact':hgt<72?'short':''].join(' ');
     const full=`${fmt(it.start)}–${fmt(it.end)} ${it.name}${it.marks&&it.marks.length?' · '+it.marks.map(m=>MARKS[m][1]).join(', '):''}${it.warns.length?' · '+it.warns[0]:''}`;
     return {uid:String(it.uid),cls,top,h:hgt,cc:String(it.cc),full,drag:it.kind==='place',time:hgt<48?`${fmt(it.start)} · ${durTxt(it.end-it.start)}`:`${fmt(it.start)}–${fmt(it.end)}`,
-      bang:!!it.warns.length,badgesHTML:extras(BLOCK_BADGES,it,day),marks:it.marks&&it.marks.length?[...new Set(it.marks.map(m=>MARKS[m][0]))].join(''):'',name:String(it.name),
+      bang:!!it.warns.length,badges:extras(BLOCK_BADGES,it,day),marks:it.marks&&it.marks.length?[...new Set(it.marks.map(m=>MARKS[m][0]))].join(''):'',name:String(it.name),
       memo:blockMemoOf(it,day)||'',loc:hgt>=72?String(it.locName??''):null}});
   // area bands: consecutive blocks (not lodging) in the same area group
   const bands=[], seq=items.filter(i=>!i.stay);
@@ -2826,7 +2826,7 @@ function cardInfo(p,wd,used,near){
       p.check?T('tag',`준비: ${p.check}`):null,
       p.gone?T('tag r','폐업했을 수 있어요'):p.hsrc==='google'?T('tag ok','영업시간 확인됨'):p.verify==='영업시간'&&p.ll&&inKR(p.ll)?T('tag','영업시간 추정'):p.verify?T('tag',`확인 필요: ${p.verify}`):null].filter(Boolean);
     return {id:String(p.id),name:String(p.name),sub:`${p.area} · ${p.note}`,cat:String(p.cat),sel:selected===p.id,off:!!(off||oos),dist,wish:!!isWish(p.id),
-      vote:recState!=='off'?{on:!!iRec(p),n:recOf(p),locked:recState==='readonly'&&!recPublic()}:null,extrasHTML:extras(CARD_EXTRAS,p),dur:p.dur,key,det};
+      vote:recState!=='off'?{on:!!iRec(p),n:recOf(p),locked:recState==='readonly'&&!recPublic()}:null,extras:extras(CARD_EXTRAS,p),dur:p.dur,key,det};
 }
 function openFill(t){
   const D=DAYS[day], wd=D.wd, {items}=analyze(day);
@@ -2940,7 +2940,7 @@ function openSheet(uid,opt){
     krw:it.krw?won(it.krw):'',check:isP&&it.p.check?String(it.p.check):'',tips:it.tips&&it.tips.length?`💡 ${it.tips.join(' · ')}`:'',
     season:isP&&it.p.season?segs('🗓 ',{t:String(it.p.season),tag:'b'},it.p.dates?` · ${mdTxt(it.p.dates[0])||'?'}~${mdTxt(it.p.dates[1])||'?'}`:'',
       ...(it.p.conf!=='high'?[' · ',{t:'올해 날짜 확인',tag:'a',href:`https://www.google.com/search?q=${encodeURIComponent((it.p.local||it.p.name)+' '+(DAYS[0].iso||'').slice(0,4))}`}]:[])):null,
-    extrasHTML:extras(SHEET_EXTRAS,it,day),warns:it.warns.map(String),
+    extras:extras(SHEET_EXTRAS,it,day),warns:it.warns.map(String),
     travel:ti?segs(`이동: ${ti.fromName}에서 ${ti.real?'':'약 '}${ti.mode} ${ti.min}분${ti.lines?` (${ti.lines}${ti.tf?` · 환승 ${ti.tf}회`:''})`:''}${ti.fare?` · ${yen(ti.fare)}`:''} · `,{t:'안내 시작',tag:'a',href:String(ti.link)}):null,
     marks:!it.stay&&!['f0a','f0b','f0c','f8','f9'].includes(it.uid)?marksInfo(it,opt&&opt.marksOpen):null,
     place:isP?{customId:it.p.custom?String(it.id):null,alts:altsInfo(it)}:null,
@@ -3578,13 +3578,14 @@ async function toggleWant(pid){
   else{(t[pid]=t[pid]||[]).push({trip_id:curPlan,place_id:pid,user_id:me,name:myName()});renderTray();
     await sbTable('jepi_trip_marks','POST','',{trip_id:curPlan,place_id:pid,user_id:me,name:myName()},'return=minimal')}
 }
+// 가고 싶어요 chip, card tag, sheet row, block badge (drawn by React: app/screens/Extras.tsx)
 function wantChip(pid){
   const m=wantsOf(pid), on=iWant(pid), who=m.map(x=>x.user_id===SYNC.sess.user?'나':x.name).join(', ');
-  return `<button class="want" type="button" data-want="${esc(pid)}" aria-pressed="${on}" title="${esc(who||'가고 싶어요')}">👍 가고 싶어요${m.length?` ${m.length}`:''}</button>${m.length?`<span class="want-who">${esc(who)}</span>`:''}`;
+  return {k:'want',pid:String(pid),on:!!on,n:m.length,who};
 }
-CARD_EXTRAS.push(p=>curShared()?wantChip(p.id)+(p.by?`<span class="tag usr">${esc(p.by===myName()?'내가':p.by+'님')} 추천</span>`:''):'');
-SHEET_EXTRAS.push(it=>curShared()&&it.kind==='place'?`<div class="row">${wantChip(it.id)}${it.p.by?`<span class="hint">${esc(it.p.by)} 추천</span>`:''}</div>`:'');
-BLOCK_BADGES.push(it=>{if(!curShared()||it.kind!=='place')return '';const n=wantsOf(it.id).length;return n?`<span class="mks" title="가고 싶어요 ${n}">👍${n}</span> `:''});
+CARD_EXTRAS.push(p=>curShared()?[wantChip(p.id),...(p.by?[{k:'tag',cls:'tag usr',t:`${p.by===myName()?'내가':p.by+'님'} 추천`}]:[])]:null);
+SHEET_EXTRAS.push(it=>curShared()&&it.kind==='place'?{k:'wantRow',want:wantChip(it.id),by:it.p.by||''}:null);
+BLOCK_BADGES.push(it=>{if(!curShared()||it.kind!=='place')return null;const n=wantsOf(it.id).length;return n?{k:'badge',t:`👍${n}`,title:`가고 싶어요 ${n}`}:null});
 document.addEventListener('click',async e=>{
   const w=e.target.closest('[data-want]'); if(w){e.preventDefault();e.stopPropagation();try{await toggleWant(w.dataset.want)}catch(err){showToast('저장하지 못했어요: '+err.message)}
     if(!$('#sheetBg').hidden&&$('#sheet').dataset.uid)openSheet($('#sheet').dataset.uid);return}
@@ -3754,9 +3755,9 @@ async function notifyTest(){
   await fetch(pushFn(),{method:'POST',headers:{'content-type':'application/json'},body:'{}'}).catch(()=>{});
 }
 // ----- UI -----
-BLOCK_BADGES.push((it,d)=>alertable(it)&&alertOn(it,d)&&NOTIFY.on?'<span class="mks" title="알림 켜짐">🔔</span> ':'');
-SHEET_EXTRAS.push((it,d)=>{if(!alertable(it)||DEMO.on)return '';const on=alertOn(it,d);
-  return `<div class="row alert-row"><button class="small-btn${on?' primary':''}" type="button" data-alert="${on?'off':'on'}">🔔 ${on?'알림 켜짐':'알림 켜기'}</button><span class="hint">${!NOTIFY.on?'더보기 → 알림에서 이 기기 알림을 켜야 와요':on?(NOTIFY.depart&&it.travelIn?`출발 ${NOTIFY.lead}분 전에 알려 드려요`:`시작 ${NOTIFY.lead}분 전에 알려 드려요`):''}</span></div>`});
+BLOCK_BADGES.push((it,d)=>alertable(it)&&alertOn(it,d)&&NOTIFY.on?{k:'badge',t:'🔔',title:'알림 켜짐'}:null);
+SHEET_EXTRAS.push((it,d)=>{if(!alertable(it)||DEMO.on)return null;const on=alertOn(it,d);
+  return {k:'alert',on:!!on,hint:!NOTIFY.on?'더보기 → 알림에서 이 기기 알림을 켜야 와요':on?(NOTIFY.depart&&it.travelIn?`출발 ${NOTIFY.lead}분 전에 알려 드려요`:`시작 ${NOTIFY.lead}분 전에 알려 드려요`):''}});
 // The panel itself is drawn by React: app/screens/NotifyPanel.tsx
 let notifyBusy=false;
 PANELS.notify={render(){
@@ -3987,11 +3988,7 @@ const blockMemoOf=(it,d)=>((profile.memo&&profile.memo.b)||{})[memoKey(it,d)]||'
 const dayMemoOf=d=>((profile.memo&&profile.memo.d)||[])[d]||'';
 function setDayMemo(d,v){const m=memoStore();m.d[d]=String(v||'').trim().slice(0,60);while(m.d.length&&!m.d[m.d.length-1])m.d.pop()}
 function renderDayMemo(){const e=$('#dayMemo');if(!e)return;const m=dayMemoOf(day);e.textContent=m?`“${m}”`:'';e.hidden=!m}
-SHEET_EXTRAS.push(it=>{
-  if(!it||!it.id) return '';
-  return `<div class="memo-f" id="bmForm" data-bm="${esc(memoKey(it,day))}"><label class="hint" for="bmIn">손글씨 메모</label>
-    <div class="kin"><input id="bmIn" class="hand" maxlength="60" value="${esc(blockMemoOf(it,day))}" placeholder="예) 참치! · 글리코 앞에서 사진" autocomplete="off"><button class="small-btn" type="button" id="bmSave">저장</button></div></div>`;
-});
+SHEET_EXTRAS.push(it=>it&&it.id?{k:'memo',key:memoKey(it,day),value:blockMemoOf(it,day)}:null);   // drawn by React: Extras.tsx
 let bmDraft=null;
 document.addEventListener('input',e=>{if(e.target.id==='bmIn'){const f=$('#bmForm');if(f)bmDraft={k:f.dataset.bm,v:e.target.value}}});
 function saveBlockMemo(){const f=$('#bmForm');if(!f)return;
