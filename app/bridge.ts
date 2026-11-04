@@ -31,6 +31,8 @@ import { Welcome, type WelcomeProps } from './screens/Welcome';
 import { PlanMenu, type PlanMenuProps } from './screens/PlanMenu';
 import { Phase, type PhaseProps } from './screens/Phase';
 import { Notebook, type NotebookProps } from './screens/Notebook';
+import { DayTitleForm, type DayTitleFormProps } from './screens/DayTitleForm';
+import { connectHost, type AppHost } from './ui/host';
 import { liveOf, type LiveHandle } from './ui/live';
 
 // Every screen React owns, with the props the old code must pass.
@@ -71,6 +73,7 @@ export interface Screens {
   planMenu: PlanMenuProps;
   phase: PhaseProps;
   notebook: NotebookProps;
+  dayTitle: DayTitleFormProps;
 }
 
 const SCREENS: { [K in keyof Screens]: ComponentType<Screens[K]> } = {
@@ -110,12 +113,15 @@ const SCREENS: { [K in keyof Screens]: ComponentType<Screens[K]> } = {
   planMenu: PlanMenu,
   phase: Phase,
   notebook: Notebook,
+  dayTitle: DayTitleForm,
 };
 
 export interface JepiUI {
   mount<K extends keyof Screens>(name: K, el: Element, props: Screens[K]): void;
   /** a status line / button React drew (app/ui/live.tsx), or null */
   live(el: Element | null): LiveHandle | null;
+  /** the old code tells React screens how to redraw / close the sheet / show a message (app/ui/host.ts) */
+  connectHost(h: AppHost): void;
 }
 
 declare global {
@@ -130,6 +136,7 @@ const roots = new WeakMap<Element, { root: Root; host: HTMLElement; name: string
 export function installBridge(): void {
   window.JEPI_UI = {
     live: liveOf,
+    connectHost,
     mount(name, el, props) {
       let cur = roots.get(el);
       if (!cur || cur.host.parentNode !== el || cur.name !== name) {

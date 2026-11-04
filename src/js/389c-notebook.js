@@ -26,7 +26,4 @@ function closeNotebook(){const nb=$('#notebook');if(nb)nb.hidden=true;document.b
 document.addEventListener('click',async e=>{const t=e.target.closest('button');if(!t)return;
   if(t.id==='nbOpen'){openNotebook();return}
   if(t.id==='lookOpen'){openLook();return}
-  if(t.id==='nbClose'){closeNotebook();return}
-  if(t.id==='nbPrint'){window.print();return}
-  if(t.id==='nbShare'){await shareLink(true);showToast(planMsg||'링크를 만들었어요');return}
 });

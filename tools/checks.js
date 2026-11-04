@@ -1187,6 +1187,29 @@ module.exports = [
     }
   },
   {
+    name: 'React handles its own buttons: 손글씨 메모 (typed text survives a sheet redraw, Enter saves) · 날짜 제목 (cancel, back to automatic)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      const memoOf = () => p.evaluate(() => JSON.parse(localStorage.getItem('gp.profile')).memo || {});
+      await p.click('#grid .blk:not(.fixed) >> nth=1'); await p.waitForTimeout(300);
+      await p.fill('#bmIn', '사진 찍기'); await p.click('#sheet [data-mv="30"]'); await p.waitForTimeout(300);
+      ok(await p.inputValue('#bmIn') === '사진 찍기', 'typed memo is still there after the sheet redraws (30분 뒤로)');
+      await p.press('#bmIn', 'Enter'); await p.waitForTimeout(400);
+      ok(!(await vis(p, '#sheetBg')) && Object.values((await memoOf()).b || {}).includes('사진 찍기') && (await p.textContent('#grid')).includes('사진 찍기'), 'Enter saves: the sheet closes, the block shows it, it is saved');
+      const t0 = await p.textContent('#dayTitle');
+      await p.click('#dayTitleEdit'); await p.waitForTimeout(200);
+      ok(await vis(p, '#dayTitleForm') && !(await vis(p, '#dayTitle')) && await p.evaluate(() => document.activeElement && document.activeElement.id === 'dayTitleIn'), '✎ opens the form in place of the title, the box is ready to type');
+      await p.fill('#dayTitleIn', '바꿀까 말까'); await p.click('#dayTitleCancel'); await p.waitForTimeout(300);
+      ok(!(await vis(p, '#dayTitleForm')) && await vis(p, '#dayTitle') && (await p.textContent('#dayTitle')) === t0, '취소: the title comes back unchanged');
+      await p.click('#dayTitleEdit'); await p.fill('#dayTitleIn', '첫날은 천천히'); await p.click('#dayTitleForm [type=submit]'); await p.waitForTimeout(400);
+      ok((await p.textContent('#dayTitle')) === '첫날은 천천히' && (await p.textContent('#toast').catch(() => '')).includes('바꿨어요'), '저장: the new title, 제목을 바꿨어요');
+      await p.click('#dayTitleEdit'); await p.fill('#dayTitleIn', ''); await p.click('#dayTitleForm [type=submit]'); await p.waitForTimeout(400);
+      ok((await p.textContent('#dayTitle')) === t0 && (await p.textContent('#toast').catch(() => '')).includes('자동 제목'), 'empty: back to the automatic title, and it says so');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
     name: 'friends: sharing again after a share that stopped half-way (trip on the server, no membership)',
     async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
       const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
