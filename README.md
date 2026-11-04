@@ -101,7 +101,7 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 | 이동 시간·경로 (해외 Google, 국내는 거리로 어림 + 카카오맵 연결) | `200-routes.js` |
 | 영업시간 확인 (Google Places, 월 900곳 한도) | `383-hours.js` |
 | 지도 | `210-map.js` |
-| AI 연결·모델 선택 | `190-keys-ai-router.js`, 실제 호출 `360-ai.js`, 채팅 `050-chat.js` (화면 `app/screens/ChatLog.tsx`), 빈 시간 추천 상자 `app/screens/AiBox.tsx` |
+| AI 연결·모델 선택 | 연결(부르기·다시 시도·다른 AI) `app/data/ai.ts`, 키·모델 `190-keys-ai-router.js`, 실제 호출 `360-ai.js`, 채팅 `050-chat.js` (화면 `app/screens/ChatLog.tsx`), 빈 시간 추천 상자 `app/screens/AiBox.tsx` |
 | 🎲 뭐 먹지 / 뭐 하지 | `280-dice-eat.js`, `290-dice-do.js` |
 | 내 계획 목록, 새 계획 | 화면 `app/screens/PlansScreen.tsx` (리액트), 동작 `180-plans.js` |
 | 로그인·기기 간 동기화·키 암호화 | 로그인 화면 `310-sync.js`, 무엇을 보내고 어떻게 합칠지 `app/data/sync.ts`, 서버와 대화 `app/data/server.ts`, 암호화 `app/data/vault.ts` |
