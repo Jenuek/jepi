@@ -27,7 +27,7 @@ body.mode-p #daySum,body.mode-p #sumBody,body.mode-p #phase{display:none!importa
 .sq.fl .st{font-family:var(--f-mono);font-weight:600;color:var(--pk)}
 .flag path{fill:none;stroke:#c0397f;stroke-width:2.5}.flag path+path{fill:#c0397f}
 /* a rubber stamp on a finished square */
-.stamp{position:absolute;right:-9px;top:-10px;z-index:2;width:42px;height:42px;box-sizing:border-box;border-radius:50%;border:3px solid rgba(192,57,127,.9);box-shadow:inset 0 0 0 2px rgba(251,241,217,.9),inset 0 0 0 4px rgba(192,57,127,.9);background:rgba(251,227,239,.6);color:#b0306f;font-family:var(--f-game);font-size:11px;letter-spacing:-.5px;line-height:1;display:flex;align-items:center;justify-content:center;transform:rotate(-16deg);pointer-events:none}
+.pstamp{position:absolute;right:-9px;top:-10px;z-index:2;width:42px;height:42px;box-sizing:border-box;border-radius:50%;border:3px solid rgba(192,57,127,.9);box-shadow:inset 0 0 0 2px rgba(251,241,217,.9),inset 0 0 0 4px rgba(192,57,127,.9);background:rgba(251,227,239,.6);color:#b0306f;font-family:var(--f-game);font-size:11px;letter-spacing:-.5px;line-height:1;display:flex;align-items:center;justify-content:center;transform:rotate(-16deg);pointer-events:none}
 /* the road between squares (in the 14px gap) */
 .road{position:absolute;background:#6b6152;pointer-events:none}
 .road::after{content:"";position:absolute}
@@ -124,3 +124,66 @@ body.mode-p #daySum,body.mode-p #sumBody,body.mode-p #phase{display:none!importa
 .pahead i::after{content:"";position:absolute;top:2px;left:2px;width:19px;height:19px;border-radius:50%;background:var(--pk);transition:left .15s}
 .pahead.on i{background:#c0397f}.pahead.on i::after{left:20px;background:#fff}
 .pwrap .pahead.on{min-height:44px;font-size:13px}
+
+/* ===== 여행 수첩 style × P모드 = a black-and-white sketchbook =====
+   Same board, same places — only the look changes: pencil lines on plain paper, the trip's handwriting font,
+   hatching instead of colour. Only the red ink stamps and the "now" square keep a colour. */
+body.style-note .pwrap{--pk:#33302b;--sk2:#6e695f;--ink-red:#c8323c;--f-game:var(--f-hand);--skl:1.5px 2px 0 rgba(51,48,43,.28);
+  background-color:#f8f5ee;background-image:radial-gradient(rgba(51,48,43,.05) .8px,transparent 1px);background-size:5px 5px;border:1px solid #e3ddd0}
+body.style-note .pwrap :is(.pboard,.sq,.ptray,.pdie,.proll,.mcard,.pcard,.deck,.pin,.pback,.pgo,.pempty,.pclosed,.pflag,.pahead,.dleft,.pdist),
+body.style-note .pwrap .row2 button{border-color:var(--pk);border-width:2px;box-shadow:var(--skl)}
+body.style-note .pwrap :is(.pboard,.ptray,.pclosed,.pempty){border-radius:22px 8px 18px 10px/10px 20px 8px 22px}
+body.style-note .pwrap :is(.sq,.pflag,.pahead,.mcard){border-radius:12px 4px 10px 5px/5px 10px 4px 12px}
+body.style-note .pwrap :is(.pcard,.deck){border-radius:16px 6px 14px 8px/8px 14px 6px 16px}
+body.style-note .pwrap .hint,body.style-note .pwrap .plabel small,body.style-note .pwrap .pmh small{color:var(--sk2)}
+body.style-note .pwrap .ph{font-size:23px}
+/* board */
+body.style-note .pwrap .pboard{background:#fff}
+body.style-note .pwrap .sq{background:#fff}
+body.style-note .pwrap .sq .st{color:var(--sk2);font-size:17px}
+body.style-note .pwrap .sq.fl .st{font-family:var(--f-mono);font-size:13px;color:var(--pk)}
+body.style-note .pwrap .sq.place,body.style-note .pwrap .sq.done{padding-top:5px}
+body.style-note .pwrap .sq.start,body.style-note .pwrap .sq.end{background:#fff repeating-linear-gradient(-45deg,rgba(51,48,43,.12) 0 1px,transparent 1px 5px)}
+body.style-note .pwrap .sq.done{background:#f1eee6}body.style-note .pwrap .sq.done .sn{color:#55504a}
+body.style-note .pwrap .sq.q{background:#fff repeating-linear-gradient(45deg,rgba(51,48,43,.22) 0 1.5px,transparent 1.5px 6px);border-style:dashed}
+body.style-note .pwrap .sq.q .st{font-size:36px;color:var(--pk)}body.style-note .pwrap .sq.q .sn{color:var(--pk)}
+body.style-note .pwrap .sq.now{background:#fff;border:2.5px solid var(--ink-red);box-shadow:0 0 0 3px rgba(200,50,60,.16)}
+body.style-note .pwrap .sq.now .st,body.style-note .pwrap .sq.now .sn{color:var(--ink-red)}
+body.style-note .pwrap .pawn circle,body.style-note .pwrap .pawn path{fill:#fff;stroke:var(--ink-red)}
+body.style-note .pwrap .flag path{stroke:var(--pk)}body.style-note .pwrap .flag path+path{fill:var(--pk)}
+body.style-note .pwrap .pstamp{border-color:rgba(200,50,60,.85);box-shadow:inset 0 0 0 2px rgba(255,255,255,.8),inset 0 0 0 4px rgba(200,50,60,.85);background:rgba(255,236,236,.45);color:var(--ink-red);font-size:14px}
+body.style-note .pwrap .road{background:none}
+body.style-note .pwrap .road.r::after,body.style-note .pwrap .road.l::after{top:4px;height:0;background:none;border-top:2px dashed var(--sk2)}
+body.style-note .pwrap .road.d::after{left:4px;width:0;background:none;border-left:2px dashed var(--sk2)}
+body.style-note .pwrap .plabel b{font-size:21px}
+body.style-note .pwrap .ppager{border-top-color:#d6cfc1}body.style-note .pwrap .ppager .pn{font-size:18px}
+body.style-note .pwrap .dots i.on{background:var(--pk)}
+/* dice: white dice drawn in pencil; the chosen one is drawn over twice and underlined in red */
+body.style-note .pwrap .ptray{background:#fff}
+body.style-note .pwrap .pstep{color:var(--pk);font-size:20px}
+body.style-note .pwrap .pd>span:last-child{color:var(--sk2);font-size:14px}
+body.style-note .pwrap .pd.on>span:last-child{color:var(--pk);font-weight:700;text-decoration:underline wavy var(--ink-red) 1.5px;text-underline-offset:3px}
+body.style-note .pwrap .pdie{background:#fff!important;border-radius:10px 4px 9px 5px/5px 9px 4px 10px}
+body.style-note .pwrap .pd.on .pdie{border-width:3.5px;box-shadow:0 0 0 2px #fff,0 0 0 4px var(--pk)}
+body.style-note .pwrap .proll{background:var(--pk);color:#fbf8f2}
+body.style-note .pwrap .proll b{font-size:28px}
+body.style-note .pwrap .pspin .shadow{background:rgba(51,48,43,.2)}
+/* my cards and the drawn card */
+body.style-note .pwrap .mcard .mb{background:#fff repeating-linear-gradient(-45deg,rgba(51,48,43,.16) 0 1px,transparent 1px 5px);color:var(--pk);border-bottom:2px solid var(--pk)}
+body.style-note .pwrap .mcard .mn{font-size:20px}
+body.style-note .pwrap :is(.pcard,.pin,.pctop){background:#fff}
+body.style-note .pwrap .pcat{font-size:21px}body.style-note .pwrap .pcat .pic{color:var(--pk)}
+body.style-note .pwrap .pdist{background:#fff;font-size:17px}
+body.style-note .pwrap .part{background:#fff repeating-linear-gradient(45deg,rgba(51,48,43,.14) 0 1.5px,transparent 1.5px 7px);color:var(--pk)}
+body.style-note .pwrap .pcb h3{font-size:31px}body.style-note .pwrap .pcb p{border-color:#8c877d}
+body.style-note .pwrap .deck{background:#fff repeating-linear-gradient(45deg,rgba(51,48,43,.16) 0 1px,transparent 1px 6px)}
+body.style-note .pwrap .dleft{font-size:17px}
+body.style-note .pwrap .pgo{background:var(--pk);color:#fbf8f2;font-size:27px}
+body.style-note .pwrap .row2 button{font-size:22px}
+body.style-note .pwrap .pback{font-size:28px}
+body.style-note .pwrap .pdhead b{font-size:26px}body.style-note .pwrap .pempty p{font-size:23px}
+/* a closed day */
+body.style-note .pwrap .pclosed{background:#fff}
+body.style-note .pwrap .ptok{background:#fff;color:var(--ink-red);border-color:var(--ink-red);box-shadow:inset 0 0 0 4px #fff,inset 0 0 0 6px rgba(200,50,60,.55)}
+body.style-note .pwrap .ptok b{font-size:38px}body.style-note .pwrap .pct b{font-size:26px}
+body.style-note .pwrap .pahead.on i{background:var(--pk)}

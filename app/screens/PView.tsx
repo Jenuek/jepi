@@ -49,7 +49,7 @@ const ROAD = ['r', 'r', 'r', 'd', 'l', 'l', 'l', 'd', 'r', 'next'];
 function Square({ s, j, more }: { s: PSquare; j: number; more: boolean }) {
   const style = { gridRow: POS[j][0], gridColumn: POS[j][1], '--cc': catColor(s.cat) } as CSSProperties;
   const road = more && ROAD[j] !== 'next' ? <span className={`road ${ROAD[j]}`} aria-hidden="true" /> : null;
-  const stamp = s.stamp ? <span className="stamp" aria-label="다녀옴">{s.k === 'start' ? '출발!' : s.k === 'end' ? '도착!' : '다녀옴'}</span> : null;
+  const stamp = s.stamp ? <span className="pstamp" aria-label="다녀옴">{s.k === 'start' ? '출발!' : s.k === 'end' ? '도착!' : '다녀옴'}</span> : null;
   const body = <>
     {s.k === 'now' && <svg className="pawn" width="24" height="28" viewBox="0 0 26 30" aria-hidden="true"><circle cx="13" cy="8" r="6" /><path d="M6 27 L9 15 H17 L20 27 Z" /></svg>}
     <span className="st">{s.flag && <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true" className="flag"><path d="M5 21V4" /><path d="M5 4h12l-3 4 3 4H5" /></svg>}{s.k === 'now' && s.uid ? '지금' : s.top}</span>
