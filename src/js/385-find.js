@@ -48,11 +48,16 @@ function findDrop(id){ // 안 함: the place was only just found, so take it off
   const k=PACK.places.findIndex(x=>x.id===id); if(k>=0){PACK.places.splice(k,1);savePack()}
   const i=P.findIndex(x=>x.id===id); if(i>=0)P.splice(i,1); delete PM[id]; FRESH.delete(id);
 }
-document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
-  if(t.dataset.find){const [k,v]=t.dataset.find.split(':');FIND[k]=v;FIND.q=($('#findQ')||{}).value||FIND.q;
-    if(k==='when'&&v==='gap'&&!FIND.gap)FIND.gap=gapsOf(day)[0]||null; renderFind();return}
-  if(t.dataset.findgap){const [a,b]=t.dataset.findgap.split('-').map(Number);openFind({when:'gap',gap:[a,b],into:'sched'});return}
-  if(t.dataset.findr){const [id,act]=t.dataset.findr.split(':'), r=FIND.res.find(x=>x.id===id), p=PM[id]; if(!r||!p) return;
+// 장소 찾기 sheet (FindSheet.tsx tells: a choice chip "key:value" with what is typed, a result "id:sched|list|skip",
+// the 동네 / 빈 시간 lists, or 찾기); and "찾기" next to an empty time in the day summary (gap "start-end")
+function findAct(n,v,typed){
+  if(n==='chip'){const [k,x]=String(v).split(':');FIND[k]=x;FIND.q=typed!=null?typed||FIND.q:FIND.q;
+    if(k==='when'&&x==='gap'&&!FIND.gap)FIND.gap=gapsOf(day)[0]||null; renderFind();return}
+  if(n==='gap'){const [a,b]=String(v).split('-').map(Number);openFind({when:'gap',gap:[a,b],into:'sched'});return}
+  if(n==='area'){FIND.area=v;return}
+  if(n==='gapsel'){FIND.gap=String(v).split('-').map(Number);return}
+  if(n==='submit'){FIND.q=String(typed||'').trim();runFind();return}
+  if(n==='r'){const [id,act]=String(v).split(':'), r=FIND.res.find(x=>x.id===id), p=PM[id]; if(!r||!p) return;
     if(act==='skip'){findDrop(id);r.c='skip';r.txt='넣지 않았어요'}
     else if(act==='list'){r.c='list';if(jp==='P'){if(!isWish(id))toggleWish(id);r.txt='내 카드에 담았어요'}else r.txt='장소 목록에 넣었어요'}
     else if(FIND.when==='gap'&&FIND.gap){
@@ -61,9 +66,4 @@ document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)r
       r.c='sched'; r.txt=`${rr.ops[0].start}에 넣었어요${rr.warns.length?` · 확인할 것 ${rr.warns.length}`:''}`; renderAll();
     } else {selected=id;r.c='pick';r.txt='일정표에서 넣을 시간을 탭하세요';closeSheet();tab='timeline';renderAll();return}
     findRowsUpdate(); renderTray(); return}
-});
-document.addEventListener('change',e=>{
-  if(e.target.id==='findArea'){FIND.area=e.target.value}
-  if(e.target.id==='findGap'){FIND.gap=e.target.value.split('-').map(Number)}
-});
-document.addEventListener('submit',e=>{if(e.target.id!=='findForm')return;e.preventDefault();FIND.q=$('#findQ').value.trim();runFind()});
+}

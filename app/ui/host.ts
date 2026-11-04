@@ -54,6 +54,18 @@ export interface AppHost {
   settings(name: string, value?: string, value2?: unknown): void;
   /** 처음 설정 / 이번 여행 / 취향 forms: what was pressed (pickjp, q, startmode, talk…, dest…, radio, addstay, …) */
   form(name: string, value?: string, more?: Record<string, unknown>): void;
+  /** the day summary: chip (which list), uid (a warning's block) */
+  sum(name: string, value: string): void;
+  /** 친구와 함께: share, invite-edit, invite-view, send, copy, leave, kick (uid), stop, name (typed) */
+  trip(action: string, uid?: string, typed?: string): void;
+  /** 👍 가고 싶어요 on a place of the shared trip */
+  want(placeId: string): void;
+  /** 장소 찾기: chip ("key:value", typed), r ("id:act"), gap ("start-end"), area, gapsel, submit (typed) */
+  find(name: string, value?: string, typed?: string | null): void;
+  /** the plan menu: open (plan id), new, manage */
+  planMenu(name: string, value?: string): void;
+  /** 더보기 rows that are not a tab: nbOpen, lookOpen, moreAll */
+  more(id: string): void;
   /** a backup file was chosen (처음 설정 · 내 계획 · 설정) */
   importFile(f: File | undefined): void;
 }

@@ -21,7 +21,7 @@ export interface DaySumProps {
   chips: { k: string; t: string; warn: boolean; open: boolean }[];
 }
 export function DaySum({ chips }: DaySumProps) {
-  return <>{chips.map(c => <button key={c.k} type="button" className={c.warn ? 'sum-chip warn' : 'sum-chip'} data-sum={c.k} aria-expanded={c.open}>{c.t}</button>)}</>;
+  return <>{chips.map(c => <button key={c.k} type="button" className={c.warn ? 'sum-chip warn' : 'sum-chip'} data-sum={c.k} aria-expanded={c.open} onClick={() => app().sum('chip', c.k)}>{c.t}</button>)}</>;
 }
 
 export interface SumBodyProps {
@@ -30,8 +30,8 @@ export interface SumBodyProps {
 }
 export function SumBody({ warns, gaps }: SumBodyProps) {
   return <>
-    {warns.map(w => <button key={w.uid} type="button" className="sum-row warn" data-sumuid={w.uid}><b className="mono">{w.time}</b>{` ${w.name}`}<span>{w.warn}</span></button>)}
-    {gaps.map((g, i) => <div key={i} className="sum-row"><b className="mono">{g.range}</b> 비어 있어요{g.find && <button type="button" className="small-btn" data-findgap={g.find}>채울 곳 찾기</button>}</div>)}
+    {warns.map(w => <button key={w.uid} type="button" className="sum-row warn" data-sumuid={w.uid} onClick={() => app().sum('uid', w.uid)}><b className="mono">{w.time}</b>{` ${w.name}`}<span>{w.warn}</span></button>)}
+    {gaps.map((g, i) => <div key={i} className="sum-row"><b className="mono">{g.range}</b> 비어 있어요{g.find && <button type="button" className="small-btn" data-findgap={g.find} onClick={() => app().find('gap', g.find!)}>채울 곳 찾기</button>}</div>)}
   </>;
 }
 

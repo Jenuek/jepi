@@ -1,6 +1,8 @@
 // 더보기 tab: this trip's card and the menu (it used to be renderMore in src/js/220-more-menu.js).
-// The buttons keep their data-tab / id names: the old code opens the screens from those.
+// The buttons keep their data-tab / id names: rows with an id tell the old code through app().more; tab rows go
+// through the app's tab switching (like the bottom tabs).
 import type { ReactNode } from 'react';
+import { app } from '../ui/host';
 
 export type ChipTone = 'ok' | 'warn' | 'acc' | '';
 
@@ -39,7 +41,7 @@ const ChipView = ({ text, tone }: Chip) => <span className={'mchip ' + (tone || 
 
 function Row({ tab, id, title, sub, children }: { tab?: string; id?: string; title: string; sub: string; children?: ReactNode }) {
   return (
-    <button className="mrow" type={tab ? undefined : 'button'} data-tab={tab} id={id}>
+    <button className="mrow" type={tab ? undefined : 'button'} data-tab={tab} id={id} onClick={id && !tab ? () => app().more(id) : undefined}>
       <span className="mt"><b>{title}</b><small>{sub}</small></span>
       {children ?? <Arrow />}
     </button>
@@ -86,7 +88,7 @@ export function MoreMenu(p: MoreMenuProps) {
           </Row>
         </div>
       )}
-      {p.showToggle && <button className="linkbtn" id="moreAll">{p.moreAll ? '간단히 보기' : '전체 메뉴 보기'}</button>}
+      {p.showToggle && <button className="linkbtn" id="moreAll" onClick={() => app().more('moreAll')}>{p.moreAll ? '간단히 보기' : '전체 메뉴 보기'}</button>}
     </>
   );
 }

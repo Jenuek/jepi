@@ -16,7 +16,7 @@ export type Extra =
 
 function Want({ x }: { x: Extract<Extra, { k: 'want' }> }) {
   return <>
-    <button className="want" type="button" data-want={x.pid} aria-pressed={x.on} title={x.who || '가고 싶어요'}>{`👍 가고 싶어요${x.n ? ` ${x.n}` : ''}`}</button>
+    <button className="want" type="button" data-want={x.pid} aria-pressed={x.on} onClick={e => { e.preventDefault(); e.stopPropagation(); app().want(x.pid) }} title={x.who || '가고 싶어요'}>{`👍 가고 싶어요${x.n ? ` ${x.n}` : ''}`}</button>
     {x.n > 0 && <span className="want-who">{x.who}</span>}
   </>;
 }

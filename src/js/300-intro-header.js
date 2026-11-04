@@ -18,11 +18,13 @@ function planMenu(open){const m=document.getElementById('planMenu'),b=document.g
 document.addEventListener('click',e=>{
   const b=e.target.closest('#planBtn'); if(b){planMenu(document.getElementById('planMenu').hidden);return}
   const m=document.getElementById('planMenu'); if(!m||m.hidden)return;
-  const it=e.target.closest('[data-pmopen],[data-pmact]');
-  if(it){planMenu(false); if(it.dataset.pmopen){if(it.dataset.pmopen!==curPlan){openPlan(it.dataset.pmopen);showToast('계획을 바꿨어요')}}
-    else if(it.dataset.pmact==='new'){newPlan()} else {tab='plans';snapshotCurrent();showText=false;renderPlans();renderTabs()} return}
-  if(!e.target.closest('#planMenu'))planMenu(false);
+  if(!e.target.closest('#planMenu'))planMenu(false);   // a tap outside closes it
 },true);
+// an item in the plan menu (PlanMenu.tsx tells: open a plan, + 새 계획, 계획 관리·공유)
+function planMenuAct(n,v){planMenu(false);
+  if(n==='open'){if(v!==curPlan){openPlan(v);showToast('계획을 바꿨어요')}return}
+  if(n==='new'){newPlan();return}
+  tab='plans';snapshotCurrent();showText=false;renderPlans();renderTabs()}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){const m=document.getElementById('planMenu');if(m&&!m.hidden){planMenu(false);document.getElementById('planBtn').focus()}}});
 
 // ---------- DICE motion: rolls while the page scrolls, opens out of the die ----------

@@ -19,8 +19,8 @@ function renderDaySum(items,trans,gaps){
   window.JEPI_UI.mount('sumBody',body,{warns:sw,gaps:sg});
   body.hidden=!(sw.length||sg.length);
 }
-document.addEventListener('click',e=>{
-  const t=e.target.closest('[data-sum],[data-sumuid]'); if(!t) return;
-  if(t.dataset.sumuid){openSheet(t.dataset.sumuid);return}
-  sumOpen=sumOpen===t.dataset.sum?null:t.dataset.sum; renderTimeline();
-});
+// the day's summary chips (DayTop.tsx DaySum / SumBody tell: a chip opens its list, a warning row opens its block)
+function sumAct(n,v){
+  if(n==='uid'){openSheet(v);return}
+  if(n==='chip'){sumOpen=sumOpen===v?null:v;renderTimeline()}
+}

@@ -93,6 +93,12 @@ function kwAct(n,v){
   case 'reset': kws=DEFAULT_KW.slice();saveKw();return;
   }
 }
+// 더보기 rows that are not a tab (MoreMenu.tsx): 여행 노트, 여행 꾸미기, 전체 메뉴 보기
+function moreAct(id){
+  if(id==='nbOpen'){openNotebook();return}
+  if(id==='lookOpen'){openLook();return}
+  if(id==='moreAll'){moreAll=!moreAll;renderMore();return}
+}
 // What was pressed on the P모드 판 (PView.tsx tells: its name and value)
 function pviewAct(n,v){
   switch(n){
