@@ -131,44 +131,34 @@ function saveCourse(){
 }
 function doCondTxt(){const mood=(DO_MOODS.find(m=>m[0]===doS.mood)||[])[1];return [doS.when==='now'?'지금':`이따 ${doS.at}`,doS.clen==='rest'?'코스: 오늘 끝까지':doS.clen==='half'?'코스: 반나절':'코스: 2~3시간',mood==='상관없음'?'':mood].filter(Boolean).join(' · ')}
 function eatCondTxt(){const mood=(EAT_MOODS.find(m=>m[0]===eat.mood)||[])[1];return [eat.base==='plan'?MEAL_TXT[eat.meal]:'',`걸어서 ${eat.walk}분`,mood==='상관없음'?'':mood].filter(Boolean).join(' · ')}
-const pillRow=(attr,cur,opts)=>`<div class="radio">${opts.map(([v,l])=>`<button type="button" data-${attr}="${v}" aria-pressed="${String(cur)===String(v)}">${l}</button>`).join('')}</div>`;
-function doBasesHTML(){
-  const nearLbl=doS.org==='gps'?'지금 위치':(mypOf(doS.org)||{}).name||'지금 위치';
-  return `<div class="eat-bases"><button type="button" class="eat-base" data-dobase="near" aria-pressed="${doS.base==='near'}">📍 내 주변<small>${esc(nearLbl)}</small></button>
-    <button type="button" class="eat-base" data-dobase="area" aria-pressed="${doS.base==='area'}">🗺 동네<small>${doS.area?esc(doS.area.name):'골라 주세요'}</small></button>
-    ${planUsable()?`<button type="button" class="eat-base" data-dobase="plan" aria-pressed="${doS.base==='plan'}">🗓 ${esc(PACK.city)}<small>Day ${day+1} 빈 시간</small></button>`:''}</div>`;
-}
+function doBases(){const nearLbl=doS.org==='gps'?'지금 위치':(mypOf(doS.org)||{}).name||'지금 위치';
+  return [{attr:'dobase',v:'near',on:doS.base==='near',label:'📍 내 주변',small:nearLbl},{attr:'dobase',v:'area',on:doS.base==='area',label:'🗺 동네',small:doS.area?doS.area.name:'골라 주세요'},
+    ...(planUsable()?[{attr:'dobase',v:'plan',on:doS.base==='plan',label:`🗓 ${PACK.city}`,small:`Day ${day+1} 빈 시간`}]:[])]}
 function renderDoNear(){
   const orgs=[['gps','지금 위치'],...MYP.filter(x=>x.ll).map(x=>[x.id,x.name])];
-  const picker=doS.base==='area'&&(!doS.area||doS.picking)?`<div class="area-pick"><div class="kin"><input id="doAreaQ" placeholder="동네·역 이름 (예: 강남역, 성수동, 해운대)" autocomplete="off" enterkeyhint="search"><button class="small-btn primary" type="button" id="doAreaFind">찾기</button></div>
-    ${doS.hits.length?`<div class="myp-hits">${doS.hits.map((h,i)=>`<button class="mrow" type="button" data-doareapick="${i}"><span class="mt"><b>${esc(h.name)}</b><small>${esc(h.addr)}</small></span></button>`).join('')}</div>`:''}
-    ${RECENT_AREAS.length?`<span class="hint">최근</span>${pillRow('doarecent','',RECENT_AREAS.map((a,i)=>[i,a.name]))}`:''}</div>`:'';
-  let stage='', acts='';
-  const busy=doS.busy?`<div class="die spin" aria-hidden="true">🎲</div><p class="hint">${doS.base==='area'&&doS.area?esc(doS.area.name):'주변'}에서 찾는 중…</p>`:'';
+  const busy=doS.busy?{s:'die',spin:true,face:'🎲',hint:`${doS.base==='area'&&doS.area?doS.area.name:'주변'}에서 찾는 중…`}:null;
+  let stage, acts;
   if(doS.course){
-    const cEnd=doS.course.length?doS.course[doS.course.length-1].start+doS.course[doS.course.length-1].dur:0;
-    stage=busy||`<p class="course-h">${fmt(doS.course[0].start)}–${fmt(cEnd)} · ${doS.course.length}곳 · 약 ${durTxt(cEnd-doS.course[0].start)}</p><ol class="course">${doS.course.map((x,i)=>`<li><span class="mono ct">${fmt(x.start)}</span><div class="cm"><b>${TYPE_ICON[x.type]} ${esc(x.name)}</b><small>${i?`앞에서 걸어서 ${x.walk}분`:`${esc(doS.where)}에서 걸어서 ${x.walk}분`} · ${esc(x.cat)}${x.meal?` · ${x.meal==='lunch'?'점심':'저녁'}`:''}</small></div><a class="small-btn" href="${esc(x.url)}" target="_blank" rel="noopener" aria-label="${esc(x.name)} 지도">지도</a><button class="small-btn" type="button" data-doreroll="${i}" aria-label="이 칸 다시 굴리기">🎲</button></li>`).join('')}</ol><small class="hint">${esc(doS.src)}</small>`;
-    acts=doS.busy?'':`<button type="button" class="small-btn primary" id="doSave">📌 이 코스 저장</button><button type="button" class="small-btn" data-dogo="course">다시 짜기</button><button type="button" class="small-btn" data-dogo="one">하나만 굴리기</button>`;
+    const C=doS.course, cEnd=C.length?C[C.length-1].start+C[C.length-1].dur:0;
+    stage=busy||{s:'course',head:`${fmt(C[0].start)}–${fmt(cEnd)} · ${C.length}곳 · 약 ${durTxt(cEnd-C[0].start)}`,src:doS.src||'',
+      items:C.map((x,i)=>({t:fmt(x.start),title:`${TYPE_ICON[x.type]} ${x.name}`,sub:`${i?`앞에서 걸어서 ${x.walk}분`:`${doS.where}에서 걸어서 ${x.walk}분`} · ${x.cat}${x.meal?` · ${x.meal==='lunch'?'점심':'저녁'}`:''}`,url:String(x.url||''),name:x.name}))};
+    acts=doS.busy?[]:[dBtn('small-btn primary','📌 이 코스 저장',{id:'doSave'}),dBtn('small-btn','다시 짜기',{data:{dogo:'course'}}),dBtn('small-btn','하나만 굴리기',{data:{dogo:'one'}})];
   }else if(doS.pick){
     const c=doS.pick,left=Math.max(0,3-doS.rolls);
-    stage=busy||(dice.rolling?`<div class="die spin" aria-hidden="true">${FACES[Math.floor(Math.random()*6)]}</div>`:`<div class="dice-card"><b>${TYPE_ICON[c.type]} ${esc(c.name)}</b><span class="mono hint">걸어서 약 ${c.walk}분 · ${esc(c.cat)}</span>${c.addr?`<p>${esc(c.addr)}</p>`:''}<small class="hint">${esc(doS.where)} 기준 · ${esc(doS.src)}</small></div>`);
-    acts=doS.busy||dice.rolling?'':doS.chosen===c.name?`<span class="ai-status">즐거운 시간 보내세요! 🎲</span><a class="small-btn primary" href="${esc(c.url)}" target="_blank" rel="noopener">지도 열기</a><button type="button" class="small-btn" data-dogo="course">여기서 코스로 짜기</button>`
-      :`<button type="button" class="small-btn primary" id="doPick">이걸로!</button><a class="small-btn" href="${esc(c.url)}" target="_blank" rel="noopener">지도</a><button type="button" class="small-btn" data-dogo="one" data-again="1"${left?'':' disabled'}>다시 (${left})</button><button type="button" class="small-btn" data-dogo="course">코스로 짜기</button>`;
+    stage=busy||(dice.rolling?dSpin():{s:'placeCard',title:`${TYPE_ICON[c.type]} ${c.name}`,line:`걸어서 약 ${c.walk}분 · ${c.cat}`,addr:c.addr||'',foot:`${doS.where} 기준 · ${doS.src}`});
+    acts=doS.busy||dice.rolling?[]:doS.chosen===c.name?[{a:'status',t:'즐거운 시간 보내세요! 🎲'},dLink('small-btn primary','지도 열기',c.url),dBtn('small-btn','여기서 코스로 짜기',{data:{dogo:'course'}})]
+      :[dBtn('small-btn primary','이걸로!',{id:'doPick'}),dLink('small-btn','지도',c.url),dBtn('small-btn',`다시 (${left})`,{data:{dogo:'one',again:'1'},disabled:!left}),dBtn('small-btn','코스로 짜기',{data:{dogo:'course'}})];
   }else{
-    stage=busy||`<div class="die" aria-hidden="true">⚄</div>`;
-    acts=doS.busy?'':`<button type="button" class="dice-go" data-dogo="one">🎲 하나 굴리기</button><button type="button" class="dice-go alt" data-dogo="course">🗺 코스 짜기</button>`;
+    stage=busy||{s:'die',face:'⚄'};
+    acts=doS.busy?[]:[dBtn('dice-go','🎲 하나 굴리기',{data:{dogo:'one'}}),dBtn('dice-go alt','🗺 코스 짜기',{data:{dogo:'course'}})];
   }
-  $('#sheet').innerHTML=`<div class="dice">${diceTabsHTML()}${doBasesHTML()}${picker}
-    <details class="cond"${doS.cond?' open':''}><summary><span>${esc(doCondTxt())}</span><span class="cond-e">조건 바꾸기</span></summary>
-      ${doS.base==='near'?`<span class="hint">기준</span>${pillRow('doorg',doS.org,orgs)}${MYP.some(x=>x.ll)?'':'<button type="button" class="linkbtn" id="eatSetPlaces">🏠 집·🏢 회사 등록해 두기</button>'}`:''}
-      <span class="hint">언제</span><div class="radio"><button type="button" data-dowhen="now" aria-pressed="${doS.when==='now'}">지금</button><button type="button" data-dowhen="later" aria-pressed="${doS.when==='later'}">이따</button>${doS.when==='later'?`<input type="time" id="doAt" value="${esc(doS.at)}" aria-label="시작 시간">`:''}</div>
-      <span class="hint">코스 길이</span>${pillRow('doclen',doS.clen,[['short','2~3시간 · 3곳 안팎'],['half','반나절 · 4~5곳'],['rest','오늘 끝까지']])}
-      <span class="hint">기분</span>${pillRow('domood',doS.mood,DO_MOODS)}</details>
-    <div class="dice-stage">${stage}</div>
-    ${doS.msg?`<p class="hint" style="color:var(--warn)">${esc(doS.msg)}</p>`:''}
-    <div class="row dice-acts">${acts}</div>
-    <p class="hint">최근 5일 동안 고른 곳은 빼고 굴려요. 영업시간은 지도에서 한 번 확인하세요.</p>
-    <div class="row"><button type="button" class="small-btn" data-close="1">닫기</button></div></div>`;
+  diceMount({tabs:dice.tab==='eat'?'eat':'do',
+    bases:doBases(),
+    picker:doS.base==='area'&&(!doS.area||doS.picking)?{hits:doS.hits.map(h=>({name:h.name,addr:h.addr})),recent:RECENT_AREAS.map(a=>a.name)}:null,
+    cond:{open:!!doS.cond,txt:doCondTxt(),rows:[...(doS.base==='near'?[dHint('기준'),dPills('doorg',doS.org,orgs),...(MYP.some(x=>x.ll)?[]:[{r:'setPlaces'}])]:[]),
+      dHint('언제'),{r:'when',later:doS.when==='later',at:doS.at||''},dHint('코스 길이'),dPills('doclen',doS.clen,[['short','2~3시간 · 3곳 안팎'],['half','반나절 · 4~5곳'],['rest','오늘 끝까지']]),
+      dHint('기분'),dPills('domood',doS.mood,DO_MOODS.map(m=>[m[0],m[1]]))]},
+    stage,msg:doS.msg||'',acts,foot:'최근 5일 동안 고른 곳은 빼고 굴려요. 영업시간은 지도에서 한 번 확인하세요.'});
 }
 function pushRecentArea(a){RECENT_AREAS=[a,...RECENT_AREAS.filter(x=>x.name!==a.name)].slice(0,6);LS.set('jepi.areas',RECENT_AREAS)}
 document.addEventListener('toggle',e=>{const d=e.target;if(d&&d.classList&&d.classList.contains('cond')){if(dice.tab==='eat')eat.cond=d.open;else doS.cond=d.open}},true);

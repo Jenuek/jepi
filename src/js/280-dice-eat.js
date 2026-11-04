@@ -13,14 +13,18 @@ function eatDefaults(){
   eat.org=wkLunch&&mypOf('work')&&mypOf('work').ll?'work':'gps';
   eat.meal=mealNow()==='dinner'?'dinner':'lunch'; eat.pick=null; eat.rolls=0; eat.msg='';
 }
-function diceTabsHTML(){return `<div class="dice-tabs" role="tablist"><button type="button" role="tab" data-dicetab="do" aria-selected="${dice.tab!=='eat'}">🎲 뭐 하지?</button><button type="button" role="tab" data-dicetab="eat" aria-selected="${dice.tab==='eat'}">🍚 뭐 먹지?</button></div>`}
+// The DICE sheet is drawn by React: app/screens/Dice.tsx. These build its pieces.
+let diceRev=0;
+const dPills=(attr,cur,opts)=>({r:'pills',p:{attr,cur,opts}}), dHint=t=>({r:'hint',t});
+const dBtn=(cls,label,o)=>Object.assign({a:'btn',cls,label},o||{}), dLink=(cls,label,href)=>({a:'link',cls,label,href:String(href||'')});
+const dSpin=()=>({s:'die',spin:true,face:FACES[Math.floor(Math.random()*6)]});
+function diceMount(pr){window.JEPI_UI.mount('dice',$('#sheet'),Object.assign({eat:false,head:null,tabs:null,bases:null,picker:null,rows:[],cond:null,msg:'',acts:[],ai:null,foot:null},pr,{rev:++diceRev}))}
 function renderDice(){
   if($('#sheet').dataset.uid!=='dice') return;
   if(dice.tab==='eat') return renderEat();
   if(!doS.base) doDefaults(false);
   if(doS.base!=='plan') return renderDoNear();
-  dice.lunch=false; renderDiceDo();
-  const d=$('#sheet .dice'); if(d) d.insertAdjacentHTML('afterbegin',diceTabsHTML()+doBasesHTML());
+  dice.lunch=false; renderDiceDo({tabs:'do',bases:doBases()});
 }
 function eatRecent(){const t=isoOf(new Date()),from=isoShift(t,-5);return new Set(diceLog.filter(x=>x.d&&x.d>=from&&x.d<=t).map(x=>norm(x.n)))}
 async function eatOrigin(){
@@ -76,34 +80,27 @@ async function eatRoll(again){
 function renderEat(){
   if($('#sheet').dataset.uid!=='dice') return;
   const meal=eat.base==='plan'?eat.meal:mealNow(), mt=MEAL_TXT[meal]||'점심', D=DAYS[day]||{};
-  const pills=(attr,cur,opts)=>`<div class="radio">${opts.map(([v,l])=>`<button type="button" data-${attr}="${v}" aria-pressed="${String(cur)===String(v)}">${l}</button>`).join('')}</div>`;
   const orgs=[['gps','지금 위치'],...MYP.filter(x=>x.ll).map(x=>[x.id,x.name])];
-  const planChip=planUsable()?`<button type="button" class="eat-base" data-eatbase="plan" aria-pressed="${eat.base==='plan'}">🗓 ${esc(PACK.city)} Day ${day+1}<small>${esc(D.date||'')} ${MEAL_TXT[eat.meal]}</small></button>`:'';
   const nearLbl=eat.org==='gps'?'지금 위치':(mypOf(eat.org)||{}).name||'지금 위치';
-  let stage='', acts='';
+  let stage, acts;
   if(eat.base==='plan'){
-    const c=dice.pick;
-    stage=dice.rolling?`<div class="die spin" aria-hidden="true">${FACES[Math.floor(Math.random()*6)]}</div>`:c?`<div class="dice-card" style="--cc:var(--c-${c.p.cat})"><b>${esc(c.p.name)}</b><span class="mono hint">${fmt(c.arr)}–${fmt(c.arr+c.dur)} · ${esc(c.p.area)}${c.tm?` · ${esc(c.mode)} ${c.tm}분`:''}</span><p>${esc(c.p.note||'')}</p></div>`:`<div class="die" aria-hidden="true">🍚</div>`;
-    const left=Math.max(0,3-dice.rolls);
-    acts=c&&!dice.rolling?`<button type="button" class="small-btn primary" id="diceFix">이걸로! 일정에 넣기</button>${dice.force?'<button type="button" class="small-btn" id="diceForce">그래도 넣기</button>':''}<button type="button" class="small-btn" data-eatroll="again"${left?'':' disabled'}>다시 굴리기 (${left})</button>`:dice.rolling?'':`<button type="button" class="dice-go" data-eatroll="go">🍚 ${MEAL_TXT[eat.meal]} 굴리기</button>`;
+    const c=dice.pick, left=Math.max(0,3-dice.rolls);
+    stage=dice.rolling?dSpin():c?{s:'planCard',cat:c.p.cat,name:c.p.name,line:`${fmt(c.arr)}–${fmt(c.arr+c.dur)} · ${c.p.area}${c.tm?` · ${c.mode} ${c.tm}분`:''}`,note:c.p.note||'',tags:null}:{s:'die',face:'🍚'};
+    acts=c&&!dice.rolling?[dBtn('small-btn primary','이걸로! 일정에 넣기',{id:'diceFix'}),...(dice.force?[dBtn('small-btn','그래도 넣기',{id:'diceForce'})]:[]),dBtn('small-btn',`다시 굴리기 (${left})`,{data:{eatroll:'again'},disabled:!left})]
+      :dice.rolling?[]:[dBtn('dice-go',`🍚 ${MEAL_TXT[eat.meal]} 굴리기`,{data:{eatroll:'go'}})];
   } else {
     const c=eat.pick, left=Math.max(0,3-eat.rolls);
-    stage=eat.busy?`<div class="die spin" aria-hidden="true">🍚</div><p class="hint">주변 식당을 찾는 중…</p>`:dice.rolling?`<div class="die spin" aria-hidden="true">${FACES[Math.floor(Math.random()*6)]}</div>`:c?`<div class="dice-card"><b>${esc(c.name)}</b><span class="mono hint">걸어서 약 ${Math.max(1,Math.round(c.dist/80))}분 · ${esc(c.cat)}</span>${c.addr?`<p>${esc(c.addr)}</p>`:''}<small class="hint">${esc(eat.where)} 기준 · ${esc(eat.src)}</small></div>`:`<div class="die" aria-hidden="true">🍚</div>`;
-    acts=c&&!eat.busy&&!dice.rolling?(eat.chosen===c.name?`<span class="ai-status">맛있게 드세요! 🍚</span><a class="small-btn primary" href="${esc(c.url)}" target="_blank" rel="noopener">지도 열기</a>`:`<button type="button" class="small-btn primary" id="eatPick">이걸로!</button><a class="small-btn" href="${esc(c.url)}" target="_blank" rel="noopener">지도</a><button type="button" class="small-btn" data-eatroll="again"${left?'':' disabled'}>다시 굴리기 (${left})</button>`):(eat.busy||dice.rolling?'':`<button type="button" class="dice-go" data-eatroll="go">🍚 ${mt} 굴리기</button>`);
+    stage=eat.busy?{s:'die',spin:true,face:'🍚',hint:'주변 식당을 찾는 중…'}:dice.rolling?dSpin():c?{s:'placeCard',title:c.name,line:`걸어서 약 ${Math.max(1,Math.round(c.dist/80))}분 · ${c.cat}`,addr:c.addr||'',foot:`${eat.where} 기준 · ${eat.src}`}:{s:'die',face:'🍚'};
+    acts=c&&!eat.busy&&!dice.rolling?(eat.chosen===c.name?[{a:'status',t:'맛있게 드세요! 🍚'},dLink('small-btn primary','지도 열기',c.url)]
+      :[dBtn('small-btn primary','이걸로!',{id:'eatPick'}),dLink('small-btn','지도',c.url),dBtn('small-btn',`다시 굴리기 (${left})`,{data:{eatroll:'again'},disabled:!left})])
+      :(eat.busy||dice.rolling?[]:[dBtn('dice-go',`🍚 ${mt} 굴리기`,{data:{eatroll:'go'}})]);
   }
-  $('#sheet').innerHTML=`<div class="dice eat">${diceTabsHTML()}
-    <div class="eat-bases"><button type="button" class="eat-base" data-eatbase="near" aria-pressed="${eat.base==='near'}">📍 ${esc(nearLbl)} 주변<small>걸어서 ${eat.walk}분</small></button>${planChip}</div>
-    <details class="cond"${eat.cond?' open':''}><summary><span>${esc(eatCondTxt())}</span><span class="cond-e">조건 바꾸기</span></summary>
-    ${eat.base==='near'?`<span class="hint">기준</span>${pills('eatorg',eat.org,orgs)}${MYP.some(x=>x.ll)?'':'<button type="button" class="linkbtn" id="eatSetPlaces">🏠 집·🏢 회사 등록해 두기</button>'}`
-      :`<span class="hint">언제</span>${pills('eatmeal',eat.meal,[['lunch','점심'],['dinner','저녁']])}`}
-    <span class="hint">걸어서</span>${pills('eatwalk',eat.walk,[[5,'5분'],[10,'10분'],[15,'15분'],[20,'20분']])}
-    <span class="hint">기분</span>${pills('eatmood',eat.mood,EAT_MOODS.map(m=>[m[0],m[1]]))}</details>
-    <div class="dice-stage">${stage}</div>
-    ${eat.base==='near'&&eat.msg?`<p class="hint" style="color:var(--warn)">${esc(eat.msg)}</p>`:''}${eat.base==='plan'&&dice.msg?`<p class="hint" style="color:var(--warn)">${esc(dice.msg)}</p>`:''}
-    <div class="row dice-acts">${acts}</div>
-    ${eat.base==='plan'&&sample&&!PACK.manual?`<div class="row"><button type="button" class="small-btn" id="diceAI">🔎 AI가 새로 찾아서 굴리기</button><span class="ai-status" id="st_dice"></span></div>`:''}
-    <p class="hint">최근 5일 동안 고른 곳은 빼고 굴려요.</p>
-    <div class="row"><button type="button" class="small-btn" data-close="1">닫기</button></div></div>`;
+  diceMount({eat:true,tabs:dice.tab==='eat'?'eat':'do',
+    bases:[{attr:'eatbase',v:'near',on:eat.base==='near',label:`📍 ${nearLbl} 주변`,small:`걸어서 ${eat.walk}분`},
+      ...(planUsable()?[{attr:'eatbase',v:'plan',on:eat.base==='plan',label:`🗓 ${PACK.city} Day ${day+1}`,small:`${D.date||''} ${MEAL_TXT[eat.meal]}`}]:[])],
+    cond:{open:!!eat.cond,txt:eatCondTxt(),rows:[...(eat.base==='near'?[dHint('기준'),dPills('eatorg',eat.org,orgs),...(MYP.some(x=>x.ll)?[]:[{r:'setPlaces'}])]:[dHint('언제'),dPills('eatmeal',eat.meal,[['lunch','점심'],['dinner','저녁']])]),
+      dHint('걸어서'),dPills('eatwalk',eat.walk,[[5,'5분'],[10,'10분'],[15,'15분'],[20,'20분']]),dHint('기분'),dPills('eatmood',eat.mood,EAT_MOODS.map(m=>[m[0],m[1]]))]},
+    stage,msg:eat.base==='near'?(eat.msg||''):(dice.msg||''),acts,ai:eat.base==='plan'&&sample&&!PACK.manual?{primary:false}:null,foot:'최근 5일 동안 고른 곳은 빼고 굴려요.'});
 }
 function openDiceTab(tab,fromT){
   dice.tab=tab; if(tab==='eat'){eatDefaults(); eat.chosen=null} else doDefaults(fromT!=null);

@@ -17,6 +17,7 @@ import { TasteStyle, type TasteStyleProps } from './screens/TasteStyle';
 import { OnbBody, type OnbBodyProps } from './screens/OnbBody';
 import { TrayCards, TrayFilters, type TrayCardsProps, type TrayFiltersProps } from './screens/Tray';
 import { Checks, type ChecksProps } from './screens/Checks';
+import { Dice, MapCards, type DiceProps, type MapCardsProps } from './screens/Dice';
 import { liveOf, type LiveHandle } from './ui/live';
 
 // Every screen React owns, with the props the old code must pass.
@@ -35,6 +36,8 @@ export interface Screens {
   trayCards: TrayCardsProps;
   trayFilters: TrayFiltersProps;
   checks: ChecksProps;
+  dice: DiceProps;
+  mapCards: MapCardsProps;
 }
 
 const SCREENS: { [K in keyof Screens]: ComponentType<Screens[K]> } = {
@@ -52,6 +55,8 @@ const SCREENS: { [K in keyof Screens]: ComponentType<Screens[K]> } = {
   trayCards: TrayCards,
   trayFilters: TrayFilters,
   checks: Checks,
+  dice: Dice,
+  mapCards: MapCards,
 };
 
 export interface JepiUI {

@@ -50,16 +50,15 @@ function drawMap(fit){
   else if(fit){const c=cityLL&&cityLL();if(c)mapState.map.setView(c,12)}
   renderMapCards();
 }
+let mapCardsRev=0;
 function renderMapCards(){
   const el=$('#mapCards'); if(!el) return;
   const {stops,legs}=mapLegs(day);
   const est=legs.some(x=>x.t&&x.t.est), noKey=legs.length&&!legs.some(x=>x.t&&x.t.real)&&!routeProvider(legs[0].a,legs[0].b);
   $('#mapMsg').textContent=mapState.all?'날짜별 색으로 전체 여행을 보여 줘요.':noKey?'점선은 직선 거리예요. 설정에서 지도 키를 연결하면 실제 경로가 그려져요.':est?'경로를 불러오는 중이에요…':'';
-  el.innerHTML=stops.map((s,i)=>{const t=i?legs[i-1].t:null,prev=i?stops[i-1]:null;
-    return `<div class="mcard" data-mapi="${i}">${t?`<div class="mleg mono">${t.real?'':'≈ '}${esc(t.mode)} ${t.min}분${t.lines?` · ${esc(t.lines)}`:''}${t.tf?` · 환승 ${t.tf}`:''}</div>`:''}
-      <b>${esc(s.name)}</b><small class="mono">${fmt(s.start)}–${fmt(s.end)}</small>
-      ${prev?`<a class="small-btn" href="${navLink(prev.ll,s.ll,t?t.mode:'도보',s.name)}" target="_blank" rel="noopener">안내 시작</a>`:''}</div>`}).join('')||'<p class="hint">이 날은 아직 장소가 없어요.</p>';
-}
+  // drawn by React: app/screens/Dice.tsx MapCards
+  window.JEPI_UI.mount('mapCards',el,{rev:++mapCardsRev,stops:stops.map((s,i)=>{const t=i?legs[i-1].t:null,prev=i?stops[i-1]:null;
+    return {leg:t?`${t.real?'':'≈ '}${t.mode} ${t.min}분${t.lines?` · ${t.lines}`:''}${t.tf?` · 환승 ${t.tf}`:''}`:'',name:String(s.name),time:`${fmt(s.start)}–${fmt(s.end)}`,nav:prev?navLink(prev.ll,s.ll,t?t.mode:'도보',s.name):''}})});}
 function locateMe(){
   if(!navigator.geolocation){$('#mapMsg').textContent='이 기기에서는 위치를 쓸 수 없어요.';return}
   if(mapState.watch!=null){navigator.geolocation.clearWatch(mapState.watch);mapState.watch=null;if(mapState.meMarker){mapState.meMarker.remove();mapState.meMarker=null}mapState.me=null;$('#mapMe').setAttribute('aria-pressed','false');return}

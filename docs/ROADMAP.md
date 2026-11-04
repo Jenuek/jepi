@@ -63,7 +63,11 @@
     장소 탭의 위쪽(제목·추천 안내 #recSt·묶어 보기 버튼·이 날 문 여는 곳만·AI로 더 찾기)은 body.html 그대로. 점검 추가(♥·필터·분류·접힌 동네 유지·넣기). 점검 237개 통과.
   - [x] 준비하기(`Checks.tsx`, #checks): 일정 경고·예약·준비·이 시기 여행 팁·여행 전체·일정 초기화 — 가짜 AI 포함 6가지 상태 모두 예전과 같음(`tools/compare/checks.js`).
     "시즌 정보 받기" 버튼과 안내 줄은 live 연결. 예전 ckRow·seasonChecksHTML 지움(`ckInfo`·`seasonInfo`가 값만 만들어요). 점검 243개 통과.
-  - [ ] 다음: 지도·DICE, 마지막으로 일정표(renderTimeline). AI 붙여 넣기 칸(pasteBox·aiFill)도 live 방식으로.
+  - [x] 🎲 DICE 시트(`Dice.tsx`: 뭐 하지 주변·동네·일정 빈 시간, 뭐 먹지 주변·일정)와 지도 아래 카드(#mapCards) — 14가지 상태 모두 예전과 같음(`tools/compare/dice.js`, 주사위 난수를 같게 고정).
+    세 가지 예전 화면이 같은 조각(탭·기준 버튼·조건 상자·주사위/카드·버튼 줄)을 값으로 넘겨요. "AI가 새로 찾아서 굴리기"는 live 연결.
+    **고친 것**: 일정 빈 시간 보기에서 예전 코드가 그려진 시트 맨 위에 탭·기준 버튼을 끼워 넣던 것(insertAdjacentHTML) → 값으로 넘김.
+    지도 자체(Leaflet)는 그대로 예전 코드. 점검 251개 통과.
+  - [ ] 다음: 마지막으로 일정표(renderTimeline — 가장 크고 중심이라 조각으로 나눠서: 요약 줄·경로 줄·예산 → 블록·빈칸 → 블록 시트·빈 시간 시트(openFill)). AI 붙여 넣기 칸(pasteBox·aiFill)도 live 방식으로.
   - 참고(예전 계획): 입력 폼 조각들(`030-forms.js`의 fParty·fBudget·fStay·fFlight·fHome·fEvents·dateFields·fStyle…, `140`·`160`·`170`의 fDest·fJP·fQuick·fTalk…)을
     하나씩 리액트로. 처음 설정(`renderOnb`)·이번 여행·취향(renderTasteStyle)이 같이 써요.
     방법: 칸 이름(`data-pf`, `data-radio`)은 그대로, 폼 전체는 다시 그릴 때마다 새로(rev 키) — 예전 코드가 값을 바꾼 뒤 다시 그리는 방식과 같아서 안전해요.

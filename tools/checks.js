@@ -785,6 +785,33 @@ module.exports = [
     }
   },
   {
+    name: 'React screen: 🎲 DICE (roll in a free slot → 이걸로 할래요 puts it in the schedule, 다시 counts down, tabs swap) and 지도 cards',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await p.emulateMedia({ reducedMotion: 'reduce' });
+      const blocks = () => p.evaluate(() => JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k => k.endsWith('gp.placed3'))) || '[]').length);
+      await p.click('#diceFab'); await p.waitForTimeout(400);
+      ok(await vis(p, '#sheet .dice-tabs') && await vis(p, '#sheet [data-dobase="near"]'), 'DICE opens with 뭐 하지/뭐 먹지 tabs');
+      await p.click('#sheet [data-dobase="plan"]'); await p.waitForTimeout(300);
+      ok((await p.textContent('#sheet h3')).includes('빈 시간에서 굴려요') && await vis(p, '#sheet [data-dicegap]'), 'plan view: free slots to pick');
+      await p.click('#diceGo'); await p.waitForTimeout(500);
+      ok(await vis(p, '#sheet .dice-card') && (await p.textContent('#diceAgain')).includes('2번'), 'a roll shows a place, 2 rolls left');
+      await p.click('#diceAgain'); await p.waitForTimeout(500);
+      ok((await p.textContent('#diceAgain')).includes('1번'), '다시 굴리기 counts down');
+      const n0 = await blocks();
+      await p.click('#diceFix'); await p.waitForTimeout(500);
+      ok(await blocks() === n0 + 1 && !(await vis(p, '#sheetBg')), '이걸로 할래요: one more block, sheet closed');
+      await p.click('#diceFab'); await p.waitForTimeout(400);
+      await p.click('#sheet [data-dicetab="eat"]'); await p.waitForTimeout(300);
+      ok(await vis(p, '#sheet .dice.eat') && await p.getAttribute('#sheet [data-dicetab="eat"]', 'aria-selected') === 'true', '뭐 먹지 tab');
+      await p.click('#sheet [data-close]'); await p.waitForTimeout(200);
+      await p.click('.tabs [data-tab="map"]'); await p.waitForTimeout(800);
+      ok(await p.$$eval('#mapCards .mcard', e => e.length) > 2 && await p.$$eval('#mapCards .mcard a', e => e.length) > 0, '지도: a card per stop with 안내 시작');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
     name: 'friends: sharing again after a share that stopped half-way (trip on the server, no membership)',
     async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
       const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
