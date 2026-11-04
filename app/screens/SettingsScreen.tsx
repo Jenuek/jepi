@@ -5,6 +5,7 @@
 import { SyncSection, type SyncSectionProps } from './SyncSection';
 import { MyPlacesSection, type MyPlacesSectionProps } from './MyPlacesSection';
 import { AiKeysSection, type AiKeysSectionProps } from './AiKeysSection';
+import { ImportFile } from './ImportFile';
 
 export interface SettingsScreenProps {
   theme: 'light' | 'dark' | 'system' | string;
@@ -46,7 +47,7 @@ export function SettingsScreen(p: SettingsScreenProps) {
         <div className="mgroup pad">
           <div className="row">
             <button className="small-btn" type="button" id="backupAll">전체 백업 받기</button>
-            <label className="small-btn filebtn">백업 불러오기<input type="file" accept=".json,application/json" className="importFile" /></label>
+            <label className="small-btn filebtn">백업 불러오기<ImportFile /></label>
           </div>
           <p className="hint">로그인해 두면 계획은 서버에 자동으로 맞춰져요. 백업은 파일로 따로 보관하고 싶을 때 받아요.</p>
           <hr />

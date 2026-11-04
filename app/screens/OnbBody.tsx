@@ -6,6 +6,7 @@ import { Fragment } from 'react';
 import { FormPiece, type FormPart, type Opt } from './TripForms';
 import { LiveButton, LiveChip, LiveLine } from '../ui/live';
 import { Talk, type TalkPart } from './OnbTalk';
+import { ImportFile } from './ImportFile';
 
 export type OnbPart =
   | FormPart
@@ -39,7 +40,7 @@ function JP(p: Extract<OnbPart, { f: 'jp' }>) {
         <div className="fsec import-box">
           <h3>Claude에서 만든 계획이 있나요?</h3>
           <p className="hint">Claude에서 "내 계획 → 백업 파일 받기"로 저장한 파일을 불러오면 그대로 이어서 쓸 수 있어요.</p>
-          <input type="file" accept=".json,application/json" className="importFile" />
+          <ImportFile />
           <LiveLine id="st_import" />
         </div>
       )}

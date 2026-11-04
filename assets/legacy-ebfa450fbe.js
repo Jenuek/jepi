@@ -1536,6 +1536,22 @@ async function copyText(text){try{await navigator.clipboard.writeText(text);plan
 let showText=false;
 // The screen itself is drawn by React: app/screens/PlansScreen.tsx
 let planRenaming=''; // the plan whose name box is open
+// What was pressed in 내 계획 (PlansScreen.tsx tells: its name and value — a plan id, a typed name or code)
+function plansAct(n,v,v2){
+  switch(n){
+  case 'new': newPlan();return;
+  case 'open': openPlan(v);return;
+  case 'dup': dupPlan(v);return;
+  case 'del': delPlan(v);return;
+  case 'rename': if(plans.some(x=>x.id===v)){planRenaming=v;renderPlans()}return;   // its name box opens (with the cursor in it)
+  case 'name': planRenaming='';renamePlan(v,String(v2||'').trim());renderPlans();return;
+  case 'share': shareCode();return;
+  case 'text': showText=!showText;renderPlans();if(showText)copyText(planText());return;
+  case 'txt': downloadText(`${planName()}.txt`,planText());return;
+  case 'json': snapshotCurrent();downloadText(`JEPI-${planName()}.json`,JSON.stringify({jepi:1,name:planName(),data:planData()}));return;
+  case 'code': openCode(v);return;
+  }
+}
 function renderPlans(){
   const box=$('#plansBox'); if(!box) return;
   window.JEPI_UI.mount('plans',box,{plans:plans.map(p=>({id:p.id,name:p.name,kind:p.kind,dates:p.dates,blocks:p.blocks,updated:p.updated})),
@@ -2840,17 +2856,6 @@ document.addEventListener('click',e=>{
   if(t.id==='nudgeDate'){goMe('여행 기간');return}
   if(t.id==='nudgeTaste'){tab='pref';renderPref();renderTabs();return}
   if(t.dataset.nudgeoff){profile.nudgeOff=Object.assign({},profile.nudgeOff,{[t.dataset.nudgeoff]:true});TRIP.save('profile',profile);renderNudges();return}
-  if(t.id==='planNew'){newPlan();return}
-  if(t.dataset.planopen){openPlan(t.dataset.planopen);return}
-  if(t.dataset.plandup){dupPlan(t.dataset.plandup);return}
-  if(t.dataset.plandel){delPlan(t.dataset.plandel);return}
-  if(t.dataset.planrename){if(plans.some(x=>x.id===t.dataset.planrename)){planRenaming=t.dataset.planrename;renderPlans();const i=$('#plansBox .pl-name');if(i)i.focus()}return}
-  if(t.dataset.planname){const v=(t.parentElement.querySelector('.pl-name')||{}).value||'';planRenaming='';renamePlan(t.dataset.planname,v.trim());renderPlans();return}
-  if(t.id==='planShare'){shareCode();return}
-  if(t.id==='planText'){showText=!showText;renderPlans();if(showText)copyText(planText());return}
-  if(t.id==='planTxt'){downloadText(`${planName()}.txt`,planText());return}
-  if(t.id==='planJson'){snapshotCurrent();downloadText(`JEPI-${planName()}.json`,JSON.stringify({jepi:1,name:planName(),data:planData()}));return}
-  if(t.id==='codeOpen'){openCode(($('#codeIn')||{}).value);return}
   if(t.dataset.jp){setJP(t.dataset.jp);renderAll();return}
   if(t.id==='diceFab'){openDiceTab(mealNow()==='snack'?'do':'eat',null);return}
   if(t.dataset.dicefrom!=null){dice.tab='do';doDefaults(true);openDice(+t.dataset.dicefrom);diceRoll(false);return}
@@ -2902,7 +2907,6 @@ document.addEventListener('click',e=>{
 document.addEventListener('change',e=>{
   if(e.target.id==='openOnly'){renderTray();return}
   if(e.target.id==='dateUnknown'&&draft){draft.dateUnknown=e.target.checked;if(draft.dateUnknown){draft.startDate=isoPlus(30);draft.dateSet=true}else draft.dateSet=false;rerenderForm();return}
-  if(e.target.classList&&e.target.classList.contains('importFile')){importBackup(e.target.files&&e.target.files[0],ok=>{if(ok){maybeCoach()}});return}
   if(e.target.dataset.ck){done[e.target.dataset.ck]=e.target.checked;TRIP.save('done',done);renderChecks()}
 });
 $('#sheetBg').addEventListener('click',e=>{if(e.target.id==='sheetBg')closeSheet()});
@@ -3276,7 +3280,7 @@ function titleEditing(on){
 document.addEventListener('click',e=>{const t=e.target.closest('#dayTitleEdit');if(t&&!$('#dayTitleIn'))titleEditing(true)});
 // what React screens may ask of the old code (app/ui/host.ts)
 window.JEPI_UI.connectHost({renderAll:()=>renderAll(),closeSheet:()=>closeSheet(),reopenSheet:()=>{const u=$('#sheet').dataset.uid;if(u&&u!=='dice'&&!$('#sheetBg').hidden)openSheet(u)},toast:m=>showToast(m),day:()=>day,autoTitle:d=>String((DAYS[d]||{}).title||''),titleEditing,
-  closeNotebook:()=>closeNotebook(),renamePlan:nm=>lookRenamePlan(nm),aiDayTitles:n=>lookAiTitles(n),errText:(e,w)=>errText(e,w),welcomeNew:()=>{closeWelcome();openOnb()},welcomeDemo:()=>demoEnter(),welcomeLoggedIn:()=>welcomeLoggedIn(),dice:(n,v,m)=>diceAct(n,v,m),place:(n,v)=>placeAct(n,v),shareNotebook:async()=>{await shareLink(true);return planMsg||'링크를 만들었어요'}});
+  closeNotebook:()=>closeNotebook(),renamePlan:nm=>lookRenamePlan(nm),aiDayTitles:n=>lookAiTitles(n),errText:(e,w)=>errText(e,w),welcomeNew:()=>{closeWelcome();openOnb()},welcomeDemo:()=>demoEnter(),welcomeLoggedIn:()=>welcomeLoggedIn(),dice:(n,v,m)=>diceAct(n,v,m),place:(n,v)=>placeAct(n,v),plans:(n,v,v2)=>plansAct(n,v,v2),importFile:f=>importBackup(f,ok=>{if(ok){maybeCoach()}}),shareNotebook:async()=>{await shareLink(true);return planMsg||'링크를 만들었어요'}});
 // ---------- how a trip looks: theme colour, cover, style, handwriting; folding hero header ----------
 // profile.look = {color, cover:'city'|'sea'|'mountain'|'none'|'photo', photo:dataURL, tagline, style:'color'|'note', hand}
 // Lives in the plan's profile, so it syncs across devices and to friends on a shared trip.

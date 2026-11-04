@@ -30,6 +30,10 @@ export interface AppHost {
   dice(name: string, value: string, more?: Record<string, string>): void;
   /** a place card / the 장소 tab: something was pressed (wish, vote, pick, cat, zone, dupmerge …) and its value */
   place(name: string, value: string): void;
+  /** 내 계획: something was pressed (new, open, dup, del, rename, name, share, text, txt, json, code), a plan id, a typed name */
+  plans(name: string, value?: string, value2?: string): void;
+  /** a backup file was chosen (처음 설정 · 내 계획 · 설정) */
+  importFile(f: File | undefined): void;
 }
 let host: AppHost | null = null;
 export function connectHost(h: AppHost): void { host = h }

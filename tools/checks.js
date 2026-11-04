@@ -409,6 +409,11 @@ module.exports = [
       await p.fill('#plansBox .pl-name', '우리 오사카'); await p.click('#plansBox [data-planname]'); await p.waitForTimeout(250);
       ok((await p.textContent('#plansBox .plan.cur .pl-top b')) === '우리 오사카' && !(await vis(p, '#plansBox .pl-name')), 'new name saved and shown');
       ok((await p.textContent('#planName')).includes('우리 오사카'), 'the header shows the new name too');
+      const [dl] = await Promise.all([p.waitForEvent('download'), p.click('#planJson')]);
+      const file = await dl.path(); ok(!!file && JSON.parse(require('fs').readFileSync(file, 'utf8')).jepi === 1, '백업 파일 받기 gives the backup file');
+      await p.setInputFiles('#plansBox .importFile', file); await p.waitForTimeout(800);
+      await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="plans"]'); await p.waitForTimeout(250);
+      ok(await count() === 2, 'loading that file back opens it as a new plan');
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }

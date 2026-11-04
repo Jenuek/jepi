@@ -102,6 +102,22 @@ async function copyText(text){try{await navigator.clipboard.writeText(text);plan
 let showText=false;
 // The screen itself is drawn by React: app/screens/PlansScreen.tsx
 let planRenaming=''; // the plan whose name box is open
+// What was pressed in 내 계획 (PlansScreen.tsx tells: its name and value — a plan id, a typed name or code)
+function plansAct(n,v,v2){
+  switch(n){
+  case 'new': newPlan();return;
+  case 'open': openPlan(v);return;
+  case 'dup': dupPlan(v);return;
+  case 'del': delPlan(v);return;
+  case 'rename': if(plans.some(x=>x.id===v)){planRenaming=v;renderPlans()}return;   // its name box opens (with the cursor in it)
+  case 'name': planRenaming='';renamePlan(v,String(v2||'').trim());renderPlans();return;
+  case 'share': shareCode();return;
+  case 'text': showText=!showText;renderPlans();if(showText)copyText(planText());return;
+  case 'txt': downloadText(`${planName()}.txt`,planText());return;
+  case 'json': snapshotCurrent();downloadText(`JEPI-${planName()}.json`,JSON.stringify({jepi:1,name:planName(),data:planData()}));return;
+  case 'code': openCode(v);return;
+  }
+}
 function renderPlans(){
   const box=$('#plansBox'); if(!box) return;
   window.JEPI_UI.mount('plans',box,{plans:plans.map(p=>({id:p.id,name:p.name,kind:p.kind,dates:p.dates,blocks:p.blocks,updated:p.updated})),

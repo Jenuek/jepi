@@ -79,17 +79,6 @@ document.addEventListener('click',e=>{
   if(t.id==='nudgeDate'){goMe('여행 기간');return}
   if(t.id==='nudgeTaste'){tab='pref';renderPref();renderTabs();return}
   if(t.dataset.nudgeoff){profile.nudgeOff=Object.assign({},profile.nudgeOff,{[t.dataset.nudgeoff]:true});TRIP.save('profile',profile);renderNudges();return}
-  if(t.id==='planNew'){newPlan();return}
-  if(t.dataset.planopen){openPlan(t.dataset.planopen);return}
-  if(t.dataset.plandup){dupPlan(t.dataset.plandup);return}
-  if(t.dataset.plandel){delPlan(t.dataset.plandel);return}
-  if(t.dataset.planrename){if(plans.some(x=>x.id===t.dataset.planrename)){planRenaming=t.dataset.planrename;renderPlans();const i=$('#plansBox .pl-name');if(i)i.focus()}return}
-  if(t.dataset.planname){const v=(t.parentElement.querySelector('.pl-name')||{}).value||'';planRenaming='';renamePlan(t.dataset.planname,v.trim());renderPlans();return}
-  if(t.id==='planShare'){shareCode();return}
-  if(t.id==='planText'){showText=!showText;renderPlans();if(showText)copyText(planText());return}
-  if(t.id==='planTxt'){downloadText(`${planName()}.txt`,planText());return}
-  if(t.id==='planJson'){snapshotCurrent();downloadText(`JEPI-${planName()}.json`,JSON.stringify({jepi:1,name:planName(),data:planData()}));return}
-  if(t.id==='codeOpen'){openCode(($('#codeIn')||{}).value);return}
   if(t.dataset.jp){setJP(t.dataset.jp);renderAll();return}
   if(t.id==='diceFab'){openDiceTab(mealNow()==='snack'?'do':'eat',null);return}
   if(t.dataset.dicefrom!=null){dice.tab='do';doDefaults(true);openDice(+t.dataset.dicefrom);diceRoll(false);return}
@@ -141,7 +130,6 @@ document.addEventListener('click',e=>{
 document.addEventListener('change',e=>{
   if(e.target.id==='openOnly'){renderTray();return}
   if(e.target.id==='dateUnknown'&&draft){draft.dateUnknown=e.target.checked;if(draft.dateUnknown){draft.startDate=isoPlus(30);draft.dateSet=true}else draft.dateSet=false;rerenderForm();return}
-  if(e.target.classList&&e.target.classList.contains('importFile')){importBackup(e.target.files&&e.target.files[0],ok=>{if(ok){maybeCoach()}});return}
   if(e.target.dataset.ck){done[e.target.dataset.ck]=e.target.checked;TRIP.save('done',done);renderChecks()}
 });
 $('#sheetBg').addEventListener('click',e=>{if(e.target.id==='sheetBg')closeSheet()});
