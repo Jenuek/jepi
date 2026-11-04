@@ -15,6 +15,7 @@ import * as kakao from './kakao';
 import * as myplaces from './myplaces';
 import * as routes from './routes';
 import * as account from './account';
+import * as recs from './recs';
 import * as logic from '../logic';
 import * as trips from './trips';
 import { status, syncDocs, syncSoon, syncPush, syncPull, syncNow, connectSync } from './sync';
@@ -39,6 +40,8 @@ export const data = {
   routes,
   /** log in / sign up / password reset / logout */
   account,
+  /** 👍 여행자 추천 */
+  recs,
   /** calculations: time text, distances, the day check (app/logic) */
   logic,
   /** 친구와 함께 on the server */

@@ -29,7 +29,7 @@ function loadPack(pk){
   KRW_PER_JPY=+pk.rate>0?+pk.rate:1;
   if(!(pk.snack>0)) pk.snack=pk.currency==='KRW'?15000:nice(15000/KRW_PER_JPY);
   if(!(pk.step>0)) pk.step=nice(pk.snack/2);
-  if(recState!=='off'){SHARED_IDS.clear();rebuildShared()}
+  if(RS.status!=='off'){SHARED_IDS.clear();rebuildShared()}
 }
 const savePack=()=>store.set('gp.pack',PACK);
 function packFrom(v){

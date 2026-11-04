@@ -13,7 +13,7 @@ function openSheet(uid,opt){
   window.JEPI_UI.mount('block',$('#sheet'),{rev:++sheetRev,
     name:String(it.name),when:`${DAYS[day].date} (${WD[DAYS[day].wd]}) ${fmt(it.start)}–${fmt(it.end)} · ${it.locName}`,note:it.note||'',
     mapLink:isP&&!it.p.custom?placeLink(it.p):'',
-    vote:isP&&recState!=='off'?{id:String(it.id),on:!!iRec(it.p),n:recOf(it.p),locked:recState==='readonly'&&!recPublic()}:null,
+    vote:isP&&RS.status!=='off'?{id:String(it.id),on:!!iRec(it.p),n:recOf(it.p),locked:false}:null,
     hours:isP&&h?`영업 ${fmt(h[0])}–${fmt(h[1])}${it.p.closed?` · 휴관 ${it.p.closed.map(w=>WD[w]).join('·')}`:''}`:'',
     cost:isP?segs('예상 비용 ',B(yen(it.yen)),it.costNote?` · ${it.costNote}`:''):null,
     krw:it.krw?won(it.krw):'',check:isP&&it.p.check?String(it.p.check):'',tips:it.tips&&it.tips.length?`💡 ${it.tips.join(' · ')}`:'',

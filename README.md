@@ -95,7 +95,7 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 | 누를 때 반응(모든 버튼) | `18-press.css` |
 | 손글씨 메모 (일정 블록별·날짜별) | `389b-memo.js` (블록 시트의 메모 칸은 `app/screens/Extras.tsx`) |
 | 여행 노트 보기 (PDF 저장·링크) | 화면 `app/screens/Notebook.tsx` (리액트), 값 `389c-notebook.js` |
-| 👍 모든 여행자의 추천 (서버 `jepi_recs`), 👍 많은 순 | `070-shared-recs.js` |
+| 👍 모든 여행자의 추천 (서버 `jepi_recs`), 👍 많은 순 | `app/data/recs.ts` (불러오기·세기·저장), `070-shared-recs.js` (장소 목록에 넣기) |
 | 블록 누르면 나오는 시트, 옮기기·길이 | `350-actions.js` |
 | 경고 계산(영업시간·이동시간) | 규칙 `app/logic/schedule.ts`, 날짜 항목 만들기 `330-helpers.js` (`analyze`) |
 | 이동 시간·경로 (해외 Google, 국내는 거리로 어림 + 카카오맵 연결) | `app/data/routes.ts`, 링크·한국 판단 `app/logic/geo.ts` (예전 `200-routes.js`는 연결과 다시 그리기만) |

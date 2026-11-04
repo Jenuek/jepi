@@ -187,6 +187,29 @@ module.exports = [
     }
   },
   {
+    name: '👍 여행자 추천 after logging in: on, counted, saved on the server, off',
+    async run({ b, S, device, ok, skipCoach, openSettings }) {
+      const e = (n) => ({ k: '오사카|' + n.replace(/\s+/g, '').toLowerCase(), city: '오사카', name: n, cat: 'trip', lat: 34.66, lng: 135.43, dur: 60 });
+      S.recs = [['U_a', '덴포잔 대관람차'], ['U_b', '덴포잔 대관람차']].map(([u, n]) => ({ user_id: u, k: e(n).k, city: '오사카', entry: e(n) }));
+      S.users['rec@x.com'] = 'pass123';
+      const p = await device(b, S);
+      await p.click('[data-w="new"]'); await p.waitForTimeout(200);
+      await p.evaluate(() => window.__jepi.demoLikeTrip()); await p.waitForTimeout(500); await skipCoach(p);
+      await openSettings(p); await p.fill('#sbEmail', 'rec@x.com'); await p.fill('#sbPw', 'pass123'); await p.click('#sbGo'); await p.waitForTimeout(2000);
+      await p.click('.tabs [data-tab="tray"]'); await p.waitForTimeout(400);
+      ok((await p.textContent('#recSt')).includes('모여 있어요'), 'logged in: the line says how many are recommended · ' + (await p.textContent('#recSt')));
+      const card = p.locator('#cards .card').filter({ hasNotText: '덴포잔' }).first(), nm = await card.locator('.nm').textContent();
+      await card.locator('[data-vote]').click(); await p.waitForTimeout(500);
+      const on = p.locator('#cards .card', { hasText: nm }).first().locator('[data-vote]');
+      ok((await on.getAttribute('aria-pressed')) === 'true' && (await on.textContent()) === '👍 1', '👍 on and counted · ' + nm);
+      ok(S.recs.length === 3 && S.recs.some(r => r.entry && r.entry.name === nm), 'saved on the server');
+      await on.click(); await p.waitForTimeout(500);
+      ok(S.recs.length === 2, 'off again: taken off the server');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
     name: 'trip look: hero folds, 여행 꾸미기, handwritten memos, 여행 노트',
     async run({ b, S, device, ok, vis, skipCoach }) {
       const p = await device(b, S);
