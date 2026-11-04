@@ -1035,6 +1035,36 @@ module.exports = [
     }
   },
   {
+    name: 'data: 친구와 함께 merge rules (app/data/merge.ts) case by case',
+    async run({ b, S, device, ok }) {
+      const p = await device(b, S);
+      const r = await p.evaluate(() => {
+        const M = window.JEPI_DATA.merge, B = (id, day, start) => ({ id, day, start, dur: 60 });
+        const base = { profile: { dest: '오사카', pace: 'slow', nights: 3 }, pack: { city: '오사카', places: [{ id: 'a', name: 'A' }] }, placed: [B('x', 0, 600), B('y', 1, 600), B('z', 1, 900)], custom: [], fmarks: {}, meals: { 0: 1000 }, done: {}, wish: ['a'] };
+        const c = o => JSON.parse(JSON.stringify(o));
+        const mine = c(base), theirs = c(base);
+        mine.placed[0].start = 660;                 // I move day-1 x
+        theirs.placed[1].start = 720;               // they move day-2 y
+        mine.profile.pace = 'full'; theirs.profile.nights = 4;   // different fields
+        theirs.pack.places.push({ id: 'b', name: 'B' });         // they add a place
+        theirs.placed = theirs.placed.filter(x => x.id !== 'z'); // they remove z
+        mine.wish = ['a', 'b']; theirs.wish = [];                 // ♥ is mine
+        mine.meals[0] = 1200; theirs.meals[0] = 800;             // both change the same day's 간식비 → mine
+        const m = M.mergePlan(base, mine, theirs), at = id => (m.placed.find(x => x.id === id) || {}).start;
+        const stamp = { pack: { places: [{ id: 'a' }, { id: 'n' }] }, custom: [{ id: 'c1' }] }; M.stampMine(stamp, new Set(['a']), '민지');
+        return { x: at('x'), y: at('y'), z: at('z'), pace: m.profile.pace, nights: m.profile.nights, places: m.pack.places.map(x => x.id).sort().join(), wish: m.wish.join(), meal: m.meals[0],
+          stamp: [stamp.pack.places[0].by || '', stamp.pack.places[1].by, stamp.custom[0].by].join('|') };
+      });
+      ok(r.x === 660 && r.y === 720, 'my day-1 move and their day-2 move both survive');
+      ok(r.z === undefined, 'a block they removed (I did not touch it) is removed');
+      ok(r.pace === 'full' && r.nights === 4, 'trip facts merge field by field');
+      ok(r.places === 'a,b', 'a place they added is kept');
+      ok(r.wish === 'a,b', '♥ stays mine');
+      ok(r.meal === 1200, 'the same thing changed by both: mine (the newest here) wins');
+      ok(r.stamp === '|민지|민지', 'new places / hand-made places carry my name, known ones do not');
+    }
+  },
+  {
     name: 'friends: sharing again after a share that stopped half-way (trip on the server, no membership)',
     async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
       const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
