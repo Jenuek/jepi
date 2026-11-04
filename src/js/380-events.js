@@ -1,7 +1,6 @@
 // ---------- events ----------
 document.addEventListener('click',e=>{
   const t=e.target.closest('button,input,label'); if(!t) return;
-  if(t.dataset.day!=null){day=+t.dataset.day;renderAll();return}
   if(t.dataset.tab){tab=t.dataset.tab;autoMsg='';if(tab==='me'){draft=clone(profile);meOpen=null;renderMe()}if(tab==='pref'){draft=clone(profile);renderTasteStyle()}if(tab==='plans'){snapshotCurrent();showText=false;renderPlans()}if(tab==='settings'){keyEdit=null;renderSettings()}if(tab==='more')renderMore();if(PANELS[tab])PANELS[tab].render({opened:true});renderTabs();if(tab==='map')openMap();else mapState.on=false;window.scrollTo({top:0});return}
   if(t.id==='customBtn'){openCustom(null,null);return}
   if(t.dataset.newcustom!=null){openCustom(null,+t.dataset.newcustom);return}
@@ -49,7 +48,6 @@ document.addEventListener('click',e=>{
   if(t.id==='wipeBtn'){if(!wipeArm){wipeArm=true;renderSettings();return}wipeAll();return}
   if(t.id==='wipeCancel'){wipeArm=false;renderSettings();return}
   if(t.dataset.group){group=t.dataset.group;renderTray();return}
-  if(t.dataset.meal){meals[day]=Math.max(0,Math.min((PACK.snack||1000)*20,mealOf(day)+ +t.dataset.meal));TRIP.save('meals',meals);renderBudget();return}
   if(t.dataset.fill){place(t.dataset.fill,+t.dataset.start);closeSheet();renderAll();return}
   if(t.dataset.totray){closeSheet();tab='tray';renderTabs();return}
   if(t.id==='seasonBtn'){genSeason('st_season');return}
@@ -66,10 +64,6 @@ document.addEventListener('click',e=>{
   if(t.id==='helperNext'){if(hStep<H_STEPS.length-1){hStep++;renderHelper();$('#helper').scrollTop=0}else closeHelper();return}
   if(t.id==='helperClose'){closeHelper();return}
   if(t.dataset.zoom){setZoom(+t.dataset.zoom);if(tab==='settings')renderSettings();return}
-  if(t.classList.contains('slot')){
-    if(!selected){openFill(+t.dataset.t);return}
-    place(selected,+t.dataset.t); selected=null; renderAll(); return}
-  if(t.classList.contains('blk')){openSheet(t.dataset.uid);return}
   if(t.id==='bannerCancel'){selected=null;renderAll();return}
   if(t.id==='resetBtn'){
     if(!resetArm){resetArm=true;renderChecks();return}
@@ -107,6 +101,15 @@ document.addEventListener('input',onPf);
 document.addEventListener('keydown',e=>{if(e.target&&e.target.id==='talkInput'&&e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();const v=e.target.value.trim();if(v)talkSend(v)}});
 document.addEventListener('input',e=>{if(e.target&&e.target.id==='chatInput'){const x=e.target;x.style.height='auto';x.style.height=Math.min(120,x.scrollHeight)+'px'}}); document.addEventListener('change',onPf);
 document.addEventListener('keydown',e=>{if(e.target&&e.target.id==='chatInput'&&e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();const f=$('#chatForm');f.requestSubmit?f.requestSubmit():f.dispatchEvent(new Event('submit',{cancelable:true,bubbles:true}))}});
+// What was pressed in the 일정표 and around it (DayGrid.tsx slots and blocks, the Day buttons, 오늘 보기, 간식비 −/+)
+function gridAct(n,v){
+  switch(n){
+  case 'day': day=+v;renderAll();return;
+  case 'slot': if(!selected){openFill(+v);return} place(selected,+v); selected=null; renderAll(); return;   // an empty time: fill it, or put the chosen card there
+  case 'blk': openSheet(v);return;
+  case 'meal': meals[day]=Math.max(0,Math.min((PACK.snack||1000)*20,mealOf(day)+ +v));TRIP.save('meals',meals);renderBudget();return;
+  }
+}
 // 취향 키워드 (TasteKeywords.tsx, and the chips in 처음 설정): toggle returns whether the keyword is on now
 function kwAct(n,v){
   switch(n){

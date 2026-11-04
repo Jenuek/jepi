@@ -65,8 +65,9 @@ export function LiveChip({ k, on }: { k: string; on: boolean }) {
 
 /** A time slot in the 일정표 (button.slot): the old drag code marks the one under the pointer through the handle. */
 export function LiveSlot({ t, half, label, top }: { t: number; half: boolean; label: string; top: string | number }) {
+  // tapped: fill this time (or put the chosen card here)
   const [extra, setExtra] = useState<string[]>([]);
   const ref = useHandle({ cls: (n: string, on: boolean) => setExtra(x => on ? (x.includes(n) ? x : [...x, n]) : x.filter(y => y !== n)) });
   const cls = ['slot', ...(half ? ['half'] : []), ...extra].join(' ');
-  return <button className={cls} style={{ top }} data-t={t} aria-label={label} ref={ref as RefObject<HTMLButtonElement>} />;
+  return <button className={cls} style={{ top }} data-t={t} aria-label={label} onClick={() => app().grid('slot', String(t))} ref={ref as RefObject<HTMLButtonElement>} />;
 }

@@ -42,6 +42,8 @@ export interface AppHost {
   pview(name: string, value?: string): void;
   /** 취향 키워드: toggle (returns: on now), del (its place), add (a word), reset */
   kw(name: string, value?: string): boolean | void;
+  /** 일정표: day (its number), slot (minutes), blk (a block's uid), meal (간식비 change) */
+  grid(name: string, value: string): void;
   /** a backup file was chosen (처음 설정 · 내 계획 · 설정) */
   importFile(f: File | undefined): void;
 }
