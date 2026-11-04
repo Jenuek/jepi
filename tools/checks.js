@@ -756,6 +756,35 @@ module.exports = [
     }
   },
   {
+    name: 'React screen: 준비하기 (a tick is saved and stays, 초기화 asks once more, 시즌 정보 button waits then shows tips)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const say = (r, o) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content: [{ type: 'text', text: JSON.stringify(o) }] }) });
+      const p = await device(b, S);
+      await p.route(/api\.anthropic\.com/, async r => { if (!(r.request().postData() || '').includes('sunrise')) return r.fulfill({ status: 503, body: '{}' }); await new Promise(x => setTimeout(x, 1500)); say(r, { sunrise: '06:30', sunset: '17:10', weather: '맑아요', notes: ['얇은 겉옷 챙기기'], events: [] }) });
+      await p.click('[data-w="new"]'); await p.waitForTimeout(250);
+      if (await p.$('#onbKey_anthropic')) { await p.fill('#onbKey_anthropic', 'sk-ant-test-key'); await p.click('#onbBody [data-onbkey="anthropic"]'); await p.waitForTimeout(300) }
+      await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      const open = async () => { await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="check"]'); await p.waitForTimeout(300) };
+      await open();
+      const ck = '#checks .check-group:has(h3:text("여행 전체")) input[data-ck] >> nth=0';
+      const id = await p.getAttribute(ck, 'data-ck');
+      await p.click(ck); await p.waitForTimeout(200);
+      await open();
+      ok(await p.isChecked(`#checks input[data-ck="${id}"]`) && await p.evaluate(id => JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k => k.endsWith('gp.done')))||'{}')[id] === true, id), 'a tick is saved and still on after reopening');
+      ok(await p.$eval(`#checks input[data-ck="${id}"]`, x => x.closest('label').classList.contains('done')), 'the ticked row looks done');
+      const blocks = async () => p.evaluate(() => JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k => k.endsWith('gp.placed3'))) || '[]').length);
+      const before = await blocks();
+      await p.click('#resetBtn'); await p.waitForTimeout(200);
+      ok((await p.textContent('#resetBtn')).includes('한 번 더') && before > 0 && await blocks() === before, '초기화: asks once more first (' + before + ' blocks kept)');
+      await p.click('#seasonBtn'); await p.waitForTimeout(600);
+      ok((await p.textContent('#seasonBtn')).length > 0 && (await p.textContent('#st_season')).includes('초 지났어요'), '시즌 정보: shows the time while waiting');
+      await p.waitForTimeout(2200); await open();
+      ok((await p.textContent('#checks')).includes('얇은 겉옷 챙기기') && (await p.textContent('#seasonBtn')) === '시즌 정보 다시 받기', 'tips arrive as rows, the button says 다시 받기');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
     name: 'friends: sharing again after a share that stopped half-way (trip on the server, no membership)',
     async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
       const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);

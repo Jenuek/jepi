@@ -49,10 +49,10 @@ export function LiveLine({ id, tag = 'p', text = '', className = 'ai-status' }: 
 }
 
 /** A button the old code may relabel or lock while something runs. */
-export function LiveButton({ id, className, children, disabled = false }: { id: string; className: string; children: ReactNode; disabled?: boolean }) {
+export function LiveButton({ id, className, children, disabled = false, noType = false }: { id: string; className: string; children: ReactNode; disabled?: boolean; /** the old button had no type attribute */ noType?: boolean }) {
   const [l, setL] = useState<string | null>(null), [d, setD] = useState<boolean | null>(null);
   const ref = useHandle({ label: setL, disabled: setD });
-  return <button className={className} type="button" id={id} disabled={d ?? disabled} ref={ref as RefObject<HTMLButtonElement>}>{l ?? children}</button>;
+  return <button className={className} type={noType ? undefined : 'button'} id={id} disabled={d ?? disabled} ref={ref as RefObject<HTMLButtonElement>}>{l ?? children}</button>;
 }
 
 /** A taste keyword chip (data-kwtoggle): the old click handler flips it through the handle. */

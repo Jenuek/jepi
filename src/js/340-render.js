@@ -180,15 +180,12 @@ function renderChecks(){
   if(markWarnings().needTax) prepRows.push({id:'tax-'+cityKey(),d:DAYS.length-1,t:'쇼핑 일정이 있어요 · 면세 환급을 어디서 할지 🧾 표시를 붙여 두세요',s:'매장 또는 출국 공항'});
   $('#warnCount').textContent=warnRows.length?String(warnRows.length):''; $('#warnCount2').textContent=warnRows.length?' '+warnRows.length:'';
   {const fc=$('#fixWarnChip');fc.hidden=!(warnRows.length&&sample);fc.textContent=`🛠 경고 ${warnRows.length}개 해결`}
-  let html='';
-  html+=`<div class="check-group"><h3>일정 경고</h3>`+(warnRows.length&&sample?`<div class="row" style="margin:0 0 8px"><button class="small-btn primary" id="fixWarnBtn">AI에게 경고 해결 맡기기</button></div>`:'')+(warnRows.length?warnRows.map(r=>`<button class="ck warn" style="width:100%;text-align:left" data-goto="${r.d}" data-uid="${r.uid}"><span class="mono">D${r.d+1}</span><span>${esc(r.t)}<small>탭해서 블록 고치기</small></span></button>`).join(''):`<p class="now-hint">겹치거나 휴관인 블록이 없어요.</p>`)+`</div>`;
-  html+=`<div class="check-group"><h3>예약·준비</h3>`+(prepRows.length?prepRows.map(r=>ckRow(r.id,`${r.t}`,`Day ${r.d+1} · ${r.s}`)).join(''):`<p class="now-hint">일정에 넣은 블록 중 준비할 게 없어요.</p>`)+`</div>`;
-  html+=seasonChecksHTML();
-  html+=`<div class="check-group"><h3>여행 전체</h3>`+STATIC_CHECKS.map(s=>ckRow(s.id,s.t)).join('')+`</div>`;
-  html+=`<div class="check-group"><h3>일정 초기화</h3><p class="now-hint" style="margin:0 0 6px">넣어 둔 블록을 모두 지워요. 항공편, 숙소 같은 고정 블록은 남아요.</p><button class="small-btn danger" id="resetBtn">${resetArm?'한 번 더 누르면 모두 지워요':'넣은 블록 모두 지우기'}</button></div>`;
-  $('#checks').innerHTML=html;
+  // drawn by React: app/screens/Checks.tsx
+  window.JEPI_UI.mount('checks',$('#checks'),{ai:!!sample,warns:warnRows.map(r=>({d:r.d,uid:String(r.uid),t:r.t})),prep:prepRows.map(r=>ckInfo(r.id,r.t,`Day ${r.d+1} · ${r.s}`)),
+    season:seasonInfo(),all:STATIC_CHECKS.map(s=>ckInfo(s.id,s.t)),resetArm:!!resetArm,rev:++checksRev});
 }
-function ckRow(id,t,sub){const on=!!done[id];return `<label class="ck${on?' done':''}"><input type="checkbox" data-ck="${id}" ${on?'checked':''}><span>${esc(t)}${sub?`<small>${esc(sub)}</small>`:''}</span></label>`}
+let checksRev=0;
+function ckInfo(id,t,sub){return {id,t:String(t),sub,on:!!done[id]}}
 function renderTabs(){document.body.classList.toggle('no-fab',!['timeline','tray'].includes(tab));
   const wide=matchMedia('(min-width:900px)').matches;
   const grp={check:'more',pref:'more',me:'more',plans:'more',settings:'more'}; Object.keys(PANELS).forEach(k=>grp[k]='more');

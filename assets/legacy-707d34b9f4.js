@@ -1109,14 +1109,11 @@ For recurring annual events give their usual dates and use confidence medium or 
     savePack(); progStop(stId); renderAll(); setSt(stId,`이 시기 정보를 받았어요${n?` · 시즌 장소 ${n}곳 추가`:''}.`); return true;
   }catch(e){setSt(stId,e&&e.code==='cancelled'?'멈췄어요. "확인할 것" 탭에서 다시 받을 수 있어요.':errText(e,'시즌 정보를 받지 못했어요'));return false}
 }
-function seasonChecksHTML(){
-  const s=seasonOf(), stale=PACK.season&&!s;
-  let h=`<div class="check-group"><h3>이 시기 여행 팁</h3>`;
-  if(s){h+=`<p class="now-hint" style="margin:0 0 6px">${s.sunrise?`🌅 일출 약 ${esc(s.sunrise)} · `:''}${s.sunset?`🌇 일몰 약 ${esc(s.sunset)}`:''}</p>${s.weather?`<p class="now-hint" style="margin:0 0 6px">${esc(s.weather)}</p>`:''}${(s.notes||[]).map((t,i)=>ckRow('sn'+i+'_'+tripKey(),t)).join('')}`}
-  else h+=`<p class="now-hint" style="margin:0 0 6px">${stale?'여행 날짜가 바뀌어서 시즌 정보를 다시 받아야 해요.':'여행 날짜의 날씨, 해 지는 시간, 축제·행사, 휴무 정보를 받아 추천에 반영할 수 있어요.'}</p>`;
-  if(sample&&!PACK.manual) h+=`<div class="row"><button class="small-btn${s?'':' primary'}" id="seasonBtn">${s?'시즌 정보 다시 받기':'AI로 이 시기 정보 받기'}</button><span class="ai-status" id="st_season"></span></div>`;
-  h+=`<p class="now-hint" style="margin:6px 0 0">행사 날짜는 AI가 아는 예년 기준이라 올해와 다를 수 있어요. 시즌 장소의 "날짜 확인" 링크로 꼭 확인하세요.</p></div>`;
-  return h;
+// 준비하기 → 이 시기 여행 팁 (drawn by React: Checks.tsx)
+function seasonInfo(){
+  const s=seasonOf(), stale=!!(PACK.season&&!s);
+  return {got:s?{sun:`${s.sunrise?`🌅 일출 약 ${s.sunrise} · `:''}${s.sunset?`🌇 일몰 약 ${s.sunset}`:''}`,weather:s.weather||'',notes:(s.notes||[]).map((t,i)=>ckInfo('sn'+i+'_'+tripKey(),t))}:null,
+    stale,canAsk:!!(sample&&!PACK.manual)};
 }
 
 // ---------- destination finder: for travelers who have not picked a place yet ----------
@@ -2878,15 +2875,12 @@ function renderChecks(){
   if(markWarnings().needTax) prepRows.push({id:'tax-'+cityKey(),d:DAYS.length-1,t:'쇼핑 일정이 있어요 · 면세 환급을 어디서 할지 🧾 표시를 붙여 두세요',s:'매장 또는 출국 공항'});
   $('#warnCount').textContent=warnRows.length?String(warnRows.length):''; $('#warnCount2').textContent=warnRows.length?' '+warnRows.length:'';
   {const fc=$('#fixWarnChip');fc.hidden=!(warnRows.length&&sample);fc.textContent=`🛠 경고 ${warnRows.length}개 해결`}
-  let html='';
-  html+=`<div class="check-group"><h3>일정 경고</h3>`+(warnRows.length&&sample?`<div class="row" style="margin:0 0 8px"><button class="small-btn primary" id="fixWarnBtn">AI에게 경고 해결 맡기기</button></div>`:'')+(warnRows.length?warnRows.map(r=>`<button class="ck warn" style="width:100%;text-align:left" data-goto="${r.d}" data-uid="${r.uid}"><span class="mono">D${r.d+1}</span><span>${esc(r.t)}<small>탭해서 블록 고치기</small></span></button>`).join(''):`<p class="now-hint">겹치거나 휴관인 블록이 없어요.</p>`)+`</div>`;
-  html+=`<div class="check-group"><h3>예약·준비</h3>`+(prepRows.length?prepRows.map(r=>ckRow(r.id,`${r.t}`,`Day ${r.d+1} · ${r.s}`)).join(''):`<p class="now-hint">일정에 넣은 블록 중 준비할 게 없어요.</p>`)+`</div>`;
-  html+=seasonChecksHTML();
-  html+=`<div class="check-group"><h3>여행 전체</h3>`+STATIC_CHECKS.map(s=>ckRow(s.id,s.t)).join('')+`</div>`;
-  html+=`<div class="check-group"><h3>일정 초기화</h3><p class="now-hint" style="margin:0 0 6px">넣어 둔 블록을 모두 지워요. 항공편, 숙소 같은 고정 블록은 남아요.</p><button class="small-btn danger" id="resetBtn">${resetArm?'한 번 더 누르면 모두 지워요':'넣은 블록 모두 지우기'}</button></div>`;
-  $('#checks').innerHTML=html;
+  // drawn by React: app/screens/Checks.tsx
+  window.JEPI_UI.mount('checks',$('#checks'),{ai:!!sample,warns:warnRows.map(r=>({d:r.d,uid:String(r.uid),t:r.t})),prep:prepRows.map(r=>ckInfo(r.id,r.t,`Day ${r.d+1} · ${r.s}`)),
+    season:seasonInfo(),all:STATIC_CHECKS.map(s=>ckInfo(s.id,s.t)),resetArm:!!resetArm,rev:++checksRev});
 }
-function ckRow(id,t,sub){const on=!!done[id];return `<label class="ck${on?' done':''}"><input type="checkbox" data-ck="${id}" ${on?'checked':''}><span>${esc(t)}${sub?`<small>${esc(sub)}</small>`:''}</span></label>`}
+let checksRev=0;
+function ckInfo(id,t,sub){return {id,t:String(t),sub,on:!!done[id]}}
 function renderTabs(){document.body.classList.toggle('no-fab',!['timeline','tray'].includes(tab));
   const wide=matchMedia('(min-width:900px)').matches;
   const grp={check:'more',pref:'more',me:'more',plans:'more',settings:'more'}; Object.keys(PANELS).forEach(k=>grp[k]='more');
