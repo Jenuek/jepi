@@ -53,7 +53,7 @@ function marksInfo(it,forceOpen){
 function toggleMark(uid,m){
   const b=placed.find(x=>x.uid===uid);
   if(b){b.mk=b.mk||[];const i=b.mk.indexOf(m);if(i>=0)b.mk.splice(i,1);else b.mk.push(m);save()}
-  else{fmarks[uid]=fmarks[uid]||[];const a=fmarks[uid],i=a.indexOf(m);if(i>=0)a.splice(i,1);else a.push(m);if(!a.length)delete fmarks[uid];if(!DRY)store.set('gp.fmarks',fmarks)}
+  else{fmarks[uid]=fmarks[uid]||[];const a=fmarks[uid],i=a.indexOf(m);if(i>=0)a.splice(i,1);else a.push(m);if(!a.length)delete fmarks[uid];if(!DRY)TRIP.save('fmarks',fmarks)}
 }
 function makePairBlock(uid,T){
   const it=dayItems(day).find(x=>x.uid===uid); if(!it) return;
@@ -65,7 +65,7 @@ function makePairBlock(uid,T){
   else start=Math.min(1350,Math.max(it.end+60,1230));
   start=Math.max(dayStart(d),Math.min(1410,Math.round(start/15)*15));
   const c={id:'c'+Date.now().toString(36),name:`${PAIRS[T].pair} · ${it.name.replace(/ \(.*\)$/,'')}`.slice(0,40),area:nearestArea(it.ll)||firstArea(),cat:T==='wait'?'food':'trip',dur:PAIRS[T].dur,cost:0,memo:`${it.name}에서 시작한 일을 마무리해요.`,tags:'',drop:false,ll:it.ll};
-  custom.push(c); store.set('gp.custom',custom); addCustomToData(c);
+  custom.push(c); TRIP.save('custom',custom); addCustomToData(c);
   placed.push({uid:'u'+(uidN++),id:c.id,day:d,start,dur:c.dur,mk:[T+'-']}); save();
   day=d; closeSheet(); renderAll();
 }

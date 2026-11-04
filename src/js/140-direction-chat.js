@@ -60,7 +60,7 @@ In the summary, pace is slow|normal|full, social is alone|some|social, party is 
     if(Number.isInteger(+S.nights)&&+S.nights>=1&&+S.nights<=MAX_N&&S.nights!==null){draft.nights=+S.nights;draft.nightsSet=true}
     if(/^\d{4}-\d{2}-\d{2}$/.test(String(S.startDate||''))&&String(S.startDate)>=isoPlus(0)){draft.startDate=S.startDate;draft.dateSet=true;draft.dateUnknown=false}
     draft.direction={purpose:talk.summary.purpose,avoid:String(S.avoid||'').slice(0,80),note:talk.summary.note};
-    talk.summary.keywords.forEach(k=>{if(!kws.some(x=>norm(x)===norm(k)))kws.push(k)}); store.set('gp.kw',kws);
+    talk.summary.keywords.forEach(k=>{if(!kws.some(x=>norm(x)===norm(k)))kws.push(k)}); TRIP.kws.save(kws);
   }
   rerenderForm(); scrollTalk();
 }

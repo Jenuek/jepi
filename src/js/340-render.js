@@ -212,6 +212,6 @@ function renderPref(){
   const known=[...new Set([...GENERIC_KW,...Object.values(TAGS).flat()])].filter(t=>!kws.some(k=>norm(k)===norm(t)));
   window.JEPI_UI.mount('keywords',box,{kws:kws.map(k=>({k:String(k),n:counts(k)})),known:known.map(String)});
 }
-const saveKw=()=>{store.set('gp.kw',kws);LS.set('jepi.kwAt',Date.now());syncSoon();renderPref();renderTray()};
+const saveKw=()=>{TRIP.kws.save(kws);LS.set('jepi.kwAt',Date.now());syncSoon();renderPref();renderTray()};
 function renderAll(){touchPlan();renderMeta();renderNudges();renderDays();renderTimeline();renderTray();renderChecks();renderPref();renderTabs();renderBanner();renderAI();renderChat();renderExt();renderLook()}
 

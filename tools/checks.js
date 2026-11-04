@@ -1016,6 +1016,91 @@ module.exports = [
     }
   },
   {
+    name: 'data: the trip in one place (JD.trip reads the live copy, tells listeners, keeps the old storage names)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await p.evaluate(() => { window.__heard = []; window.JEPI_DATA.trip.on(part => window.__heard.push(part)) });
+      const n0 = await p.evaluate(() => window.JEPI_DATA.trip.get('placed').length);
+      ok(n0 > 3 && await p.evaluate(() => window.JEPI_DATA.trip.get('profile').dest) !== undefined, 'get(): blocks and trip facts');
+      await p.click('#grid .blk:not(.fixed) >> nth=1'); await p.waitForTimeout(300); await p.click('#sheet [data-del="1"]'); await p.waitForTimeout(400);
+      const after = await p.evaluate(() => ({ live: window.JEPI_DATA.trip.get('placed').length, saved: JSON.parse(localStorage.getItem('gp.placed3')).length, heard: window.__heard }));
+      ok(after.live === n0 - 1 && after.saved === n0 - 1 && after.heard.includes('placed'), 'removing a block: live copy, saved copy (gp.placed3) and listeners agree ' + JSON.stringify(after.heard.slice(0, 6)));
+      ok(await p.evaluate(() => JSON.parse(localStorage.getItem('gp.placed3')).every(x => !('uid' in x))), 'blocks are saved without uids, as before');
+      await p.click('.tabs [data-tab="tray"]'); await p.click('#cards details[open] [data-wish] >> nth=0'); await p.waitForTimeout(200);
+      ok(await p.evaluate(() => window.__heard.includes('wish') && window.JEPI_DATA.trip.get('wish').length === JSON.parse(localStorage.getItem('gp.wish')).length), '♥: saved as gp.wish, listeners told');
+      await p.click('#planBtn'); await p.waitForTimeout(200); await p.click('#planMenu [data-pmact="new"]'); await p.waitForTimeout(500);
+      ok(await p.evaluate(() => { const cur = localStorage.getItem('gp.cur'); return JSON.parse(cur) === window.__jepi.state().cur && window.JEPI_DATA.trip.plans.current() === cur.replace(/"/g, '') && window.__heard.includes('plans') }), '새 계획: the open plan is saved (gp.cur) and listeners told (it joins the list once it is first saved, as before)');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'data: 친구와 함께 merge rules (app/data/merge.ts) case by case',
+    async run({ b, S, device, ok }) {
+      const p = await device(b, S);
+      const r = await p.evaluate(() => {
+        const M = window.JEPI_DATA.merge, B = (id, day, start) => ({ id, day, start, dur: 60 });
+        const base = { profile: { dest: '오사카', pace: 'slow', nights: 3 }, pack: { city: '오사카', places: [{ id: 'a', name: 'A' }] }, placed: [B('x', 0, 600), B('y', 1, 600), B('z', 1, 900)], custom: [], fmarks: {}, meals: { 0: 1000 }, done: {}, wish: ['a'] };
+        const c = o => JSON.parse(JSON.stringify(o));
+        const mine = c(base), theirs = c(base);
+        mine.placed[0].start = 660;                 // I move day-1 x
+        theirs.placed[1].start = 720;               // they move day-2 y
+        mine.profile.pace = 'full'; theirs.profile.nights = 4;   // different fields
+        theirs.pack.places.push({ id: 'b', name: 'B' });         // they add a place
+        theirs.placed = theirs.placed.filter(x => x.id !== 'z'); // they remove z
+        mine.wish = ['a', 'b']; theirs.wish = [];                 // ♥ is mine
+        mine.meals[0] = 1200; theirs.meals[0] = 800;             // both change the same day's 간식비 → mine
+        const m = M.mergePlan(base, mine, theirs), at = id => (m.placed.find(x => x.id === id) || {}).start;
+        const stamp = { pack: { places: [{ id: 'a' }, { id: 'n' }] }, custom: [{ id: 'c1' }] }; M.stampMine(stamp, new Set(['a']), '민지');
+        return { x: at('x'), y: at('y'), z: at('z'), pace: m.profile.pace, nights: m.profile.nights, places: m.pack.places.map(x => x.id).sort().join(), wish: m.wish.join(), meal: m.meals[0],
+          stamp: [stamp.pack.places[0].by || '', stamp.pack.places[1].by, stamp.custom[0].by].join('|') };
+      });
+      ok(r.x === 660 && r.y === 720, 'my day-1 move and their day-2 move both survive');
+      ok(r.z === undefined, 'a block they removed (I did not touch it) is removed');
+      ok(r.pace === 'full' && r.nights === 4, 'trip facts merge field by field');
+      ok(r.places === 'a,b', 'a place they added is kept');
+      ok(r.wish === 'a,b', '♥ stays mine');
+      ok(r.meal === 1200, 'the same thing changed by both: mine (the newest here) wins');
+      ok(r.stamp === '|민지|민지', 'new places / hand-made places carry my name, known ones do not');
+    }
+  },
+  {
+    name: 'logic: time text, travel guesses, the day check rules and free gaps (app/logic) case by case',
+    async run({ b, S, device, ok }) {
+      const p = await device(b, S);
+      const r = await p.evaluate(() => {
+        const { time, geo, schedule } = window.JEPI_DATA.logic;
+        const A = [34.6687, 135.5013], near = [34.6730, 135.5013], far = [34.6873, 135.5262];   // near ≈ 500 m, far ≈ 3 km
+        const ctx = (o = {}) => Object.assign({ firstDay: false, start: { ll: A, name: '숙소' }, dayStart: 420, wdName: '월', iso: '2026-11-30', kidsInParty: false, currency: 'JPY',
+          marksOf: () => [], hasMark: () => false, markWarnings: () => [], closed: () => false, outOfSeason: () => null, tips: () => [], hours: () => null,
+          travel: (a, b) => geo.travelGuess(a, b, { car: false, transitName: '전철', walkKm: 1.3, gateway: null }), fare: () => 0, nav: () => '#', fmt: time.fmt }, o);
+        const it = (uid, start, end, ll, extra = {}) => Object.assign({ kind: 'place', uid, name: uid, start, end, ll, p: { cat: 'art' }, warns: [], tips: [], marks: [] }, extra);
+        const out = {};
+        out.time = [time.fmt(570), time.fmt(-5), time.fmt(2000), time.parse('9:05'), time.parse('x'), time.durTxt(90), time.durTxt(45), time.durTxt(120)].join('|');
+        out.guess = [geo.travelGuess(A, A, ctx().travel === 0 ? {} : { car: false, transitName: '전철', walkKm: 1.3, gateway: null }), geo.travelGuess(A, near, { car: false, transitName: '전철', walkKm: 1.3, gateway: null }), geo.travelGuess(A, far, { car: false, transitName: '전철', walkKm: 1.3, gateway: null })].map(x => x ? x.mode + x.min : 'none').join('|');
+        let d = [it('a', 600, 700, A), it('b', 680, 760, near)]; schedule.checkDay(d, ctx()); out.overlap = d[1].warns.join();
+        d = [it('a', 600, 700, A), it('b', 705, 760, far)]; schedule.checkDay(d, ctx()); out.short = d[1].warns.join();
+        d = [it('a', 600, 700, A)]; schedule.checkDay(d, ctx({ closed: () => true, hours: () => [660, 1080] })); out.closed = d[0].warns.join();
+        d = [it('arr', 600, 620, A, { kind: 'fixed', bagStart: true }), it('m', 700, 760, near), it('w', 800, 860, near, { p: { cat: 'walk' } }), it('in', 900, 930, near, { kind: 'fixed', drop: true }), it('m2', 960, 1000, near)];
+        schedule.checkDay(d, ctx()); out.bag = [d[1].warns.length, d[2].warns.length, d[4].warns.length].join();
+        d = [it('a', 600, 700, A), it('b', 800, 900, [34.75, 135.6])]; schedule.checkDay(d, ctx({ kidsInParty: true })); out.kids = d[1].warns.some(w => w.includes('아이와'));
+        d = [it('a', 600, 700, near)]; const legs = schedule.checkDay(d, ctx()); out.firstLeg = legs.length + ':' + (d[0].travelIn ? 'in' : '-');
+        d = [it('a', 600, 700, A)]; out.firstDay = schedule.checkDay(d, ctx({ firstDay: true })).length;
+        out.gaps = JSON.stringify(schedule.gaps([{ start: 600, end: 700 }, { start: 720, end: 800 }, { start: 1000, end: 1100 }], 480));
+        return out;
+      });
+      ok(r.time === '09:30|00:00|24:00|545||1시간 30분|45분|2시간', 'time text ' + r.time);
+      ok(/^none\|도보\d+\|전철\d+$/.test(r.guess), 'travel guess: right next to it · walk · transit ' + r.guess);
+      ok(r.overlap.includes('시간이 겹쳐요'), 'two blocks at the same time: overlap warning');
+      ok(r.short.includes('분이 필요한데'), 'not enough time to get there: warning');
+      ok(r.closed.includes('월요일 휴관') && r.closed.includes('영업시간 11:00–18:00 밖'), 'closed that weekday · outside opening hours');
+      ok(r.bag === '1,0,0', 'suitcase: a museum with it warns, a walk does not, after the check-in it is gone ' + r.bag);
+      ok(r.kids === true, 'a long ride with children: warning');
+      ok(r.firstLeg === '1:in' && r.firstDay === 0, 'travel from the stay to the first block (not on Day 1)');
+      ok(r.gaps === '[[480,600],[800,1000],[1100,1380]]', 'free gaps of 90 min or more until 23:00 ' + r.gaps);
+    }
+  },
+  {
     name: 'friends: sharing again after a share that stopped half-way (trip on the server, no membership)',
     async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
       const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);

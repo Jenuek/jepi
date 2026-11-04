@@ -24,7 +24,7 @@ function renderPhase(){
   else show({s:'none'});
 }
 // open the plan whose dates include today, then today's day, scrolled to now
-function planCovers(id,t){const d=store.get('gp.plan.'+id,null);const p=d&&d.profile;if(!p||!p.startDate||p.dateUnknown)return false;
+function planCovers(id,t){const d=TRIP.plans.get(id);const p=d&&d.profile;if(!p||!p.startDate||p.dateUnknown)return false;
   const s=new Date(p.startDate+'T00:00:00'),e=new Date(s);e.setDate(e.getDate()+(p.kind==='day'?0:(+p.nights||0)));const x=new Date(t+'T00:00:00');return x>=s&&x<=e}
 function startupFocus(){
   const t=isoOf(new Date());

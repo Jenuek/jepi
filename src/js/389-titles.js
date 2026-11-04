@@ -13,7 +13,7 @@ function editDayTitle(){
 function closeDayTitle(save){
   const f=$('#dayTitleForm'); if(!f) return;
   if(save){const v=$('#dayTitleIn').value.trim().slice(0,40); const a=(profile.dayTitles||[]).slice(); a[day]=v; while(a.length&&!a[a.length-1])a.pop();
-    profile.dayTitles=a; setDayMemo(day,$('#dayMemoIn').value); store.set('gp.profile',profile)}
+    profile.dayTitles=a; setDayMemo(day,$('#dayMemoIn').value); TRIP.save('profile',profile)}
   f.remove(); $('#dayTitle').hidden=false; $('#dayTitleEdit').hidden=false; renderAll();
   if(save) showToast($('#dayTitle').textContent?'제목을 바꿨어요':'자동 제목으로 돌아갔어요');
 }

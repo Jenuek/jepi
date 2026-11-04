@@ -2,7 +2,7 @@
 let wipeArm=false;
 function wipeAll(){
   ['profile','pack','placed3','custom','kw','meal2','done','fmarks','wish','coach','dice','jp'].forEach(k=>JD.storage.del('gp.'+k));
-  plans.forEach(p=>{JD.storage.del('gp.plan.'+p.id);cloudDelete(p.id)}); plans=[]; curPlan='p'+Date.now().toString(36); savePlans();
+  plans.forEach(p=>{TRIP.plans.del(p.id);cloudDelete(p.id)}); plans=[]; curPlan='p'+Date.now().toString(36); savePlans();
   custom=[]; placed=[]; fmarks={}; wish=[]; kws=[]; meals={}; done={}; chat=[]; undoSnap=null; aiState=null; selected=null; hVibe=null; wipeArm=false;
   loadPack(blankPack()); savePack();
   profile=clone(PROFILE_EXAMPLE); Object.assign(profile,{stays:[{name:'숙소',area:'center',checkin:'15:00',checkout:'11:00',from:0,to:3}],events:[],dest:'',pace:'normal',social:'some',breakfast:true,purpose:'',party:{type:'solo',adults:1,kids:0},flightSet:false,staySet:false,dateSet:false,nightsSet:false,dateUnknown:false,startDate:isoPlus(30)}); profile.stays[0].name='숙소';

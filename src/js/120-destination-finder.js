@@ -27,7 +27,7 @@ Reply with only JSON: {"destinations":[{"city":"Korean name of the city or regio
       highlights:(Array.isArray(d.highlights)?d.highlights:[]).map(x=>String(x).slice(0,40)).slice(0,4),flight:String(d.flight||'').slice(0,40),budget:String(d.budget||'').slice(0,40),caution:String(d.caution||'').slice(0,100)}));
     if(mode.ask) destAsked=[...got.slice(0,1),...destAsked.filter(d=>!got.some(g=>g.city===d.city))].slice(0,3);
     else destRecs=mode.more?[...(destRecs||[]),...got.filter(g=>!prev.includes(g.city))].slice(0,15):got;
-    progStop(stId); store.set('gp.kw',kws); rerenderForm();
+    progStop(stId); TRIP.kws.save(kws); rerenderForm();
     if(mode.ask){setSt('st_ask',got.length?'아래에 정리했어요.':'정보를 찾지 못했어요. 이름을 조금 더 정확히 적어 주세요.');const c=document.getElementById('asked-0');if(c)c.scrollIntoView({block:'nearest'})}
     else setSt(stId,(destRecs||[]).length?(mode.more?'아래에 더 추가했어요.':'아래에서 마음에 드는 곳을 골라 주세요.'):'추천을 받지 못했어요. 조건을 바꿔 다시 해 보세요.');
   }catch(e){setSt(stId,errText(e,'추천을 받지 못했어요'))} finally{destBusy=false}

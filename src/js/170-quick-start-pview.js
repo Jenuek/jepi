@@ -20,7 +20,7 @@ async function quickStart(){
   else{draft.kind='trip'; draft.nights=+q.len; draft.bookedFlight=true; draft.bookedStay=true; draft.flightSet=false; draft.staySet=false;}
   if(norm(dest)!==norm(PACK.city)){
     if(sample){if(!(await genPack(dest,'quickStart')))return}
-    else{custom=[];store.set('gp.custom',custom);placed=[];save();loadPack(manualPack(dest));savePack()}
+    else{custom=[];TRIP.save('custom',custom);placed=[];save();loadPack(manualPack(dest));savePack()}
   }
   draft.dest=PACK.city; if(draft.kind==='day'&&!AREAS[draft.meet.area]) draft.meet.area=firstArea();
   await finishOnb();
@@ -104,7 +104,7 @@ function pRollDo(gi,auto){
   clearTimeout(pSpinT); renderPView();
   if(spin) pSpinT=setTimeout(()=>{if(pSt.draw){pSt.draw.rolling=false;renderPView()}},1100);
 }
-function learnFrom(p){const t=tagsOf(p.id)[0];if(t&&!kws.some(x=>norm(x)===norm(t))&&kws.length<12){kws.push(t);store.set('gp.kw',kws)}}
+function learnFrom(p){const t=tagsOf(p.id)[0];if(t&&!kws.some(x=>norm(x)===norm(t))&&kws.length<12){kws.push(t);TRIP.kws.save(kws)}}
 function pYes(){const d=pSt.draw; if(!d||!d.cand) return; const c=d.cand; learnFrom(c.p);
   const r=repairOps([{op:'add',day,id:c.p.id,start:fmt(c.arr),dur:c.dur}]); applyOpsCore(r.ops); save();
   diceLog.push({n:c.p.name,d:DAYS[day].iso}); diceLog=diceLog.slice(-60); store.set('gp.dice',diceLog); pSt.draw=null; renderAll();}
