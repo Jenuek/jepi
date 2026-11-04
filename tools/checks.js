@@ -1033,5 +1033,20 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'press feedback: buttons react while held down',
+    async run({ b, S, device, ok }) {
+      const p = await device(b, S);
+      const btn = await p.$('#welcome [data-w="new"]'); const r = await btn.boundingBox();
+      const before = await btn.evaluate(e => getComputedStyle(e).filter);
+      await p.mouse.move(r.x + r.width / 2, r.y + r.height / 2); await p.mouse.down(); await p.waitForTimeout(50);
+      const held = await btn.evaluate(e => ({ f: getComputedStyle(e).filter, s: getComputedStyle(e).scale }));
+      await p.mouse.move(0, 0); await p.mouse.up();
+      ok(before === 'none' && held.f.includes('brightness') && held.s !== 'none', 'held button gets darker and smaller ' + JSON.stringify(held));
+      ok(await p.evaluate(() => getComputedStyle(document.documentElement).webkitTapHighlightColor === 'rgba(0, 0, 0, 0)'), 'browser blue tap flash is off');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];

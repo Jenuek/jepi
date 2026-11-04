@@ -20,3 +20,5 @@ window.addEventListener('unhandledrejection',e=>{const r=e.reason;if(r&&r.code==
 initRecs(); heroWatch();
 if('serviceWorker' in navigator&&location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
 (async()=>{try{ if(window.claude&&window.claude.use){ const s=await window.claude.use('sample'); if(s){sample=s; renderAI(); renderChat(); renderTray(); if(!$('#onb').hidden) renderOnb(); else if(tab==='me') renderMe()} } }catch(_){} })();
+// iOS Safari only shows :active (press feedback) once the page listens for touches
+document.addEventListener('touchstart',()=>{},{passive:true});

@@ -1,0 +1,20 @@
+/* ---------- press feedback: every button shows that it was touched ---------- */
+/* Uses the separate `scale` property so buttons that already use `transform` keep it. */
+html{-webkit-tap-highlight-color:transparent}
+button,a,label,summary,[role="button"],[role="tab"],[role="menuitemradio"]{touch-action:manipulation}
+button,a,summary,[role="button"]{transition:scale .12s ease,filter .12s ease,background-color .12s ease}
+/* small buttons: shrink a little and get darker while pressed */
+button:not(:disabled):active,a:active,summary:active,[role="button"]:active{filter:brightness(.9);transition-duration:0s}
+@media (prefers-reduced-motion:no-preference){
+  button:not(:disabled):active,a:active,[role="button"]:active{scale:.96}
+  /* large rows and blocks: shrink less so the layout doesn't jump */
+  .blk:active,.trip-card:active,.mrow:active,.merow:active,.pm-item:active,.tabs button:active,.day-btn:active{scale:.985}
+  .slot:active,.minibar button:active{scale:1}
+}
+/* buttons with no background of their own: show a soft accent background instead */
+.tabs button:not(:disabled):active,.jp button:not(:disabled):active,.linkbtn:active,.slot:active,.pm-item:active{background-color:var(--accent-soft);filter:none}
+.tabs button:not(:disabled):active{background-color:color-mix(in srgb,var(--theme,var(--accent)) 12%,transparent)}
+/* dark mode: brighten instead of darken */
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) :is(button:not(:disabled),a,summary,[role="button"]):active{filter:brightness(1.18)}}
+:root[data-theme="dark"] :is(button:not(:disabled),a,summary,[role="button"]):active{filter:brightness(1.18)}
+:is(.tabs button,.jp button,.linkbtn,.slot,.pm-item):active{filter:none!important}
