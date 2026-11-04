@@ -11,7 +11,7 @@ let LOC_AREA={};
 let LOC_ZONE={};
 const dayStart=d=>d===0?((typeof profile!=='undefined'&&profile&&profile.kind==='day')?Math.max(360,tmin(profile.meet.time,660)-60):240):((typeof profile!=='undefined'&&profile&&profile.style&&profile.style.rhythm==='late')?600:420);
 let GMP_BY=360; // when to be at the home airport, from the profile
-const durTxt=m=>m>=60?`${Math.floor(m/60)}시간${m%60?` ${m%60}분`:''}`:`${m}분`;
+const durTxt=JD.logic.time.durTxt;   // app/logic/time.ts
 let DAYS=[];
 // place blocks: hours [open,close] in minutes; closed: weekdays (0=Sun)
 const P=[

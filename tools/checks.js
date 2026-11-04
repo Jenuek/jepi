@@ -1065,6 +1065,42 @@ module.exports = [
     }
   },
   {
+    name: 'logic: time text, travel guesses, the day check rules and free gaps (app/logic) case by case',
+    async run({ b, S, device, ok }) {
+      const p = await device(b, S);
+      const r = await p.evaluate(() => {
+        const { time, geo, schedule } = window.JEPI_DATA.logic;
+        const A = [34.6687, 135.5013], near = [34.6730, 135.5013], far = [34.6873, 135.5262];   // near ≈ 500 m, far ≈ 3 km
+        const ctx = (o = {}) => Object.assign({ firstDay: false, start: { ll: A, name: '숙소' }, dayStart: 420, wdName: '월', iso: '2026-11-30', kidsInParty: false, currency: 'JPY',
+          marksOf: () => [], hasMark: () => false, markWarnings: () => [], closed: () => false, outOfSeason: () => null, tips: () => [], hours: () => null,
+          travel: (a, b) => geo.travelGuess(a, b, { car: false, transitName: '전철', walkKm: 1.3, gateway: null }), fare: () => 0, nav: () => '#', fmt: time.fmt }, o);
+        const it = (uid, start, end, ll, extra = {}) => Object.assign({ kind: 'place', uid, name: uid, start, end, ll, p: { cat: 'art' }, warns: [], tips: [], marks: [] }, extra);
+        const out = {};
+        out.time = [time.fmt(570), time.fmt(-5), time.fmt(2000), time.parse('9:05'), time.parse('x'), time.durTxt(90), time.durTxt(45), time.durTxt(120)].join('|');
+        out.guess = [geo.travelGuess(A, A, ctx().travel === 0 ? {} : { car: false, transitName: '전철', walkKm: 1.3, gateway: null }), geo.travelGuess(A, near, { car: false, transitName: '전철', walkKm: 1.3, gateway: null }), geo.travelGuess(A, far, { car: false, transitName: '전철', walkKm: 1.3, gateway: null })].map(x => x ? x.mode + x.min : 'none').join('|');
+        let d = [it('a', 600, 700, A), it('b', 680, 760, near)]; schedule.checkDay(d, ctx()); out.overlap = d[1].warns.join();
+        d = [it('a', 600, 700, A), it('b', 705, 760, far)]; schedule.checkDay(d, ctx()); out.short = d[1].warns.join();
+        d = [it('a', 600, 700, A)]; schedule.checkDay(d, ctx({ closed: () => true, hours: () => [660, 1080] })); out.closed = d[0].warns.join();
+        d = [it('arr', 600, 620, A, { kind: 'fixed', bagStart: true }), it('m', 700, 760, near), it('w', 800, 860, near, { p: { cat: 'walk' } }), it('in', 900, 930, near, { kind: 'fixed', drop: true }), it('m2', 960, 1000, near)];
+        schedule.checkDay(d, ctx()); out.bag = [d[1].warns.length, d[2].warns.length, d[4].warns.length].join();
+        d = [it('a', 600, 700, A), it('b', 800, 900, [34.75, 135.6])]; schedule.checkDay(d, ctx({ kidsInParty: true })); out.kids = d[1].warns.some(w => w.includes('아이와'));
+        d = [it('a', 600, 700, near)]; const legs = schedule.checkDay(d, ctx()); out.firstLeg = legs.length + ':' + (d[0].travelIn ? 'in' : '-');
+        d = [it('a', 600, 700, A)]; out.firstDay = schedule.checkDay(d, ctx({ firstDay: true })).length;
+        out.gaps = JSON.stringify(schedule.gaps([{ start: 600, end: 700 }, { start: 720, end: 800 }, { start: 1000, end: 1100 }], 480));
+        return out;
+      });
+      ok(r.time === '09:30|00:00|24:00|545||1시간 30분|45분|2시간', 'time text ' + r.time);
+      ok(/^none\|도보\d+\|전철\d+$/.test(r.guess), 'travel guess: right next to it · walk · transit ' + r.guess);
+      ok(r.overlap.includes('시간이 겹쳐요'), 'two blocks at the same time: overlap warning');
+      ok(r.short.includes('분이 필요한데'), 'not enough time to get there: warning');
+      ok(r.closed.includes('월요일 휴관') && r.closed.includes('영업시간 11:00–18:00 밖'), 'closed that weekday · outside opening hours');
+      ok(r.bag === '1,0,0', 'suitcase: a museum with it warns, a walk does not, after the check-in it is gone ' + r.bag);
+      ok(r.kids === true, 'a long ride with children: warning');
+      ok(r.firstLeg === '1:in' && r.firstDay === 0, 'travel from the stay to the first block (not on Day 1)');
+      ok(r.gaps === '[[480,600],[800,1000],[1100,1380]]', 'free gaps of 90 min or more until 23:00 ' + r.gaps);
+    }
+  },
+  {
     name: 'friends: sharing again after a share that stopped half-way (trip on the server, no membership)',
     async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
       const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);

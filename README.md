@@ -77,6 +77,7 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 
 | 하고 싶은 일 | 파일 |
 |---|---|
+| 일정 계산 (하루 점검·경고·이동 구간·빈 시간), 시간 글자, 거리·이동 시간 어림 | `app/logic/schedule.ts`·`time.ts`·`geo.ts` (예전 코드는 `JD.logic`, 날짜 항목 만들기는 `330-helpers.js`의 dayItems) |
 | 여행 데이터 저장 (계획 목록·계획 사본·일정 블록·♥·체크·취향 키워드), 저장 이름과 모양 | `app/data/trip.ts` (예전 코드는 `TRIP`) |
 | 첫 화면(새 여행·로그인·데모), 데모 시작/끝 | 화면 `app/screens/Welcome.tsx` (리액트), 동작 `381-welcome-demo.js`, 데모 칸막이 `app/data/demo.ts`, 데모 일정 `066-demo-osaka.js` |
 | 일정표 그리기 / 장소 탭 카드·필터 | `340-render.js` / 화면 `app/screens/Tray.tsx` (리액트, 카드에 넣을 값은 `340-render.js`의 `cardInfo`) |

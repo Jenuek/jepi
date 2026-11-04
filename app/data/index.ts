@@ -8,6 +8,7 @@ import { SYNC, SB_DEFAULT, loadSync, saveSync, syncOn, sbAuth, keepSess, sbToken
 import { b64e, b64d, vaultMake, vaultKey, vaultSeal, vaultOpen } from './vault';
 import * as trip from './trip';
 import * as merge from './merge';
+import * as logic from '../logic';
 import * as trips from './trips';
 import { status, syncDocs, syncSoon, syncPush, syncPull, syncNow, connectSync } from './sync';
 
@@ -17,6 +18,8 @@ export const data = {
   trip,
   /** 친구와 함께: merging two people's changes */
   merge,
+  /** calculations: time text, distances, the day check (app/logic) */
+  logic,
   /** 친구와 함께 on the server */
   trips,
   demo: { DEMO, DEMO_BACKUP, DEMO_LIVE, demoKeep, demoRestore, demoSaveCopy, demoClearTrips },
