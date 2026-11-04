@@ -1275,7 +1275,7 @@ function partsDay(p){const m=p.meet||{};
   return [partDest(p),{f:'day',date:p.dateSet!==false?String(p.startDate??''):'',time:m.time||'11:00',end:m.end||'20:00',area:m.area,areas:optsOf(AREAS)},partParty(p)]}
 
 // ---------- DICE: roll for an empty slot ----------
-const DICE_MOODS=[['any','상관없음'],['hungry','배고파'],['quiet','조용히'],['move','움직이고 싶어'],['drink','한잔'],['rain','비 와요']];
+const DICE_MOODS=[['any','아무거나'],['hungry','배고파'],['calm','차분히'],['dopa','도파민'],['mine','내 카드'],['legs','다리 아파']];
 const FACES='⚀⚁⚂⚃⚄⚅';
 let dice={mood:'any',lunch:false,walk:10,gapI:0,rolls:0,pick:null,rolling:false,msg:'',force:null};
 let diceLog=[];
@@ -1286,10 +1286,13 @@ function diceGaps(d){
   for(const it of its){ if(it.start>=end) break; if(it.start-cur>=45) out.push({s:cur,e:it.start,prev}); if(it.end>cur){cur=it.end;prev=it} }
   if(end-cur>=45) out.push({s:cur,e:end,prev}); return out;
 }
-function moodOk(p){const tg=tagsOf(p.id).join(' ')+' '+p.name+' '+(p.note||'');
-  switch(dice.mood){case 'hungry':return p.cat==='food';case 'quiet':return ['art','walk'].includes(p.cat)||/카페|정원|서점|사색|공원|조용/.test(tg);
-    case 'move':return ['walk','shop','music'].includes(p.cat)||/액티비티|체험|산책/.test(tg);case 'drink':return p.cat==='night'||/술|바|이자카야|맥주|와인|한잔/.test(tg);
-    case 'rain':return ['art','shop','music','food'].includes(p.cat);default:return true}}
+// the six dice (P모드 주사위 판 and the 🎲 sheet): 비 와요·한잔 are handled by time of day (and weather, later)
+function moodOk(p,from){const tg=tagsOf(p.id).join(' ')+' '+p.name+' '+(p.note||'');
+  switch(dice.mood){case 'hungry':return p.cat==='food';
+    case 'calm':return ['art','walk'].includes(p.cat)||/카페|정원|서점|사색|공원|조용/.test(tg);
+    case 'dopa':return ['shop','music'].includes(p.cat)||(p.cat==='night'&&from>=1020)||/액티비티|체험|놀이|전망|쇼핑|게임/.test(tg);
+    case 'mine':return isWish(p.id);
+    default:return true}}
 function diceCands(g){
   const D=DAYS[day],wd=D.wd,used=new Set(placed.map(b=>b.id)),from=g.prev?g.prev.ll:LOC[D.startLoc].ll;
   const recent=new Set(diceLog.filter(x=>x.d&&D.iso&&x.d<D.iso&&x.d>=isoShift(D.iso,-5)).map(x=>norm(x.n)));
@@ -1297,9 +1300,10 @@ function diceCands(g){
   const out=[];
   for(const p of P){
     if(used.has(p.id)||p.drop||closedOn(p,wd)||outOfSeason(p,D.iso)) continue;
-    if(dice.lunch?(p.cat!=='food'||recent.has(norm(p.name))||!eatMoodOk(p)):!moodOk(p)) continue;
+    if(dice.lunch?(p.cat!=='food'||recent.has(norm(p.name))||!eatMoodOk(p)):!moodOk(p,g.s)) continue;
     const t=travel(from,p.ll), tm=t?t.min:0;
     if(dice.lunch&&t&&(t.mode!=='도보'||tm>dice.walk)) continue;
+    if(!dice.lunch&&dice.mood==='legs'&&t&&(t.mode!=='도보'||tm>10)) continue;
     const h=hoursFor(p,wd), ss=sunsetMin()||1050;
     let pref={morning:540,day:720,sunset:ss-45,evening:1080,night:ss+30}[p.best]||(p.cat==='food'?(s0<=720?720:s0):p.cat==='night'?1140:600);
     if(dice.lunch) pref=dice.meal==='dinner'?1110:720; if(h) pref=Math.max(pref,h[0]);
@@ -1309,6 +1313,7 @@ function diceCands(g){
     if(h&&(arr<h[0]||arr+30>h[1])) continue;
     let w=1+matchKw(p.id).length+(isWish(p.id)?3:0)+(MUST[p.id]?1.5:0)+(p.season?1.5:0)+recOf(p)*0.5-tm/30;
     if(bestTips(p,arr,arr+dur).length) w-=0.7;
+    if(!dice.lunch&&dice.mood==='legs'&&(p.dur<=60||/카페|공원|정원|벤치/.test(tagsOf(p.id).join(' ')+' '+p.name))) w+=1.5;
     out.push({p,arr,dur,tm,mode:t?t.mode:'',w:Math.max(0.2,w)});
   }
   return out;
@@ -1381,50 +1386,93 @@ async function quickStart(){
   await finishOnb();
 }
 
-// ---------- P view: day as four cards you fill by rolling ----------
-const BUCKETS=[['오전',360,720],['오후',720,1020],['저녁',1020,1260],['밤',1260,1440]];
-let pRoll={};
+// ---------- P view: the day as a board game (drawn by React: app/screens/PView.tsx) ----------
+// Squares follow the day: start → places (stamped "다녀옴" once done) → ? squares for free time → flag squares for fixed times → end.
+// A future day stays closed until its morning, unless "미리 열어서 계획하기" is on. Rolling a die spins a 3D die, then shows a card.
 function fuzzy(m){const h=Math.floor(m/60)%24,mm=m%60;return `${h<12?'오전':'오후'} ${h%12||12}시${mm>=30?' 반':''}`}
-function pGap(nm){const b=BUCKETS.find(x=>x[0]===nm);return diceGaps(day).map(g=>({s:Math.max(g.s,b[1]),e:Math.min(g.e,b[2]),prev:g.prev})).filter(g=>g.e-g.s>=45)[0]}
+const shortFuzzy=m=>{const h=Math.floor(m/60)%24;return `${h%12||12}시${m%60>=30?' 반':''}쯤`};
+const partOfDay=m=>m<720?'오전':m<1020?'오후':m<1260?'저녁':'밤';
+const P_DICE=[['any','아무거나',1],['hungry','배고파',2],['calm','차분히',3],['dopa','도파민',4],['mine','내 카드',5],['legs','다리 아파',6]];
+let pSt={mood:'any',draw:null}, pviewRev=0, pSpinT=0;
+const pAheadOn=()=>!!store.get('gp.pAhead',false);
+// where "now" is on this day: past day → everything done, today → the clock, future → nothing yet
+function pClock(){const dIso=DAYS[day]&&DAYS[day].iso, t=isoOf(new Date());
+  if(!dIso) return {past:false,today:false,future:false,nm:-1};
+  return {past:dIso<t,today:dIso===t,future:dIso>t,nm:dIso===t?nowMin():-1};
+}
+// free time you can still roll for (from now on, when it's today)
+function pGaps(){const c=pClock(); if(c.past) return [];
+  return diceGaps(day).map(g=>c.today?{s:Math.max(g.s,Math.ceil(c.nm/15)*15),e:g.e,prev:g.prev}:g).filter(g=>g.e-g.s>=45);
+}
+function pSquares(){
+  const c=pClock(), items=analyze(day).items.filter(i=>!i.stay), gaps=pGaps(), out=[];
+  const start=LOC[DAYS[day].startLoc], firstT=items.length?items[0].start:dayStart(day);
+  // day 1 begins with its fixed trip from home, so it needs no start square
+  if(day>0) out.push({k:'start',t:-1,top:'출발',name:start?String(start.name):'',stamp:c.past||(c.today&&c.nm>=firstT)});
+  const seq=[];
+  items.forEach(i=>{const done=c.past||(c.today&&i.end<=c.nm), here=c.today&&i.start<=c.nm&&c.nm<i.end;
+    seq.push(i.kind==='fixed'
+      ?{k:here?'now':'flag',t:i.start,top:fmt(i.start),name:String(i.name),uid:String(i.uid),stamp:done,flag:true}
+      :{k:here?'now':done?'done':'place',t:i.start,top:shortFuzzy(i.start),name:String(i.name),uid:String(i.uid),cat:i.p?String(i.p.cat):'',stamp:done})});
+  gaps.forEach((g,gi)=>seq.push({k:'q',t:g.s,top:'?',name:partOfDay(g.s),gap:gi}));
+  if(c.today&&!seq.some(s=>s.k==='now')) seq.push({k:'now',t:c.nm,top:'지금 '+fmt(c.nm).replace(/^0/,''),name:''});
+  seq.sort((a,b)=>a.t-b.t||(a.k==='now'?-1:b.k==='now'?1:0)).forEach(s=>out.push(s));
+  const next=DAYS[day+1]&&LOC[DAYS[day+1].startLoc];
+  out.push({k:'end',t:1e4,top:'하루 끝',name:next?String(next.name):'집으로',stamp:c.past});
+  return out.map(({t,...s})=>({name:'',uid:'',cat:'',stamp:false,flag:false,gap:-1,...s}));
+}
+function pDiceProps(){return P_DICE.map(([k,label,n])=>({k,label,n,on:pSt.mood===k}))}
+function pMyCards(){const ids=wish.filter(id=>PM[id]&&!placed.some(b=>b.id===id));
+  return {count:ids.length,list:ids.slice(0,3).map(id=>({id:String(id),name:String(PM[id].name),cat:String(PM[id].cat)}))}}
 function renderPView(){
   const box=$('#pview'); if(!box) return;
   const on=jp==='P'; box.hidden=!on; $('.grid-wrap').hidden=on; if(!on) return;
-  const {items}=analyze(day), lo=day===0?arrEnd()-60:dayStart(day), hi=profile.kind==='day'?tmin(profile.meet.end,1200)+15:1440;
-  // drawn by React: app/screens/PView.tsx
-  const buckets=[];
-  for(const [nm,bs,be] of BUCKETS){
-    if(be<=lo||bs>=hi) continue;
-    const its=items.filter(i=>!i.stay&&i.start<be&&i.start>=bs), g=pGap(nm);
-    buckets.push({nm,items:its.map(pItem),tile:g?pTile(nm):null});
+  const c=pClock(), cards=pMyCards(), base={day,dice:pDiceProps(),cards,rev:++pviewRev};
+  if(c.future&&!pAheadOn()&&!DEMO.on){
+    const until=Math.round((new Date(DAYS[day].iso+'T00:00:00')-new Date(isoOf(new Date())+'T00:00:00'))/864e5);
+    const flags=analyze(day).items.filter(i=>i.kind==='fixed').map(i=>({t:fmt(i.start),name:String(i.name)}));
+    window.JEPI_UI.mount('pview',box,{...base,mode:'closed',closed:{until,date:mdTxt(DAYS[day].iso)||'',started:!!(DAYS[0].iso&&DAYS[0].iso<=isoOf(new Date())),flags}});
+    return;
   }
-  window.JEPI_UI.mount('pview',box,{buckets,rev:++pviewRev});
+  const d=pSt.draw;
+  if(d&&d.day===day){
+    const x=d.cand;
+    window.JEPI_UI.mount('pview',box,{...base,mode:'draw',draw:{rolling:!!d.rolling,n:(P_DICE.find(v=>v[0]===d.mood)||P_DICE[0])[2],mood:(P_DICE.find(v=>v[0]===d.mood)||P_DICE[0])[1],
+      part:partOfDay(d.g.s),left:d.left,empty:d.mood==='mine'&&!wish.some(id=>PM[id])?'내 카드가 비어 있어요. 장소 탭에서 ♥ 해 봐요.':'이 주사위로 나올 곳은 다 봤어요.',ai:!!(sample&&!PACK.manual),
+      card:x?{id:String(x.p.id),cat:String(x.p.cat),catName:String(CATS[x.p.cat]||''),name:String(x.p.name),dist:x.tm?`${x.mode} ${x.tm}분`:'바로 옆',note:String(x.p.note||''),
+        when:`${shortFuzzy(x.arr)} 도착${isWish(x.p.id)?' · 내 카드':''}`,mine:isWish(x.p.id)}:null}});
+    return;
+  }
+  const sq=pSquares(), gaps=pGaps(), nextQ=sq.find(s=>s.k==='q');
+  window.JEPI_UI.mount('pview',box,{...base,mode:'board',squares:sq,ahead:c.future,canRoll:!!nextQ,qLeft:sq.filter(s=>s.k==='q').length,rollGap:nextQ?nextQ.gap:-1});
 }
-let pviewRev=0;
-function pItem(i){const crit=i.warns.filter(w=>/휴관|겹쳐|기간|찾아야/.test(w));
-  return {uid:String(i.uid),fixed:i.kind==='fixed',cc:String(i.cc),time:fuzzy(i.start),name:`${i.marks&&i.marks.length?[...new Set(i.marks.map(m=>MARKS[m][0]))].join('')+' ':''}${i.name}`,loc:String(i.locName||''),warn:crit.length?String(crit[0]):''}}
-function pTile(nm){const k=day+'|'+nm, st=pRoll[k];
-  if(st&&st.cand){const c=st.cand;return {s:'cand',k,cat:String(c.p.cat),name:String(c.p.name),line:`${fuzzy(c.arr)}쯤 · ${c.p.area}${c.tm?` · ${c.mode} ${c.tm}분`:''}${isWish(c.p.id)?' · ♥':''}`,note:c.p.note||''}}
-  if(st&&st.empty) return {s:'empty',k,nm,ai:!!(sample&&!PACK.manual),stId:'st_p_'+BUCKETS.findIndex(b=>b[0]===nm)};
-  return {s:'roll',k,nm};
-}
-function pRollDo(k){
-  const nm=k.split('|')[1], g=pGap(nm); if(!g){delete pRoll[k];renderPView();return}
-  const st=pRoll[k]||(pRoll[k]={seen:[]}); if(st.cand) st.seen.push(st.cand.p.id);
-  const km0=dice.mood, l0=dice.lunch; dice.mood='any'; dice.lunch=false; let cs=diceCands(g); dice.mood=km0; dice.lunch=l0;
-  if(nm==='저녁'||nm==='밤') cs.forEach(c=>{if(['food','night'].includes(c.p.cat)||['evening','night','sunset'].includes(c.p.best))c.w+=1.5});
-  if(nm==='오전') cs.forEach(c=>{if(c.p.best==='morning')c.w+=1.5});
-  cs=cs.filter(c=>!st.seen.includes(c.p.id));
-  if(!cs.length){st.cand=null;st.empty=true;renderPView();return}
-  const fw=c=>c.w*(dice.fresh&&dice.fresh.includes(c.p.id)?8:1); const tot=cs.reduce((a,c)=>a+fw(c),0); let r=Math.random()*tot, pick=cs[cs.length-1]; for(const c of cs){r-=fw(c);if(r<=0){pick=c;break}}
-  st.cand=pick; st.empty=false; renderPView();
+function pPick(cs){const fw=c=>c.w*(dice.fresh&&dice.fresh.includes(c.p.id)?8:1); const tot=cs.reduce((a,c)=>a+fw(c),0); let r=Math.random()*tot, pick=cs[cs.length-1]; for(const c of cs){r-=fw(c);if(r<=0){pick=c;break}} return pick}
+// roll the chosen die for one free time: spin, then show a card
+function pRollDo(gi,auto){
+  const gs=pGaps(), g=gs[+gi]; if(!g){pSt.draw=null;renderPView();return}
+  const old=pSt.draw, same=old&&old.day===day&&old.gi===+gi&&old.mood===pSt.mood, seen=same?old.seen.slice():[];
+  if(same&&old.cand) seen.push(old.cand.p.id);
+  const m0=dice.mood, l0=dice.lunch; dice.mood=pSt.mood; dice.lunch=false; let cs=diceCands(g); dice.mood=m0; dice.lunch=l0;
+  const pt=partOfDay(g.s);
+  if(pt==='저녁'||pt==='밤') cs.forEach(c=>{if(['food','night'].includes(c.p.cat)||['evening','night','sunset'].includes(c.p.best))c.w+=1.5});
+  if(pt==='오전') cs.forEach(c=>{if(c.p.best==='morning')c.w+=1.5});
+  cs=cs.filter(c=>!seen.includes(c.p.id));
+  // the roll button looks for the next ? square this die can fill
+  if(auto&&!cs.length&&!seen.length&&+gi+1<gs.length) return pRollDo(+gi+1,true);
+  const cand=cs.length?pPick(cs):null, spin=!matchMedia('(prefers-reduced-motion:reduce)').matches;
+  pSt.draw={day,gi:+gi,g,mood:pSt.mood,seen,cand,left:Math.max(0,cs.length-1),rolling:spin};
+  clearTimeout(pSpinT); renderPView();
+  if(spin) pSpinT=setTimeout(()=>{if(pSt.draw){pSt.draw.rolling=false;renderPView()}},1100);
 }
 function learnFrom(p){const t=tagsOf(p.id)[0];if(t&&!kws.some(x=>norm(x)===norm(t))&&kws.length<12){kws.push(t);store.set('gp.kw',kws)}}
-function pYes(k){const st=pRoll[k]; if(!st||!st.cand) return; const c=st.cand; learnFrom(c.p);
+function pYes(){const d=pSt.draw; if(!d||!d.cand) return; const c=d.cand; learnFrom(c.p);
   const r=repairOps([{op:'add',day,id:c.p.id,start:fmt(c.arr),dur:c.dur}]); applyOpsCore(r.ops); save();
-  diceLog.push({n:c.p.name,d:DAYS[day].iso}); diceLog=diceLog.slice(-60); store.set('gp.dice',diceLog); delete pRoll[k]; renderAll();}
-async function pAI(k){const nm=k.split('|')[1], id='st_p_'+BUCKETS.findIndex(b=>b[0]===nm);
-  const n=await morePlaces(6,id,`${nm} 시간대에 하기 좋은 곳`); if(n){const st=pRoll[k];if(st){st.empty=false;st.cand=null}pRollDo(k)}}
-
+  diceLog.push({n:c.p.name,d:DAYS[day].iso}); diceLog=diceLog.slice(-60); store.set('gp.dice',diceLog); pSt.draw=null; renderAll();}
+function pKeep(){const d=pSt.draw; if(!d||!d.cand) return; if(!isWish(d.cand.p.id)) toggleWish(d.cand.p.id); showToast('내 카드에 넣었어요'); pRollDo(d.gi)}
+function pClose(){clearTimeout(pSpinT); pSt.draw=null; renderPView()}
+function pMood(k){if(P_DICE.some(v=>v[0]===k)){pSt.mood=k;renderPView()}}
+function pAhead(){store.set('gp.pAhead',!pAheadOn()); renderPView()}
+async function pAI(){const d=pSt.draw; if(!d) return; const n=await morePlaces(6,'st_pai',`${partOfDay(d.g.s)} 시간대에 하기 좋은 곳`); if(n){d.seen=[];d.cand=null;pRollDo(d.gi)}}
 // ---------- my plans: several saved plans, account sync, sharing ----------
 let plans=[], curPlan='', planTimer=null, cloudTimer=null, planMsg='', delArm='';
 const PLAN_KEYS=['profile','pack','placed3','custom','meal2','done','fmarks','wish'];
@@ -1459,7 +1507,7 @@ function applyPlanData(d){
   placed=(Array.isArray(d.placed)?d.placed:[]).filter(b=>PM[b.id]).map(b=>({uid:'u'+(uidN++),id:b.id,day:b.day,start:b.start,dur:b.dur||PM[b.id].dur,mk:Array.isArray(b.mk)?b.mk.filter(m=>MARKS[m]):undefined}));
   fmarks=d.fmarks&&typeof d.fmarks==='object'?d.fmarks:{}; wish=Array.isArray(d.wish)?d.wish:[]; meals=d.meals&&typeof d.meals==='object'?d.meals:{}; done=d.done&&typeof d.done==='object'?d.done:{};
   store.set('gp.profile',profile); savePack(); store.set('gp.custom',custom); store.set('gp.fmarks',fmarks); store.set('gp.wish',wish); store.set('gp.meal2',meals); store.set('gp.done',done);
-  chat=[]; undoSnap=null; aiState=null; selected=null; pRoll={}; hVibe=null; hotelRecs={}; routeInfo=null; destRecs=null; destAsked=[];
+  chat=[]; undoSnap=null; aiState=null; selected=null; pSt.draw=null; hVibe=null; hotelRecs={}; routeInfo=null; destRecs=null; destAsked=[];
   buildDays(); day=0; save(); renderAll();
 }
 function openPlan(id){
@@ -3039,7 +3087,7 @@ function showCoach(i){
   document.querySelectorAll('.coach-hl').forEach(e=>e.classList.remove('coach-hl'));
   if(i>=COACH.length){$('#coach').hidden=true;store.set('gp.coach',1);return}
   if(!matchMedia('(min-width:900px)').matches&&tab!=='timeline'){tab='timeline';renderTabs()}
-  let el=document.querySelector(COACH[i].sel); if(COACH[i].sel==='#grid'&&jp==='P') el=document.querySelector('#pview'); if(COACH[i].sel==='#grid .blk'&&jp==='P') el=document.querySelector('#pview .pi'); if(!el||!el.offsetParent){showCoach(i+1);return}
+  let el=document.querySelector(COACH[i].sel); if(COACH[i].sel==='#grid'&&jp==='P') el=document.querySelector('#pview'); if(COACH[i].sel==='#grid .blk'&&jp==='P') el=document.querySelector('#pview .sq'); if(!el||!el.offsetParent){showCoach(i+1);return}
   if(el){el.classList.add('coach-hl');el.scrollIntoView({block:i===0?'start':'center'})}
   $('#coachText').textContent=COACH[i].t; $('#coachStep').textContent=`${i+1} / ${COACH.length}`; $('#coachNext').textContent=i===COACH.length-1?'시작하기':'다음';
   $('#coach').dataset.i=i; $('#coach').hidden=false;
@@ -3059,12 +3107,17 @@ document.addEventListener('click',e=>{
   if(t.dataset.pickjp&&draft){draft.jpPicked=true;setJP(t.dataset.pickjp);if(t.dataset.pickjp==='P'){draft.startMode='pq';draft.q={when:'',len:'',slot:'noon'}}renderOnb();return}
   if(t.dataset.q&&draft){const q=draft.q||(draft.q={});const v=t.dataset.qv;if(t.dataset.q==='party'){draft.party.type=v;if(v==='friends'&&draft.party.adults<2)draft.party.adults=3;if(v==='couple')draft.party.adults=2;if(v==='family'&&draft.party.adults<2)draft.party.adults=2}else q[t.dataset.q]=v;if(t.dataset.q==='when'&&v!=='pick')draft.dateSet=true;if(t.dataset.q==='when'&&v==='pick')draft.dateSet=false;rerenderForm();return}
   if(t.id==='quickStart'){quickStart();return}
-  if(t.dataset.puid){openSheet(t.dataset.puid);return}
-  if(t.dataset.proll){pRollDo(t.dataset.proll);return}
-  if(t.dataset.pnext){pRollDo(t.dataset.pnext);return}
-  if(t.dataset.pyes){pYes(t.dataset.pyes);return}
-  if(t.dataset.pclose){delete pRoll[t.dataset.pclose];renderPView();return}
-  if(t.dataset.pai){pAI(t.dataset.pai);return}
+  if(t.dataset.psq){openSheet(t.dataset.psq);return}
+  if(t.dataset.pgap!=null){pRollDo(t.dataset.pgap);return}
+  if(t.dataset.proll!=null){pRollDo(t.dataset.proll,true);return}
+  if(t.dataset.pmood){pMood(t.dataset.pmood);return}
+  if(t.dataset.pnext!=null){if(pSt.draw)pRollDo(pSt.draw.gi);return}
+  if(t.dataset.pyes!=null){pYes();return}
+  if(t.dataset.pkeep!=null){pKeep();return}
+  if(t.dataset.pclose!=null){pClose();return}
+  if(t.dataset.pai!=null){pAI();return}
+  if(t.dataset.pahead!=null){pAhead();return}
+  if(t.dataset.pcard){pMood('mine');return}
   if(t.dataset.startmode&&draft){draft.startMode=t.dataset.startmode;draft.kind=draft.startMode==='day'?'day':'trip';if(draft.kind==='day'){draft.nightsSet=true;draft.bookedFlight=true;draft.bookedStay=true;draft.flightSet=true;draft.staySet=true;draft.q={when:'',len:'0',slot:'noon'}}if(t.dataset.destmode!=null)draft.destMode=t.dataset.destmode;else if(t.dataset.startmode==='quick'&&!t.closest('.choose'))draft.destMode=draft.dest?'':'find';if(draft.startMode==='talk'&&!talk)talkReset();renderOnb();return}
   if(t.dataset.talkopt!=null&&talk){talkSend(talk.options[+t.dataset.talkopt]);return}
   if(t.id==='talkSend'){const v=(($('#talkInput')||{}).value||'').trim();if(v)talkSend(v);return}

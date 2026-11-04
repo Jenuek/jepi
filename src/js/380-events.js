@@ -12,12 +12,17 @@ document.addEventListener('click',e=>{
   if(t.dataset.pickjp&&draft){draft.jpPicked=true;setJP(t.dataset.pickjp);if(t.dataset.pickjp==='P'){draft.startMode='pq';draft.q={when:'',len:'',slot:'noon'}}renderOnb();return}
   if(t.dataset.q&&draft){const q=draft.q||(draft.q={});const v=t.dataset.qv;if(t.dataset.q==='party'){draft.party.type=v;if(v==='friends'&&draft.party.adults<2)draft.party.adults=3;if(v==='couple')draft.party.adults=2;if(v==='family'&&draft.party.adults<2)draft.party.adults=2}else q[t.dataset.q]=v;if(t.dataset.q==='when'&&v!=='pick')draft.dateSet=true;if(t.dataset.q==='when'&&v==='pick')draft.dateSet=false;rerenderForm();return}
   if(t.id==='quickStart'){quickStart();return}
-  if(t.dataset.puid){openSheet(t.dataset.puid);return}
-  if(t.dataset.proll){pRollDo(t.dataset.proll);return}
-  if(t.dataset.pnext){pRollDo(t.dataset.pnext);return}
-  if(t.dataset.pyes){pYes(t.dataset.pyes);return}
-  if(t.dataset.pclose){delete pRoll[t.dataset.pclose];renderPView();return}
-  if(t.dataset.pai){pAI(t.dataset.pai);return}
+  if(t.dataset.psq){openSheet(t.dataset.psq);return}
+  if(t.dataset.pgap!=null){pRollDo(t.dataset.pgap);return}
+  if(t.dataset.proll!=null){pRollDo(t.dataset.proll,true);return}
+  if(t.dataset.pmood){pMood(t.dataset.pmood);return}
+  if(t.dataset.pnext!=null){if(pSt.draw)pRollDo(pSt.draw.gi);return}
+  if(t.dataset.pyes!=null){pYes();return}
+  if(t.dataset.pkeep!=null){pKeep();return}
+  if(t.dataset.pclose!=null){pClose();return}
+  if(t.dataset.pai!=null){pAI();return}
+  if(t.dataset.pahead!=null){pAhead();return}
+  if(t.dataset.pcard){pMood('mine');return}
   if(t.dataset.startmode&&draft){draft.startMode=t.dataset.startmode;draft.kind=draft.startMode==='day'?'day':'trip';if(draft.kind==='day'){draft.nightsSet=true;draft.bookedFlight=true;draft.bookedStay=true;draft.flightSet=true;draft.staySet=true;draft.q={when:'',len:'0',slot:'noon'}}if(t.dataset.destmode!=null)draft.destMode=t.dataset.destmode;else if(t.dataset.startmode==='quick'&&!t.closest('.choose'))draft.destMode=draft.dest?'':'find';if(draft.startMode==='talk'&&!talk)talkReset();renderOnb();return}
   if(t.dataset.talkopt!=null&&talk){talkSend(talk.options[+t.dataset.talkopt]);return}
   if(t.id==='talkSend'){const v=(($('#talkInput')||{}).value||'').trim();if(v)talkSend(v);return}

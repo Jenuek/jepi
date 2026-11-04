@@ -889,21 +889,39 @@ module.exports = [
     }
   },
   {
-    name: 'React screen: P 모드 일정 (time-of-day sections, 🎲 tile rolls a place, 다음 → another, 좋아요 adds it)',
+    name: 'React screen: P모드 보드게임판 (closed until the morning, 미리 열기, zigzag board with roads, dice 1–6, 3D roll → card, 다시 뽑기, 갈래요 adds it, stamps on a past/now day)',
     async run({ b, S, device, ok, vis, skipCoach }) {
       const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
       await p.evaluate(() => { let s = 7; Math.random = () => ((s = s * 16807 % 2147483647) / 2147483647) });
       const count = () => p.evaluate(() => JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k => k.endsWith('gp.placed3'))) || '[]').length);
+      ok((await p.textContent('[data-jp="J"]')) === 'J모드' && (await p.textContent('[data-jp="P"]')) === 'P모드', 'mode buttons say J모드 / P모드');
       await p.click('[data-jp="P"]'); await p.waitForTimeout(400); await skipCoach(p);
-      ok(await vis(p, '#pview') && !(await vis(p, '#grid')) && await p.$$eval('#pview section.pb', e => e.length) >= 2, 'P: sections instead of the hour grid');
-      ok(await vis(p, '#pview [data-proll]'), 'a free part has a 🎲 tile');
-      await p.click('#pview [data-proll] >> nth=0'); await p.waitForTimeout(300);
-      const a = await p.textContent('#pview .ptile.on b');
-      await p.click('#pview [data-pnext]'); await p.waitForTimeout(300);
-      ok(a && (await p.textContent('#pview .ptile.on b')) !== a, '다음 → shows another place');
+      ok(await vis(p, '#pview .pclosed') && !(await vis(p, '#grid')) && !(await vis(p, '#pview .pboard')), 'a future day is closed: "판은 그날 아침에 펼쳐요"');
+      ok((await p.textContent('#pview .pclosed')).includes('아침에'), 'closed card explains the morning opening');
+      await p.click('#pview [data-pahead]'); await p.waitForTimeout(300);
+      ok(await vis(p, '#pview .pboard') && await p.$$eval('#pview .ppage:first-child .sq', e => e.length) >= 4, '미리 열어서 계획하기 → the board');
+      ok(await p.$$eval('#pview .ppage:first-child .road', e => e.length) >= 3, 'squares are joined by roads');
+      ok(!(await vis(p, '#pview .sq.start')) && await p.$$eval('#pview .sq.q', e => e.length) >= 1 && await p.$$eval('#pview .sq.fl', e => e.length) >= 1, 'day 1: flag squares for fixed times and ? squares (no start square)');
+      const faces = await p.$$eval('#pview .pd', ds => ds.map(d => d.querySelectorAll('.pdie i.on').length));
+      ok(JSON.stringify(faces) === '[1,2,3,4,5,6]', 'six dice show 1–6 pips ' + JSON.stringify(faces));
+      await p.click('#pview [data-pmood="dopa"]'); await p.waitForTimeout(200);
+      ok((await p.textContent('#pview .proll')).includes('도파민 주사위 굴리기') && await p.$$eval('#pview .proll .pdie i.on', e => e.length) === 4, 'the roll button follows the chosen die');
+      await p.click('#pview [data-pmood="any"]'); await p.waitForTimeout(200);
+      await p.click('#pview [data-proll]'); await p.waitForTimeout(250);
+      ok(await vis(p, '#pview .pspin .cube'), 'rolling: a 3D die spins first');
+      await p.waitForTimeout(1200);
+      ok(await vis(p, '#pview .pcard') && await vis(p, '#pview .pcard .pic'), 'then a card with a category pictogram');
+      const a = await p.textContent('#pview .pcard h3');
+      await p.click('#pview [data-pnext]'); await p.waitForTimeout(1400);
+      ok(a && (await p.textContent('#pview .pcard h3')) !== a, '다시 뽑기 draws another card');
       const n0 = await count();
       await p.click('#pview [data-pyes]'); await p.waitForTimeout(400);
-      ok(await count() === n0 + 1, '좋아요 adds it to the day');
+      ok(await count() === n0 + 1 && await vis(p, '#pview .pboard'), '이 카드로 갈래요 adds it, back to the board');
+      const md = (await p.textContent('[data-day="1"]')).match(/(\d+)\/(\d+)/);
+      await p.clock.install({ time: new Date(new Date().getFullYear(), +md[1] - 1, +md[2], 14, 10) }); await p.reload(); await p.waitForTimeout(3400); await skipCoach(p);
+      await p.click('[data-day="1"]'); await p.waitForTimeout(300);
+      ok(await vis(p, '#pview .pboard') && !(await vis(p, '#pview .pclosed')) && await vis(p, '#pview .sq.start'), 'today: the board is open by itself, starting at the hotel');
+      ok(await p.$$eval('#pview .sq.stamped .stamp', e => e.length) >= 2 && await p.$$eval('#pview .sq.now', e => e.length) === 1, 'today: finished squares are stamped, the pawn stands on "now"');
       await p.click('[data-jp="J"]'); await p.waitForTimeout(300);
       ok(await vis(p, '#grid') && !(await vis(p, '#pview')), 'back to J: the hour grid');
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));

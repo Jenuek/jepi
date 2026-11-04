@@ -8,7 +8,7 @@ function partsDay(p){const m=p.meet||{};
   return [partDest(p),{f:'day',date:p.dateSet!==false?String(p.startDate??''):'',time:m.time||'11:00',end:m.end||'20:00',area:m.area,areas:optsOf(AREAS)},partParty(p)]}
 
 // ---------- DICE: roll for an empty slot ----------
-const DICE_MOODS=[['any','상관없음'],['hungry','배고파'],['quiet','조용히'],['move','움직이고 싶어'],['drink','한잔'],['rain','비 와요']];
+const DICE_MOODS=[['any','아무거나'],['hungry','배고파'],['calm','차분히'],['dopa','도파민'],['mine','내 카드'],['legs','다리 아파']];
 const FACES='⚀⚁⚂⚃⚄⚅';
 let dice={mood:'any',lunch:false,walk:10,gapI:0,rolls:0,pick:null,rolling:false,msg:'',force:null};
 let diceLog=[];
@@ -19,10 +19,13 @@ function diceGaps(d){
   for(const it of its){ if(it.start>=end) break; if(it.start-cur>=45) out.push({s:cur,e:it.start,prev}); if(it.end>cur){cur=it.end;prev=it} }
   if(end-cur>=45) out.push({s:cur,e:end,prev}); return out;
 }
-function moodOk(p){const tg=tagsOf(p.id).join(' ')+' '+p.name+' '+(p.note||'');
-  switch(dice.mood){case 'hungry':return p.cat==='food';case 'quiet':return ['art','walk'].includes(p.cat)||/카페|정원|서점|사색|공원|조용/.test(tg);
-    case 'move':return ['walk','shop','music'].includes(p.cat)||/액티비티|체험|산책/.test(tg);case 'drink':return p.cat==='night'||/술|바|이자카야|맥주|와인|한잔/.test(tg);
-    case 'rain':return ['art','shop','music','food'].includes(p.cat);default:return true}}
+// the six dice (P모드 주사위 판 and the 🎲 sheet): 비 와요·한잔 are handled by time of day (and weather, later)
+function moodOk(p,from){const tg=tagsOf(p.id).join(' ')+' '+p.name+' '+(p.note||'');
+  switch(dice.mood){case 'hungry':return p.cat==='food';
+    case 'calm':return ['art','walk'].includes(p.cat)||/카페|정원|서점|사색|공원|조용/.test(tg);
+    case 'dopa':return ['shop','music'].includes(p.cat)||(p.cat==='night'&&from>=1020)||/액티비티|체험|놀이|전망|쇼핑|게임/.test(tg);
+    case 'mine':return isWish(p.id);
+    default:return true}}
 function diceCands(g){
   const D=DAYS[day],wd=D.wd,used=new Set(placed.map(b=>b.id)),from=g.prev?g.prev.ll:LOC[D.startLoc].ll;
   const recent=new Set(diceLog.filter(x=>x.d&&D.iso&&x.d<D.iso&&x.d>=isoShift(D.iso,-5)).map(x=>norm(x.n)));
@@ -30,9 +33,10 @@ function diceCands(g){
   const out=[];
   for(const p of P){
     if(used.has(p.id)||p.drop||closedOn(p,wd)||outOfSeason(p,D.iso)) continue;
-    if(dice.lunch?(p.cat!=='food'||recent.has(norm(p.name))||!eatMoodOk(p)):!moodOk(p)) continue;
+    if(dice.lunch?(p.cat!=='food'||recent.has(norm(p.name))||!eatMoodOk(p)):!moodOk(p,g.s)) continue;
     const t=travel(from,p.ll), tm=t?t.min:0;
     if(dice.lunch&&t&&(t.mode!=='도보'||tm>dice.walk)) continue;
+    if(!dice.lunch&&dice.mood==='legs'&&t&&(t.mode!=='도보'||tm>10)) continue;
     const h=hoursFor(p,wd), ss=sunsetMin()||1050;
     let pref={morning:540,day:720,sunset:ss-45,evening:1080,night:ss+30}[p.best]||(p.cat==='food'?(s0<=720?720:s0):p.cat==='night'?1140:600);
     if(dice.lunch) pref=dice.meal==='dinner'?1110:720; if(h) pref=Math.max(pref,h[0]);
@@ -42,6 +46,7 @@ function diceCands(g){
     if(h&&(arr<h[0]||arr+30>h[1])) continue;
     let w=1+matchKw(p.id).length+(isWish(p.id)?3:0)+(MUST[p.id]?1.5:0)+(p.season?1.5:0)+recOf(p)*0.5-tm/30;
     if(bestTips(p,arr,arr+dur).length) w-=0.7;
+    if(!dice.lunch&&dice.mood==='legs'&&(p.dur<=60||/카페|공원|정원|벤치/.test(tagsOf(p.id).join(' ')+' '+p.name))) w+=1.5;
     out.push({p,arr,dur,tm,mode:t?t.mode:'',w:Math.max(0.2,w)});
   }
   return out;
