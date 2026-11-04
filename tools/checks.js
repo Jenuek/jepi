@@ -940,6 +940,27 @@ module.exports = [
     }
   },
   {
+    name: 'React screen: 예약 내용 붙여 넣기 (empty → asks for text, AI fills the times, says so)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const say = (r, o) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content: [{ type: 'text', text: JSON.stringify(o) }] }) });
+      const p = await device(b, S);
+      await p.route(/api\.anthropic\.com/, r => (r.request().postData() || '').includes('round trip') ? say(r, { mode: 'flight', out: { dep: '09:10', arr: '11:05', flight: 'KE 723' }, back: { dep: '18:40', arr: '20:35', flight: 'KE 724' } }) : r.fulfill({ status: 503, body: '{}' }));
+      await p.click('[data-w="new"]'); await p.waitForTimeout(250);
+      if (await p.$('#onbKey_anthropic')) { await p.fill('#onbKey_anthropic', 'sk-ant-test-key'); await p.click('#onbBody [data-onbkey="anthropic"]'); await p.waitForTimeout(300) }
+      await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="me"]'); await p.waitForTimeout(250);
+      await p.click('[data-meopen="way"]'); await p.waitForTimeout(200);
+      await p.click('#meBox [data-aifill="flight"]'); await p.waitForTimeout(200);
+      ok((await p.textContent('#st_flight')).includes('붙여 넣은 내용이 없어요'), 'nothing pasted: says so');
+      await p.fill('#paste_flight', 'KE723 09:10'); await p.click('#meBox [data-aifill="flight"]'); await p.waitForTimeout(1500);
+      ok(await p.inputValue('#meBox [data-pf="out.dep"]') === '09:10' && await p.inputValue('#meBox [data-pf="out.flight"]') === 'KE 723' && (await p.textContent('#st_flight')).includes('채웠어요'), 'AI filled the times and says so');
+      await p.evaluate(() => window.__jepi.sync()); await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="me"]'); await p.waitForTimeout(300); await p.click('[data-meopen="way"]').catch(() => {}); await p.waitForTimeout(200);
+      ok(!(await p.textContent('#st_flight')).includes('채웠어요'), 'the message is gone once the row is opened again');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
     name: 'friends: sharing again after a share that stopped half-way (trip on the server, no membership)',
     async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
       const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
