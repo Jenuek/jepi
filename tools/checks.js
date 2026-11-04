@@ -1109,6 +1109,29 @@ module.exports = [
     }
   },
   {
+    name: 'the floating 🎲: on every tab in J and P, the same size; in P it steps aside only while the board dice is on screen',
+    async run({ b, S, device, ok, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      const fab = async () => { await p.waitForTimeout(450); return p.evaluate(() => { const f = document.getElementById('diceFab'), c = getComputedStyle(f); return { on: c.display !== 'none' && c.opacity !== '0', w: Math.round(f.getBoundingClientRect().width) } }) };
+      const seen = [];
+      for (const tb of ['timeline', 'tray', 'map', 'more']) { await p.click(`.tabs [data-tab="${tb}"]`); seen.push((await fab()).on) }
+      ok(seen.every(Boolean), 'J: on every tab ' + seen);
+      const wJ = (await fab()).w;
+      await p.click('.tabs [data-tab="timeline"]'); await p.click('[data-jp="P"]'); await p.waitForTimeout(400); await skipCoach(p).catch(() => {});
+      const fP = await fab();
+      ok(fP.on && fP.w === wJ, 'P: shown, the same size as in J (' + fP.w + ' / ' + wJ + ')');
+      const start = await p.evaluate(() => JSON.parse(localStorage.getItem('gp.profile')).startDate);
+      await p.clock.setFixedTime(new Date(start + 'T13:00:00')); await p.click('#days [data-day="0"]'); await p.waitForTimeout(500); await p.evaluate(() => window.scrollTo(0, 0));
+      ok((await fab()).on, 'P board day, top of the page (the board dice is further down): shown');
+      await p.evaluate(() => { const e = document.querySelector('#pview .proll'); if (e) window.scrollTo(0, e.getBoundingClientRect().top + scrollY - 200) });
+      ok(!(await fab()).on, 'the board roll button on screen: the floating 🎲 steps aside');
+      await p.click('.tabs [data-tab="tray"]');
+      ok((await fab()).on, 'another tab: back again');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
     name: 'friends: sharing again after a share that stopped half-way (trip on the server, no membership)',
     async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
       const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);

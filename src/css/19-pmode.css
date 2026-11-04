@@ -1,7 +1,7 @@
 /* P모드: the day as a board game (app/screens/PView.tsx). The board is a "real" object on the table,
    so it keeps its own light colours in dark mode too (text uses --pk, not --ink). */
 :root{--f-game:"Jua","IBM Plex Sans KR",system-ui,sans-serif;--pk:#2b2230}
-body.mode-p #daySum,body.mode-p #sumBody,body.mode-p #phase,body.mode-p .dice-fab{display:none!important}
+body.mode-p #daySum,body.mode-p #sumBody,body.mode-p #phase{display:none!important}
 .pview .pwrap{display:grid;gap:14px;padding:12px;border-radius:20px;color:var(--pk);background-color:#eadcbc;background-image:radial-gradient(rgba(43,34,48,.10) 1.5px,transparent 1.6px);background-size:14px 14px}
 .pwrap .hint{color:#5c5240;margin:0}
 .pwrap .ph{font-family:var(--f-game);font-weight:400;font-size:16px}
