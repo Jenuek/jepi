@@ -18,7 +18,7 @@ function showCoach(i){
   document.querySelectorAll('.coach-hl').forEach(e=>e.classList.remove('coach-hl'));
   if(i>=COACH.length){$('#coach').hidden=true;store.set('gp.coach',1);return}
   if(!matchMedia('(min-width:900px)').matches&&tab!=='timeline'){tab='timeline';renderTabs()}
-  let el=document.querySelector(COACH[i].sel); if(COACH[i].sel==='#grid'&&jp==='P') el=document.querySelector('#pview'); if(COACH[i].sel==='#grid .blk'&&jp==='P') el=document.querySelector('#pview .pi'); if(!el||!el.offsetParent){showCoach(i+1);return}
+  let el=document.querySelector(COACH[i].sel); if(COACH[i].sel==='#grid'&&jp==='P') el=document.querySelector('#pview'); if(COACH[i].sel==='#grid .blk'&&jp==='P') el=document.querySelector('#pview .sq'); if(!el||!el.offsetParent){showCoach(i+1);return}
   if(el){el.classList.add('coach-hl');el.scrollIntoView({block:i===0?'start':'center'})}
   $('#coachText').textContent=COACH[i].t; $('#coachStep').textContent=`${i+1} / ${COACH.length}`; $('#coachNext').textContent=i===COACH.length-1?'시작하기':'다음';
   $('#coach').dataset.i=i; $('#coach').hidden=false;

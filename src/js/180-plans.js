@@ -32,7 +32,7 @@ function applyPlanData(d){
   placed=(Array.isArray(d.placed)?d.placed:[]).filter(b=>PM[b.id]).map(b=>({uid:'u'+(uidN++),id:b.id,day:b.day,start:b.start,dur:b.dur||PM[b.id].dur,mk:Array.isArray(b.mk)?b.mk.filter(m=>MARKS[m]):undefined}));
   fmarks=d.fmarks&&typeof d.fmarks==='object'?d.fmarks:{}; wish=Array.isArray(d.wish)?d.wish:[]; meals=d.meals&&typeof d.meals==='object'?d.meals:{}; done=d.done&&typeof d.done==='object'?d.done:{};
   store.set('gp.profile',profile); savePack(); store.set('gp.custom',custom); store.set('gp.fmarks',fmarks); store.set('gp.wish',wish); store.set('gp.meal2',meals); store.set('gp.done',done);
-  chat=[]; undoSnap=null; aiState=null; selected=null; pRoll={}; hVibe=null; hotelRecs={}; routeInfo=null; destRecs=null; destAsked=[];
+  chat=[]; undoSnap=null; aiState=null; selected=null; pSt.draw=null; hVibe=null; hotelRecs={}; routeInfo=null; destRecs=null; destAsked=[];
   buildDays(); day=0; save(); renderAll();
 }
 function openPlan(id){
