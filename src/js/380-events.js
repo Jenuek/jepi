@@ -43,8 +43,6 @@ document.addEventListener('click',e=>{
   if(t.dataset.aifill){aiFill(t.dataset.aifill);return}
   if(t.id==='meSave'){commitProfile(draft);draft=clone(profile);renderAll();renderMe();meSetMsg('저장했어요. 고정 블록을 다시 만들었어요.');return}
   if(t.id==='meOnb'){openOnb();return}
-  if(t.id==='wipeBtn'){if(!wipeArm){wipeArm=true;renderSettings();return}wipeAll();return}
-  if(t.id==='wipeCancel'){wipeArm=false;renderSettings();return}
   if(t.dataset.group){group=t.dataset.group;renderTray();return}
   if(t.dataset.jp){setJP(t.dataset.jp);renderAll();return}
   if(t.id==='diceFab'){openDiceTab(mealNow()==='snack'?'do':'eat',null);return}
@@ -57,7 +55,6 @@ document.addEventListener('click',e=>{
   if(t.id==='helperPrev'){if(hStep>0){hStep--;renderHelper();$('#helper').scrollTop=0}return}
   if(t.id==='helperNext'){if(hStep<H_STEPS.length-1){hStep++;renderHelper();$('#helper').scrollTop=0}else closeHelper();return}
   if(t.id==='helperClose'){closeHelper();return}
-  if(t.dataset.zoom){setZoom(+t.dataset.zoom);if(tab==='settings')renderSettings();return}
   if(t.id==='bannerCancel'){selected=null;renderAll();return}
   if(t.id==='aiBtn'){openFind({when:'gap',into:'sched'});return}
   // 닫기 in any sheet (#sheet: block, 🎲, 장소 찾기, 직접 만들기)

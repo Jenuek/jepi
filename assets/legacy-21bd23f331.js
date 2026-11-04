@@ -1779,15 +1779,35 @@ const KEY_HELP={
   gmaps:`<ol><li><a href="https://console.cloud.google.com/google/maps-apis/start" target="_blank" rel="noopener">Google Cloud 콘솔</a>에서 결제 계정을 연결해요 (무료 한도 안이면 청구되지 않아요).</li><li>API 및 서비스 → 라이브러리에서 <b>Routes API</b>와 <b>Places API (New)</b>를 사용 설정해요 (Places는 영업시간 확인용).</li><li>사용자 인증 정보 → API 키 만들기 → <b>애플리케이션 제한: 웹사이트</b>에 <code>${ORIGIN}/*</code>를 넣고, API 제한은 Routes API와 Places API (New) 두 개만 골라요.</li><li>할당량에서 하루 요청 수 상한(예: 500)을 걸어 두면 안전해요.</li></ol>`,
   kakao:`<ol><li><a href="https://developers.kakao.com/console/app" target="_blank" rel="noopener">카카오 디벨로퍼스</a>에서 애플리케이션을 추가해요.</li><li>플랫폼 → Web에 <code>${ORIGIN}</code>를 등록해요.</li><li>제품 설정에서 <b>카카오맵</b>을 활성화해요.</li><li>앱 키의 <b>REST API 키</b>를 복사해서 붙여 넣어요.</li></ol>`
 };
-let keyEdit=null, keyShow=false;
+let keyEdit=null;
 const isBad=k=>!!keyBad[k==='gmaps'?'google':k];
 // The frame is drawn by React: app/screens/SettingsScreen.tsx. The parts below are still old HTML.
 let settingsRev=0;
 // AI·지도 연결 is drawn by React: app/screens/AiKeysSection.tsx. Only the masked keys go there.
-function settingsAI(){return {standalone:!!STANDALONE,editing:keyEdit,show:!!keyShow,hasGemini:!!KEYS.gemini,routesOk:+routeStats.ok||0,
+function settingsAI(){return {standalone:!!STANDALONE,editing:keyEdit,hasGemini:!!KEYS.gemini,routesOk:+routeStats.ok||0,
   models:{heavy:MODELS.heavy,light:MODELS.light,gemini:MODELS.gemini},
   hours:KEYS.gmaps?{use:+hoursUse(),cap:HOURS_CAP,off:JD.hours.state.off||''}:null,
   keys:Object.keys(KEY_DEF).map(k=>{const d=KEY_DEF[k];return {k,name:d.name,sub:d.sub,ph:d.ph,masked:KEYS[k]?maskKey(KEYS[k]):'',bad:isBad(k),msg:keyMsg[k]||'',helpHTML:KEY_HELP[k]}})}}
+// What was pressed in 설정 (SettingsScreen.tsx / AiKeysSection.tsx tell: its name and value; a typed key comes as v2)
+function settingsAct(n,v,v2){
+  switch(n){
+  case 'theme': themePref=v;LS.set('jepi.theme',themePref);applyTheme();renderSettings();if(mapState.on)drawMap();return;
+  case 'zoom': setZoom(+v);if(tab==='settings')renderSettings();return;
+  case 'keyedit': keyEdit=v;keyMsg[keyEdit]='';renderSettings();return;   // its box opens, with the cursor in it
+  case 'keycancel': keyEdit=null;renderSettings();return;
+  case 'keysave': {const k=v,key=String(v2||'').trim().replace(/\s+/g,'');
+    if(!key){keyMsg[k]='키를 붙여 넣어 주세요.';renderSettings();return}
+    if(KEY_DEF[k].re&&!KEY_DEF[k].re.test(key)){keyMsg[k]=`${KEY_DEF[k].name} 키 형식이 아닌 것 같아요. 그래도 저장했으니 "확인"을 눌러 보세요.`}
+    else keyMsg[k]='';
+    KEYS[k]=key;keyEdit=null;keysChanged();testKey(k);return}
+  case 'keydel': delete KEYS[v];keyMsg[v]='삭제했어요.';keysChanged();return;
+  case 'keytest': testKey(v);return;
+  case 'models': {const m=v2||{};MODELS.heavy=String(m.heavy||'').trim()||'claude-sonnet-5-5';MODELS.light=String(m.light||'').trim()||'claude-haiku-5-5';MODELS.gemini=String(m.gemini||'').trim()||'gemini-3.6-flash';LS.set('jepi.models',{heavy:MODELS.heavy,light:MODELS.light,gemini:MODELS.gemini});keysChanged();return}
+  case 'backup': backupAll();return;
+  case 'wipe': if(!wipeArm){wipeArm=true;renderSettings();return}wipeAll();return;
+  case 'wipecancel': wipeArm=false;renderSettings();return;
+  }
+}
 function renderSettings(){
   const el=$('#setBox'); if(!el) return;
   window.JEPI_UI.mount('settings',el,{theme:themePref,zoom:store.get('gp.zoom',60),sync:syncView(),myPlaces:mypView(),ai:settingsAI(),
@@ -1892,19 +1912,6 @@ document.addEventListener('click',e=>{
   if(t.id==='meHelper2'){openHelper(0);return}
   if(t.id==='moreAll'){moreAll=!moreAll;renderMore();return}
   if(t.id==='wishGo'){cat='wish';tab='tray';renderTray();renderTabs();return}
-  if(t.dataset.themeSet){themePref=t.dataset.themeSet;LS.set('jepi.theme',themePref);applyTheme();renderSettings();if(mapState.on)drawMap();return}
-  if(t.dataset.keyedit){keyEdit=t.dataset.keyedit;keyShow=false;keyMsg[keyEdit]='';renderSettings();setTimeout(()=>{const i=$('#keyIn');if(i)i.focus()},30);return}
-  if(t.id==='keyCancel'){keyEdit=null;renderSettings();return}
-  if(t.id==='keyShow'){const i=$('#keyIn'),v=i?i.value:'';keyShow=!keyShow;renderSettings();const j=$('#keyIn');if(j){j.value=v;j.focus()}return}
-  if(t.dataset.keysave){const k=t.dataset.keysave,v=(($('#keyIn')||{}).value||'').trim().replace(/\s+/g,'');
-    if(!v){keyMsg[k]='키를 붙여 넣어 주세요.';renderSettings();return}
-    if(KEY_DEF[k].re&&!KEY_DEF[k].re.test(v)){keyMsg[k]=`${KEY_DEF[k].name} 키 형식이 아닌 것 같아요. 그래도 저장했으니 "확인"을 눌러 보세요.`}
-    else keyMsg[k]='';
-    KEYS[k]=v;keyEdit=null;keysChanged();testKey(k);return}
-  if(t.dataset.keydel){delete KEYS[t.dataset.keydel];keyMsg[t.dataset.keydel]='삭제했어요.';keysChanged();return}
-  if(t.dataset.keytest){testKey(t.dataset.keytest);return}
-  if(t.id==='mSave'){MODELS.heavy=($('#mHeavy').value||'').trim()||'claude-sonnet-5-5';MODELS.light=($('#mLight').value||'').trim()||'claude-haiku-5-5';MODELS.gemini=($('#mGem').value||'').trim()||'gemini-3.6-flash';LS.set('jepi.models',{heavy:MODELS.heavy,light:MODELS.light,gemini:MODELS.gemini});keysChanged();return}
-  if(t.id==='backupAll'){backupAll();return}
   if(t.dataset.mapday!=null){mapState.all=t.dataset.mapday==='all';document.querySelectorAll('[data-mapday]').forEach(b=>b.setAttribute('aria-pressed',String((b.dataset.mapday==='all')===mapState.all)));drawMap(true);return}
   if(t.id==='mapMe'){locateMe();return}
   if(t.dataset.onbkey){const k=t.dataset.onbkey,i=document.getElementById('onbKey_'+k),v=(i&&i.value||'').trim().replace(/\s+/g,'');if(!v)return;KEYS[k]=v;keysChanged();return}
@@ -2842,8 +2849,6 @@ document.addEventListener('click',e=>{
   if(t.dataset.aifill){aiFill(t.dataset.aifill);return}
   if(t.id==='meSave'){commitProfile(draft);draft=clone(profile);renderAll();renderMe();meSetMsg('저장했어요. 고정 블록을 다시 만들었어요.');return}
   if(t.id==='meOnb'){openOnb();return}
-  if(t.id==='wipeBtn'){if(!wipeArm){wipeArm=true;renderSettings();return}wipeAll();return}
-  if(t.id==='wipeCancel'){wipeArm=false;renderSettings();return}
   if(t.dataset.group){group=t.dataset.group;renderTray();return}
   if(t.dataset.jp){setJP(t.dataset.jp);renderAll();return}
   if(t.id==='diceFab'){openDiceTab(mealNow()==='snack'?'do':'eat',null);return}
@@ -2856,7 +2861,6 @@ document.addEventListener('click',e=>{
   if(t.id==='helperPrev'){if(hStep>0){hStep--;renderHelper();$('#helper').scrollTop=0}return}
   if(t.id==='helperNext'){if(hStep<H_STEPS.length-1){hStep++;renderHelper();$('#helper').scrollTop=0}else closeHelper();return}
   if(t.id==='helperClose'){closeHelper();return}
-  if(t.dataset.zoom){setZoom(+t.dataset.zoom);if(tab==='settings')renderSettings();return}
   if(t.id==='bannerCancel'){selected=null;renderAll();return}
   if(t.id==='aiBtn'){openFind({when:'gap',into:'sched'});return}
   // 닫기 in any sheet (#sheet: block, 🎲, 장소 찾기, 직접 만들기)
@@ -3320,7 +3324,7 @@ function titleEditing(on){
 document.addEventListener('click',e=>{const t=e.target.closest('#dayTitleEdit');if(t&&!$('#dayTitleIn'))titleEditing(true)});
 // what React screens may ask of the old code (app/ui/host.ts)
 window.JEPI_UI.connectHost({renderAll:()=>renderAll(),closeSheet:()=>closeSheet(),reopenSheet:()=>{const u=$('#sheet').dataset.uid;if(u&&u!=='dice'&&!$('#sheetBg').hidden)openSheet(u)},toast:m=>showToast(m),day:()=>day,autoTitle:d=>String((DAYS[d]||{}).title||''),titleEditing,
-  closeNotebook:()=>closeNotebook(),renamePlan:nm=>lookRenamePlan(nm),aiDayTitles:n=>lookAiTitles(n),errText:(e,w)=>errText(e,w),welcomeNew:()=>{closeWelcome();openOnb()},welcomeDemo:()=>demoEnter(),welcomeLoggedIn:()=>welcomeLoggedIn(),dice:(n,v,m)=>diceAct(n,v,m),place:(n,v)=>placeAct(n,v),plans:(n,v,v2)=>plansAct(n,v,v2),helper:(n,v,v2)=>helperAct(n,v,v2),chat:(n,v)=>chatAct(n,v),pview:(n,v)=>pviewAct(n,v),kw:(n,v)=>kwAct(n,v),grid:(n,v)=>gridAct(n,v),block:(n,v,o)=>blockAct(n,v,o),checks:(n,v,o)=>checksAct(n,v,o),aibox:(n,v)=>aiboxAct(n,v),nudge:(n,v)=>nudgeAct(n,v),importFile:f=>importBackup(f,ok=>{if(ok){maybeCoach()}}),shareNotebook:async()=>{await shareLink(true);return planMsg||'링크를 만들었어요'}});
+  closeNotebook:()=>closeNotebook(),renamePlan:nm=>lookRenamePlan(nm),aiDayTitles:n=>lookAiTitles(n),errText:(e,w)=>errText(e,w),welcomeNew:()=>{closeWelcome();openOnb()},welcomeDemo:()=>demoEnter(),welcomeLoggedIn:()=>welcomeLoggedIn(),dice:(n,v,m)=>diceAct(n,v,m),place:(n,v)=>placeAct(n,v),plans:(n,v,v2)=>plansAct(n,v,v2),helper:(n,v,v2)=>helperAct(n,v,v2),chat:(n,v)=>chatAct(n,v),pview:(n,v)=>pviewAct(n,v),kw:(n,v)=>kwAct(n,v),grid:(n,v)=>gridAct(n,v),block:(n,v,o)=>blockAct(n,v,o),checks:(n,v,o)=>checksAct(n,v,o),aibox:(n,v)=>aiboxAct(n,v),settings:(n,v,v2)=>settingsAct(n,v,v2),nudge:(n,v)=>nudgeAct(n,v),importFile:f=>importBackup(f,ok=>{if(ok){maybeCoach()}}),shareNotebook:async()=>{await shareLink(true);return planMsg||'링크를 만들었어요'}});
 // ---------- how a trip looks: theme colour, cover, style, handwriting; folding hero header ----------
 // profile.look = {color, cover:'city'|'sea'|'mountain'|'none'|'photo', photo:dataURL, tagline, style:'color'|'note', hand}
 // Lives in the plan's profile, so it syncs across devices and to friends on a shared trip.

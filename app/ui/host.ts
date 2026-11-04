@@ -50,6 +50,8 @@ export interface AppHost {
   checks(name: string, value?: string, more?: boolean): void;
   /** ✨ 빈 시간 채우기 results: stop, close, acc (which one) */
   aibox(name: string, value?: string): void;
+  /** 설정: theme, zoom, keyedit, keycancel, keysave (key name, typed key), keydel, keytest, models, backup, wipe, wipecancel */
+  settings(name: string, value?: string, value2?: unknown): void;
   /** a backup file was chosen (처음 설정 · 내 계획 · 설정) */
   importFile(f: File | undefined): void;
 }
