@@ -2802,8 +2802,6 @@ document.addEventListener('click',e=>{
   const t=e.target.closest('button,input,label'); if(!t) return;
   if(t.dataset.tab){tab=t.dataset.tab;autoMsg='';if(tab==='me'){draft=clone(profile);meOpen=null;renderMe()}if(tab==='pref'){draft=clone(profile);renderTasteStyle()}if(tab==='plans'){snapshotCurrent();showText=false;renderPlans()}if(tab==='settings'){keyEdit=null;renderSettings()}if(tab==='more')renderMore();if(PANELS[tab])PANELS[tab].render({opened:true});renderTabs();if(tab==='map')openMap();else mapState.on=false;window.scrollTo({top:0});return}
   if(t.id==='customBtn'){openCustom(null,null);return}
-  if(t.dataset.newcustom!=null){openCustom(null,+t.dataset.newcustom);return}
-  if(t.dataset.editcustom){openCustom(t.dataset.editcustom,null);return}
   if(t.id==='onbPrev'){if(onbStep>0){onbStep--;renderOnb()}return}
   if(t.id==='onbSkip'&&placeCtl){placeCtl.abort();return}
   if(t.id==='onbNext'||t.id==='onbSkip'){onbAdvance();return}
@@ -2847,49 +2845,26 @@ document.addEventListener('click',e=>{
   if(t.id==='wipeBtn'){if(!wipeArm){wipeArm=true;renderSettings();return}wipeAll();return}
   if(t.id==='wipeCancel'){wipeArm=false;renderSettings();return}
   if(t.dataset.group){group=t.dataset.group;renderTray();return}
-  if(t.dataset.fill){place(t.dataset.fill,+t.dataset.start);closeSheet();renderAll();return}
-  if(t.dataset.totray){closeSheet();tab='tray';renderTabs();return}
-  if(t.id==='seasonBtn'){genSeason('st_season');return}
   if(t.dataset.jp){setJP(t.dataset.jp);renderAll();return}
   if(t.id==='diceFab'){openDiceTab(mealNow()==='snack'?'do':'eat',null);return}
-  if(t.dataset.dicefrom!=null){dice.tab='do';doDefaults(true);openDice(+t.dataset.dicefrom);diceRoll(false);return}
   if(t.id==='coachNext'){showCoach(+$('#coach').dataset.i+1);return}
   if(t.id==='coachSkip'){showCoach(COACH.length);return}
   if(t.id==='coachAgain'){showCoach(0);return}
   if(t.id==='moreHelper'){openHelper(wish.length?1:0);return}
-  if(t.id==='fixWarnBtn'||t.id==='fixWarnChip'){const ws=[];DAYS.forEach((_,d)=>analyze(d).items.forEach(it=>it.warns.forEach(w=>ws.push(`Day ${d+1} ${it.name}: ${w}`))));tab='timeline';renderTabs();sendChat('지금 일정의 경고를 모두 해결해 줘. 꼭 필요한 것만 바꾸고, 바꿀 수 없는 고정 일정은 그대로 둬.\n'+ws.slice(0,20).join('\n'));const c=$('#chat');if(c)c.scrollIntoView({block:'start'});return}
+  if(t.id==='fixWarnChip'){fixWarns();return}
   if(t.id==='helperBtn'||t.id==='meHelper'){openHelper(0);return}
   if(t.id==='helperPrev'){if(hStep>0){hStep--;renderHelper();$('#helper').scrollTop=0}return}
   if(t.id==='helperNext'){if(hStep<H_STEPS.length-1){hStep++;renderHelper();$('#helper').scrollTop=0}else closeHelper();return}
   if(t.id==='helperClose'){closeHelper();return}
   if(t.dataset.zoom){setZoom(+t.dataset.zoom);if(tab==='settings')renderSettings();return}
   if(t.id==='bannerCancel'){selected=null;renderAll();return}
-  if(t.id==='resetBtn'){
-    if(!resetArm){resetArm=true;renderChecks();return}
-    resetArm=false;fmarks={};TRIP.save('fmarks',fmarks);placed=DEFAULT.map(b=>({uid:'u'+(uidN++),id:b.id,day:b.day,start:b.start,dur:PM[b.id].dur}));save();renderAll();return}
   if(t.id==='aiBtn'){openFind({when:'gap',into:'sched'});return}
-  if(t.id==='aiStop'){aiState?.ctl?.abort();return}
-  if(t.id==='aiClose'){aiState=null;renderAI();return}
-  if(t.dataset.acc!=null&&aiState?.items){const x=aiState.items[+t.dataset.acc];if(x&&!x.added){place(x.id,x.start);x.added=true;renderAll()}return}
-  if(t.dataset.goto!=null){day=+t.dataset.goto;tab='timeline';renderAll();openSheet(t.dataset.uid);return}
-  const sh=t.closest('#sheet');
-  if(sh){const uid=sh.dataset.uid, b=placed.find(x=>x.uid===uid);
-    if(t.dataset.close){closeSheet();return}
-    if(t.dataset.swap&&b){b.id=t.dataset.swap;b.start=+t.dataset.start;b.dur=+t.dataset.dur;save();renderAll();openSheet(uid);return}
-    if(t.dataset.mark){toggleMark(uid,t.dataset.mark);renderAll();openSheet(uid,{marksOpen:true});return}
-    if(t.dataset.pairblock){makePairBlock(uid,t.dataset.pairblock);return}
-    if(t.dataset.home){profile.home.min=Math.max(10,Math.min(240,(+profile.home.min||60)+ +t.dataset.home));TRIP.save('profile',profile);buildDays();renderAll();openSheet('f0a');return}
-    if(!b) return;
-    if(t.dataset.mv){b.start=Math.max(dayStart(day),Math.min(1410,b.start+ +t.dataset.mv))}
-    if(t.dataset.du){b.dur=Math.max(30,Math.min(720,b.dur+ +t.dataset.du))}
-    if(t.dataset.del){placed=placed.filter(x=>x.uid!==uid);save();closeSheet();renderAll();return}
-    // only the move/length buttons redraw the sheet; tapping an input (memo, etc.) must keep focus for the keyboard
-    if(t.dataset.mv||t.dataset.du){save();renderAll();openSheet(uid)}return}
+  // 닫기 in any sheet (#sheet: block, 🎲, 장소 찾기, 직접 만들기)
+  if(t.dataset.close&&t.closest('#sheet')){closeSheet();return}
 });
 document.addEventListener('change',e=>{
   if(e.target.id==='openOnly'){renderTray();return}
   if(e.target.id==='dateUnknown'&&draft){draft.dateUnknown=e.target.checked;if(draft.dateUnknown){draft.startDate=isoPlus(30);draft.dateSet=true}else draft.dateSet=false;rerenderForm();return}
-  if(e.target.dataset.ck){done[e.target.dataset.ck]=e.target.checked;TRIP.save('done',done);renderChecks()}
 });
 $('#sheetBg').addEventListener('click',e=>{if(e.target.id==='sheetBg')closeSheet()});
 document.addEventListener('submit',e=>{const f=e.target;
@@ -2900,6 +2875,45 @@ document.addEventListener('input',onPf);
 document.addEventListener('keydown',e=>{if(e.target&&e.target.id==='talkInput'&&e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();const v=e.target.value.trim();if(v)talkSend(v)}});
 document.addEventListener('input',e=>{if(e.target&&e.target.id==='chatInput'){const x=e.target;x.style.height='auto';x.style.height=Math.min(120,x.scrollHeight)+'px'}}); document.addEventListener('change',onPf);
 document.addEventListener('keydown',e=>{if(e.target&&e.target.id==='chatInput'&&e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();const f=$('#chatForm');f.requestSubmit?f.requestSubmit():f.dispatchEvent(new Event('submit',{cancelable:true,bubbles:true}))}});
+// What was pressed in a block's sheet (BlockSheet.tsx; the sheet's block is #sheet's uid). Only changes that move the
+// block redraw the sheet: tapping an input (memo, …) keeps the keyboard.
+function blockAct(n,v,o){
+  o=o||{}; const uid=$('#sheet').dataset.uid, b=placed.find(x=>x.uid===uid);
+  switch(n){
+  case 'fill': place(v,+o.start);closeSheet();renderAll();return;          // an empty time: put this place there
+  case 'dicefrom': dice.tab='do';doDefaults(true);openDice(+v);diceRoll(false);return;
+  case 'totray': closeSheet();tab='tray';renderTabs();return;
+  case 'newcustom': openCustom(null,+v);return;
+  case 'editcustom': openCustom(v,null);return;
+  case 'swap': if(b){b.id=v;b.start=+o.start;b.dur=+o.dur;save();renderAll();openSheet(uid)}return;
+  case 'mark': toggleMark(uid,v);renderAll();openSheet(uid,{marksOpen:true});return;
+  case 'pairblock': makePairBlock(uid,v);return;
+  case 'home': profile.home.min=Math.max(10,Math.min(240,(+profile.home.min||60)+ +v));TRIP.save('profile',profile);buildDays();renderAll();openSheet('f0a');return;
+  }
+  if(!b) return;
+  if(n==='mv'){b.start=Math.max(dayStart(day),Math.min(1410,b.start+ +v));save();renderAll();openSheet(uid);return}
+  if(n==='du'){b.dur=Math.max(30,Math.min(720,b.dur+ +v));save();renderAll();openSheet(uid);return}
+  if(n==='del'){placed=placed.filter(x=>x.uid!==uid);save();closeSheet();renderAll();return}
+}
+// 🛠 AI에게 경고 해결 맡기기 (the check list's button and the 경고 chip above the 일정표)
+function fixWarns(){const ws=[];DAYS.forEach((_,d)=>analyze(d).items.forEach(it=>it.warns.forEach(w=>ws.push(`Day ${d+1} ${it.name}: ${w}`))));tab='timeline';renderTabs();sendChat('지금 일정의 경고를 모두 해결해 줘. 꼭 필요한 것만 바꾸고, 바꿀 수 없는 고정 일정은 그대로 둬.\n'+ws.slice(0,20).join('\n'));const c=$('#chat');if(c)c.scrollIntoView({block:'start'})}
+// 준비하기 (Checks.tsx): a tick, a warning (go to its block), 경고 해결, 시즌 정보, 모두 지우기
+function checksAct(n,v,o){
+  switch(n){
+  case 'ck': done[v]=!!o;TRIP.save('done',done);renderChecks();return;
+  case 'goto': {const [d,u]=String(v).split('~');day=+d;tab='timeline';renderAll();openSheet(u);return}
+  case 'fix': fixWarns();return;
+  case 'season': genSeason('st_season');return;
+  case 'reset': if(!resetArm){resetArm=true;renderChecks();return}
+    resetArm=false;fmarks={};TRIP.save('fmarks',fmarks);placed=DEFAULT.map(b=>({uid:'u'+(uidN++),id:b.id,day:b.day,start:b.start,dur:PM[b.id].dur}));save();renderAll();return;
+  }
+}
+// ✨ 빈 시간 채우기 results (AiBox.tsx): stop, close, put one in
+function aiboxAct(n,v){
+  if(n==='stop'){aiState?.ctl?.abort();return}
+  if(n==='close'){aiState=null;renderAI();return}
+  if(n==='acc'&&aiState?.items){const x=aiState.items[+v];if(x&&!x.added){place(x.id,x.start);x.added=true;renderAll()}}
+}
 // What was pressed in the 일정표 and around it (DayGrid.tsx slots and blocks, the Day buttons, 오늘 보기, 간식비 −/+)
 function gridAct(n,v){
   switch(n){
@@ -3306,7 +3320,7 @@ function titleEditing(on){
 document.addEventListener('click',e=>{const t=e.target.closest('#dayTitleEdit');if(t&&!$('#dayTitleIn'))titleEditing(true)});
 // what React screens may ask of the old code (app/ui/host.ts)
 window.JEPI_UI.connectHost({renderAll:()=>renderAll(),closeSheet:()=>closeSheet(),reopenSheet:()=>{const u=$('#sheet').dataset.uid;if(u&&u!=='dice'&&!$('#sheetBg').hidden)openSheet(u)},toast:m=>showToast(m),day:()=>day,autoTitle:d=>String((DAYS[d]||{}).title||''),titleEditing,
-  closeNotebook:()=>closeNotebook(),renamePlan:nm=>lookRenamePlan(nm),aiDayTitles:n=>lookAiTitles(n),errText:(e,w)=>errText(e,w),welcomeNew:()=>{closeWelcome();openOnb()},welcomeDemo:()=>demoEnter(),welcomeLoggedIn:()=>welcomeLoggedIn(),dice:(n,v,m)=>diceAct(n,v,m),place:(n,v)=>placeAct(n,v),plans:(n,v,v2)=>plansAct(n,v,v2),helper:(n,v,v2)=>helperAct(n,v,v2),chat:(n,v)=>chatAct(n,v),pview:(n,v)=>pviewAct(n,v),kw:(n,v)=>kwAct(n,v),grid:(n,v)=>gridAct(n,v),nudge:(n,v)=>nudgeAct(n,v),importFile:f=>importBackup(f,ok=>{if(ok){maybeCoach()}}),shareNotebook:async()=>{await shareLink(true);return planMsg||'링크를 만들었어요'}});
+  closeNotebook:()=>closeNotebook(),renamePlan:nm=>lookRenamePlan(nm),aiDayTitles:n=>lookAiTitles(n),errText:(e,w)=>errText(e,w),welcomeNew:()=>{closeWelcome();openOnb()},welcomeDemo:()=>demoEnter(),welcomeLoggedIn:()=>welcomeLoggedIn(),dice:(n,v,m)=>diceAct(n,v,m),place:(n,v)=>placeAct(n,v),plans:(n,v,v2)=>plansAct(n,v,v2),helper:(n,v,v2)=>helperAct(n,v,v2),chat:(n,v)=>chatAct(n,v),pview:(n,v)=>pviewAct(n,v),kw:(n,v)=>kwAct(n,v),grid:(n,v)=>gridAct(n,v),block:(n,v,o)=>blockAct(n,v,o),checks:(n,v,o)=>checksAct(n,v,o),aibox:(n,v)=>aiboxAct(n,v),nudge:(n,v)=>nudgeAct(n,v),importFile:f=>importBackup(f,ok=>{if(ok){maybeCoach()}}),shareNotebook:async()=>{await shareLink(true);return planMsg||'링크를 만들었어요'}});
 // ---------- how a trip looks: theme colour, cover, style, handwriting; folding hero header ----------
 // profile.look = {color, cover:'city'|'sea'|'mountain'|'none'|'photo', photo:dataURL, tagline, style:'color'|'note', hand}
 // Lives in the plan's profile, so it syncs across devices and to friends on a shared trip.

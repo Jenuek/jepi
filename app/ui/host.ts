@@ -44,6 +44,12 @@ export interface AppHost {
   kw(name: string, value?: string): boolean | void;
   /** 일정표: day (its number), slot (minutes), blk (a block's uid), meal (간식비 change) */
   grid(name: string, value: string): void;
+  /** a block's sheet: fill, dicefrom, totray, newcustom, editcustom, swap, mark, pairblock, home, mv, du, del (+ start / dur) */
+  block(name: string, value?: string, more?: { start?: string; dur?: string }): void;
+  /** 준비하기: ck (id, ticked), goto ("day~uid"), fix, season, reset */
+  checks(name: string, value?: string, more?: boolean): void;
+  /** ✨ 빈 시간 채우기 results: stop, close, acc (which one) */
+  aibox(name: string, value?: string): void;
   /** a backup file was chosen (처음 설정 · 내 계획 · 설정) */
   importFile(f: File | undefined): void;
 }
