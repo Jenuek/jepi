@@ -113,3 +113,14 @@ function pClose(){clearTimeout(pSpinT); pSt.draw=null; renderPView()}
 function pMood(k){if(P_DICE.some(v=>v[0]===k)){pSt.mood=k;renderPView()}}
 function pAhead(){store.set('gp.pAhead',!pAheadOn()); renderPView()}
 async function pAI(){const d=pSt.draw; if(!d) return; const n=await morePlaces(6,'st_pai',`${partOfDay(d.g.s)} 시간대에 하기 좋은 곳`); if(n){d.seen=[];d.cand=null;pRollDo(d.gi)}}
+// P모드 장소 탭 (카드 모으기): ask the AI for places to collect, or put one place straight onto the board's next ? square that fits it
+async function pAIRec(){const n=await morePlaces(8,'st_pairec','');if(n){renderTray();setSt('st_pairec',`${n}곳을 찾았어요. 아래 "✨ 방금 찾은 곳"에서 ♥ 담기로 모아요.`)}}
+function pPlaceNow(id){
+  const p=PM[id]; if(!p) return;
+  const m0=dice.mood,l0=dice.lunch; dice.mood='any'; dice.lunch=false;
+  let hit=null; for(const g of pGaps()){const c=diceCands(g).find(x=>x.p.id===id);if(c){hit=c;break}}
+  dice.mood=m0; dice.lunch=l0;
+  if(!hit){showToast('이 날 빈 칸에는 맞지 않아요. 내 카드로 담아 두세요.');return}
+  const r=repairOps([{op:'add',day,id,start:fmt(hit.arr),dur:hit.dur}]); applyOpsCore(r.ops); save();
+  showToast(`${DAYS[day].date||'이 날'} ${shortFuzzy(hit.arr)}에 넣었어요`); renderAll();
+}

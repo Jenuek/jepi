@@ -19,7 +19,7 @@ function findRowsUpdate(){findMount()}
 function findMount(){
   const F=FIND, gaps=gapsOf(day), gv=g=>({v:`${g[0]}-${g[1]}`,label:`${fmt(g[0])}–${fmt(g[1])}`});
   window.JEPI_UI.mount('find',$('#sheet'),{dayNo:day+1,date:String(DAYS[day].date),city:String(PACK.city||''),where:F.where,area:F.area||'',
-    areas:Object.entries(AREAS).map(([k,v])=>({k,label:String(v[0])})),when:F.when,gaps:gaps.map(gv),gap:F.gap?gv(F.gap):null,into:F.into,q:F.q||'',busy:!!F.busy,
+    areas:Object.entries(AREAS).map(([k,v])=>({k,label:String(v[0])})),when:F.when,gaps:gaps.map(gv),gap:F.gap?gv(F.gap):null,into:F.into,q:F.q||'',busy:!!F.busy,mine:jp==='P',
     rows:F.res.map(r=>{const p=PM[r.id];if(!p)return null;
       const meta=[p.area,CATS[p.cat]||'',p.hours&&!p.always?`${fmt(p.hours[0])}–${fmt(p.hours[1])}`:''].filter(Boolean).join(' · ');
       return {id:r.id,name:String(p.name),meta,note:p.note?String(p.note):'',c:r.c||'',txt:r.txt||''}}).filter(Boolean),rev:findRev});
@@ -54,7 +54,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)r
   if(t.dataset.findgap){const [a,b]=t.dataset.findgap.split('-').map(Number);openFind({when:'gap',gap:[a,b],into:'sched'});return}
   if(t.dataset.findr){const [id,act]=t.dataset.findr.split(':'), r=FIND.res.find(x=>x.id===id), p=PM[id]; if(!r||!p) return;
     if(act==='skip'){findDrop(id);r.c='skip';r.txt='넣지 않았어요'}
-    else if(act==='list'){r.c='list';r.txt='장소 목록에 넣었어요'}
+    else if(act==='list'){r.c='list';if(jp==='P'){if(!isWish(id))toggleWish(id);r.txt='내 카드에 담았어요'}else r.txt='장소 목록에 넣었어요'}
     else if(FIND.when==='gap'&&FIND.gap){
       const st=Math.max(FIND.cursor||FIND.gap[0],FIND.gap[0]), rr=repairOps([{op:'add',day,id,start:fmt(st),dur:p.dur}]);
       applyOpsCore(rr.ops); save(); FIND.cursor=parse(rr.ops[0].start)+p.dur+20;

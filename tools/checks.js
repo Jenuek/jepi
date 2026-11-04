@@ -889,6 +889,32 @@ module.exports = [
     }
   },
   {
+    name: 'P모드: collecting 내 카드 before the board opens (+ 카드 모으기 → 장소 tab with ♥ 담기, 직접 적어 담기, 일정에 바로 넣기)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      ok(await p.$$eval('#cards [data-pick]', e => e.length) > 0 && !(await vis(p, '.pcollect')), 'J모드: the 장소 tab is unchanged (넣기, no collecting box)');
+      await p.click('[data-jp="P"]'); await p.waitForTimeout(300); await skipCoach(p);
+      ok(await vis(p, '#pview .pclosed') && await vis(p, '#pview .pcol.big'), 'closed day with no cards: a big "+ 카드 모으기"');
+      await p.click('#pview .pcol.big'); await p.waitForTimeout(400); await skipCoach(p);
+      ok(await vis(p, '#cards .pcollect') && (await p.textContent('#cards .pcollect b')).includes('0장'), '… opens the 장소 tab as "카드 모으기" (0장)');
+      ok(await p.$$eval('#cards .card .wish-go', e => e.length) > 0 && await p.$$eval('#cards [data-pick]', e => e.length) === 0, 'P모드: every place has "♥ 담기" instead of 넣기');
+      await p.evaluate(() => document.querySelectorAll('#cards .wish-go')[0].click()); await p.waitForTimeout(200);
+      await p.evaluate(() => document.querySelectorAll('#cards .wish-go:not(.on)')[0].click()); await p.waitForTimeout(200);
+      ok((await p.textContent('#cards .pcollect b')).includes('2장') && await p.$$eval('#cards .wish-go.on', e => e.length) === 2, '♥ 담기 twice → 2장, buttons say 담았어요');
+      await p.click('#cards [data-pnewcard]'); await p.waitForTimeout(300);
+      ok(await vis(p, '#customForm[data-card="1"]') && !(await vis(p, '#cfStart')), '직접 적어 담기: a card form without a start time');
+      await p.fill('#cfName', '친구가 말한 타코야키집'); await p.click('#customForm [type=submit]'); await p.waitForTimeout(400);
+      ok((await p.textContent('#cards .pcollect b')).includes('3장'), '… it becomes a card (3장)');
+      const placed = () => p.evaluate(() => JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k => k.endsWith('gp.placed3'))) || '[]').length);
+      const n0 = await placed();
+      await p.evaluate(() => document.querySelector('.tabs [data-tab="timeline"]').click()); await p.waitForTimeout(300);
+      ok(await placed() === n0 && await p.$$eval('#pview .pfan .mcard', e => e.length) === 3 && (await p.textContent('#pview .pfan')).includes('타코야키'), 'the board shows 3 cards, none put into the day');
+      ok(await vis(p, '#pview .pmh .pcol'), 'with cards: a small "+ 카드 모으기" next to 내 카드');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
     name: 'P모드 × 여행 수첩 style = black-and-white sketchbook (same board, pencil look, only the stamps/now in red)',
     async run({ b, S, device, ok, vis, skipCoach }) {
       const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);

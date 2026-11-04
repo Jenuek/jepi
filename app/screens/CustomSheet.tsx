@@ -7,6 +7,8 @@ type Opt = [value: string | number, label: string];
 
 export interface CustomSheetProps {
   edit: string;
+  /** P모드 "직접 적어 담기": make a place for 내 카드 only (no time, not put into the day) */
+  card?: boolean;
   dayLabel: string;
   name: string; area: string; cat: string; dur: number; cost: number | string; memo: string; tags: string; drop: boolean;
   /** sharing with other travelers is possible: its box and whether it is on */
@@ -26,14 +28,14 @@ export function CustomSheet(p: CustomSheetProps) {
   const edit = !!p.edit;
   return (
     <Fragment key={p.rev}>
-      <h3>{edit ? '블록 정보 수정' : '직접 블록 만들기'}</h3>
-      <div className="when">{edit ? '바꾼 내용은 이 블록이 들어간 모든 날에 반영돼요.' : `${p.dayLabel} 일정에 넣어요.`}</div>
-      <form id="customForm" data-edit={p.edit} className="fsec" style={{ marginTop: 12 }}>
+      <h3>{edit ? '블록 정보 수정' : p.card ? '내 카드 직접 만들기' : '직접 블록 만들기'}</h3>
+      <div className="when">{edit ? '바꾼 내용은 이 블록이 들어간 모든 날에 반영돼요.' : p.card ? '가고 싶은 곳 이름만 적어도 카드가 돼요. 시간은 그날 주사위로 정해요.' : `${p.dayLabel} 일정에 넣어요.`}</div>
+      <form id="customForm" data-edit={p.edit} data-card={p.card ? '1' : undefined} className="fsec" style={{ marginTop: 12 }}>
         <div className="fg">
           <label>이름<input id="cfName" required maxLength={40} defaultValue={p.name} placeholder="예: 친구가 추천한 카페" /></label>
           <label>동네<Sel id="cfArea" val={p.area} opts={p.areas} /></label>
           <label>종류<Sel id="cfCat" val={p.cat} opts={p.cats} /></label>
-          {!edit && <label>시작<input id="cfStart" type="time" defaultValue={p.start} /></label>}
+          {!edit && !p.card && <label>시작<input id="cfStart" type="time" defaultValue={p.start} /></label>}
           <label>머무는 시간<Sel id="cfDur" val={p.dur} opts={p.durs} /></label>
           <label>{`1인 예상 비용 (${p.currency})`}<input id="cfCost" type="number" min="0" step="any" defaultValue={String(p.cost)} /></label>
         </div>
@@ -49,7 +51,7 @@ export function CustomSheet(p: CustomSheetProps) {
         <label className="fg" style={{ display: 'block' }}><span className="hint">키워드 (쉼표로 구분, 선택)</span><input id="cfTags" maxLength={80} defaultValue={p.tags} style={{ marginTop: 4 }} /></label>
         <label className="toggle"><input type="checkbox" id="cfDrop" defaultChecked={p.drop} /> 짐을 맡기는 곳이에요 (짐 보관함, 숙소 등)</label>
         {p.share != null && <label className="toggle"><input type="checkbox" id="cfShare" defaultChecked={p.share} /> 다른 여행자에게도 이 장소 추천하기 (이름·동네·메모가 공유돼요)</label>}
-        <div className="row"><button className="small-btn primary" type="submit">{edit ? '저장' : '일정에 넣기'}</button><button className="small-btn" type="button" data-close="1">취소</button></div>
+        <div className="row"><button className="small-btn primary" type="submit">{edit ? '저장' : p.card ? '♥ 내 카드에 담기' : '일정에 넣기'}</button><button className="small-btn" type="button" data-close="1">취소</button></div>
       </form>
       <p className="hint">위치는 고른 동네의 중심으로 잡아서 이동 시간을 계산해요. 영업시간은 확인하지 않으니 직접 챙겨 주세요.</p>
     </Fragment>
