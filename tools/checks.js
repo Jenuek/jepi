@@ -672,9 +672,10 @@ module.exports = [
       await p.fill('#onbBody [data-pf="dest"]', '부산'); await p.click('#onbBody #genPack'); await p.waitForTimeout(1300);
       const busy = { btn: await p.textContent('#genPack'), st: await p.textContent('#st_pack'), cls: await p.getAttribute('#st_pack', 'class') };
       ok(busy.btn.includes('준비하는 중') && busy.st.includes('초 지났어요') && busy.cls.includes('busy'), 'while waiting: button relabeled, time shown ' + JSON.stringify(busy));
-      await p.waitForTimeout(5000);
+      await p.waitForTimeout(13000);   // a busy server is tried 3 times (2.5 s each here) before it gives up
       const done = { btn: await p.textContent('#genPack'), st: await p.textContent('#st_pack'), cls: await p.getAttribute('#st_pack', 'class') };
       ok(done.btn === 'AI로 여행지 준비하기' && !done.cls.includes('busy') && !done.st.includes('초 지났어요') && done.st.length > 0, 'after it fails: button back, a message instead ' + JSON.stringify(done));
+      ok(done.st.includes('바빠요'), 'the message says the AI server is busy');
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
@@ -905,6 +906,35 @@ module.exports = [
       ok(await count() === n0 + 1, '좋아요 adds it to the day');
       await p.click('[data-jp="J"]'); await p.waitForTimeout(300);
       ok(await vis(p, '#grid') && !(await vis(p, '#pview')), 'back to J: the hour grid');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'AI: a busy server (529) or a broken reply is tried again; a wrong key is not; the message says why',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); let calls = 0, mode = 'busy2';
+      await p.route(/api\.anthropic\.com/, r => {
+        calls++;
+        if (mode === 'busy2' && calls <= 2) return r.fulfill({ status: 529, body: '{"error":{"message":"Overloaded"}}' });
+        if (mode === 'badjson' && calls === 1) return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content: [{ type: 'text', text: '{"sunrise": "06:3' }] }) });
+        if (mode === 'key') return r.fulfill({ status: 401, body: '{}' });
+        if (mode === 'busy') return r.fulfill({ status: 529, body: '{}' });
+        r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content: [{ type: 'text', text: JSON.stringify({ sunrise: '06:30', sunset: '17:10', weather: '맑아요', notes: ['겉옷'], events: [] }) }] }) });
+      });
+      await p.click('[data-w="new"]'); await p.waitForTimeout(250);
+      if (await p.$('#onbKey_anthropic')) { await p.fill('#onbKey_anthropic', 'sk-ant-test-key'); await p.click('#onbBody [data-onbkey="anthropic"]'); await p.waitForTimeout(300) }
+      await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      const open = async () => { await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="check"]'); await p.waitForTimeout(300) };
+      const ask = async (m, wait) => { mode = m; calls = 0; await open(); await p.click('#seasonBtn'); await p.waitForTimeout(wait); await open() };
+      await ask('busy2', 6000);
+      ok((await p.textContent('#checks')).includes('겉옷') && calls === 3, 'busy twice, then it answers: tips arrive (' + calls + ' tries)');
+      await ask('badjson', 4000);
+      ok(calls === 2 && (await p.textContent('#checks')).includes('겉옷'), 'a cut-off reply is asked again once (' + calls + ' tries)');
+      await ask('key', 2500);
+      ok(calls === 1, 'a wrong key is not asked again (' + calls + ' tries)');
+      mode = 'busy'; calls = 0; await open(); await p.click('#seasonBtn'); await p.waitForTimeout(9000);
+      ok(calls === 3 && (await p.textContent('#st_season')).includes('바빠요'), 'still busy after 3 tries: says the server is busy (' + calls + ' tries) ' + await p.textContent('#st_season'));
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }

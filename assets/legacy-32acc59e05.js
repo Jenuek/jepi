@@ -606,7 +606,12 @@ function progStart(stId,label,btnIds,btnLabel){progStop(stId);const t0=Date.now(
 function progStop(stId){const p=prog[stId];if(!p)return;clearInterval(p.iv);const L=liveEl(stId),e=document.getElementById(stId);if(L)L.busy(false);else if(e)e.classList.remove('busy');
   Object.entries(p.old).forEach(([id,t])=>{const b=document.getElementById(id);if(!b)return;const BL=window.JEPI_UI.live(b);if(BL)BL.label(null);else if(t!=null)b.textContent=t});delete prog[stId]}
 const setSt=(id,t)=>{progStop(id);const L=liveEl(id),e=document.getElementById(id);if(L)L.text(t);else if(e)e.textContent=t};
-function errText(e,what){return e&&e.code==='not_granted'?'AI 키가 맞지 않아서 할 수 없어요.':e&&e.code==='rate_limited'?'요청이 많아 잠시 쉬어야 해요. 조금 뒤에 다시 해 주세요.':`${what}. 다시 시도해 주세요.`}
+// what went wrong, in words the person can act on (the app already tried again a few times)
+function errText(e,what){const c=e&&e.code;
+  return c==='not_granted'?'AI 키가 맞지 않아서 할 수 없어요.':c==='rate_limited'?'요청이 많아 잠시 쉬어야 해요. 1분쯤 뒤에 다시 해 주세요.'
+    :c==='timeout'?`${what}. AI가 너무 오래 걸렸어요. 다시 해 주세요.`:c==='busy'?`${what}. AI 서버가 지금 바빠요. 조금 뒤에 다시 해 주세요.`
+    :c==='too_long'?`${what}. 답이 너무 길어 잘렸어요. 조건을 줄여 다시 해 주세요.`:c==='invalid_json'?`${what}. AI 답을 읽지 못했어요. 다시 해 주세요.`
+    :`${what}. 다시 시도해 주세요.`}
 async function genPack(dest,btn){
   if(!sample){setSt('st_pack','AI가 연결되어 있지 않아요. 더보기 → 설정에서 키를 넣어 주세요.');return false}
   if(onbBusy) return false; onbBusy=true; setBusy(true);
@@ -1585,14 +1590,18 @@ function pickJSON(text){
 async function callClaude(prompt,model,signal){
   let r;
   try{r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',signal,headers:{'content-type':'application/json','x-api-key':KEYS.anthropic,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-    body:JSON.stringify({model,max_tokens:8000,system:'You are the planning engine of a travel planner app. Follow the format instructions exactly. When JSON is requested, reply with only the JSON object and nothing else.',messages:[{role:'user',content:prompt}]})})}
-  catch(e){if(signal&&signal.aborted)throw aiErr(signal.reason==='timeout'?'timeout':'cancelled');throw aiErr('upstream_error','인터넷 연결을 확인해 주세요')}
+    body:JSON.stringify({model,max_tokens:16000,system:'You are the planning engine of a travel planner app. Follow the format instructions exactly. When JSON is requested, reply with only the JSON object and nothing else.',messages:[{role:'user',content:prompt}]})})}
+  catch(e){if(signal&&signal.aborted)throw aiErr(signal.reason==='timeout'?'timeout':'cancelled');throw retryable(aiErr('upstream_error','인터넷 연결을 확인해 주세요'))}
   if(r.status===400){let m='';try{m=(await r.json()).error.message}catch(_){}throw aiErr(/credit|balance/i.test(m)?'not_granted':'upstream_error',/credit|balance/i.test(m)?'Claude 크레딧이 부족해요':m.slice(0,120))}
   if(r.status===401||r.status===403){keyBad.anthropic=true;throw aiErr('not_granted','Claude 키가 맞지 않아요')}
-  if(r.status===429)throw aiErr('rate_limited');
+  if(r.status===429)throw retryable(aiErr('rate_limited'));
+  if(r.status===529||r.status>=500)throw retryable(aiErr('busy','Claude 서버가 잠시 바빠요'));
   if(!r.ok){let m='';try{m=(await r.json()).error.message}catch(_){}throw aiErr('upstream_error',m||('HTTP '+r.status))}
-  const j=await r.json(); keyBad.anthropic=false;
-  return (j.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('');
+  let j; try{j=await r.json()}catch(_){throw retryable(aiErr('upstream_error','답을 받다가 끊겼어요'))}
+  keyBad.anthropic=false;
+  const text=(j.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('');
+  if(j.stop_reason==='max_tokens') throw aiErr('too_long','답이 너무 길어 중간에 잘렸어요',text);
+  return text;
 }
 let geminiNoThink=false;
 async function callGemini(prompt,signal,plain){
@@ -1601,7 +1610,7 @@ async function callGemini(prompt,signal,plain){
   let r;
   try{r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(MODELS.gemini)}:generateContent`,{method:'POST',signal,headers:{'content-type':'application/json','x-goog-api-key':KEYS.gemini},
     body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:gc})})}
-  catch(e){if(signal&&signal.aborted)throw aiErr(signal.reason==='timeout'?'timeout':'cancelled','AI가 오래 답하지 않아 멈췄어요');throw aiErr('upstream_error','인터넷 연결을 확인해 주세요')}
+  catch(e){if(signal&&signal.aborted)throw aiErr(signal.reason==='timeout'?'timeout':'cancelled','AI가 오래 답하지 않아 멈췄어요');throw retryable(aiErr('upstream_error','인터넷 연결을 확인해 주세요'))}
   if(r.status===400||r.status===401||r.status===403){let m='';try{m=(await r.json()).error.message}catch(_){}
     if(r.status===400&&!plain&&/thinking/i.test(m)){geminiNoThink=true;return callGemini(prompt,signal,true)}
     if(/API key|permission|PERMISSION/i.test(m)||r.status!==400){keyBad.gemini=true;throw aiErr('not_granted','Gemini 키가 맞지 않아요')}
@@ -1609,20 +1618,27 @@ async function callGemini(prompt,signal,plain){
     throw aiErr('upstream_error',m.slice(0,120))}
   if(r.status===404){if(MODELS.gemini!=='gemini-flash-latest'&&!callGemini.fb){callGemini.fb=1;const was=MODELS.gemini;MODELS.gemini='gemini-flash-latest';try{return await callGemini(prompt,signal,plain)}catch(e){MODELS.gemini=was;throw e}}
     throw aiErr('upstream_error','Gemini 모델을 찾지 못했어요 ('+MODELS.gemini+') · 설정 → 고급에서 바꿔 주세요')}
-  if(r.status===429)throw aiErr('rate_limited');
+  if(r.status===429)throw retryable(aiErr('rate_limited'));
+  if(r.status>=500)throw retryable(aiErr('busy','Gemini 서버가 잠시 바빠요'));
   if(!r.ok)throw aiErr('upstream_error','Gemini 서버 오류 (HTTP '+r.status+')');
-  const j=await r.json(); keyBad.gemini=false;
+  let j; try{j=await r.json()}catch(_){throw retryable(aiErr('upstream_error','답을 받다가 끊겼어요'))}
+  keyBad.gemini=false;
   const c=(j.candidates||[])[0]||{}, text=((c.content||{}).parts||[]).filter(p=>!p.thought).map(p=>p.text||'').join('');
-  if(!text) throw aiErr('upstream_error',c.finishReason==='SAFETY'?'Gemini가 답을 거절했어요':c.finishReason==='MAX_TOKENS'?'답이 너무 길어 잘렸어요':'Gemini가 빈 답을 보냈어요');
+  if(!text) throw c.finishReason==='SAFETY'?aiErr('upstream_error','Gemini가 답을 거절했어요'):c.finishReason==='MAX_TOKENS'?aiErr('too_long','답이 너무 길어 잘렸어요'):retryable(aiErr('upstream_error','Gemini가 빈 답을 보냈어요'));
+  if(c.finishReason==='MAX_TOKENS') throw aiErr('too_long','답이 너무 길어 잘렸어요',text);
   return text;
 }
 // light jobs (quick tier) → Gemini Flash if connected, else Claude Haiku; everything else → Claude Sonnet
 let aiWho='AI';
+// A short hiccup (server busy, a dropped connection, a reply that is not JSON) is tried again after a short wait,
+// then the other AI if both are connected. Only "stopped by the person" and a wrong key stop right away.
+const retryable=e=>{e.retry=true;return e};
+const aiWait=(ms,signal)=>new Promise((ok,no)=>{const t=setTimeout(ok,ms);if(signal)signal.addEventListener('abort',()=>{clearTimeout(t);no(aiErr(signal.reason==='timeout'?'timeout':'cancelled'))},{once:true})});
 function makeSample(){
   const hasC=!!KEYS.anthropic, hasG=!!KEYS.gemini; if(!hasC&&!hasG) return null;
   return {json:async(prompt,opts={})=>{
     const light=opts.modelTier==='quick';
-    const ctl=new AbortController(), outer=opts.signal, limit=light?60000:100000;
+    const ctl=new AbortController(), outer=opts.signal, limit=light?90000:180000;
     if(outer){if(outer.aborted)ctl.abort();else outer.addEventListener('abort',()=>ctl.abort(),{once:true})}
     const tm=setTimeout(()=>ctl.abort('timeout'),limit), signal=ctl.signal;
     try{
@@ -1630,10 +1646,15 @@ function makeSample(){
     let last=null;
     for(const w of order){
       if(w==='c'&&!hasC||w==='g'&&!hasG) continue;
-      aiWho=w==='g'?'Gemini':'Claude';
-      try{const text=w==='g'?await callGemini(prompt,signal):await callClaude(prompt,light?MODELS.light:MODELS.heavy,signal);return pickJSON(text)}
-      catch(e){if(signal.aborted&&signal.reason==='timeout'&&!(outer&&outer.aborted))throw aiErr('timeout',`${aiWho}가 ${limit/1000}초 안에 답하지 않았어요`);
-        if(e.code==='cancelled'||e.code==='invalid_json')throw e;last=e}
+      for(let n=0;n<3;n++){
+        aiWho=w==='g'?'Gemini':'Claude';
+        try{const text=w==='g'?await callGemini(prompt,signal):await callClaude(prompt,light?MODELS.light:MODELS.heavy,signal);return pickJSON(text)}
+        catch(e){if(signal.aborted&&signal.reason==='timeout'&&!(outer&&outer.aborted))throw aiErr('timeout',`${aiWho}가 ${limit/1000}초 안에 답하지 않았어요`);
+          if(e.code==='cancelled')throw e; last=e;
+          if(e.code==='not_granted'||e.code==='too_long') break;                 // the same again would not help: try the other AI
+          if(n===2||!(e.retry||(e.code==='invalid_json'&&n===0))) break;
+          await aiWait(e.code==='rate_limited'?4000:1500*(n+1),signal)}
+      }
     }
     throw last||aiErr('upstream_error');
     }finally{clearTimeout(tm)}
