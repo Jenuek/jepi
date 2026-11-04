@@ -13,7 +13,7 @@ function saveBlockMemo(){const f=$('#bmForm');if(!f)return;
   // the sheet can redraw between typing and tapping 저장, so keep what was typed (bmDraft)
   const k=f.dataset.bm, v=String(bmDraft&&bmDraft.k===k?bmDraft.v:$('#bmIn').value).trim().slice(0,60), m=memoStore(); bmDraft=null;
   if(v) m.b[k]=v; else delete m.b[k];
-  store.set('gp.profile',profile); closeSheet(); renderAll(); showToast(v?'메모를 남겼어요':'메모를 지웠어요');
+  TRIP.save('profile',profile); closeSheet(); renderAll(); showToast(v?'메모를 남겼어요':'메모를 지웠어요');
 }
 document.addEventListener('click',e=>{if(e.target.closest('#bmSave'))saveBlockMemo()});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='bmIn'&&!e.isComposing){e.preventDefault();saveBlockMemo()}});

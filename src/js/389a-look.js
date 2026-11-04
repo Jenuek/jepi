@@ -84,7 +84,7 @@ function saveLook(){
   lookCollect(); const L=lookDraft;
   profile.look={color:L.color,pop:L.pop,cover:L.cover,tagline:L.tagline.trim().slice(0,40),style:L.style,hand:L.hand,photo:L.cover==='photo'?L.photo:''};
   const t=L.titles.map(x=>String(x||'').trim().slice(0,40)); while(t.length&&!t[t.length-1])t.pop(); profile.dayTitles=t;
-  store.set('gp.profile',profile);
+  TRIP.save('profile',profile);
   const p=plans.find(x=>x.id===curPlan), nm=L.name.trim().slice(0,30); if(p&&nm&&nm!==p.name){p.name=nm;p.custom_name=true;savePlans()}
   closeSheet(); renderAll(); showToast('여행을 꾸몄어요');
 }

@@ -50,7 +50,7 @@ document.addEventListener('click',e=>{
     return}
   if(t.id==='onbExample'){if(onbBusy)return;demoEnter();return}
   if(t.dataset.radio&&!t.closest('#helper')){if(t.dataset.radio.startsWith('style.'))styleOpen=true;let v=t.dataset.val;if(v==='true')v=true;else if(v==='false')v=false;if(draft){setPath(draft,t.dataset.radio,v);if(t.dataset.radio==='mode')draft.local=v==='car'?'car':'transit';if(t.dataset.radio==='party.type'){const q=draft.party;if(v==='couple')q.adults=2;if(v==='friends'&&q.adults<2)q.adults=3;if(v==='family'){if(q.adults<2)q.adults=2;if(!q.kids)q.kids=1;draft.pace='slow'}fixProfile(draft)}rerenderForm()}return}
-  if(t.dataset.kwtoggle){const k=t.dataset.kwtoggle,i=kws.findIndex(x=>norm(x)===norm(k));if(i>=0)kws.splice(i,1);else kws.push(k);store.set('gp.kw',kws);{const L=window.JEPI_UI.live(t);if(L)L.pressed(i<0);else t.setAttribute('aria-pressed',String(i<0))}renderPref();return}
+  if(t.dataset.kwtoggle){const k=t.dataset.kwtoggle,i=kws.findIndex(x=>norm(x)===norm(k));if(i>=0)kws.splice(i,1);else kws.push(k);TRIP.kws.save(kws);{const L=window.JEPI_UI.live(t);if(L)L.pressed(i<0);else t.setAttribute('aria-pressed',String(i<0))}renderPref();return}
   if(t.dataset.addstay&&draft){const n=nightsOf(draft);draft.stays.push({name:'숙소 '+(draft.stays.length+1),area:firstArea(),checkin:'15:00',checkout:'11:00',from:Math.max(0,n-1),to:n});rerenderForm();return}
   if(t.dataset.delstay!=null&&draft){draft.stays.splice(+t.dataset.delstay,1);rerenderForm();return}
   if(t.dataset.addev&&draft){draft.events.push({name:'',day:0,start:'19:00',end:'21:00',area:firstArea()});rerenderForm();return}
@@ -69,17 +69,17 @@ document.addEventListener('click',e=>{
   if(t.dataset.kwdel!=null){kws.splice(+t.dataset.kwdel,1);saveKw();return}
   if(t.dataset.kwadd){if(!kws.some(k=>norm(k)===norm(t.dataset.kwadd)))kws.push(t.dataset.kwadd);saveKw();return}
   if(t.id==='kwReset'){kws=DEFAULT_KW.slice();saveKw();return}
-  if(t.dataset.meal){meals[day]=Math.max(0,Math.min((PACK.snack||1000)*20,mealOf(day)+ +t.dataset.meal));store.set('gp.meal2',meals);renderBudget();return}
+  if(t.dataset.meal){meals[day]=Math.max(0,Math.min((PACK.snack||1000)*20,mealOf(day)+ +t.dataset.meal));TRIP.save('meals',meals);renderBudget();return}
   if(t.dataset.fill){place(t.dataset.fill,+t.dataset.start);closeSheet();renderAll();return}
   if(t.dataset.totray){closeSheet();tab='tray';renderTabs();return}
   if(t.id==='seasonBtn'){genSeason('st_season');return}
   if(t.id==='nudgeFlightIn'){goMe('가는 길');return}
-  if(t.id==='nudgeFlightNo'){profile.bookedFlight=false;store.set('gp.profile',profile);renderAll();openHelper(2);return}
+  if(t.id==='nudgeFlightNo'){profile.bookedFlight=false;TRIP.save('profile',profile);renderAll();openHelper(2);return}
   if(t.id==='nudgeStayIn'){if(profile.bookedStay===false){profile.bookedStay=true}goMe('숙소');return}
-  if(t.id==='nudgeStayNo'){profile.bookedStay=false;store.set('gp.profile',profile);renderAll();openHelper(wish.length?1:0);return}
+  if(t.id==='nudgeStayNo'){profile.bookedStay=false;TRIP.save('profile',profile);renderAll();openHelper(wish.length?1:0);return}
   if(t.id==='nudgeDate'){goMe('여행 기간');return}
   if(t.id==='nudgeTaste'){tab='pref';renderPref();renderTabs();return}
-  if(t.dataset.nudgeoff){profile.nudgeOff=Object.assign({},profile.nudgeOff,{[t.dataset.nudgeoff]:true});store.set('gp.profile',profile);renderNudges();return}
+  if(t.dataset.nudgeoff){profile.nudgeOff=Object.assign({},profile.nudgeOff,{[t.dataset.nudgeoff]:true});TRIP.save('profile',profile);renderNudges();return}
   if(t.id==='planNew'){newPlan();return}
   if(t.dataset.planopen){openPlan(t.dataset.planopen);return}
   if(t.dataset.plandup){dupPlan(t.dataset.plandup);return}
@@ -117,9 +117,9 @@ document.addEventListener('click',e=>{
   if(t.dataset.hotels){askHotels(t.dataset.hotels);return}
   if(t.id==='routeBtn'){askRoutes();return}
   if(t.dataset.wish){toggleWish(t.dataset.wish);if(!$('#helper').hidden)renderHelper();renderTray();return}
-  if(t.dataset.setarea){const k=t.dataset.setarea;profile.stayPicked=k;profile.stays.forEach((st,i)=>{if(i===0||profile.bookedStay===false){st.area=k;if(profile.bookedStay===false)st.name=`숙소 (미정 · ${AREAS[k][0]})`}});store.set('gp.profile',profile);buildDays();renderHelper();return}
+  if(t.dataset.setarea){const k=t.dataset.setarea;profile.stayPicked=k;profile.stays.forEach((st,i)=>{if(i===0||profile.bookedStay===false){st.area=k;if(profile.bookedStay===false)st.name=`숙소 (미정 · ${AREAS[k][0]})`}});TRIP.save('profile',profile);buildDays();renderHelper();return}
   if(t.dataset.slot){const [a,d]=t.dataset.slot.split(',').map(Number);setSlot(a,d);return}
-  if(t.closest('#helper')&&t.dataset.radio){let v=t.dataset.val==='true';profile[t.dataset.radio]=v;store.set('gp.profile',profile);renderHelper();return}
+  if(t.closest('#helper')&&t.dataset.radio){let v=t.dataset.val==='true';profile[t.dataset.radio]=v;TRIP.save('profile',profile);renderHelper();return}
   if(t.dataset.zoom){setZoom(+t.dataset.zoom);if(tab==='settings')renderSettings();return}
   if(t.dataset.vote){toggleRec(t.dataset.vote);return}
   if(t.dataset.pick){selected=selected===t.dataset.pick?null:t.dataset.pick;
@@ -132,7 +132,7 @@ document.addEventListener('click',e=>{
   if(t.id==='bannerCancel'){selected=null;renderAll();return}
   if(t.id==='resetBtn'){
     if(!resetArm){resetArm=true;renderChecks();return}
-    resetArm=false;fmarks={};store.set('gp.fmarks',fmarks);placed=DEFAULT.map(b=>({uid:'u'+(uidN++),id:b.id,day:b.day,start:b.start,dur:PM[b.id].dur}));save();renderAll();return}
+    resetArm=false;fmarks={};TRIP.save('fmarks',fmarks);placed=DEFAULT.map(b=>({uid:'u'+(uidN++),id:b.id,day:b.day,start:b.start,dur:PM[b.id].dur}));save();renderAll();return}
   if(t.id==='aiBtn'){openFind({when:'gap',into:'sched'});return}
   if(t.id==='aiStop'){aiState?.ctl?.abort();return}
   if(t.id==='aiClose'){aiState=null;renderAI();return}
@@ -144,7 +144,7 @@ document.addEventListener('click',e=>{
     if(t.dataset.swap&&b){b.id=t.dataset.swap;b.start=+t.dataset.start;b.dur=+t.dataset.dur;save();renderAll();openSheet(uid);return}
     if(t.dataset.mark){toggleMark(uid,t.dataset.mark);renderAll();openSheet(uid,{marksOpen:true});return}
     if(t.dataset.pairblock){makePairBlock(uid,t.dataset.pairblock);return}
-    if(t.dataset.home){profile.home.min=Math.max(10,Math.min(240,(+profile.home.min||60)+ +t.dataset.home));store.set('gp.profile',profile);buildDays();renderAll();openSheet('f0a');return}
+    if(t.dataset.home){profile.home.min=Math.max(10,Math.min(240,(+profile.home.min||60)+ +t.dataset.home));TRIP.save('profile',profile);buildDays();renderAll();openSheet('f0a');return}
     if(!b) return;
     if(t.dataset.mv){b.start=Math.max(dayStart(day),Math.min(1410,b.start+ +t.dataset.mv))}
     if(t.dataset.du){b.dur=Math.max(30,Math.min(720,b.dur+ +t.dataset.du))}
@@ -158,7 +158,7 @@ document.addEventListener('change',e=>{
   if(e.target.classList&&e.target.classList.contains('importFile')){importBackup(e.target.files&&e.target.files[0],ok=>{if(ok){maybeCoach()}});return}
   if(e.target.id==='diceLunch'){dice.lunch=e.target.checked;dice.pick=null;dice.msg='';renderDice();return}
   if(e.target.id==='catSel'){cat=e.target.value||'all';renderTray();return}
-  if(e.target.dataset.ck){done[e.target.dataset.ck]=e.target.checked;store.set('gp.done',done);renderChecks()}
+  if(e.target.dataset.ck){done[e.target.dataset.ck]=e.target.checked;TRIP.save('done',done);renderChecks()}
 });
 $('#sheetBg').addEventListener('click',e=>{if(e.target.id==='sheetBg')closeSheet()});
 document.addEventListener('submit',e=>{if(e.target.id!=='kwForm')return;e.preventDefault();

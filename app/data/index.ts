@@ -6,10 +6,13 @@ import { hashStr } from './hash';
 import { DEMO, DEMO_BACKUP, DEMO_LIVE, demoKeep, demoRestore, demoGuard, demoSaveCopy, demoClearTrips } from './demo';
 import { SYNC, SB_DEFAULT, loadSync, saveSync, syncOn, sbAuth, keepSess, sbToken, sbTable, sbRest, sbPublicGet, sbFunctionUrl } from './server';
 import { b64e, b64d, vaultMake, vaultKey, vaultSeal, vaultOpen } from './vault';
+import * as trip from './trip';
 import { status, syncDocs, syncSoon, syncPush, syncPull, syncNow, connectSync } from './sync';
 
 export const data = {
   storage, appError, hashStr,
+  /** the trip's data: saving, shapes, change listeners */
+  trip,
   demo: { DEMO, DEMO_BACKUP, DEMO_LIVE, demoKeep, demoRestore, demoSaveCopy, demoClearTrips },
   server: { SYNC, SB_DEFAULT, saveSync, syncOn, sbAuth, keepSess, sbToken, sbTable, sbRest, sbPublicGet, sbFunctionUrl },
   vault: { b64e, b64d, vaultMake, vaultKey, vaultSeal, vaultOpen },

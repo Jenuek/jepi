@@ -112,7 +112,7 @@ Coordinates must be accurate WGS84 to 4 decimals.`;
   try{
     const r=await sample.json(prompt,{cache:false,signal:ctl.signal}); const pk=cleanPack(r,dest);
     if(!pk){setSt('st_pack','여행지를 찾지 못했어요. 도시 이름을 조금 더 정확히 적어 주세요.');return false}
-    custom=[]; store.set('gp.custom',custom); placed=[]; save(); undoSnap=null;
+    custom=[]; TRIP.save('custom',custom); placed=[]; save(); undoSnap=null;
     loadPack(pk); savePack();
     if(draft){draft.dest=pk.city; draft.stays.forEach(s=>{s.area=firstArea();if(/시부야/.test(s.name))s.name='숙소'}); draft.events.forEach(e=>e.area=firstArea()); draft.out.airport=draft.back.airport=firstGw(); if(pk.intl) draft.mode='flight'}
     if($('#onb').hidden&&draft&&tab==='me')autoSave();setSt('st_pack',`${pk.city} 준비 완료 · 동네 ${pk.areas.length}곳 · 공항·역 ${pk.gateways.length}곳`); return true;
@@ -146,7 +146,7 @@ async function onbAdvance(){
     if(!dest){setSt('st_pack','여행지를 먼저 적어 주세요.');return}
     if(norm(dest)!==norm(PACK.city)){
       if(sample){if(!(await genPack(dest,'onbNext')))return}
-      else{custom=[];store.set('gp.custom',custom);placed=[];save();loadPack(manualPack(dest));savePack();draft.stays.forEach(s=>s.area=firstArea());draft.events.forEach(e=>e.area=firstArea());draft.out.airport=draft.back.airport=firstGw()}
+      else{custom=[];TRIP.save('custom',custom);placed=[];save();loadPack(manualPack(dest));savePack();draft.stays.forEach(s=>s.area=firstArea());draft.events.forEach(e=>e.area=firstArea());draft.out.airport=draft.back.airport=firstGw()}
     }
   }
   if(onbStep<ONB.length-1){onbStep++;renderOnb()} else await finishOnb();

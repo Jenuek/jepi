@@ -13,7 +13,7 @@ async function welcomeLogin(em,pw){
   try{
     await sbSignIn(em,pw,welcomeJoin); await syncNow();
     if(LS.get('jepi.joinCode','')){welcomeBusy=false;closeWelcome();if(!(await joinPending())&&firstRun)openOnb();return}
-    const mine=plans.filter(p=>p.id!==curPlan&&store.get('gp.plan.'+p.id,null)).sort((a,b)=>(b.updated||0)-(a.updated||0));
+    const mine=plans.filter(p=>p.id!==curPlan&&TRIP.plans.get(p.id)).sort((a,b)=>(b.updated||0)-(a.updated||0));
     welcomeBusy=false; closeWelcome();
     if(mine.length){curPlan='';openPlan(mine[0].id);startupFocus();showToast(`로그인했어요 · 계획 ${mine.length}개를 가져왔어요`)}
     else{openOnb();showToast('로그인했어요 · 아직 저장된 여행이 없어서 새로 만들어요')}
@@ -24,9 +24,9 @@ function demoEnter(){
   if(!JD.demo.demoSaveCopy()){showToast('저장 공간이 부족해서 데모를 열 수 없어요');return}
   JD.demo.demoClearTrips();
   const d=demoOsaka(), set=JD.storage.set;
-  set('gp.pack',d.pack); set('gp.profile',d.profile); set('gp.placed3',d.placed); set('gp.custom',[]); set('gp.kw',[]); set('gp.jp','J');
-  set('gp.plan.demo',{profile:d.profile,pack:d.pack,placed:d.placed});
-  set('gp.plans',[{id:'demo',name:d.name,custom_name:true,updated:Date.now(),kind:'trip',dates:'',blocks:d.placed.length}]); set('gp.cur','demo');
+  set('gp.pack',d.pack); TRIP.save('profile',d.profile); TRIP.save('placed',d.placed); TRIP.save('custom',[]); TRIP.kws.save([]); set('gp.jp','J');
+  TRIP.plans.put('demo',{profile:d.profile,pack:d.pack,placed:d.placed});
+  TRIP.plans.saveList([{id:'demo',name:d.name,custom_name:true,updated:Date.now(),kind:'trip',dates:'',blocks:d.placed.length}],'demo');
   try{sessionStorage.setItem(DEMO_LIVE,'1')}catch(_){}
   location.replace(location.pathname);
 }

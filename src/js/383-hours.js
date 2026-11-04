@@ -57,7 +57,7 @@ async function hoursSweep(){
     }
   }catch(e){if(e.code==='off')hoursOff=e.message}
   LS.set('jepi.hours',cache); hoursBusy=false;
-  if(changed){savePack();store.set('gp.custom',custom);renderAll();touchPlan()}
+  if(changed){savePack();TRIP.save('custom',custom);renderAll();touchPlan()}
 }
 function hoursHint(){
   if(!KEYS.gmaps) return '';

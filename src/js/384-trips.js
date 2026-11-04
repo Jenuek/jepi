@@ -49,7 +49,7 @@ function applyIfOpen(id,data,who){
 }
 async function tripPush(id){
   const p=planOf(id); if(!p||!p.shared||p.role==='view') return;
-  const mine=store.get('gp.plan.'+id,null), b=TRIPS.base[id]; if(!mine||(b&&JS(b.data)===JS(mine))) return;
+  const mine=TRIP.plans.get(id), b=TRIPS.base[id]; if(!mine||(b&&JS(b.data)===JS(mine))) return;
   stampMine(id,mine);
   for(let i=0;i<3;i++){
     const srv=(await sbTable('jepi_trips','GET',`?id=eq.${encodeURIComponent(id)}&select=rev,data`))[0];
@@ -57,7 +57,7 @@ async function tripPush(id){
     const next=b&&srv.rev!==b.rev?mergePlan(b.data,mine,srv.data):mine;
     const res=await sbTable('jepi_trips','PATCH',`?id=eq.${encodeURIComponent(id)}&rev=eq.${srv.rev}`,{data:next,rev:srv.rev+1,updated:Date.now(),last_by:myName(),name:p.name},'return=representation');
     if(res&&res.length){TRIPS.base[id]={rev:srv.rev+1,data:next};saveTripBase();
-      if(JS(next)!==JS(mine)){store.set('gp.plan.'+id,next);applyIfOpen(id,next)}return}
+      if(JS(next)!==JS(mine)){TRIP.plans.put(id,next);applyIfOpen(id,next)}return}
   }
 }
 async function tripsPull(){
@@ -74,24 +74,24 @@ async function tripsPull(){
       if(!p){p={id:r.id,name:r.name||'함께하는 여행',custom_name:true};plans.push(p);listChanged=true}
       if(!p.shared||p.role!==role){p.shared=true;p.role=role;listChanged=true}
       if(b&&b.rev===r.rev) continue;
-      const local=store.get('gp.plan.'+r.id,null);
+      const local=TRIP.plans.get(r.id);
       const next=!local||!b||role==='view'||JS(local)===JS(b.data)?r.data:mergePlan(b.data,local,r.data);
       if(!applyIfOpen(r.id,next,r.last_by)) continue;
-      store.set('gp.plan.'+r.id,next); Object.assign(p,{updated:+r.updated||Date.now()}); TRIPS.base[r.id]={rev:r.rev,data:r.data}; listChanged=true;
+      TRIP.plans.put(r.id,next); Object.assign(p,{updated:+r.updated||Date.now()}); TRIPS.base[r.id]={rev:r.rev,data:r.data}; listChanged=true;
       if(JS(next)!==JS(r.data)) setTimeout(()=>tripPush(r.id).catch(()=>{}),300);
     }
     const mk=await sbTable('jepi_trip_marks','GET',`?trip_id=in.(${ids.map(encodeURIComponent).join(',')})&select=trip_id,place_id,user_id,name`)||[];
     TRIPS.marks={}; mk.forEach(m=>{const t=TRIPS.marks[m.trip_id]=TRIPS.marks[m.trip_id]||{};(t[m.place_id]=t[m.place_id]||[]).push(m)});
   }
   saveTripBase();
-  if(listChanged){store.set('gp.plans',plans);renderPlans();renderExt()}
+  if(listChanged){TRIP.plans.saveList(plans,curPlan);renderPlans();renderExt()}
   if(curShared()) renderAll();
   if(tab==='friends') PANELS.friends.render();
 }
 SYNC_AFTER_PUSH.push(async()=>{for(const p of plans.filter(p=>p.shared)) await tripPush(p.id)});
 SYNC_AFTER_PULL.push(tripsPull);
 async function tripShare(){
-  snapshotCurrent(); const p=planOf(curPlan), data=store.get('gp.plan.'+curPlan,null); if(!p||!data) return;
+  snapshotCurrent(); const p=planOf(curPlan), data=TRIP.plans.get(curPlan); if(!p||!data) return;
   stampMine(curPlan,data);
   // one server function (jepi_share in schema.sql) makes the trip — or takes back a half-made one of mine —
   // and makes me its owner member, so the row rules can't stop it half-way

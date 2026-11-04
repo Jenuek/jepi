@@ -19,7 +19,7 @@ function openCustom(editId,startAt){
 function saveCustomForm(f){
   const editId=f.dataset.edit;
   const c={id:editId||('c'+Date.now().toString(36)),name:$('#cfName').value.trim()||'직접 만든 블록',area:$('#cfArea').value,cat:$('#cfCat').value,dur:+$('#cfDur').value||60,cost:Math.max(0,+$('#cfCost').value||0),memo:$('#cfMemo').value.trim(),tags:$('#cfTags').value.trim(),drop:$('#cfDrop').checked,share:!!($('#cfShare')&&$('#cfShare').checked)};
-  const i=custom.findIndex(x=>x.id===c.id); if(i>=0) custom[i]=c; else custom.push(c); store.set('gp.custom',custom); addCustomToData(c);
+  const i=custom.findIndex(x=>x.id===c.id); if(i>=0) custom[i]=c; else custom.push(c); TRIP.save('custom',custom); addCustomToData(c);
   if(!editId){const st=parse($('#cfStart').value);placed.push({uid:'u'+(uidN++),id:c.id,day,start:Math.max(dayStart(day),Math.min(1410,st??600)),dur:c.dur});save()}
   {const prev=editId?(custom.find(x=>x.id===c.id)||{}):{};if(recState==='on'&&(c.share||prev.share!==undefined))shareCustom(c,c.share)}
   closeSheet(); renderAll();

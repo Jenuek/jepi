@@ -1,7 +1,7 @@
 // ---------- booking helper: wish list → where to stay → flight times → search links ----------
 let wish=[], hStep=0, hVibe=null, hBusy=false;
 const isWish=id=>wish.includes(id);
-function toggleWish(id){const i=wish.indexOf(id);if(i>=0)wish.splice(i,1);else wish.push(id);store.set('gp.wish',wish)}
+function toggleWish(id){const i=wish.indexOf(id);if(i>=0)wish.splice(i,1);else wish.push(id);TRIP.save('wish',wish)}
 const needBooking=()=>profile.kind!=='day'&&(profile.bookedFlight===false||profile.bookedStay===false);
 const ymd=i=>{const d=dateOf(profile,i);return d?`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`:''};
 const guests=()=>({a:profile.party.adults||1,k:profile.party.kids||0});
@@ -55,7 +55,7 @@ Reply with only JSON: {"places":[{"name":"Korean name","local":"name in local la
     (Array.isArray(r&&r.places)?r.places:[]).slice(0,40).forEach(x=>{const ex=P.find(p=>norm(p.name)===norm(x&&x.name||''));
       if(ex){if(!isWish(ex.id))wish.push(ex.id);n++;return}
       const pl=cleanPlace(x);if(pl){PACK.places.push(pl);addPackPlace(pl);wish.push(pl.id);n++;added++}});
-    store.set('gp.wish',wish); savePack(); progStop(stId); renderHelper(); renderTray(); setSt(stId,n?`${n}곳에 ♥를 붙였어요${added?` (새로 찾은 곳 ${added}곳)`:''}.`:'목록에서 장소를 찾지 못했어요.');
+    TRIP.save('wish',wish); savePack(); progStop(stId); renderHelper(); renderTray(); setSt(stId,n?`${n}곳에 ♥를 붙였어요${added?` (새로 찾은 곳 ${added}곳)`:''}.`:'목록에서 장소를 찾지 못했어요.');
   }catch(e){setSt(stId,errText(e,'장소를 찾지 못했어요'))}
 }
 async function askVibes(){
@@ -99,6 +99,6 @@ let helperRev=0, slotPicked=null;
 function setSlot(a,d){
   const M=profile.mode, dur=PACK.intl?150:70;
   profile.out.arr=fmt(a); profile.out.dep=fmt(Math.max(0,a-dur)); profile.back.dep=fmt(d); profile.back.arr=fmt(Math.min(1439,d+dur));
-  store.set('gp.profile',profile); buildDays(); slotPicked=`${a},${d}`; renderHelper();
+  TRIP.save('profile',profile); buildDays(); slotPicked=`${a},${d}`; renderHelper();
 }
 

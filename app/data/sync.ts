@@ -5,6 +5,7 @@
 // The values themselves still live in the old code (src/js), which connects them with connectSync().
 // This file decides what to send and how to merge what comes back; the old code redraws the screens.
 import * as storage from './storage';
+import * as trip from './trip';
 import { hashStr } from './hash';
 import { SYNC, saveSync, syncOn, sbRest } from './server';
 import { vaultSeal, vaultOpen } from './vault';
@@ -48,7 +49,7 @@ interface Doc { id: string; kind: DocRow['kind']; data: any; updated: number }
 export function syncDocs(): Doc[] {
   const h = host!, out: Doc[] = [];
   h.plans().forEach(p => {
-    const d = storage.get<unknown>('gp.plan.' + p.id, null);
+    const d = trip.plans.get(p.id);
     if (!d || p.shared) return;   // shared trips sync through jepi_trips
     out.push({ id: 'plan:' + p.id, kind: 'plan', data: { meta: p, data: d }, updated: p.updated || Date.now() });
   });
@@ -117,7 +118,7 @@ export async function syncPull(): Promise<void> {
         const pid = r.id.slice(5), loc = h.plans().find(p => p.id === pid);
         if (loc && loc.shared) { SYNC.sent[r.id] = r.deleted ? 'x' : SYNC.sent[r.id]; continue }
         if (r.deleted) {
-          if (loc && pid !== h.curPlan()) { h.setPlans(h.plans().filter(p => p.id !== pid)); storage.del('gp.plan.' + pid); res.changed = true }
+          if (loc && pid !== h.curPlan()) { h.setPlans(h.plans().filter(p => p.id !== pid)); trip.plans.del(pid); res.changed = true }
           SYNC.sent[r.id] = 'x';
           continue;
         }
@@ -126,14 +127,14 @@ export async function syncPull(): Promise<void> {
         const hh = hashStr(JSON.stringify(v.data));
         if (loc && SYNC.sent[r.id] === hh) continue;
         if (!loc || (+r.updated) > (loc.updated || 0)) {
-          storage.set('gp.plan.' + pid, v.data);
+          trip.plans.put(pid, v.data);
           if (loc) Object.assign(loc, m, { updated: +r.updated });
           else h.plans().push(Object.assign({}, m, { updated: +r.updated }));
           SYNC.sent[r.id] = hh; res.changed = true;
           if (pid === h.curPlan()) res.curChanged = v.data;
         }
       } else if (r.kind === 'kw' && Array.isArray(data && data.kws) && (+r.updated) > storage.get('jepi.kwAt', 0)) {
-        h.setKws(data.kws.slice()); storage.set('gp.kw', h.kws()); storage.set('jepi.kwAt', +r.updated);
+        h.setKws(data.kws.slice()); trip.kws.save(h.kws()); storage.set('jepi.kwAt', +r.updated);
         SYNC.sent.kw = hashStr(JSON.stringify(data)); res.changed = true;
       } else if (r.kind === 'keys' && data && data.ct && storage.get('jepi.vk', null) && (+r.updated) > storage.get('jepi.keysAt', 0)) {
         let got: Record<string, string> | null = null;
@@ -150,7 +151,7 @@ export async function syncPull(): Promise<void> {
         SYNC.sent.myplaces = hashStr(JSON.stringify(data)); res.changed = true;
       }
     }
-    if (res.changed) { h.plans().sort((a, b) => (b.updated || 0) - (a.updated || 0)); storage.set('gp.plans', h.plans()) }
+    if (res.changed) { h.plans().sort((a, b) => (b.updated || 0) - (a.updated || 0)); trip.plans.saveList(h.plans(), h.curPlan()) }
     h.setErr(''); SYNC.at = Date.now(); saveSync();
   } catch (e: any) {
     h.setErr(e.message);

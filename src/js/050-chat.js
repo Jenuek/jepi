@@ -75,10 +75,10 @@ Marks are small to-dos attached to a block without taking time: bag+ leave lugga
 }
 function applyChat(i){const m=chat[i]; if(!m||m.state!=='pending') return;
   undoSnap={i,placed:clone(placed),custom:clone(custom),fmarks:clone(fmarks)};
-  applyOpsCore(m.ops.filter(o=>o.op!=='add_place')); store.set('gp.fmarks',fmarks);
-  store.set('gp.custom',custom); m.state='applied'; save(); renderAll();
+  applyOpsCore(m.ops.filter(o=>o.op!=='add_place')); TRIP.save('fmarks',fmarks);
+  TRIP.save('custom',custom); m.state='applied'; save(); renderAll();
 }
-function undoChat(i){if(!undoSnap||undoSnap.i!==i) return; placed=undoSnap.placed; custom=undoSnap.custom; fmarks=undoSnap.fmarks||fmarks; store.set('gp.fmarks',fmarks); custom.forEach(addCustomToData); store.set('gp.custom',custom); undoSnap=null; chat[i].state='cancelled'; chat[i].text+=' (되돌렸어요)'; save(); renderAll()}
+function undoChat(i){if(!undoSnap||undoSnap.i!==i) return; placed=undoSnap.placed; custom=undoSnap.custom; fmarks=undoSnap.fmarks||fmarks; TRIP.save('fmarks',fmarks); custom.forEach(addCustomToData); TRIP.save('custom',custom); undoSnap=null; chat[i].state='cancelled'; chat[i].text+=' (되돌렸어요)'; save(); renderAll()}
 function renderNudges(){
   const off=profile.nudgeOff||{}, C=[];
   if(profile.kind!=='day'&&!profile.flightSet&&profile.bookedFlight!==false&&!off.flight) C.push(['flight','✈️','교통편 시간을 알려 주세요','첫날 출발과 마지막 날 귀국 시간이 정확해져요.',[['nudgeFlightIn','시간 넣기',1],['nudgeFlightNo','아직 예약 전이에요']]]);

@@ -1016,6 +1016,25 @@ module.exports = [
     }
   },
   {
+    name: 'data: the trip in one place (JD.trip reads the live copy, tells listeners, keeps the old storage names)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await p.evaluate(() => { window.__heard = []; window.JEPI_DATA.trip.on(part => window.__heard.push(part)) });
+      const n0 = await p.evaluate(() => window.JEPI_DATA.trip.get('placed').length);
+      ok(n0 > 3 && await p.evaluate(() => window.JEPI_DATA.trip.get('profile').dest) !== undefined, 'get(): blocks and trip facts');
+      await p.click('#grid .blk:not(.fixed) >> nth=1'); await p.waitForTimeout(300); await p.click('#sheet [data-del="1"]'); await p.waitForTimeout(400);
+      const after = await p.evaluate(() => ({ live: window.JEPI_DATA.trip.get('placed').length, saved: JSON.parse(localStorage.getItem('gp.placed3')).length, heard: window.__heard }));
+      ok(after.live === n0 - 1 && after.saved === n0 - 1 && after.heard.includes('placed'), 'removing a block: live copy, saved copy (gp.placed3) and listeners agree ' + JSON.stringify(after.heard.slice(0, 6)));
+      ok(await p.evaluate(() => JSON.parse(localStorage.getItem('gp.placed3')).every(x => !('uid' in x))), 'blocks are saved without uids, as before');
+      await p.click('.tabs [data-tab="tray"]'); await p.click('#cards details[open] [data-wish] >> nth=0'); await p.waitForTimeout(200);
+      ok(await p.evaluate(() => window.__heard.includes('wish') && window.JEPI_DATA.trip.get('wish').length === JSON.parse(localStorage.getItem('gp.wish')).length), '♥: saved as gp.wish, listeners told');
+      await p.click('#planBtn'); await p.waitForTimeout(200); await p.click('#planMenu [data-pmact="new"]'); await p.waitForTimeout(500);
+      ok(await p.evaluate(() => { const cur = localStorage.getItem('gp.cur'); return JSON.parse(cur) === window.__jepi.state().cur && window.JEPI_DATA.trip.plans.current() === cur.replace(/"/g, '') && window.__heard.includes('plans') }), '새 계획: the open plan is saved (gp.cur) and listeners told (it joins the list once it is first saved, as before)');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
     name: 'friends: sharing again after a share that stopped half-way (trip on the server, no membership)',
     async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
       const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);

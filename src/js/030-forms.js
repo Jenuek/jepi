@@ -34,7 +34,7 @@ function openOnb(){draft=clone(profile);draft.startMode=undefined;draft.jpPicked
 function renderOnb(){const st=ONB[onbStep];$('#onbStep').textContent=ONB.length>1?`${onbStep+1} / ${ONB.length}`:'';
   const md=draft&&draft.startMode;$('#onbTitle').textContent=!draft.jpPicked?'어떤 여행자예요?':md==='pq'?'가볍게 시작해요':!md?'어떻게 시작할까요?':md==='talk'?'이번 여행, 어떤 여행이면 좋을까요?':md==='day'?'오늘 어디서 놀아요?':st.t;$('#onbSub').textContent=!draft.jpPicked?'고르는 쪽에 맞춰 화면과 시작 방법이 달라져요.':md==='pq'?'네 가지만 누르면 바로 굴릴 수 있어요.':!md?'편한 방법을 골라 주세요. 언제든 바꿀 수 있어요.':md==='talk'?'정답은 없어요. 떠오르는 대로 답하면 방향을 정리해 드릴게요.':md==='day'?'동네와 시간만 정하면 하루 코스를 바로 짤 수 있어요.':st.s;
   window.JEPI_UI.mount('onb',$('#onbBody'),{parts:st.f(fixProfile(draft)),rev:++onbRev});$('#onbPrev').disabled=onbStep===0;$('#onbPrev').hidden=ONB.length===1;$('#onbNext').textContent=onbStep===ONB.length-1?'일정표 만들기':'다음';$('#onbSkip').hidden=onbStep===ONB.length-1;$('#onbNext').hidden=!draft.jpPicked||!md||['talk','pq','day'].includes(md);$('#onb').scrollTop=0}
-function commitProfile(p){profile=fixProfile(clone(p));store.set('gp.profile',profile);store.set('gp.kw',kws);buildDays();placed=placed.filter(b=>b.day<DAYS.length);save();if(day>=DAYS.length)day=0}
+function commitProfile(p){profile=fixProfile(clone(p));TRIP.save('profile',profile);TRIP.kws.save(kws);buildDays();placed=placed.filter(b=>b.day<DAYS.length);save();if(day>=DAYS.length)day=0}
 async function finishOnb(){commitProfile(draft);day=0;
   if(sample&&!PACK.example&&!PACK.manual&&P.length<8){onbBusy=true;setBusy(true);placeCtl=new AbortController();
     const nx=$('#onbNext'),sk=$('#onbSkip'); nx.textContent='장소 찾는 중…'; sk.hidden=false; sk.disabled=false; sk.textContent='기다리지 않고 시작';
