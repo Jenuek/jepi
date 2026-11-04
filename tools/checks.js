@@ -1101,6 +1101,14 @@ module.exports = [
     }
   },
   {
+    name: 'the floating 🎲 button keeps its small die (the P board big die uses the same class names)',
+    async run({ b, S, device, ok, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      const size = await p.evaluate(() => { const f = document.getElementById('diceFab').getBoundingClientRect(); const fr = document.querySelector('#diceFab .cf.front').getBoundingClientRect(); return { fab: Math.round(f.width), face: Math.round(fr.width) } });
+      ok(size.face <= 36 && size.face < size.fab, 'the die inside the button stays inside it ' + JSON.stringify(size));
+    }
+  },
+  {
     name: 'friends: sharing again after a share that stopped half-way (trip on the server, no membership)',
     async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
       const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);

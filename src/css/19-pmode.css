@@ -95,16 +95,17 @@ body.mode-p #daySum,body.mode-p #sumBody,body.mode-p #phase,body.mode-p .dice-fa
 .pempty{background:#fbf1d9;border:3px solid var(--pk);border-radius:18px;padding:16px;display:grid;gap:10px}
 .pempty p{margin:0;font-family:var(--f-game);font-size:18px}
 .pspin{height:300px;display:flex;flex-direction:column;align-items:center;justify-content:center;perspective:700px}
-.cube{position:relative;width:96px;height:96px;transform-style:preserve-3d;animation:pspin 1s cubic-bezier(.25,.75,.3,1) both}
-.pdie.cf{position:absolute;inset:0;width:96px;height:96px;border-radius:18px;padding:12px;box-shadow:none;backface-visibility:hidden}
-.pdie.cf i{width:14px;height:14px}
-.cf.front{transform:translateZ(48px)}.cf.back{transform:rotateY(180deg) translateZ(48px)}.cf.right{transform:rotateY(90deg) translateZ(48px)}
-.cf.left{transform:rotateY(-90deg) translateZ(48px)}.cf.top{transform:rotateX(90deg) translateZ(48px)}.cf.bottom{transform:rotateX(-90deg) translateZ(48px)}
+/* only the big die on the P board (.pspin): the floating 🎲 button has its own small die with the same class names (14-die-motion.css) */
+.pspin .cube{position:relative;width:96px;height:96px;transform-style:preserve-3d;animation:pspin 1s cubic-bezier(.25,.75,.3,1) both}
+.pspin .pdie.cf{position:absolute;inset:0;width:96px;height:96px;border-radius:18px;padding:12px;box-shadow:none;backface-visibility:hidden}
+.pspin .pdie.cf i{width:14px;height:14px}
+.pspin .cf.front{transform:translateZ(48px)}.pspin .cf.back{transform:rotateY(180deg) translateZ(48px)}.pspin .cf.right{transform:rotateY(90deg) translateZ(48px)}
+.pspin .cf.left{transform:rotateY(-90deg) translateZ(48px)}.pspin .cf.top{transform:rotateX(90deg) translateZ(48px)}.pspin .cf.bottom{transform:rotateX(-90deg) translateZ(48px)}
 .pspin .shadow{width:90px;height:14px;border-radius:50%;background:rgba(43,34,48,.25);margin-top:36px;animation:pshadow 1s ease both}
 @keyframes pspin{0%{transform:translateY(-70px) rotateX(0) rotateY(0) rotateZ(0)}55%{transform:translateY(10px) rotateX(250deg) rotateY(200deg) rotateZ(40deg)}75%{transform:translateY(-12px) rotateX(330deg) rotateY(340deg) rotateZ(10deg)}100%{transform:translateY(0) rotateX(360deg) rotateY(360deg) rotateZ(0)}}
 @keyframes pshadow{0%{transform:scale(.5);opacity:.3}55%{transform:scale(1.05)}75%{transform:scale(.85)}100%{transform:scale(1);opacity:1}}
 @keyframes pflip{from{transform:rotate(-2deg) rotateY(90deg) scale(.9)}to{transform:rotate(-2deg) rotateY(0) scale(1)}}
-@media (prefers-reduced-motion:reduce){.cube,.pspin .shadow,.pcard{animation:none}}
+@media (prefers-reduced-motion:reduce){.pspin .cube,.pspin .shadow,.pcard{animation:none}}
 
 /* a day that hasn't opened yet */
 .pclosed{display:flex;align-items:center;gap:14px;background:#fbf1d9;border:3px solid var(--pk);border-radius:18px;box-shadow:0 6px 0 var(--pk);padding:14px}
