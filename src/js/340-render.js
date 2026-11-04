@@ -5,6 +5,7 @@ function renderDays(){
     return {date:`${D.date} ${WD[D.wd]}`,label:`Day ${i+1}${n?` · 경고 ${n}`:''}`,on:i===day}})});
 }
 function setZoom(h,quiet){h=h===100?100:60;document.documentElement.style.setProperty('--hour',h+'px');document.querySelectorAll('[data-zoom]').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.zoom===h)));if(!quiet){store.set('gp.zoom',h);renderTimeline()}}
+let gridRev=0;
 function renderTimeline(){
   const DAY_START=dayStart(day);
   const D=DAYS[day]; $('#dayTitle').textContent=dayTitleOf(day);
@@ -14,32 +15,26 @@ function renderTimeline(){
   {$('#daySub').textContent=`${D.date} (${WD[D.wd]})`;renderDaySum(items,trans,g)}
   const H=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hour'))||60;
   const y=m=>(m-DAY_START)/60*H;
-  let html='';
-  for(let h=DAY_START/60;h<DAY_END/60;h++){
-    html+=`<div class="hour"><span class="lbl">${String(h).padStart(2,'0')}:00</span>`+
-      `<button class="slot" style="top:0" data-t="${h*60}" aria-label="${h}시 00분에 넣기"></button>`+
-      `<button class="slot half" style="top:calc(var(--hour)/2)" data-t="${h*60+30}" aria-label="${h}시 30분에 넣기"></button></div>`;
-  }
-  for(const t of trans){
-    const top=y(Math.max(DAY_START,t.from)), hgt=Math.max(16,t.min/60*H);
-    html+=`<div class="trn${t.bad?' bad':''}" style="top:${top}px;height:${hgt}px"><span class="chip mono">${t.real?'':'≈'}${t.mode} ${t.min}분${t.lines?` · ${esc(t.lines)}`:''}${t.fare?` · ${yen(t.fare)}`:''}</span></div>`;
-  }
-  for(const it of items){
+  // drawn by React: app/screens/DayGrid.tsx
+  const hours=[]; for(let h=DAY_START/60;h<DAY_END/60;h++) hours.push(h);
+  const tr=trans.map(t=>({top:y(Math.max(DAY_START,t.from)),h:Math.max(16,t.min/60*H),bad:!!t.bad,text:`${t.real?'':'≈'}${t.mode} ${t.min}분${t.lines?` · ${t.lines}`:''}${t.fare?` · ${yen(t.fare)}`:''}`}));
+  const blocks=items.map(it=>{
     const top=y(Math.max(DAY_START,it.start)), hgt=Math.max(30,(it.end-Math.max(DAY_START,it.start))/60*H-2);
     const cls=['blk',it.kind==='fixed'?'fixed':'',it.warns.length?'bad':'',hgt<48?'compact':hgt<72?'short':''].join(' ');
     const full=`${fmt(it.start)}–${fmt(it.end)} ${it.name}${it.marks&&it.marks.length?' · '+it.marks.map(m=>MARKS[m][1]).join(', '):''}${it.warns.length?' · '+it.warns[0]:''}`;
-    html+=`<button class="${cls}" style="top:${top}px;height:${hgt}px;--cc:${it.cc}" data-uid="${it.uid}" title="${esc(full)}" aria-label="${esc(full)}" ${it.kind==='place'?'draggable="true"':''}>
-      <span class="bt">${hgt<48?`${fmt(it.start)} · ${durTxt(it.end-it.start)}`:`${fmt(it.start)}–${fmt(it.end)}`}</span><span class="bn">${it.warns.length?'<span class="bang" aria-hidden="true">!</span>':''}${extras(BLOCK_BADGES,it,day)}${it.marks&&it.marks.length?`<span class="mks">${[...new Set(it.marks.map(m=>MARKS[m][0]))].join('')}</span> `:''}${esc(it.name)}</span>${blockMemoHTML(it,day)}
-      ${hgt>=72?`<span class="ba">${esc(it.locName)}</span>`:''}</button>`;
-  }
+    return {uid:String(it.uid),cls,top,h:hgt,cc:String(it.cc),full,drag:it.kind==='place',time:hgt<48?`${fmt(it.start)} · ${durTxt(it.end-it.start)}`:`${fmt(it.start)}–${fmt(it.end)}`,
+      bang:!!it.warns.length,badgesHTML:extras(BLOCK_BADGES,it,day),marks:it.marks&&it.marks.length?[...new Set(it.marks.map(m=>MARKS[m][0]))].join(''):'',name:String(it.name),
+      memo:blockMemoOf(it,day)||'',loc:hgt>=72?String(it.locName??''):null}});
   // area bands: consecutive blocks (not lodging) in the same area group
-  const seq=items.filter(i=>!i.stay);
+  const bands=[], seq=items.filter(i=>!i.stay);
   for(let i=0;i<seq.length;){let j=i;while(j+1<seq.length&&seq[j+1].zone===seq[i].zone)j++;
     if(j>i){const top=y(Math.max(DAY_START,seq[i].start)),bot=y(seq[j].end),zn=ZONES[seq[i].zone];
-      html+=`<div class="zband" style="top:${top}px;height:${Math.max(20,bot-top)}px" title="${esc(zn)} 권역 ${fmt(seq[i].start)}–${fmt(seq[j].end)}">${bot-top>90?`<span>${esc(zn.split('·')[0])} 권역</span>`:''}</div>`}
+      bands.push({top,h:Math.max(20,bot-top),title:`${zn} 권역 ${fmt(seq[i].start)}–${fmt(seq[j].end)}`,label:bot-top>90?`${zn.split('·')[0]} 권역`:null})}
     i=j+1}
-  {const ss=sunsetMin();if(ss&&ss>DAY_START)html+=`<div class="sunline" style="top:${y(ss)}px"><span>🌇 일몰 ${fmt(ss)}</span></div>`}
-  const grid=$('#grid'); grid.innerHTML=html; grid.style.height=((DAY_END-DAY_START)/60*H)+'px';
+  const ss=sunsetMin();
+  const grid=$('#grid');
+  window.JEPI_UI.mount('grid',grid,{hours,trans:tr,blocks,bands,sunset:ss&&ss>DAY_START?{top:y(ss),text:`🌇 일몰 ${fmt(ss)}`}:null,rev:++gridRev});
+  grid.style.height=((DAY_END-DAY_START)/60*H)+'px';
   renderRoute(items,trans);
   renderBudget();
   renderPView();

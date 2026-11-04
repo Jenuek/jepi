@@ -17,6 +17,8 @@ export interface LiveHandle {
   disabled(b: boolean): void;
   /** toggle chip: pressed or not */
   pressed(b: boolean): void;
+  /** an extra class on or off (the time slot under a dragged card: "drop") */
+  cls(name: string, on: boolean): void;
 }
 
 const handles = new WeakMap<Element, LiveHandle>();
@@ -31,7 +33,8 @@ function useHandle(h: Partial<LiveHandle>) {
     const el = ref.current; if (!el) return;
     // apply right away, like the old direct writes (the old code may read the element back)
     const now = <T,>(f?: (v: T) => void) => f ? (v: T) => flushSync(() => f(v)) : noop;
-    handles.set(el, { text: now(h.text), busy: now(h.busy), label: now(h.label), disabled: now(h.disabled), pressed: now(h.pressed) });
+    handles.set(el, { text: now(h.text), busy: now(h.busy), label: now(h.label), disabled: now(h.disabled), pressed: now(h.pressed),
+      cls: h.cls ? (n: string, on: boolean) => flushSync(() => h.cls!(n, on)) : noop });
     return () => { handles.delete(el) };
   }, []);   // the setters below never change
   return ref;
@@ -60,4 +63,12 @@ export function LiveChip({ k, on }: { k: string; on: boolean }) {
   const [v, setV] = useState(on);
   const ref = useHandle({ pressed: setV });
   return <button type="button" data-kwtoggle={k} aria-pressed={v} ref={ref as RefObject<HTMLButtonElement>}>{k}</button>;
+}
+
+/** A time slot in the 일정표 (button.slot): the old drag code marks the one under the pointer through the handle. */
+export function LiveSlot({ t, half, label, top }: { t: number; half: boolean; label: string; top: string | number }) {
+  const [extra, setExtra] = useState<string[]>([]);
+  const ref = useHandle({ cls: (n: string, on: boolean) => setExtra(x => on ? (x.includes(n) ? x : [...x, n]) : x.filter(y => y !== n)) });
+  const cls = ['slot', ...(half ? ['half'] : []), ...extra].join(' ');
+  return <button className={cls} style={{ top }} data-t={t} aria-label={label} ref={ref as RefObject<HTMLButtonElement>} />;
 }

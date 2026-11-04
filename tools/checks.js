@@ -836,6 +836,31 @@ module.exports = [
     }
   },
   {
+    name: 'React screen: 일정표 블록 (drag a block: the slot under it lights up, drop moves it, highlight clears; memo shows; 넣기 → slot)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      const n0 = await p.$$eval('#grid .blk', e => e.length);
+      ok(n0 > 3 && await p.$$eval('#grid .slot', e => e.length) >= 30, 'blocks and time slots drawn (' + n0 + ')');
+      const uid = await p.getAttribute('#grid .blk[draggable="true"] >> nth=0', 'data-uid');
+      const startOf = () => p.evaluate(u => { const k = Object.keys(localStorage).find(k => k.endsWith('gp.placed3')); return (JSON.parse(localStorage.getItem(k)) || []).map(x => x.start) }, uid);
+      const before = await startOf();
+      const box = await p.$eval('#grid .slot[data-t="1290"]', el => { el.scrollIntoView({ block: 'center' }); const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 } });
+      const fire = (type, sel, x, y) => p.evaluate(([type, sel, x, y]) => { const dt = new DataTransfer(); const el = document.querySelector(sel); el.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y, dataTransfer: dt })) }, [type, sel, x, y]);
+      await fire('dragstart', `#grid .blk[data-uid="${uid}"]`, 0, 0);
+      await fire('dragover', '#grid', box.x, box.y);
+      ok(await p.$$eval('#grid .slot.drop', e => e.length) === 1 && await p.getAttribute('#grid .slot.drop', 'data-t') === '1290', 'the slot under the pointer lights up');
+      await fire('drop', '#grid', box.x, box.y); await p.waitForTimeout(300);
+      await fire('dragend', '#grid', 0, 0);
+      ok(JSON.stringify(await startOf()) !== JSON.stringify(before) && (await startOf()).includes(1290), 'drop moves the block to that time');
+      ok(await p.$$eval('#grid .slot.drop', e => e.length) === 0, 'the highlight clears');
+      await p.click('#grid .blk:not(.fixed) >> nth=0'); await p.waitForTimeout(300);
+      await p.fill('#bmIn', '사진!'); await p.click('#bmSave'); await p.waitForTimeout(300); await p.keyboard.press('Escape'); await p.waitForTimeout(300);
+      ok((await p.textContent('#grid')).includes('사진!') && await vis(p, '#grid .bmemo'), 'a handwritten memo shows on the block');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
     name: 'friends: sharing again after a share that stopped half-way (trip on the server, no membership)',
     async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
       const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);

@@ -80,6 +80,7 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 |---|---|
 | 첫 화면(새 여행·로그인·데모), 데모 시작/끝 | `381-welcome-demo.js`, 데모 칸막이 `app/data/demo.ts`, 데모 일정 `066-demo-osaka.js` |
 | 일정표 그리기 / 장소 탭 카드·필터 | `340-render.js` / 화면 `app/screens/Tray.tsx` (리액트, 카드에 넣을 값은 `340-render.js`의 `cardInfo`) |
+| 일정표 본체 (시간 줄·블록·이동·권역 띠·일몰 선) | 화면 `app/screens/DayGrid.tsx` (리액트), 값은 `340-render.js`의 renderTimeline, 끌어다 놓기 `380-events.js` |
 | 일정표 위쪽 (날짜 버튼·요약 줄·동선·예산) | 화면 `app/screens/DayTop.tsx` (리액트), 값은 `340-render.js`(renderDays·renderBudget·renderRoute)·`382-tidy.js`(요약 줄) |
 | 🎲 DICE 시트, 지도 아래 카드 | 화면 `app/screens/Dice.tsx` (리액트), 값은 `280-dice-eat.js`(뭐 먹지·diceMount)·`290-dice-do.js`(뭐 하지)·`160-modes-roll.js`(일정 빈 시간)·`210-map.js`(지도는 Leaflet 그대로) |
 | 준비하기 (일정 경고·준비할 것·이 시기 여행 팁·초기화) | 화면 `app/screens/Checks.tsx` (리액트), 값은 `340-render.js`의 `renderChecks`, 시즌 팁 `110-season.js` |

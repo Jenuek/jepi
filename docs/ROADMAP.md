@@ -70,7 +70,10 @@
   - [x] 일정표 ① 위쪽(`DayTop.tsx`): 날짜 버튼(#days)·요약 줄(#daySum)과 펼친 내용(#sumBody)·동선(#route)·예산(#budgetSum·#budget) — 48가지 캡처 모두 예전과 같음(`tools/compare/daytop.js`, 예산 넘을 때·여럿일 때 포함).
     굵은 글씨가 섞인 줄은 `segs(…)`로 글자 조각을 만들어 넘겨요(DayTop.tsx의 Line). 상자(#sumBody 숨기기, 패널의 sum-… 표시)는 예전 코드가 그대로 열고 닫아요.
     점검 추가. 🎲 점검이 주사위 난수에 따라 가끔 실패하던 것도 고침(난수 고정 + "그래도 넣기" 경우). 점검 259개 통과.
-  - [ ] 다음: 일정표 ② 블록·빈칸·이동·권역 띠·일몰 선(#grid, renderTimeline 본체 — 손글씨 메모 blockMemoHTML·BLOCK_BADGES 포함), ③ 블록 시트·빈 시간 시트(openSheet·openFill, #sheet).
+  - [x] 일정표 ② 본체(`DayGrid.tsx`, #grid): 시간 줄·빈칸·이동 칩·블록(손글씨 메모 포함)·권역 띠·일몰 선 — 6가지 상태 모두 예전과 같음(`tools/compare/grid.js`).
+    블록에 다른 기능이 더하는 표시(BLOCK_BADGES: 🔔·👍)만 예전 HTML 조각. 끌어다 놓을 때 빈칸 강조(.drop)는 예전 코드가 직접 바꾸던 것 → `LiveSlot`(live 연결).
+    점검 추가(끌어서 옮기기·강조·메모). 점검 265개 통과.
+  - [ ] 다음: 일정표 ③ 블록 시트·빈 시간 시트(openSheet·openFill, #sheet), P 모드 시간 구간 보기(renderPView).
     AI 붙여 넣기 칸(pasteBox·aiFill)도 live 방식으로.
   - 참고(예전 계획): 입력 폼 조각들(`030-forms.js`의 fParty·fBudget·fStay·fFlight·fHome·fEvents·dateFields·fStyle…, `140`·`160`·`170`의 fDest·fJP·fQuick·fTalk…)을
     하나씩 리액트로. 처음 설정(`renderOnb`)·이번 여행·취향(renderTasteStyle)이 같이 써요.
