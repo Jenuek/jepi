@@ -58,7 +58,10 @@
   - [x] 이야기하면서 정하기(`OnbTalk.tsx`)와 여행지 추천(`OnbFinder.tsx`, 카드·더 보기·궁금한 곳) — 가짜 AI로 13가지 상태 모두 예전과 같음(`tools/compare/onb-ai.js`).
     "여행 스타일 더"는 취향 탭과 같은 조각(`TasteStyle.tsx`의 StyleMore). 취향 키워드 칩은 누르면 예전 코드가 눌림 표시를 직접 바꿨는데 → `LiveChip`(live 연결)으로.
     이제 처음 설정·이번 여행·취향 탭에 예전 HTML 문자열 폼이 남아 있지 않아요(AI 붙여 넣기 칸만 예전 조각). 안 쓰던 fTaste도 지움. 점검 추가(대화·방향·칩·추천 카드·기다리는 동안 버튼). 점검 230개 통과.
-  - [ ] 다음: 장소 탭(renderTray), 준비하기(renderChecks), 지도·DICE, 마지막으로 일정표(renderTimeline). AI 붙여 넣기 칸(pasteBox·aiFill)도 live 방식으로.
+  - [x] 장소 탭의 필터와 카드 목록(`Tray.tsx`: #filters·#cards, 같은 곳 같아요 카드 포함) — 11가지 상태 모두 예전과 같음(`tools/compare/tray.js`).
+    예전 코드는 카드마다 보여 줄 값만 만들어요(`340-render.js`의 `cardInfo`, `388-dedup.js`의 `dupInfo`). 다른 기능이 카드에 더하는 것(CARD_EXTRAS: 친구 "가고 싶어요")만 예전 HTML 조각.
+    장소 탭의 위쪽(제목·추천 안내 #recSt·묶어 보기 버튼·이 날 문 여는 곳만·AI로 더 찾기)은 body.html 그대로. 점검 추가(♥·필터·분류·접힌 동네 유지·넣기). 점검 237개 통과.
+  - [ ] 다음: 준비하기(renderChecks), 지도·DICE, 마지막으로 일정표(renderTimeline). AI 붙여 넣기 칸(pasteBox·aiFill)도 live 방식으로.
   - 참고(예전 계획): 입력 폼 조각들(`030-forms.js`의 fParty·fBudget·fStay·fFlight·fHome·fEvents·dateFields·fStyle…, `140`·`160`·`170`의 fDest·fJP·fQuick·fTalk…)을
     하나씩 리액트로. 처음 설정(`renderOnb`)·이번 여행·취향(renderTasteStyle)이 같이 써요.
     방법: 칸 이름(`data-pf`, `data-radio`)은 그대로, 폼 전체는 다시 그릴 때마다 새로(rev 키) — 예전 코드가 값을 바꾼 뒤 다시 그리는 방식과 같아서 안전해요.

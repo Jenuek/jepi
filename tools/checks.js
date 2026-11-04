@@ -727,6 +727,35 @@ module.exports = [
     }
   },
   {
+    name: 'React screen: 장소 탭 (♥ stays after redraw, filters, 넣기 then a slot places it, 동네 folds stay folded)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await p.click('.tabs [data-tab="tray"]'); await p.waitForTimeout(300);
+      const n0 = await p.$$eval('#cards .card', e => e.length);
+      ok(n0 > 0 && await p.$$eval('#cards details.zone', e => e.length) > 0, 'cards grouped by 동네 (' + n0 + ')');
+      const id = await p.getAttribute('#cards details[open] .card >> nth=0', 'data-id');
+      await p.click(`#cards [data-wish="${id}"]`); await p.waitForTimeout(200);
+      ok(await p.textContent(`#cards [data-wish="${id}"]`) === '♥' && await p.getAttribute(`#cards [data-wish="${id}"]`, 'aria-pressed') === 'true', '♥ is on after the list redraws');
+      await p.click('#filters [data-cat="wish"]'); await p.waitForTimeout(200);
+      ok(await p.$$eval('#cards .card', e => e.length) === 1 && await p.getAttribute('#filters [data-cat="wish"]', 'aria-pressed') === 'true', '♥ filter: only that place');
+      await p.click('#filters [data-cat="all"]'); await p.selectOption('#catSel', 'food'); await p.waitForTimeout(200);
+      ok(await p.inputValue('#catSel') === 'food' && await p.$$eval('#cards .card', e => e.every(c => c.getAttribute('style').includes('--c-food'))), '분류: only 식사·카페');
+      await p.click('#filters [data-cat="all"]'); await p.waitForTimeout(200);
+      const z = await p.getAttribute('#cards details.zone[open] >> nth=0', 'data-zone');
+      await p.click(`#cards details.zone[data-zone="${z}"] > summary`); await p.waitForTimeout(100);
+      await p.click(`#cards [data-wish="${id}"]`).catch(() => {}); await p.waitForTimeout(200);
+      ok(!(await p.evaluate(z => document.querySelector(`#cards details.zone[data-zone="${z}"]`).open, z)), 'a folded 동네 stays folded after a redraw');
+      const pid = await p.getAttribute('#cards details[open] .card >> nth=0', 'data-id');
+      await p.click(`#cards [data-pick="${pid}"]`); await p.waitForTimeout(250);
+      if (!(await vis(p, '#grid'))) { await p.click('.tabs [data-tab="timeline"]'); await p.waitForTimeout(200) }
+      await p.click('#grid .slot >> nth=0'); await p.waitForTimeout(300);
+      await p.click('.tabs [data-tab="tray"]'); await p.waitForTimeout(200);
+      ok(!(await p.$(`#cards [data-id="${pid}"]`)) && (await p.textContent('#cards')).includes('목록에서 숨겼어요'), '넣기 → slot: placed, hidden from the list');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
     name: 'friends: sharing again after a share that stopped half-way (trip on the server, no membership)',
     async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
       const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);

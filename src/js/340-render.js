@@ -85,52 +85,50 @@ function renderTray(){
   const wd=DAYS[day].wd, openOnly=$('#openOnly').checked; $('#moreForm').hidden=!sample||PACK.manual;
   {const rs=$('#recSt'),h=recStatusHTML();rs.hidden=!h;rs.innerHTML=h}
   document.querySelectorAll('[data-group]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.group===group)));
-  $('#filters').innerHTML=[['all','전체'],['wish','♥'],...(P.some(p=>p.season)?[['season','🗓 시즌']]:[]),...(recState!=='off'?[['users','👍']]:[]),['must','★']].map(([k,v])=>`<button class="fchip" data-cat="${k}" aria-pressed="${cat===k}">${v}</button>`).join('')+`<select id="catSel" class="fsel" aria-label="분류"><option value="">분류 ▾</option>${Object.entries(CATS).map(([k,v])=>`<option value="${k}"${cat===k?' selected':''}>${v}</option>`).join('')}</select>`;
+  const cats=Object.entries(CATS);
+  window.JEPI_UI.mount('trayFilters',$('#filters'),{chips:[['all','전체'],['wish','♥'],...(P.some(p=>p.season)?[['season','🗓 시즌']]:[]),...(recState!=='off'?[['users','👍']]:[]),['must','★']],cats,cat,rev:++trayRev});
   const used=new Set(placed.map(b=>b.id));
   const inCat=P.filter(p=>!(cat==='all'&&p.drop)&&(cat==='all'||(cat==='wish'?isWish(p.id):cat==='season'?!!p.season:cat==='must'?!!MUST[p.id]:cat==='users'?(recOf(p)>0||p.shared):p.cat===cat))&&(!openOnly||(!closedOn(p,wd)&&!outOfSeason(p,DAYS[day].iso))));
   const list=inCat.filter(p=>!used.has(p.id));
   const nHidden=inCat.length-list.length;
-  const hiddenNote=dupHTML()+(nHidden?`<p class="now-hint" style="margin:0 0 4px">일정에 넣은 ${nHidden}곳은 목록에서 숨겼어요.</p>`:'');
-  if(!list.length){$('#cards').innerHTML=hiddenNote+`<p class="now-hint">${P.length?'이 조건에서 남은 후보지가 없어요.':sample&&!PACK.manual?'아직 장소 후보가 없어요. 위에서 AI로 찾아보세요.':'장소 후보가 없어요. 타임라인의 "+ 직접 만들기"로 블록을 만들어 쓰세요.'}</p>`;return}
+  // drawn by React: app/screens/Tray.tsx
+  const show=(empty,groups)=>window.JEPI_UI.mount('trayCards',$('#cards'),{dups:dupInfo(),hidden:nHidden,empty,groups,rev:++trayRev});
+  if(!list.length){show(P.length?'이 조건에서 남은 후보지가 없어요.':sample&&!PACK.manual?'아직 장소 후보가 없어요. 위에서 AI로 찾아보세요.':'장소 후보가 없어요. 타임라인의 "+ 직접 만들기"로 블록을 만들어 쓰세요.',[]);return}
   const refs=dayRefs();
   let rows=list.map(p=>({p,near:nearestRef(p,refs)}));
+  const card=x=>cardInfo(x.p,wd,used,x.near);
   const fresh=rows.filter(x=>FRESH.has(x.p.id)); rows=rows.filter(x=>!FRESH.has(x.p.id));
-  const freshHTML=fresh.length?`<details class="zone fresh" open><summary><b>✨ 방금 찾은 곳<span class="mono">${fresh.length}</span></b><span class="d near">AI가 새로 찾았어요</span></summary><div class="cards">${fresh.map(x=>cardHTML(x.p,wd,used,x.near)).join('')}</div></details>`:'';
+  const freshG=fresh.length?[{kind:'fresh',name:'✨ 방금 찾은 곳',near:true,note:'AI가 새로 찾았어요',cards:fresh.map(card)}]:[];
   if(group==='pop'){ // people's 👍 first (all travelers), then friends' 가고 싶어요, then my ♥
     const fw=p=>curShared()?wantsOf(p.id).length:0;
     rows.sort((a,b)=>recOf(b.p)-recOf(a.p)||fw(b.p)-fw(a.p)||isWish(b.p.id)-isWish(a.p.id)||a.near.d-b.near.d);
-    $('#cards').innerHTML=hiddenNote+freshHTML+rows.map(x=>cardHTML(x.p,wd,used,x.near)).join('');return}
+    show(null,[...freshG,{kind:'list',cards:rows.map(card)}]);return}
   if(group==='list'){
     rows.sort((a,b)=>isWish(b.p.id)-isWish(a.p.id)||(!!b.p.season)-(!!a.p.season)||(!!MUST[b.p.id])-(!!MUST[a.p.id])||recOf(b.p)-recOf(a.p)||matchKw(b.p.id).length-matchKw(a.p.id).length||a.near.d-b.near.d);
-    $('#cards').innerHTML=hiddenNote+freshHTML+rows.map(x=>cardHTML(x.p,wd,used,x.near)).join('');return}
+    show(null,[...freshG,{kind:'list',cards:rows.map(card)}]);return}
   const zones={}; rows.forEach(x=>{const z=ZONE_OF[x.p.id]||'outer';(zones[z]=zones[z]||[]).push(x)});
   const order=Object.entries(zones).map(([z,arr])=>{arr.sort((a,b)=>a.near.d-b.near.d);return {z,arr,d:arr[0].near.d}}).sort((a,b)=>a.d-b.d);
-  $('#cards').innerHTML=hiddenNote+freshHTML+order.map((g,i)=>{
+  show(null,[...freshG,...order.map((g,i)=>{
     const open=zoneOpen[g.z]??(i<2); const n=g.arr[0].near, t=travel(n.r.ll,g.arr[0].p.ll);
-    const dtxt=i===0?'오늘 일정과 가장 가까워요':`가장 가까운 일정에서 ${t?`${t.mode} 약 ${t.min}분`:'바로'}`;
-    return `<details class="zone" data-zone="${g.z}"${open?' open':''}><summary><b>${esc(ZONES[g.z])}<span class="mono">${g.arr.length}</span></b><span class="d${i===0?' near':''}">${dtxt}</span></summary>
-      <div class="cards">${g.arr.map(x=>cardHTML(x.p,wd,used,x.near)).join('')}</div></details>`}).join('');
+    return {kind:'zone',zone:g.z,name:ZONES[g.z],open,near:i===0,note:i===0?'오늘 일정과 가장 가까워요':`가장 가까운 일정에서 ${t?`${t.mode} 약 ${t.min}분`:'바로'}`,cards:g.arr.map(card)}})]);
 }
-function cardHTML(p,wd,used,near){
-    const h=hoursFor(p,wd), off=closedOn(p,wd), oos=outOfSeason(p,DAYS[day].iso), mk=matchKw(p.id);
-    let dist=''; if(near){const t=travel(near.r.ll,p.ll);dist=`<div class="dist">${esc(near.r.name)}에서 ${t?`${t.mode} 약 ${t.min}분`:'바로 옆'}</div>`}
-    const key=off?`<span class="tag w">${WD[wd]} 휴관</span>`:oos?`<span class="tag w">이 날은 기간 아님</span>`:p.season?`<span class="tag r">🗓 ${esc(p.season)}</span>`:mustOf(p.id)?`<span class="tag r">★ 추천</span>`:mk.length?`<span class="tag kwt">#${esc(mk[0])}</span>`:'';
-    const row=[`<button class="vote" data-wish="${p.id}" aria-pressed="${isWish(p.id)}" aria-label="가고 싶어요">${isWish(p.id)?'♥':'♡'}</button>`,
-      recState!=='off'?`<button class="vote" data-vote="${p.id}" aria-pressed="${iRec(p)}" aria-label="추천하기"${recState==='readonly'&&!recPublic()?' disabled':''}>👍 ${recOf(p)}</button>`:'',
-      extras(CARD_EXTRAS,p),`<span class="tag mono">${p.dur}분</span>`,key].join('');
-    const det=[p.shared||p.fromUsers?`<span class="tag usr">${p.userMade?'여행자가 올린 곳':'여행자 추천'}</span>`:'',
-      mustOf(p.id)?`<span class="tag r">★ ${esc(mustOf(p.id))}</span>`:'',...mk.map(k=>`<span class="tag kwt">#${esc(k)}</span>`),
-      `<span class="tag mono">${costOf(p.id)[0]?yen(costOf(p.id)[0]):'무료'}</span>`,
-      h?`<span class="tag mono">${fmt(h[0])}–${fmt(h[1])}</span>`:`<span class="tag">언제든</span>`,
-      p.closed&&p.closed.length?`<span class="tag">${p.closed.map(w=>WD[w]).join('·')} 휴관</span>`:'',
-      p.season&&p.dates?`<span class="tag r">🗓 ${mdTxt(p.dates[0])||''}~${mdTxt(p.dates[1])||''}</span>`:'',
-      p.best&&p.best!=='any'?`<span class="tag">${BEST_KO[p.best]}에 좋아요</span>`:'',
-      p.check?`<span class="tag">준비: ${esc(p.check)}</span>`:'',
-      p.gone?`<span class="tag r">폐업했을 수 있어요</span>`:p.hsrc==='google'?`<span class="tag ok">영업시간 확인됨</span>`:p.verify==='영업시간'&&p.ll&&inKR(p.ll)?`<span class="tag">영업시간 추정</span>`:p.verify?`<span class="tag">확인 필요: ${esc(p.verify)}</span>`:''].join('');
-    return `<div class="card${selected===p.id?' sel':''}${off||oos?' off':''}" style="--cc:var(--c-${p.cat})" draggable="true" data-id="${p.id}">
-      <div class="nm">${esc(p.name)}</div><button class="small-btn primary" data-pick="${p.id}">${selected===p.id?'선택됨':'넣기'}</button>
-      <div class="sub">${esc(p.area)} · ${esc(p.note)}</div>${dist}<div class="tags">${row}</div>
-      <details class="cmore"><summary>자세히</summary><div class="tags">${det}</div></details></div>`;
+let trayRev=0;
+// one place card (drawn by React: Tray.tsx Card)
+function cardInfo(p,wd,used,near){
+    const h=hoursFor(p,wd), off=closedOn(p,wd), oos=outOfSeason(p,DAYS[day].iso), mk=matchKw(p.id), T=(c,t)=>({c,t});
+    let dist=''; if(near){const t=travel(near.r.ll,p.ll);dist=`${near.r.name}에서 ${t?`${t.mode} 약 ${t.min}분`:'바로 옆'}`}
+    const key=off?T('tag w',`${WD[wd]} 휴관`):oos?T('tag w','이 날은 기간 아님'):p.season?T('tag r',`🗓 ${p.season}`):mustOf(p.id)?T('tag r','★ 추천'):mk.length?T('tag kwt',`#${mk[0]}`):null;
+    const det=[p.shared||p.fromUsers?T('tag usr',p.userMade?'여행자가 올린 곳':'여행자 추천'):null,
+      mustOf(p.id)?T('tag r',`★ ${mustOf(p.id)}`):null,...mk.map(k=>T('tag kwt',`#${k}`)),
+      T('tag mono',costOf(p.id)[0]?yen(costOf(p.id)[0]):'무료'),
+      h?T('tag mono',`${fmt(h[0])}–${fmt(h[1])}`):T('tag','언제든'),
+      p.closed&&p.closed.length?T('tag',`${p.closed.map(w=>WD[w]).join('·')} 휴관`):null,
+      p.season&&p.dates?T('tag r',`🗓 ${mdTxt(p.dates[0])||''}~${mdTxt(p.dates[1])||''}`):null,
+      p.best&&p.best!=='any'?T('tag',`${BEST_KO[p.best]}에 좋아요`):null,
+      p.check?T('tag',`준비: ${p.check}`):null,
+      p.gone?T('tag r','폐업했을 수 있어요'):p.hsrc==='google'?T('tag ok','영업시간 확인됨'):p.verify==='영업시간'&&p.ll&&inKR(p.ll)?T('tag','영업시간 추정'):p.verify?T('tag',`확인 필요: ${p.verify}`):null].filter(Boolean);
+    return {id:String(p.id),name:String(p.name),sub:`${p.area} · ${p.note}`,cat:String(p.cat),sel:selected===p.id,off:!!(off||oos),dist,wish:!!isWish(p.id),
+      vote:recState!=='off'?{on:!!iRec(p),n:recOf(p),locked:recState==='readonly'&&!recPublic()}:null,extrasHTML:extras(CARD_EXTRAS,p),dur:p.dur,key,det};
 }
 function openFill(t){
   const D=DAYS[day], wd=D.wd, {items}=analyze(day);

@@ -24,12 +24,10 @@ function dupPairs(){
     const a=mine[i],b=mine[j]; if(samePlace(a,b)&&!no.has(dupNoKey(a.id,b.id))){out.push([a,b]);break}}
   return out;
 }
-function dupHTML(){
-  const pairs=dupPairs(); if(!pairs.length) return '';
+// the "같은 곳 같아요" cards at the top of 장소 (drawn by React: Tray.tsx)
+function dupInfo(){
   const who=p=>p.custom?'직접 추가':p.by?`${p.by} 추천`:p.ai||FRESH.has(p.id)?'AI가 찾음':'장소 목록';
-  return pairs.map(([a,b])=>`<div class="dup-card"><div class="dup-h"><b>🔗 같은 곳 같아요</b><span class="hint">${a.custom||b.custom?'이름이 비슷해요':'위치가 가깝고 이름이 비슷해요'}</span></div>
-    <div class="dup-row"><span class="tag">${esc(who(a))}</span> ${esc(a.name)}</div><div class="dup-row"><span class="tag">${esc(who(b))}</span> ${esc(b.name)}</div>
-    <div class="row"><button class="small-btn primary" type="button" data-dupmerge="${a.id}~${b.id}">하나로 묶기</button><button class="small-btn" type="button" data-dupno="${a.id}~${b.id}">다른 곳이에요</button></div></div>`).join('');
+  return dupPairs().map(([a,b])=>({a:a.id,b:b.id,why:a.custom||b.custom?'이름이 비슷해요':'위치가 가깝고 이름이 비슷해요',aWho:who(a),aName:a.name,bWho:who(b),bName:b.name}));
 }
 function mergePlaces(aId,bId){
   let a=PM[aId], b=PM[bId]; if(!a||!b) return;

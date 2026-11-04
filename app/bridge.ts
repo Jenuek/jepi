@@ -15,6 +15,7 @@ import { FindSheet, type FindSheetProps } from './screens/FindSheet';
 import { MeRows, type MeRowsProps } from './screens/MeRows';
 import { TasteStyle, type TasteStyleProps } from './screens/TasteStyle';
 import { OnbBody, type OnbBodyProps } from './screens/OnbBody';
+import { TrayCards, TrayFilters, type TrayCardsProps, type TrayFiltersProps } from './screens/Tray';
 import { liveOf, type LiveHandle } from './ui/live';
 
 // Every screen React owns, with the props the old code must pass.
@@ -30,6 +31,8 @@ export interface Screens {
   me: MeRowsProps;
   tasteStyle: TasteStyleProps;
   onb: OnbBodyProps;
+  trayCards: TrayCardsProps;
+  trayFilters: TrayFiltersProps;
 }
 
 const SCREENS: { [K in keyof Screens]: ComponentType<Screens[K]> } = {
@@ -44,6 +47,8 @@ const SCREENS: { [K in keyof Screens]: ComponentType<Screens[K]> } = {
   me: MeRows,
   tasteStyle: TasteStyle,
   onb: OnbBody,
+  trayCards: TrayCards,
+  trayFilters: TrayFilters,
 };
 
 export interface JepiUI {
