@@ -5,12 +5,13 @@ import { useState } from 'react';
 import * as trip from '../data/trip';
 import { memo } from '../logic';
 import { app } from '../ui/host';
+import * as alerts from '../data/alerts';
 export type Extra =
   | { k: 'badge'; t: string; title: string }
   | { k: 'want'; pid: string; on: boolean; n: number; who: string }
   | { k: 'tag'; cls: string; t: string }
   | { k: 'wantRow'; want: Extract<Extra, { k: 'want' }>; by: string }
-  | { k: 'alert'; on: boolean; hint: string }
+  | { k: 'alert'; key: string; on: boolean; hint: string }
   | { k: 'memo'; key: string; value: string };
 
 function Want({ x }: { x: Extract<Extra, { k: 'want' }> }) {
@@ -49,7 +50,8 @@ function One({ x }: { x: Extra }) {
     case 'tag': return <span className={x.cls}>{x.t}</span>;
     case 'wantRow': return <div className="row"><Want x={x.want} />{x.by && <span className="hint">{`${x.by} 추천`}</span>}</div>;
     case 'alert': return (
-      <div className="row alert-row"><button className={x.on ? 'small-btn primary' : 'small-btn'} type="button" data-alert={x.on ? 'off' : 'on'}>{`🔔 ${x.on ? '알림 켜짐' : '알림 켜기'}`}</button><span className="hint">{x.hint}</span></div>
+      <div className="row alert-row"><button className={x.on ? 'small-btn primary' : 'small-btn'} type="button" data-alert={x.on ? 'off' : 'on'}
+        onClick={() => { alerts.setBlock(x.key, !x.on); app().reopenSheet(); app().renderAll() }}>{`🔔 ${x.on ? '알림 켜짐' : '알림 켜기'}`}</button><span className="hint">{x.hint}</span></div>
     );
     case 'memo': return <MemoBox x={x} />;
   }

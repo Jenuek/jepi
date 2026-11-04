@@ -16,7 +16,7 @@ let settingsRev=0;
 // AI·지도 연결 is drawn by React: app/screens/AiKeysSection.tsx. Only the masked keys go there.
 function settingsAI(){return {standalone:!!STANDALONE,editing:keyEdit,show:!!keyShow,hasGemini:!!KEYS.gemini,routesOk:+routeStats.ok||0,
   models:{heavy:MODELS.heavy,light:MODELS.light,gemini:MODELS.gemini},
-  hours:KEYS.gmaps?{use:+hoursUse(),cap:HOURS_CAP,off:hoursOff||''}:null,
+  hours:KEYS.gmaps?{use:+hoursUse(),cap:HOURS_CAP,off:JD.hours.state.off||''}:null,
   keys:Object.keys(KEY_DEF).map(k=>{const d=KEY_DEF[k];return {k,name:d.name,sub:d.sub,ph:d.ph,masked:KEYS[k]?maskKey(KEYS[k]):'',bad:isBad(k),msg:keyMsg[k]||'',helpHTML:KEY_HELP[k]}})}}
 function renderSettings(){
   const el=$('#setBox'); if(!el) return;

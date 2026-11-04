@@ -147,7 +147,7 @@ const MUST={
  shelter:'일본 인디 록의 산실. 당일권으로 들어가 보는 경험'
 };
 const mustOf=id=>MUST[id]||'';
-const norm=k=>String(k).replace(/\s+/g,'').toLowerCase();
+const norm=JD.logic.places.norm;   // app/logic/places.ts
 let KRW_PER_JPY=8.4; // 100엔 = 약 840원 (2026-10-28 기준)
 const yen=n=>((PACK&&PACK.symbol)||'¥')+Math.round(n).toLocaleString('ko-KR');
 const won=n=>'₩'+(Math.round(n/10)*10).toLocaleString('ko-KR');

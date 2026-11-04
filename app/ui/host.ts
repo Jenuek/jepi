@@ -5,6 +5,8 @@ export interface AppHost {
   /** redraw everything that shows the trip */
   renderAll(): void;
   closeSheet(): void;
+  /** draw the open block sheet again (after something in it changed) */
+  reopenSheet(): void;
   toast(msg: string): void;
   /** the day shown now (0 = Day 1) */
   day(): number;

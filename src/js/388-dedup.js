@@ -1,19 +1,8 @@
 // ---------- same place twice: catch it when adding, offer to merge what is already doubled ----------
 // "Same place" = within 100 m and a similar name (one contains the other, or most letter pairs match).
 // Nothing is merged automatically: a branch of the same chain can sit next door.
-function nameSim(a,b){
-  const x=norm(a).replace(/[^\p{L}\p{N}]/gu,''), y=norm(b).replace(/[^\p{L}\p{N}]/gu,'');
-  if(!x||!y) return 0; if(x===y) return 1; if(x.includes(y)||y.includes(x)) return .9;
-  const bi=s=>{const m=new Map();for(let i=0;i<s.length-1;i++){const g=s.slice(i,i+2);m.set(g,(m.get(g)||0)+1)}return m};
-  const A=bi(x),B=bi(y); let hit=0; A.forEach((n,g)=>{hit+=Math.min(n,B.get(g)||0)});
-  return 2*hit/Math.max(1,(x.length-1)+(y.length-1));
-}
-function samePlace(p,q){
-  if(!p||!q||p.id===q.id) return false;
-  if(p.gid&&q.gid) return p.gid===q.gid;
-  const near=p.ll&&q.ll&&!p.custom&&!q.custom?km(p.ll,q.ll)<0.1:true; // hand-made blocks sit at the area centre: judge by name only
-  return near&&(nameSim(p.name,q.name)>=.6||(p.local&&q.local&&nameSim(p.local,q.local)>=.6));
-}
+// the rules live in app/logic/places.ts
+const nameSim=JD.logic.places.nameSim, samePlace=JD.logic.places.samePlace;
 const dupOf=pl=>P.find(p=>!p.shared&&samePlace(p,pl))||null;
 
 // --- already doubled: suggest merging at the top of the 장소 tab ---

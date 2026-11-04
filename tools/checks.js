@@ -1210,6 +1210,56 @@ module.exports = [
     }
   },
   {
+    name: 'logic: 알림 reminders (app/logic/alerts.ts) — time zones, 출발할 때 / 시작할 때, morning summary',
+    async run({ b, S, device, ok }) {
+      const p = await device(b, S);
+      const r = await p.evaluate(() => {
+        const A = window.JEPI_DATA.logic.alerts, fmt = window.JEPI_DATA.logic.time.fmt;
+        const t = A.localToUtc('2027-01-10', 600, 'Asia/Tokyo');           // 10:00 in Tokyo = 01:00 UTC
+        const tz = [new Date(t).toISOString(), A.tripTZ({ country: '일본' }), A.tripTZ({ tz: 'Europe/Paris', country: '일본' }), A.tripTZ({ currency: 'KRW' })].join('|');
+        const rows = [{ key: 'a@0', name: '미술관', start: 600, end: 700, locName: '우에노' }, { key: 'b@0', name: '카페', start: 780, end: 840, travelIn: { min: 20, mode: '전철', fromName: '미술관' } }];
+        const s = { on: true, all: true, lead: 10, depart: true, morning: true };
+        const now = Date.UTC(2027, 0, 1);
+        const L = A.alertList('p1', [{ iso: '2027-01-10', rows }], s, () => true, 'Asia/Tokyo', fmt, now);
+        const only = A.alertList('p1', [{ iso: '2027-01-10', rows }], Object.assign({}, s, { morning: false }), k => k === 'b@0', 'Asia/Tokyo', fmt, now);
+        const atStart = A.alertList('p1', [{ iso: '2027-01-10', rows }], Object.assign({}, s, { depart: false, morning: false }), () => true, 'Asia/Tokyo', fmt, now);
+        const past = A.alertList('p1', [{ iso: '2027-01-10', rows }], s, () => true, 'Asia/Tokyo', fmt, Date.UTC(2027, 0, 11));
+        const hm = x => new Date(x.t + 9 * 3600000).toISOString().slice(11, 16);   // back to Tokyo time
+        return { tz, n: L.length, morning: L[0].title + ' ' + hm(L[0]) + ' ' + L[0].body, depart: L[2].title + ' ' + hm(L[2]), start: hm(atStart[1]) + ' ' + atStart[1].title, only: only.map(x => x.id).join(), past: past.length };
+      });
+      ok(r.tz === '2027-01-10T01:00:00.000Z|Asia/Tokyo|Europe/Paris|Asia/Seoul', 'Tokyo 10:00 → 01:00 UTC, the trip time zone by country / its own / Korea ' + r.tz);
+      ok(r.n === 3 && r.morning === '☀️ 오늘 일정 · Day 1 08:00 10:00 미술관 → 13:00 카페', 'morning summary at 08:00 with the first blocks ' + r.morning);
+      ok(r.depart === '🚶 10분 뒤 출발 · 카페 12:30', '출발할 때: start minus the ride minus 10 min ' + r.depart);
+      ok(r.start === '12:50 ⏰ 10분 뒤 · 카페', '시작할 때: 10 min before the start ' + r.start);
+      ok(r.only === 'p1:b@0', 'only the blocks that are on');
+      ok(r.past === 0, 'nothing that is already past');
+    }
+  },
+  {
+    name: 'logic: 영업시간 from Google (app/logic/hours.ts) and same-place rules (app/logic/places.ts)',
+    async run({ b, S, device, ok }) {
+      const p = await device(b, S);
+      const r = await p.evaluate(() => {
+        const { hours, places } = window.JEPI_DATA.logic;
+        const P = (d, oh, om, ch, cm, cd) => ({ open: { day: d, hour: oh, minute: om }, close: { day: cd ?? d, hour: ch, minute: cm } });
+        const week = hours.fromGoogle({ periods: [1, 2, 3, 4, 5].map(d => P(d, 10, 0, 18, 0)).concat([P(6, 10, 0, 20, 30)]) });   // closed Sunday, Saturday later
+        const late = hours.fromGoogle({ periods: [P(5, 18, 0, 2, 0, 6)] });   // Friday 18:00 → Saturday 02:00
+        const always = hours.fromGoogle({ periods: [{ open: { day: 0, hour: 0 } }] });
+        const pl = { verify: '영업시간', hours: [600, 1200] }; hours.apply(pl, week);
+        const A = { id: 'a', name: '이치란 라멘 도톤보리점', ll: [34.6687, 135.5013] };
+        return { week: JSON.stringify(week), late: JSON.stringify(late.hours), always: !!always.always, applied: pl.hsrc + '|' + (pl.verify === undefined) + '|' + pl.closed.join(),
+          sim: [places.nameSim('이치란 라멘', '이치란라멘 도톤보리점'), places.nameSim('ABC', 'xyz')].map(x => x.toFixed(1)).join(),
+          same: [places.samePlace(A, { id: 'b', name: '이치란 라멘', ll: [34.6688, 135.5014] }), places.samePlace(A, { id: 'c', name: '이치란 라멘', ll: [34.70, 135.50] }), places.samePlace(A, { id: 'd', name: '이치란 라멘', custom: true })].join() };
+      });
+      ok(r.week === '{"hours":[600,1080],"hoursBy":{"6":[600,1230]},"closed":[0]}', 'weekdays 10–18, Saturday till 20:30, closed Sunday ' + r.week);
+      ok(r.late === '[1080,1440]', 'open past midnight counts to the end of the day');
+      ok(r.always === true, 'open all the time');
+      ok(r.applied === 'google|true|0', 'applied: marked as checked by Google, the "확인 필요" goes away');
+      ok(r.sim === '0.9,0.0', 'name likeness: one name inside the other · nothing alike');
+      ok(r.same === 'true,false,true', 'same place: next door with the name · far away is not · hand-made judged by name');
+    }
+  },
+  {
     name: 'friends: sharing again after a share that stopped half-way (trip on the server, no membership)',
     async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
       const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);

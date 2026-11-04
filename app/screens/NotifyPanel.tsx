@@ -1,5 +1,6 @@
 // 더보기 → 알림 (it used to be PANELS.notify in src/js/386-notify.js).
-// Buttons keep their data-ntf / data-nset names: the old code does the work (subscribing, the server).
+// The buttons do the work themselves (app/data/alerts.ts: subscribing, the server); names data-ntf / data-nset stay.
+import * as alerts from '../data/alerts';
 export interface NotifySettings {
   on: boolean;
   /** every block (true) or only the blocks with 🔔 (false) */
@@ -29,7 +30,8 @@ function Radio({ k, opts, value }: { k: string; opts: Opt[]; value: unknown }) {
   return (
     <div className="radio">
       {opts.map(([v, l]) => (
-        <button key={String(v)} type="button" data-nset={k} data-val={String(v)} aria-pressed={String(value) === String(v)}>{l}</button>
+        <button key={String(v)} type="button" data-nset={k} data-val={String(v)} aria-pressed={String(value) === String(v)}
+          onClick={() => alerts.set(k as 'all' | 'lead' | 'depart' | 'morning', v === 'true' ? true : v === 'false' ? false : +v)}>{l}</button>
       ))}
     </div>
   );
@@ -52,9 +54,9 @@ function Device({ mode, on, busy }: { mode: NotifyPanelProps['mode']; on: boolea
   return <>
     <div className="srow" style={{ margin: 0 }}>
       <span><b>이 기기에서 알림 받기</b><br /><small className="hint">{on ? '켜져 있어요' : '꺼져 있어요'}</small></span>
-      <button className={'small-btn' + (on ? '' : ' primary')} type="button" data-ntf={on ? 'off' : 'on'} disabled={busy}>{on ? '끄기' : '켜기'}</button>
+      <button className={'small-btn' + (on ? '' : ' primary')} type="button" data-ntf={on ? 'off' : 'on'} disabled={busy} onClick={() => alerts.run(on ? 'off' : 'on')}>{on ? '끄기' : '켜기'}</button>
     </div>
-    {on && <div className="row"><button className="small-btn" type="button" data-ntf="test" disabled={busy}>테스트 알림 보내기</button></div>}
+    {on && <div className="row"><button className="small-btn" type="button" data-ntf="test" disabled={busy} onClick={() => alerts.run('test')}>테스트 알림 보내기</button></div>}
   </>;
 }
 

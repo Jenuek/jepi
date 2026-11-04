@@ -9,6 +9,8 @@ import { b64e, b64d, vaultMake, vaultKey, vaultSeal, vaultOpen } from './vault';
 import * as trip from './trip';
 import * as merge from './merge';
 import * as ai from './ai';
+import * as alerts from './alerts';
+import * as hours from './hours';
 import * as logic from '../logic';
 import * as trips from './trips';
 import { status, syncDocs, syncSoon, syncPush, syncPull, syncNow, connectSync } from './sync';
@@ -21,6 +23,10 @@ export const data = {
   merge,
   /** the AI connection (Claude / Gemini) */
   ai,
+  /** 알림 (push reminders) */
+  alerts,
+  /** 영업시간 from Google Places */
+  hours,
   /** calculations: time text, distances, the day check (app/logic) */
   logic,
   /** 친구와 함께 on the server */
