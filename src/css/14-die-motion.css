@@ -15,7 +15,6 @@
 
 /* real 3D die inside the floating button */
 .dice-fab{perspective:180px;--cs:24px}
-body.mode-p .dice-fab{--cs:28px}
 .fab-die{display:block;width:var(--cs);height:var(--cs);transform-style:preserve-3d}
 .cube{position:relative;display:block;width:100%;height:100%;transform-style:preserve-3d;transform:rotateX(-22deg) rotateY(32deg);will-change:transform}
 .cf{position:absolute;inset:0;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);padding:14%;box-sizing:border-box;background:#fbfbf8;border-radius:22%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08),inset -2px -2px 4px rgba(0,0,0,.12);backface-visibility:hidden}
@@ -35,3 +34,7 @@ body.mode-p .dice-fab{--cs:28px}
 .sb-form input{height:44px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font:inherit;font-size:16px;background:var(--surface);color:var(--ink)}
 .sb-form .small-btn{min-height:44px}
 
+/* P 모드: while the board's own dice / roll button is on screen, the floating 🎲 steps aside (fabDodge in 300-intro-header.js) */
+.dice-fab{transition:opacity .2s ease,transform .2s ease}
+body.fab-dodge .dice-fab{opacity:0;transform:scale(.7);pointer-events:none}
+@media (prefers-reduced-motion:reduce){.dice-fab{transition:none}}

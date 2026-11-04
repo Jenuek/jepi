@@ -35,7 +35,7 @@ function startupFocus(){
 }
 function renderPlanBtn(){const b=$('#planBtn');if(!b)return;const p=plans.find(x=>x.id===curPlan);$('#planName').textContent=(p&&p.name)||planName()}
 const inside=sel=>{const a=document.activeElement;return !!(a&&a.closest&&a.closest(sel))};
-function renderExt(){document.body.classList.toggle('no-fab',!['timeline','tray'].includes(tab));renderPhase();renderMore();renderPlanBtn();
+function renderExt(){renderPhase();renderMore();renderPlanBtn();
   if(tab==='me'&&$('#onb').hidden&&!inside('#meBox'))renderMeRows();
   if(tab==='pref'&&!inside('#tasteStyle'))renderTasteStyle();
   if(tab==='settings'&&!inside('#setBox'))renderSettings();

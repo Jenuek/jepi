@@ -24,7 +24,6 @@ body.mode-p{--accent:#c0397f;--accent-soft:#fbe3ef}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) body.mode-p{--accent:#f28fc0;--accent-soft:#3a1f2d}}
 :root[data-theme="dark"] body.mode-p{--accent:#f28fc0;--accent-soft:#3a1f2d}
 body.mode-p #budgetBox,body.mode-p #route,body.mode-p .nudge,body.mode-p .seg,body.mode-p #filters,body.mode-p #side-tray .toggle,body.mode-p .cmore,body.mode-p #aiBtn,body.mode-p .card .dist,body.mode-p #moreForm{display:none!important}
-body.mode-p .dice-fab{width:64px;height:64px;font-size:30px}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5;
