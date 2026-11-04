@@ -956,7 +956,6 @@ function flightLinks(){
   L.push(['네이버 항공권',`https://flight.naver.com/`]);
   return L;
 }
-const linkRow=L=>L.length?`<div class="links">${L.map(([n,u])=>`<a class="small-btn" href="${u}" target="_blank" rel="noopener">${esc(n)} ↗</a>`).join('')}</div>`:'';
 function areaScores(){
   const tg=[...wish.filter(id=>PM[id]).map(id=>({ll:PM[id].ll,w:MUST[id]?1.5:1})),...(profile.events||[]).filter(e=>AREAS[e.area]).map(e=>({ll:[AREAS[e.area][1],AREAS[e.area][2]],w:3}))];
   const gw=AIRPORTS[profile.out.airport];
@@ -1004,49 +1003,38 @@ Reply with only JSON: {"areas":[{"key":"area key","vibe":"one Korean sentence on
     hVibe={}; (Array.isArray(r&&r.areas)?r.areas:[]).forEach(a=>{if(AREAS[a.key])hVibe[a.key]=a}); progStop('st_vibe');
   }catch(e){setSt('st_vibe',errText(e,'정리하지 못했어요'))} finally{hBusy=false;renderHelper()}
 }
-function openHelper(step){hStep=step||0;$('#meBox').innerHTML='';$('#helper').hidden=false;renderHelper()}
+function openHelper(step){hStep=step||0;slotPicked=null;$('#meBox').innerHTML='';$('#helper').hidden=false;renderHelper()}
 function closeHelper(){$('#helper').hidden=true;renderAll();maybeCoach();if(tab==='me'){draft=clone(profile);renderMe()}}
 const H_STEPS=['가고 싶은 곳 고르기','숙소 동네 정하기','교통편 시간대 정하기','예약하고 일정에 넣기'];
 function renderHelper(){
   const el=$('#helperBody'); if(!el||$('#helper').hidden) return;
   $('#helperStep').textContent=`${hStep+1} / ${H_STEPS.length}`; $('#helperTitle').textContent=H_STEPS[hStep];
   $('#helperPrev').disabled=hStep===0; $('#helperNext').textContent=hStep===H_STEPS.length-1?'일정표로 가기':'다음';
-  let h='';
+  // drawn by React: app/screens/HelperBody.tsx
+  let st;
   if(hStep===0){
     const list=P.filter(p=>!p.drop).sort((a,b)=>isWish(b.id)-isWish(a.id)||(!!MUST[b.id])-(!!MUST[a.id])||matchKw(b.id).length-matchKw(a.id).length);
-    h=`<p class="onb-sub">끌리는 곳에 ♥만 누르세요. 고른 곳을 기준으로 숙소 동네를 추천해요. 3곳 이상 고르면 정확해져요. <b>지금 ♥ ${wish.filter(id=>PM[id]).length}곳</b></p>
-    ${sample?`<div class="fsec"><h3>미리 찾아 둔 곳이 있다면</h3><textarea id="wishPaste" rows="3" placeholder="가고 싶은 곳 이름을 줄마다 하나씩 붙여 넣으세요 (지도 저장 목록, 메모 등)"></textarea><div class="row"><button class="small-btn primary" type="button" id="wishPasteBtn">목록에서 ♥ 붙이기</button><span class="ai-status" id="st_wish"></span></div></div>`:''}
-    <div class="wish-list">${list.length?list.map(p=>`<button type="button" class="wish-item" data-wish="${p.id}" aria-pressed="${isWish(p.id)}"><span class="hrt">${isWish(p.id)?'♥':'♡'}</span><span><b>${esc(p.name)}</b><small>${esc(p.area)} · ${esc(CATS[p.cat]||'')}${MUST[p.id]?' · ★':''}${recOf(p)?` · 👍${recOf(p)}`:''}</small><small>${esc(p.note||'')}</small></span></button>`).join(''):'<p class="hint">아직 장소 후보가 없어요. 위 칸에 붙여 넣거나 장소 블록 탭에서 AI로 찾아 주세요.</p>'}</div>`;
+    st={s:0,count:wish.filter(id=>PM[id]).length,list:list.map(p=>({id:String(p.id),on:!!isWish(p.id),name:String(p.name),sub:`${p.area} · ${CATS[p.cat]||''}${MUST[p.id]?' · ★':''}${recOf(p)?` · 👍${recOf(p)}`:''}`,note:p.note||''}))};
   }else if(hStep===1){
-    const sc=areaScores().slice(0,3), cur=profile.bookedStay===false?profile.stayPicked:(profile.stays[0]||{}).area, nW=wish.filter(id=>PM[id]).length;
-    h=`<p class="onb-sub">${nW?`♥ ${nW}곳${(profile.events||[]).length?'과 예약한 일정':''}까지 이동 시간이 가장 짧은 동네예요.`:'♥를 고르지 않아서 공항 접근성 위주로 계산했어요. 1단계에서 ♥를 고르면 더 정확해져요.'} 이동 시간은 직선거리 기준 추정이에요.</p>
-    ${sc.map((a,i)=>{const v=hVibe&&hVibe[a.k];return `<div class="fsec area-card${cur===a.k?' sel':''}"><h3>${i+1}. ${esc(a.name)}${cur===a.k?' · 선택함':''}</h3>
-      <p class="mono hint">♥ 장소까지 평균 ${Math.round(a.avg)}분 · 15분 안에 ${a.near}곳 · ${esc(apName(profile.out.airport))}까지 약 ${a.air}분</p>
-      ${v?`<p>${esc(v.vibe||'')}</p><p class="hint">${v.good?'추천: '+esc(v.good):''}${v.caution?' · 주의: '+esc(v.caution):''}</p>`:''}
-      <div class="row"><button class="small-btn${cur===a.k?'':' primary'}" type="button" data-setarea="${a.k}">${cur===a.k?'선택한 동네예요':'이 동네로 정하기'}</button></div>
-      ${roomCap()?`<p class="hint">🏷 예산 기준 1박 약 ${won(roomCap())} 이하${heads()>1?` (${heads()}명 객실)`:''} · 부킹닷컴·에어비앤비 링크에 가격 상한을 넣었어요</p>`:''}${linkRow(hotelLinks(a.name))}
-      ${sample?`<div class="row" style="margin-top:8px"><button class="small-btn" type="button" id="hotelBtn_${a.k}" data-hotels="${a.k}">${hotelRecs[a.k]?'숙소 후보 다시 받기':'이 동네 숙소 후보 보기'}</button><span class="ai-status" id="st_hotel_${a.k}"></span></div>`:''}${hotelRecHTML(a.k)}</div>`}).join('')}
-    ${sample?`<div class="row"><button class="small-btn" type="button" id="vibeBtn">AI에게 동네 분위기 물어보기</button><span class="ai-status" id="st_vibe"></span></div>`:''}
-    <p class="hint">링크를 누르면 날짜·인원·동네가 채워진 검색 결과가 새 창으로 열려요. 사이트에 따라 일부 조건은 다시 골라야 할 수 있어요.</p>`;
+    const sc=areaScores().slice(0,3), cur=profile.bookedStay===false?profile.stayPicked:(profile.stays[0]||{}).area, nW=wish.filter(id=>PM[id]).length, cap=roomCap();
+    st={s:1,intro:`${nW?`♥ ${nW}곳${(profile.events||[]).length?'과 예약한 일정':''}까지 이동 시간이 가장 짧은 동네예요.`:'♥를 고르지 않아서 공항 접근성 위주로 계산했어요. 1단계에서 ♥를 고르면 더 정확해져요.'} 이동 시간은 직선거리 기준 추정이에요.`,
+      cards:sc.map(a=>{const v=hVibe&&hVibe[a.k];return {k:a.k,name:String(a.name),sel:cur===a.k,line:`♥ 장소까지 평균 ${Math.round(a.avg)}분 · 15분 안에 ${a.near}곳 · ${apName(profile.out.airport)}까지 약 ${a.air}분`,
+        vibe:v?{vibe:v.vibe||'',good:`${v.good?'추천: '+v.good:''}${v.caution?' · 주의: '+v.caution:''}`}:null,
+        cap:cap?`🏷 예산 기준 1박 약 ${won(cap)} 이하${heads()>1?` (${heads()}명 객실)`:''} · 부킹닷컴·에어비앤비 링크에 가격 상한을 넣었어요`:'',links:hotelLinks(a.name),
+        hotelLabel:hotelRecs[a.k]?'숙소 후보 다시 받기':'이 동네 숙소 후보 보기',hotels:hotelInfo(a.k)}})};
   }else if(hStep===2){
     const sl=flightSlots().slice(0,4), M=profile.mode;
-    h=`<p class="onb-sub">${M==='car'?'자동차 여행이라 출발 시간만 정하면 돼요.':'시간대별로 여행지에서 실제로 쓸 수 있는 시간을 비교했어요. 첫날과 마지막 날만 달라지고, 가운데 날은 같아요.'}</p>
-    ${M==='car'?'':sl.map((s,i)=>`<div class="fsec"><h3>${i+1}. ${s.an} · ${s.dn}</h3><p class="mono hint">첫날·마지막 날 합쳐 약 ${Math.round(s.h*10)/10}시간 자유 시간</p>${s.notes.length?`<p class="hint">${s.notes.map(esc).join(' · ')}</p>`:''}
-      <div class="row"><button class="small-btn" type="button" data-slot="${s.a},${s.d}">이 시간대로 가정하기</button></div></div>`).join('')}
-    <p class="hint">보통 인기 시간대가 더 비싸요. 가격 차이와 자유 시간을 같이 보고 고르세요.</p>
-    ${M!=='car'&&sample?`<div class="row"><button class="small-btn primary" type="button" id="routeBtn">어떤 ${M==='flight'?'항공편':'교통편'}이 있는지 알아보기</button><span class="ai-status" id="st_route"></span></div>`:''}${routeHTML()}
-    ${linkRow(flightLinks())}`;
-  }else{
-    h=`<p class="onb-sub">예약을 마쳤다면 확인 메일이나 e티켓 내용을 붙여 넣어 주세요. 정확한 시간과 숙소가 일정표에 들어가요.</p>
-    <div class="fsec"><h3>예약 상태</h3>${radioRow('bookedFlight',profile.bookedFlight!==false,[[true,'교통편 예약함'],[false,'아직']])}${radioRow('bookedStay',profile.bookedStay!==false,[[true,'숙소 예약함'],[false,'아직']])}</div>
-    <div class="row"><button class="small-btn primary" type="button" id="helperToMe">"내 정보"에서 예약 내용 붙여 넣기</button></div>`;
-  }
-  el.innerHTML=h;
+    st={s:2,intro:M==='car'?'자동차 여행이라 출발 시간만 정하면 돼요.':'시간대별로 여행지에서 실제로 쓸 수 있는 시간을 비교했어요. 첫날과 마지막 날만 달라지고, 가운데 날은 같아요.',car:M==='car',
+      slots:sl.map((x,i)=>({title:`${i+1}. ${x.an} · ${x.dn}`,line:`첫날·마지막 날 합쳐 약 ${Math.round(x.h*10)/10}시간 자유 시간`,notes:x.notes.join(' · '),key:`${x.a},${x.d}`,picked:slotPicked===`${x.a},${x.d}`})),
+      routeLabel:M!=='car'&&sample?`어떤 ${M==='flight'?'항공편':'교통편'}이 있는지 알아보기`:null,route:routeInfoView(),links:flightLinks()};
+  }else st={s:3,bookedFlight:profile.bookedFlight!==false,bookedStay:profile.bookedStay!==false};
+  window.JEPI_UI.mount('helper',el,{step:st,ai:!!sample,rev:++helperRev});
 }
+let helperRev=0, slotPicked=null;
 function setSlot(a,d){
   const M=profile.mode, dur=PACK.intl?150:70;
   profile.out.arr=fmt(a); profile.out.dep=fmt(Math.max(0,a-dur)); profile.back.dep=fmt(d); profile.back.arr=fmt(Math.min(1439,d+dur));
-  store.set('gp.profile',profile); buildDays(); renderHelper(); const b=document.querySelector(`[data-slot="${a},${d}"]`); if(b){b.textContent='이 시간대로 가정했어요';b.classList.add('primary')}
+  store.set('gp.profile',profile); buildDays(); slotPicked=`${a},${d}`; renderHelper();
 }
 
 // ---------- season & time-of-day: what is special on these dates, and when each place is best ----------
@@ -1257,10 +1245,11 @@ Reply with only JSON: {"stays":[{"name":"Korean name","local":"name in local lan
     progStop(st); renderHelper(); setSt(st,hotelRecs[k].length?'가격과 빈방은 링크에서 꼭 확인하세요.':'후보를 찾지 못했어요.');
   }catch(e){setSt(st,errText(e,'숙소 후보를 받지 못했어요'))} finally{hrBusy=false}
 }
-function hotelRecHTML(k){const L=hotelRecs[k];if(!L)return '';const ci=ymd(0),co=ymd(nightsOf(profile)),g=guests();
-  return `<div class="h-list">${L.map(h=>{const q=encodeURIComponent((h.local||h.name)+' '+PACK.city);
-    return `<div class="h-item"><b>${esc(h.name)}</b>${h.type?` <span class="tag">${esc(h.type)}</span>`:''}<p>${esc(h.why)}</p><p class="hint">${esc(h.price)}${h.caution?' · '+esc(h.caution):''}</p>
-    <div class="links"><a class="small-btn" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${q}">지도 ↗</a><a class="small-btn" target="_blank" rel="noopener" href="https://www.booking.com/searchresults.ko.html?ss=${q}&checkin=${ci}&checkout=${co}&group_adults=${g.a}&group_children=${g.k}&no_rooms=1">부킹닷컴 ↗</a><a class="small-btn" target="_blank" rel="noopener" href="https://www.google.com/search?q=${q}+%EC%98%88%EC%95%BD">예약 검색 ↗</a></div></div>`}).join('')}</div>`}
+// named stays for one area (drawn by React: HelperBody.tsx)
+function hotelInfo(k){const L=hotelRecs[k];if(!L)return null;const ci=ymd(0),co=ymd(nightsOf(profile)),g=guests();
+  return L.map(h=>{const q=encodeURIComponent((h.local||h.name)+' '+PACK.city);
+    return {name:h.name,type:h.type||'',why:h.why||'',price:`${h.price}${h.caution?' · '+h.caution:''}`,
+      links:[['지도',`https://www.google.com/maps/search/?api=1&query=${q}`],['부킹닷컴',`https://www.booking.com/searchresults.ko.html?ss=${q}&checkin=${ci}&checkout=${co}&group_adults=${g.a}&group_children=${g.k}&no_rooms=1`],['예약 검색',`https://www.google.com/search?q=${q}+%EC%98%88%EC%95%BD`]]}})}
 async function askRoutes(){
   if(!sample||hrBusy) return; hrBusy=true; const gw=AIRPORTS[profile.out.airport]||{}, M=profile.mode;
   progStart('st_route','다니는 노선과 항공사를 정리하는 중이에요 (보통 20~40초)',['routeBtn'],'정리하는 중…');
@@ -1272,9 +1261,8 @@ Reply with only JSON: {"routes":[{"from":"Korean","to":"Korean","type":"직항|�
     progStop('st_route'); renderHelper(); setSt('st_route','시간표와 가격은 아래 검색 링크에서 확인하세요.');
   }catch(e){setSt('st_route',errText(e,'노선 정보를 받지 못했어요'))} finally{hrBusy=false}
 }
-function routeHTML(){const R=routeInfo;if(!R||R.key!==PACK.city+'|'+profile.mode)return '';
-  return `<div class="fsec"><h3>이렇게 갈 수 있어요</h3>${R.routes.map(x=>`<div class="h-item"><b>${esc(x.from)} → ${esc(x.to)}</b> <span class="tag">${esc(x.type)}</span>${x.duration?` <span class="tag mono">${esc(x.duration)}</span>`:''}<p>${x.carriers.map(esc).join(', ')}${x.lcc?' · 저비용 항공사 있음':''}</p>${x.note?`<p class="hint">${esc(x.note)}</p>`:''}</div>`).join('')}
-  ${R.tips.length?`<ul class="tips-list">${R.tips.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`:''}<p class="hint">AI가 아는 일반적인 운항 정보예요. 실제 시간표와 가격은 바뀔 수 있어요.</p></div>`}
+function routeInfoView(){const R=routeInfo;if(!R||R.key!==PACK.city+'|'+profile.mode)return null;
+  return {routes:R.routes.map(x=>({title:`${x.from} → ${x.to}`,type:x.type||'',duration:x.duration||'',carriers:`${x.carriers.join(', ')}${x.lcc?' · 저비용 항공사 있음':''}`,note:x.note||''})),tips:R.tips.slice()}}
 
 // ---------- J / P modes ----------
 let jp='J';
@@ -2018,8 +2006,9 @@ document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t||
 // onboarding: connect AI right on the first screen
 
 
-setInterval(()=>{try{const el=document.getElementById('aiSec');if(!el)return;if(!aiState||aiState.status!=='loading'){el.textContent='';return}
-  if(!aiState.t0)aiState.t0=Date.now();el.textContent=`${aiWho} · ${Math.round((Date.now()-aiState.t0)/1000)}초째`}catch(_){}},1000);
+setInterval(()=>{try{const el=document.getElementById('aiSec');if(!el)return;const L=window.JEPI_UI.live(el),put=t=>{if(L)L.text(t);else el.textContent=t};   // AiBox.tsx draws it
+  if(!aiState||aiState.status!=='loading'){put('');return}
+  if(!aiState.t0)aiState.t0=Date.now();put(`${aiWho} · ${Math.round((Date.now()-aiState.t0)/1000)}초째`)}catch(_){}},1000);
 
 // ---------- AI-found places, chat folding ----------
 const FRESH=new Set();
@@ -2881,14 +2870,12 @@ function renderAI(){
   const box=$('#aiBox'); $('#aiBtn').hidden=!sample;
   if(!aiState||aiState.day!==day){box.hidden=true;return}
   box.hidden=false;
-  if(aiState.status==='loading'){box.innerHTML=`<h3>빈 시간에 맞는 블록을 고르는 중</h3><div class="status">AI가 이 날의 일정, 이동 거리, 영업시간을 보고 있어요. 보통 10~40초 걸려요. <span class="mono" id="aiSec"></span></div><div class="sugg"><button class="small-btn" id="aiStop">멈추기</button></div>`;return}
-  if(aiState.status==='error'){box.innerHTML=`<h3>추천을 받지 못했어요</h3><div class="status">${esc(aiState.msg)}</div><div class="sugg"><button class="small-btn" id="aiClose">닫기</button></div>`;return}
-  const s=aiState.items;
-  box.innerHTML=`<h3>AI 추천 · ${DAYS[day].date}</h3>`+(s.length?`<div class="status">✓ 넣어도 경고가 생기지 않는지 확인한 블록만 보여 줘요.${aiState.dropped?` 경고가 생기는 추천 ${aiState.dropped}개는 뺐어요.`:''}</div>`:`<div class="status">지금 일정에 경고 없이 넣을 만한 블록을 찾지 못했어요.${aiState.dropped?` (경고가 생기는 추천 ${aiState.dropped}개를 뺐어요)`:''}</div>`)+
-    `<div class="sugg">`+s.map((x,i)=>`<div class="sugg-item"><div><div class="t">${fmt(x.start)}–${fmt(x.start+PM[x.id].dur)}</div><b>${esc(PM[x.id].name)}</b><div class="why">${esc(x.reason)}</div></div>
-      <button class="small-btn primary" data-acc="${i}" ${x.added?'disabled':''}>${x.added?'넣음':'넣기'}</button></div>`).join('')+
-    `<button class="small-btn" id="aiClose">닫기</button></div>`;
+  // drawn by React: app/screens/AiBox.tsx
+  const st=aiState.status==='loading'?{s:'loading'}:aiState.status==='error'?{s:'error',msg:String(aiState.msg||'')}
+    :{s:'done',date:String(DAYS[day].date),dropped:aiState.dropped||0,items:aiState.items.map(x=>({time:`${fmt(x.start)}–${fmt(x.start+PM[x.id].dur)}`,name:String(PM[x.id].name),why:String(x.reason||''),added:!!x.added}))};
+  window.JEPI_UI.mount('aiBox',box,{state:st,rev:++aiBoxRev});
 }
+let aiBoxRev=0;
 // Drawn by React: app/screens/TasteKeywords.tsx
 function renderPref(){
   const box=$('#prefBox'); if(!box) return;

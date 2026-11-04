@@ -77,6 +77,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t||
 // onboarding: connect AI right on the first screen
 
 
-setInterval(()=>{try{const el=document.getElementById('aiSec');if(!el)return;if(!aiState||aiState.status!=='loading'){el.textContent='';return}
-  if(!aiState.t0)aiState.t0=Date.now();el.textContent=`${aiWho} · ${Math.round((Date.now()-aiState.t0)/1000)}초째`}catch(_){}},1000);
+setInterval(()=>{try{const el=document.getElementById('aiSec');if(!el)return;const L=window.JEPI_UI.live(el),put=t=>{if(L)L.text(t);else el.textContent=t};   // AiBox.tsx draws it
+  if(!aiState||aiState.status!=='loading'){put('');return}
+  if(!aiState.t0)aiState.t0=Date.now();put(`${aiWho} · ${Math.round((Date.now()-aiState.t0)/1000)}초째`)}catch(_){}},1000);
 

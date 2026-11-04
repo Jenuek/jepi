@@ -21,7 +21,6 @@ function flightLinks(){
   L.push(['네이버 항공권',`https://flight.naver.com/`]);
   return L;
 }
-const linkRow=L=>L.length?`<div class="links">${L.map(([n,u])=>`<a class="small-btn" href="${u}" target="_blank" rel="noopener">${esc(n)} ↗</a>`).join('')}</div>`:'';
 function areaScores(){
   const tg=[...wish.filter(id=>PM[id]).map(id=>({ll:PM[id].ll,w:MUST[id]?1.5:1})),...(profile.events||[]).filter(e=>AREAS[e.area]).map(e=>({ll:[AREAS[e.area][1],AREAS[e.area][2]],w:3}))];
   const gw=AIRPORTS[profile.out.airport];
@@ -69,48 +68,37 @@ Reply with only JSON: {"areas":[{"key":"area key","vibe":"one Korean sentence on
     hVibe={}; (Array.isArray(r&&r.areas)?r.areas:[]).forEach(a=>{if(AREAS[a.key])hVibe[a.key]=a}); progStop('st_vibe');
   }catch(e){setSt('st_vibe',errText(e,'정리하지 못했어요'))} finally{hBusy=false;renderHelper()}
 }
-function openHelper(step){hStep=step||0;$('#meBox').innerHTML='';$('#helper').hidden=false;renderHelper()}
+function openHelper(step){hStep=step||0;slotPicked=null;$('#meBox').innerHTML='';$('#helper').hidden=false;renderHelper()}
 function closeHelper(){$('#helper').hidden=true;renderAll();maybeCoach();if(tab==='me'){draft=clone(profile);renderMe()}}
 const H_STEPS=['가고 싶은 곳 고르기','숙소 동네 정하기','교통편 시간대 정하기','예약하고 일정에 넣기'];
 function renderHelper(){
   const el=$('#helperBody'); if(!el||$('#helper').hidden) return;
   $('#helperStep').textContent=`${hStep+1} / ${H_STEPS.length}`; $('#helperTitle').textContent=H_STEPS[hStep];
   $('#helperPrev').disabled=hStep===0; $('#helperNext').textContent=hStep===H_STEPS.length-1?'일정표로 가기':'다음';
-  let h='';
+  // drawn by React: app/screens/HelperBody.tsx
+  let st;
   if(hStep===0){
     const list=P.filter(p=>!p.drop).sort((a,b)=>isWish(b.id)-isWish(a.id)||(!!MUST[b.id])-(!!MUST[a.id])||matchKw(b.id).length-matchKw(a.id).length);
-    h=`<p class="onb-sub">끌리는 곳에 ♥만 누르세요. 고른 곳을 기준으로 숙소 동네를 추천해요. 3곳 이상 고르면 정확해져요. <b>지금 ♥ ${wish.filter(id=>PM[id]).length}곳</b></p>
-    ${sample?`<div class="fsec"><h3>미리 찾아 둔 곳이 있다면</h3><textarea id="wishPaste" rows="3" placeholder="가고 싶은 곳 이름을 줄마다 하나씩 붙여 넣으세요 (지도 저장 목록, 메모 등)"></textarea><div class="row"><button class="small-btn primary" type="button" id="wishPasteBtn">목록에서 ♥ 붙이기</button><span class="ai-status" id="st_wish"></span></div></div>`:''}
-    <div class="wish-list">${list.length?list.map(p=>`<button type="button" class="wish-item" data-wish="${p.id}" aria-pressed="${isWish(p.id)}"><span class="hrt">${isWish(p.id)?'♥':'♡'}</span><span><b>${esc(p.name)}</b><small>${esc(p.area)} · ${esc(CATS[p.cat]||'')}${MUST[p.id]?' · ★':''}${recOf(p)?` · 👍${recOf(p)}`:''}</small><small>${esc(p.note||'')}</small></span></button>`).join(''):'<p class="hint">아직 장소 후보가 없어요. 위 칸에 붙여 넣거나 장소 블록 탭에서 AI로 찾아 주세요.</p>'}</div>`;
+    st={s:0,count:wish.filter(id=>PM[id]).length,list:list.map(p=>({id:String(p.id),on:!!isWish(p.id),name:String(p.name),sub:`${p.area} · ${CATS[p.cat]||''}${MUST[p.id]?' · ★':''}${recOf(p)?` · 👍${recOf(p)}`:''}`,note:p.note||''}))};
   }else if(hStep===1){
-    const sc=areaScores().slice(0,3), cur=profile.bookedStay===false?profile.stayPicked:(profile.stays[0]||{}).area, nW=wish.filter(id=>PM[id]).length;
-    h=`<p class="onb-sub">${nW?`♥ ${nW}곳${(profile.events||[]).length?'과 예약한 일정':''}까지 이동 시간이 가장 짧은 동네예요.`:'♥를 고르지 않아서 공항 접근성 위주로 계산했어요. 1단계에서 ♥를 고르면 더 정확해져요.'} 이동 시간은 직선거리 기준 추정이에요.</p>
-    ${sc.map((a,i)=>{const v=hVibe&&hVibe[a.k];return `<div class="fsec area-card${cur===a.k?' sel':''}"><h3>${i+1}. ${esc(a.name)}${cur===a.k?' · 선택함':''}</h3>
-      <p class="mono hint">♥ 장소까지 평균 ${Math.round(a.avg)}분 · 15분 안에 ${a.near}곳 · ${esc(apName(profile.out.airport))}까지 약 ${a.air}분</p>
-      ${v?`<p>${esc(v.vibe||'')}</p><p class="hint">${v.good?'추천: '+esc(v.good):''}${v.caution?' · 주의: '+esc(v.caution):''}</p>`:''}
-      <div class="row"><button class="small-btn${cur===a.k?'':' primary'}" type="button" data-setarea="${a.k}">${cur===a.k?'선택한 동네예요':'이 동네로 정하기'}</button></div>
-      ${roomCap()?`<p class="hint">🏷 예산 기준 1박 약 ${won(roomCap())} 이하${heads()>1?` (${heads()}명 객실)`:''} · 부킹닷컴·에어비앤비 링크에 가격 상한을 넣었어요</p>`:''}${linkRow(hotelLinks(a.name))}
-      ${sample?`<div class="row" style="margin-top:8px"><button class="small-btn" type="button" id="hotelBtn_${a.k}" data-hotels="${a.k}">${hotelRecs[a.k]?'숙소 후보 다시 받기':'이 동네 숙소 후보 보기'}</button><span class="ai-status" id="st_hotel_${a.k}"></span></div>`:''}${hotelRecHTML(a.k)}</div>`}).join('')}
-    ${sample?`<div class="row"><button class="small-btn" type="button" id="vibeBtn">AI에게 동네 분위기 물어보기</button><span class="ai-status" id="st_vibe"></span></div>`:''}
-    <p class="hint">링크를 누르면 날짜·인원·동네가 채워진 검색 결과가 새 창으로 열려요. 사이트에 따라 일부 조건은 다시 골라야 할 수 있어요.</p>`;
+    const sc=areaScores().slice(0,3), cur=profile.bookedStay===false?profile.stayPicked:(profile.stays[0]||{}).area, nW=wish.filter(id=>PM[id]).length, cap=roomCap();
+    st={s:1,intro:`${nW?`♥ ${nW}곳${(profile.events||[]).length?'과 예약한 일정':''}까지 이동 시간이 가장 짧은 동네예요.`:'♥를 고르지 않아서 공항 접근성 위주로 계산했어요. 1단계에서 ♥를 고르면 더 정확해져요.'} 이동 시간은 직선거리 기준 추정이에요.`,
+      cards:sc.map(a=>{const v=hVibe&&hVibe[a.k];return {k:a.k,name:String(a.name),sel:cur===a.k,line:`♥ 장소까지 평균 ${Math.round(a.avg)}분 · 15분 안에 ${a.near}곳 · ${apName(profile.out.airport)}까지 약 ${a.air}분`,
+        vibe:v?{vibe:v.vibe||'',good:`${v.good?'추천: '+v.good:''}${v.caution?' · 주의: '+v.caution:''}`}:null,
+        cap:cap?`🏷 예산 기준 1박 약 ${won(cap)} 이하${heads()>1?` (${heads()}명 객실)`:''} · 부킹닷컴·에어비앤비 링크에 가격 상한을 넣었어요`:'',links:hotelLinks(a.name),
+        hotelLabel:hotelRecs[a.k]?'숙소 후보 다시 받기':'이 동네 숙소 후보 보기',hotels:hotelInfo(a.k)}})};
   }else if(hStep===2){
     const sl=flightSlots().slice(0,4), M=profile.mode;
-    h=`<p class="onb-sub">${M==='car'?'자동차 여행이라 출발 시간만 정하면 돼요.':'시간대별로 여행지에서 실제로 쓸 수 있는 시간을 비교했어요. 첫날과 마지막 날만 달라지고, 가운데 날은 같아요.'}</p>
-    ${M==='car'?'':sl.map((s,i)=>`<div class="fsec"><h3>${i+1}. ${s.an} · ${s.dn}</h3><p class="mono hint">첫날·마지막 날 합쳐 약 ${Math.round(s.h*10)/10}시간 자유 시간</p>${s.notes.length?`<p class="hint">${s.notes.map(esc).join(' · ')}</p>`:''}
-      <div class="row"><button class="small-btn" type="button" data-slot="${s.a},${s.d}">이 시간대로 가정하기</button></div></div>`).join('')}
-    <p class="hint">보통 인기 시간대가 더 비싸요. 가격 차이와 자유 시간을 같이 보고 고르세요.</p>
-    ${M!=='car'&&sample?`<div class="row"><button class="small-btn primary" type="button" id="routeBtn">어떤 ${M==='flight'?'항공편':'교통편'}이 있는지 알아보기</button><span class="ai-status" id="st_route"></span></div>`:''}${routeHTML()}
-    ${linkRow(flightLinks())}`;
-  }else{
-    h=`<p class="onb-sub">예약을 마쳤다면 확인 메일이나 e티켓 내용을 붙여 넣어 주세요. 정확한 시간과 숙소가 일정표에 들어가요.</p>
-    <div class="fsec"><h3>예약 상태</h3>${radioRow('bookedFlight',profile.bookedFlight!==false,[[true,'교통편 예약함'],[false,'아직']])}${radioRow('bookedStay',profile.bookedStay!==false,[[true,'숙소 예약함'],[false,'아직']])}</div>
-    <div class="row"><button class="small-btn primary" type="button" id="helperToMe">"내 정보"에서 예약 내용 붙여 넣기</button></div>`;
-  }
-  el.innerHTML=h;
+    st={s:2,intro:M==='car'?'자동차 여행이라 출발 시간만 정하면 돼요.':'시간대별로 여행지에서 실제로 쓸 수 있는 시간을 비교했어요. 첫날과 마지막 날만 달라지고, 가운데 날은 같아요.',car:M==='car',
+      slots:sl.map((x,i)=>({title:`${i+1}. ${x.an} · ${x.dn}`,line:`첫날·마지막 날 합쳐 약 ${Math.round(x.h*10)/10}시간 자유 시간`,notes:x.notes.join(' · '),key:`${x.a},${x.d}`,picked:slotPicked===`${x.a},${x.d}`})),
+      routeLabel:M!=='car'&&sample?`어떤 ${M==='flight'?'항공편':'교통편'}이 있는지 알아보기`:null,route:routeInfoView(),links:flightLinks()};
+  }else st={s:3,bookedFlight:profile.bookedFlight!==false,bookedStay:profile.bookedStay!==false};
+  window.JEPI_UI.mount('helper',el,{step:st,ai:!!sample,rev:++helperRev});
 }
+let helperRev=0, slotPicked=null;
 function setSlot(a,d){
   const M=profile.mode, dur=PACK.intl?150:70;
   profile.out.arr=fmt(a); profile.out.dep=fmt(Math.max(0,a-dur)); profile.back.dep=fmt(d); profile.back.arr=fmt(Math.min(1439,d+dur));
-  store.set('gp.profile',profile); buildDays(); renderHelper(); const b=document.querySelector(`[data-slot="${a},${d}"]`); if(b){b.textContent='이 시간대로 가정했어요';b.classList.add('primary')}
+  store.set('gp.profile',profile); buildDays(); slotPicked=`${a},${d}`; renderHelper();
 }
 

@@ -199,14 +199,12 @@ function renderAI(){
   const box=$('#aiBox'); $('#aiBtn').hidden=!sample;
   if(!aiState||aiState.day!==day){box.hidden=true;return}
   box.hidden=false;
-  if(aiState.status==='loading'){box.innerHTML=`<h3>빈 시간에 맞는 블록을 고르는 중</h3><div class="status">AI가 이 날의 일정, 이동 거리, 영업시간을 보고 있어요. 보통 10~40초 걸려요. <span class="mono" id="aiSec"></span></div><div class="sugg"><button class="small-btn" id="aiStop">멈추기</button></div>`;return}
-  if(aiState.status==='error'){box.innerHTML=`<h3>추천을 받지 못했어요</h3><div class="status">${esc(aiState.msg)}</div><div class="sugg"><button class="small-btn" id="aiClose">닫기</button></div>`;return}
-  const s=aiState.items;
-  box.innerHTML=`<h3>AI 추천 · ${DAYS[day].date}</h3>`+(s.length?`<div class="status">✓ 넣어도 경고가 생기지 않는지 확인한 블록만 보여 줘요.${aiState.dropped?` 경고가 생기는 추천 ${aiState.dropped}개는 뺐어요.`:''}</div>`:`<div class="status">지금 일정에 경고 없이 넣을 만한 블록을 찾지 못했어요.${aiState.dropped?` (경고가 생기는 추천 ${aiState.dropped}개를 뺐어요)`:''}</div>`)+
-    `<div class="sugg">`+s.map((x,i)=>`<div class="sugg-item"><div><div class="t">${fmt(x.start)}–${fmt(x.start+PM[x.id].dur)}</div><b>${esc(PM[x.id].name)}</b><div class="why">${esc(x.reason)}</div></div>
-      <button class="small-btn primary" data-acc="${i}" ${x.added?'disabled':''}>${x.added?'넣음':'넣기'}</button></div>`).join('')+
-    `<button class="small-btn" id="aiClose">닫기</button></div>`;
+  // drawn by React: app/screens/AiBox.tsx
+  const st=aiState.status==='loading'?{s:'loading'}:aiState.status==='error'?{s:'error',msg:String(aiState.msg||'')}
+    :{s:'done',date:String(DAYS[day].date),dropped:aiState.dropped||0,items:aiState.items.map(x=>({time:`${fmt(x.start)}–${fmt(x.start+PM[x.id].dur)}`,name:String(PM[x.id].name),why:String(x.reason||''),added:!!x.added}))};
+  window.JEPI_UI.mount('aiBox',box,{state:st,rev:++aiBoxRev});
 }
+let aiBoxRev=0;
 // Drawn by React: app/screens/TasteKeywords.tsx
 function renderPref(){
   const box=$('#prefBox'); if(!box) return;

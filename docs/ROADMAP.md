@@ -85,7 +85,9 @@
     3. 다른 시트: ~~직접 블록 만들기(`CustomSheet.tsx`, 같은 장소 제안 포함 — 예전엔 입력할 때 상자를 직접 끼워 넣음 → 값으로)~~,
        ~~여행 꾸미기(`LookSheet.tsx`, 안내 줄 live)~~ — 예전과 같음(`tools/compare/custom.js`·`look.js`).
        **고친 버그**: 꾸미기의 손글씨 글꼴 미리보기가 따옴표 때문에 스타일이 깨져서 세 글꼴이 모두 같은 글꼴로 보였음 → 이제 각자 자기 글꼴로.
-       남은 것: 예약 도우미(`100`), AI 빈 시간 추천 상자(`340`의 aiState).
+       ~~예약 도우미(`HelperBody.tsx`, 4단계)~~ — 예전과 같음(`tools/compare/helper.js`, 가짜 AI로 ♥ 붙여 넣기·동네 분위기·숙소 후보·노선).
+       **고친 것**: 시간대를 고르면 예전 코드가 그 버튼 글자를 직접 바꿨고 다음 다시 그리기에 사라졌음 → 상태값(slotPicked)으로 남아요.
+       ~~AI 빈 시간 추천 상자(`AiBox.tsx`)~~ — "○초째" 시계는 live 연결. 예전과 같음(`tools/compare/aibox.js`: 기다림·못 찾음·실패).
     4. 채팅(`050` #chatLog·#nudges), 첫 화면(`381`), 계획 메뉴(`300`), 여행 단계 띠(`250`), 날짜 제목 고치기(`389-titles`), 여행 노트(`389c`), 장소 탭 추천 안내(#recSt).
     5. 그다음 2단계 뒷부분 ②(여행 데이터를 한 곳으로)와 친구 합치기 규칙 → 4단계 앱 포장.
   - 참고(예전 계획): 입력 폼 조각들(`030-forms.js`의 fParty·fBudget·fStay·fFlight·fHome·fEvents·dateFields·fStyle…, `140`·`160`·`170`의 fDest·fJP·fQuick·fTalk…)을

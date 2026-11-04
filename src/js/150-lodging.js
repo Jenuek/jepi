@@ -14,10 +14,11 @@ Reply with only JSON: {"stays":[{"name":"Korean name","local":"name in local lan
     progStop(st); renderHelper(); setSt(st,hotelRecs[k].length?'가격과 빈방은 링크에서 꼭 확인하세요.':'후보를 찾지 못했어요.');
   }catch(e){setSt(st,errText(e,'숙소 후보를 받지 못했어요'))} finally{hrBusy=false}
 }
-function hotelRecHTML(k){const L=hotelRecs[k];if(!L)return '';const ci=ymd(0),co=ymd(nightsOf(profile)),g=guests();
-  return `<div class="h-list">${L.map(h=>{const q=encodeURIComponent((h.local||h.name)+' '+PACK.city);
-    return `<div class="h-item"><b>${esc(h.name)}</b>${h.type?` <span class="tag">${esc(h.type)}</span>`:''}<p>${esc(h.why)}</p><p class="hint">${esc(h.price)}${h.caution?' · '+esc(h.caution):''}</p>
-    <div class="links"><a class="small-btn" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${q}">지도 ↗</a><a class="small-btn" target="_blank" rel="noopener" href="https://www.booking.com/searchresults.ko.html?ss=${q}&checkin=${ci}&checkout=${co}&group_adults=${g.a}&group_children=${g.k}&no_rooms=1">부킹닷컴 ↗</a><a class="small-btn" target="_blank" rel="noopener" href="https://www.google.com/search?q=${q}+%EC%98%88%EC%95%BD">예약 검색 ↗</a></div></div>`}).join('')}</div>`}
+// named stays for one area (drawn by React: HelperBody.tsx)
+function hotelInfo(k){const L=hotelRecs[k];if(!L)return null;const ci=ymd(0),co=ymd(nightsOf(profile)),g=guests();
+  return L.map(h=>{const q=encodeURIComponent((h.local||h.name)+' '+PACK.city);
+    return {name:h.name,type:h.type||'',why:h.why||'',price:`${h.price}${h.caution?' · '+h.caution:''}`,
+      links:[['지도',`https://www.google.com/maps/search/?api=1&query=${q}`],['부킹닷컴',`https://www.booking.com/searchresults.ko.html?ss=${q}&checkin=${ci}&checkout=${co}&group_adults=${g.a}&group_children=${g.k}&no_rooms=1`],['예약 검색',`https://www.google.com/search?q=${q}+%EC%98%88%EC%95%BD`]]}})}
 async function askRoutes(){
   if(!sample||hrBusy) return; hrBusy=true; const gw=AIRPORTS[profile.out.airport]||{}, M=profile.mode;
   progStart('st_route','다니는 노선과 항공사를 정리하는 중이에요 (보통 20~40초)',['routeBtn'],'정리하는 중…');
@@ -29,7 +30,6 @@ Reply with only JSON: {"routes":[{"from":"Korean","to":"Korean","type":"직항|�
     progStop('st_route'); renderHelper(); setSt('st_route','시간표와 가격은 아래 검색 링크에서 확인하세요.');
   }catch(e){setSt('st_route',errText(e,'노선 정보를 받지 못했어요'))} finally{hrBusy=false}
 }
-function routeHTML(){const R=routeInfo;if(!R||R.key!==PACK.city+'|'+profile.mode)return '';
-  return `<div class="fsec"><h3>이렇게 갈 수 있어요</h3>${R.routes.map(x=>`<div class="h-item"><b>${esc(x.from)} → ${esc(x.to)}</b> <span class="tag">${esc(x.type)}</span>${x.duration?` <span class="tag mono">${esc(x.duration)}</span>`:''}<p>${x.carriers.map(esc).join(', ')}${x.lcc?' · 저비용 항공사 있음':''}</p>${x.note?`<p class="hint">${esc(x.note)}</p>`:''}</div>`).join('')}
-  ${R.tips.length?`<ul class="tips-list">${R.tips.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`:''}<p class="hint">AI가 아는 일반적인 운항 정보예요. 실제 시간표와 가격은 바뀔 수 있어요.</p></div>`}
+function routeInfoView(){const R=routeInfo;if(!R||R.key!==PACK.city+'|'+profile.mode)return null;
+  return {routes:R.routes.map(x=>({title:`${x.from} → ${x.to}`,type:x.type||'',duration:x.duration||'',carriers:`${x.carriers.join(', ')}${x.lcc?' · 저비용 항공사 있음':''}`,note:x.note||''})),tips:R.tips.slice()}}
 

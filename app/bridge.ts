@@ -24,6 +24,8 @@ import { BlockSheet, FillSheet, type BlockSheetProps, type FillSheetProps } from
 import { PView, type PViewProps } from './screens/PView';
 import { CustomSheet, type CustomSheetProps } from './screens/CustomSheet';
 import { LookSheet, type LookSheetProps } from './screens/LookSheet';
+import { HelperBody, type HelperBodyProps } from './screens/HelperBody';
+import { AiBox, type AiBoxProps } from './screens/AiBox';
 import { liveOf, type LiveHandle } from './ui/live';
 
 // Every screen React owns, with the props the old code must pass.
@@ -56,6 +58,8 @@ export interface Screens {
   pview: PViewProps;
   custom: CustomSheetProps;
   look: LookSheetProps;
+  helper: HelperBodyProps;
+  aiBox: AiBoxProps;
 }
 
 const SCREENS: { [K in keyof Screens]: ComponentType<Screens[K]> } = {
@@ -87,6 +91,8 @@ const SCREENS: { [K in keyof Screens]: ComponentType<Screens[K]> } = {
   pview: PView,
   custom: CustomSheet,
   look: LookSheet,
+  helper: HelperBody,
+  aiBox: AiBox,
 };
 
 export interface JepiUI {
