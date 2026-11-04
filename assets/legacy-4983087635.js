@@ -1945,8 +1945,17 @@ function cpEnsure(o){if(o._id&&PM[o._id])return o._id;
   const pl=cleanPlace({name:o.name,local:o.local,area:o.area,cat:o.category,lat:o.lat,lng:o.lng,dur:o.dur,open:o.open,closed:o.closed,cost:o.cost,costNote:o.costNote,tags:o.tags,note:o.note});
   if(!pl)return null; const ex=P.find(p=>norm(p.name)===norm(pl.name))||dupOf(pl); if(ex){o._id=ex.id;o._dup=ex.name;return ex.id}
   PACK.places.push(pl);addPackPlace(pl);FRESH.add(pl.id);savePack();o._id=pl.id;return pl.id}
-document.addEventListener('click',e=>{const t=e.target.closest('[data-cp]');if(!t)return;
-  const [i,k,act]=t.dataset.cp.split(':'), m=chat[+i], o=m&&m.ops&&m.ops[+k]; if(!o)return;
+// What was pressed in a chat message (ChatLog.tsx tells: its name and value)
+function chatAct(n,v){
+  if(n==='stop'){chatCtl&&chatCtl.abort();return}
+  if(n==='apply'){applyChat(+v);return}
+  if(n==='cancel'){const m=chat[+v];if(m){m.state='cancelled';renderChat()}return}
+  if(n==='undo'){undoChat(+v);return}
+  if(n==='cp') cpAct(v);
+}
+// one suggested place: "message:place:sched|list|skip"
+function cpAct(v){
+  const [i,k,act]=String(v).split(':'), m=chat[+i], o=m&&m.ops&&m.ops[+k]; if(!o)return;
   if(act==='skip'){o._c='skip';o._txt='넣지 않았어요';renderChat();return}
   const id=cpEnsure(o); if(!id){o._c='skip';o._txt='장소 정보를 읽지 못했어요';renderChat();return}
   if(act==='list'){o._c='list';o._txt=o._dup?`이미 있는 "${o._dup}"와 같은 곳이라 새로 만들지 않았어요`:'장소 목록에 넣었어요 · 장소 탭 맨 위';renderChat();renderTray();renderExt();return}
@@ -1955,7 +1964,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-cp]');if(!
     applyOpsCore(r.ops);save();o._c='sched';o._txt=`Day ${sl.d+1} ${r.ops[0].start}에 넣었어요${r.warns.length?` · 경고 ${r.warns.length}개`:''}`;day=sl.d;renderAll();renderChat();return}
   selected=id;o._c='pick';o._txt='일정표에서 넣을 시간을 탭하세요';tab='timeline';chatFolded=true;renderAll();renderChat();
   const g=document.getElementById('grid');if(g)g.scrollIntoView({block:'start',behavior:'smooth'});
-});
+}
 
 // ================= 내 장소 (집·회사·…) — on this device and the account, never in share links =================
 // The list, saving, location and address search live in app/data/myplaces.ts and app/data/kakao.ts; the section in 설정
@@ -2850,10 +2859,6 @@ document.addEventListener('click',e=>{
   if(t.id==='meOnb'){openOnb();return}
   if(t.id==='wipeBtn'){if(!wipeArm){wipeArm=true;renderSettings();return}wipeAll();return}
   if(t.id==='wipeCancel'){wipeArm=false;renderSettings();return}
-  if(t.id==='chatStop'){chatCtl&&chatCtl.abort();return}
-  if(t.dataset.chatapply!=null){applyChat(+t.dataset.chatapply);return}
-  if(t.dataset.chatcancel!=null){const m=chat[+t.dataset.chatcancel];if(m){m.state='cancelled';renderChat()}return}
-  if(t.dataset.chatundo!=null){undoChat(+t.dataset.chatundo);return}
   if(t.dataset.group){group=t.dataset.group;renderTray();return}
   if(t.dataset.kwdel!=null){kws.splice(+t.dataset.kwdel,1);saveKw();return}
   if(t.dataset.kwadd){if(!kws.some(k=>norm(k)===norm(t.dataset.kwadd)))kws.push(t.dataset.kwadd);saveKw();return}
@@ -2862,13 +2867,6 @@ document.addEventListener('click',e=>{
   if(t.dataset.fill){place(t.dataset.fill,+t.dataset.start);closeSheet();renderAll();return}
   if(t.dataset.totray){closeSheet();tab='tray';renderTabs();return}
   if(t.id==='seasonBtn'){genSeason('st_season');return}
-  if(t.id==='nudgeFlightIn'){goMe('가는 길');return}
-  if(t.id==='nudgeFlightNo'){profile.bookedFlight=false;TRIP.save('profile',profile);renderAll();openHelper(2);return}
-  if(t.id==='nudgeStayIn'){if(profile.bookedStay===false){profile.bookedStay=true}goMe('숙소');return}
-  if(t.id==='nudgeStayNo'){profile.bookedStay=false;TRIP.save('profile',profile);renderAll();openHelper(wish.length?1:0);return}
-  if(t.id==='nudgeDate'){goMe('여행 기간');return}
-  if(t.id==='nudgeTaste'){tab='pref';renderPref();renderTabs();return}
-  if(t.dataset.nudgeoff){profile.nudgeOff=Object.assign({},profile.nudgeOff,{[t.dataset.nudgeoff]:true});TRIP.save('profile',profile);renderNudges();return}
   if(t.dataset.jp){setJP(t.dataset.jp);renderAll();return}
   if(t.id==='diceFab'){openDiceTab(mealNow()==='snack'?'do':'eat',null);return}
   if(t.dataset.dicefrom!=null){dice.tab='do';doDefaults(true);openDice(+t.dataset.dicefrom);diceRoll(false);return}
@@ -2925,6 +2923,18 @@ document.addEventListener('input',onPf);
 document.addEventListener('keydown',e=>{if(e.target&&e.target.id==='talkInput'&&e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();const v=e.target.value.trim();if(v)talkSend(v)}});
 document.addEventListener('input',e=>{if(e.target&&e.target.id==='chatInput'){const x=e.target;x.style.height='auto';x.style.height=Math.min(120,x.scrollHeight)+'px'}}); document.addEventListener('change',onPf);
 document.addEventListener('keydown',e=>{if(e.target&&e.target.id==='chatInput'&&e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();const f=$('#chatForm');f.requestSubmit?f.requestSubmit():f.dispatchEvent(new Event('submit',{cancelable:true,bubbles:true}))}});
+// What was pressed in the "더 정확한 일정을 위해 알려 주세요" box (ChatLog.tsx Nudges: a button id, or ✕ with its row)
+function nudgeAct(n,v){
+  switch(n){
+  case 'nudgeFlightIn': goMe('가는 길');return;
+  case 'nudgeFlightNo': profile.bookedFlight=false;TRIP.save('profile',profile);renderAll();openHelper(2);return;
+  case 'nudgeStayIn': if(profile.bookedStay===false){profile.bookedStay=true}goMe('숙소');return;
+  case 'nudgeStayNo': profile.bookedStay=false;TRIP.save('profile',profile);renderAll();openHelper(wish.length?1:0);return;
+  case 'nudgeDate': goMe('여행 기간');return;
+  case 'nudgeTaste': tab='pref';renderPref();renderTabs();return;
+  case 'off': profile.nudgeOff=Object.assign({},profile.nudgeOff,{[v]:true});TRIP.save('profile',profile);renderNudges();return;
+  }
+}
 // What was pressed on a place card or in the 장소 tab (Tray.tsx, also ♥ in the helper and 👍 in a block's sheet)
 function placeAct(n,v){
   switch(n){
@@ -3285,7 +3295,7 @@ function titleEditing(on){
 document.addEventListener('click',e=>{const t=e.target.closest('#dayTitleEdit');if(t&&!$('#dayTitleIn'))titleEditing(true)});
 // what React screens may ask of the old code (app/ui/host.ts)
 window.JEPI_UI.connectHost({renderAll:()=>renderAll(),closeSheet:()=>closeSheet(),reopenSheet:()=>{const u=$('#sheet').dataset.uid;if(u&&u!=='dice'&&!$('#sheetBg').hidden)openSheet(u)},toast:m=>showToast(m),day:()=>day,autoTitle:d=>String((DAYS[d]||{}).title||''),titleEditing,
-  closeNotebook:()=>closeNotebook(),renamePlan:nm=>lookRenamePlan(nm),aiDayTitles:n=>lookAiTitles(n),errText:(e,w)=>errText(e,w),welcomeNew:()=>{closeWelcome();openOnb()},welcomeDemo:()=>demoEnter(),welcomeLoggedIn:()=>welcomeLoggedIn(),dice:(n,v,m)=>diceAct(n,v,m),place:(n,v)=>placeAct(n,v),plans:(n,v,v2)=>plansAct(n,v,v2),helper:(n,v,v2)=>helperAct(n,v,v2),importFile:f=>importBackup(f,ok=>{if(ok){maybeCoach()}}),shareNotebook:async()=>{await shareLink(true);return planMsg||'링크를 만들었어요'}});
+  closeNotebook:()=>closeNotebook(),renamePlan:nm=>lookRenamePlan(nm),aiDayTitles:n=>lookAiTitles(n),errText:(e,w)=>errText(e,w),welcomeNew:()=>{closeWelcome();openOnb()},welcomeDemo:()=>demoEnter(),welcomeLoggedIn:()=>welcomeLoggedIn(),dice:(n,v,m)=>diceAct(n,v,m),place:(n,v)=>placeAct(n,v),plans:(n,v,v2)=>plansAct(n,v,v2),helper:(n,v,v2)=>helperAct(n,v,v2),chat:(n,v)=>chatAct(n,v),nudge:(n,v)=>nudgeAct(n,v),importFile:f=>importBackup(f,ok=>{if(ok){maybeCoach()}}),shareNotebook:async()=>{await shareLink(true);return planMsg||'링크를 만들었어요'}});
 // ---------- how a trip looks: theme colour, cover, style, handwriting; folding hero header ----------
 // profile.look = {color, cover:'city'|'sea'|'mountain'|'none'|'photo', photo:dataURL, tagline, style:'color'|'note', hand}
 // Lives in the plan's profile, so it syncs across devices and to friends on a shared trip.

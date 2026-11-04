@@ -34,6 +34,10 @@ export interface AppHost {
   plans(name: string, value?: string, value2?: string): void;
   /** 예약 도우미: something was pressed (paste, vibe, hotels, route, setarea, slot, radio, toMe) */
   helper(name: string, value?: string, value2?: string): void;
+  /** AI chat: stop / apply / cancel / undo a message, or cp (one suggested place: "message:place:sched|list|skip") */
+  chat(name: string, value?: string): void;
+  /** the "알려 주세요" box: a button id, or off with its row */
+  nudge(name: string, value?: string): void;
   /** a backup file was chosen (처음 설정 · 내 계획 · 설정) */
   importFile(f: File | undefined): void;
 }

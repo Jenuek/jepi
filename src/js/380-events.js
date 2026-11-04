@@ -60,10 +60,6 @@ document.addEventListener('click',e=>{
   if(t.id==='meOnb'){openOnb();return}
   if(t.id==='wipeBtn'){if(!wipeArm){wipeArm=true;renderSettings();return}wipeAll();return}
   if(t.id==='wipeCancel'){wipeArm=false;renderSettings();return}
-  if(t.id==='chatStop'){chatCtl&&chatCtl.abort();return}
-  if(t.dataset.chatapply!=null){applyChat(+t.dataset.chatapply);return}
-  if(t.dataset.chatcancel!=null){const m=chat[+t.dataset.chatcancel];if(m){m.state='cancelled';renderChat()}return}
-  if(t.dataset.chatundo!=null){undoChat(+t.dataset.chatundo);return}
   if(t.dataset.group){group=t.dataset.group;renderTray();return}
   if(t.dataset.kwdel!=null){kws.splice(+t.dataset.kwdel,1);saveKw();return}
   if(t.dataset.kwadd){if(!kws.some(k=>norm(k)===norm(t.dataset.kwadd)))kws.push(t.dataset.kwadd);saveKw();return}
@@ -72,13 +68,6 @@ document.addEventListener('click',e=>{
   if(t.dataset.fill){place(t.dataset.fill,+t.dataset.start);closeSheet();renderAll();return}
   if(t.dataset.totray){closeSheet();tab='tray';renderTabs();return}
   if(t.id==='seasonBtn'){genSeason('st_season');return}
-  if(t.id==='nudgeFlightIn'){goMe('가는 길');return}
-  if(t.id==='nudgeFlightNo'){profile.bookedFlight=false;TRIP.save('profile',profile);renderAll();openHelper(2);return}
-  if(t.id==='nudgeStayIn'){if(profile.bookedStay===false){profile.bookedStay=true}goMe('숙소');return}
-  if(t.id==='nudgeStayNo'){profile.bookedStay=false;TRIP.save('profile',profile);renderAll();openHelper(wish.length?1:0);return}
-  if(t.id==='nudgeDate'){goMe('여행 기간');return}
-  if(t.id==='nudgeTaste'){tab='pref';renderPref();renderTabs();return}
-  if(t.dataset.nudgeoff){profile.nudgeOff=Object.assign({},profile.nudgeOff,{[t.dataset.nudgeoff]:true});TRIP.save('profile',profile);renderNudges();return}
   if(t.dataset.jp){setJP(t.dataset.jp);renderAll();return}
   if(t.id==='diceFab'){openDiceTab(mealNow()==='snack'?'do':'eat',null);return}
   if(t.dataset.dicefrom!=null){dice.tab='do';doDefaults(true);openDice(+t.dataset.dicefrom);diceRoll(false);return}
@@ -135,6 +124,18 @@ document.addEventListener('input',onPf);
 document.addEventListener('keydown',e=>{if(e.target&&e.target.id==='talkInput'&&e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();const v=e.target.value.trim();if(v)talkSend(v)}});
 document.addEventListener('input',e=>{if(e.target&&e.target.id==='chatInput'){const x=e.target;x.style.height='auto';x.style.height=Math.min(120,x.scrollHeight)+'px'}}); document.addEventListener('change',onPf);
 document.addEventListener('keydown',e=>{if(e.target&&e.target.id==='chatInput'&&e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();const f=$('#chatForm');f.requestSubmit?f.requestSubmit():f.dispatchEvent(new Event('submit',{cancelable:true,bubbles:true}))}});
+// What was pressed in the "더 정확한 일정을 위해 알려 주세요" box (ChatLog.tsx Nudges: a button id, or ✕ with its row)
+function nudgeAct(n,v){
+  switch(n){
+  case 'nudgeFlightIn': goMe('가는 길');return;
+  case 'nudgeFlightNo': profile.bookedFlight=false;TRIP.save('profile',profile);renderAll();openHelper(2);return;
+  case 'nudgeStayIn': if(profile.bookedStay===false){profile.bookedStay=true}goMe('숙소');return;
+  case 'nudgeStayNo': profile.bookedStay=false;TRIP.save('profile',profile);renderAll();openHelper(wish.length?1:0);return;
+  case 'nudgeDate': goMe('여행 기간');return;
+  case 'nudgeTaste': tab='pref';renderPref();renderTabs();return;
+  case 'off': profile.nudgeOff=Object.assign({},profile.nudgeOff,{[v]:true});TRIP.save('profile',profile);renderNudges();return;
+  }
+}
 // What was pressed on a place card or in the 장소 tab (Tray.tsx, also ♥ in the helper and 👍 in a block's sheet)
 function placeAct(n,v){
   switch(n){
