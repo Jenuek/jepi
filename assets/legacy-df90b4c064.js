@@ -3673,29 +3673,19 @@ if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)&&window.__jepi) Object.a
   dupTest(){const a=P.find(p=>!p.custom&&!p.drop&&!placed.some(b=>b.id===p.id));const b=Object.assign({},a,{id:'dupx',name:a.name+' 본점'});PACK.places.push(b);addPackPlace(b);renderTray();return a.name},
   has:id=>!!PM[id], openCustom:()=>openCustom(), openFind:o=>openFind(o)});
 // ---------- day titles the traveler can rename ----------
-// profile.dayTitles[d] overrides the automatic "Day 1 · 도착" title. Empty = back to automatic.
-// Stored in the plan's profile, so it syncs to other devices and to friends on a shared trip.
-function dayTitleOf(d){const t=((profile&&profile.dayTitles)||[])[d];return t&&String(t).trim()?String(t):(DAYS[d]||{}).title||''}
-function editDayTitle(){
-  const h=$('#dayTitle'); if(!h||$('#dayTitleIn')) return;
-  const cur=((profile.dayTitles||[])[day])||'';
-  h.hidden=true; $('#dayTitleEdit').hidden=true;
-  const f=document.createElement('form'); f.id='dayTitleForm'; f.className='dt-form';
-  f.innerHTML=`<input id="dayTitleIn" maxlength="40" value="${esc(cur)}" placeholder="${esc(DAYS[day].title)}" aria-label="Day ${day+1} 제목"><input id="dayMemoIn" class="hand" maxlength="60" value="${esc(dayMemoOf(day))}" placeholder="한 줄 메모 (손글씨로 보여요)" aria-label="Day ${day+1} 메모"><button class="small-btn primary" type="submit">저장</button><button class="small-btn" type="button" id="dayTitleCancel">취소</button>`;
-  h.after(f); const i=$('#dayTitleIn'); i.focus(); i.select();
+// profile.dayTitles[d] overrides the automatic "Day 1 · 도착" title (rules: app/logic/memo.ts). The ✎ form is React
+// (app/screens/DayTitleForm.tsx, it saves itself); here: the header around it.
+function dayTitleOf(d){return JD.logic.memo.dayTitle(profile,d,(DAYS[d]||{}).title||'')}
+let dayTitleRev=0;
+function dayTitleSlot(){let s=$('#dayTitleSlot');if(!s){s=document.createElement('span');s.id='dayTitleSlot';s.style.display='contents';$('#dayTitle').after(s)}return s}
+function titleEditing(on){
+  $('#dayTitle').hidden=on; $('#dayTitleEdit').hidden=on;
+  window.JEPI_UI.mount('dayTitle',dayTitleSlot(),{open:on,day,title:JD.logic.memo.ownDayTitle(profile,day),auto:String(DAYS[day].title||''),memo:dayMemoOf(day),rev:++dayTitleRev});
 }
-function closeDayTitle(save){
-  const f=$('#dayTitleForm'); if(!f) return;
-  if(save){const v=$('#dayTitleIn').value.trim().slice(0,40); const a=(profile.dayTitles||[]).slice(); a[day]=v; while(a.length&&!a[a.length-1])a.pop();
-    profile.dayTitles=a; setDayMemo(day,$('#dayMemoIn').value); TRIP.save('profile',profile)}
-  f.remove(); $('#dayTitle').hidden=false; $('#dayTitleEdit').hidden=false; renderAll();
-  if(save) showToast($('#dayTitle').textContent?'제목을 바꿨어요':'자동 제목으로 돌아갔어요');
-}
-document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
-  if(t.id==='dayTitleEdit'){editDayTitle();return}
-  if(t.id==='dayTitleCancel'){closeDayTitle(false);return}
-});
-document.addEventListener('submit',e=>{if(e.target.id!=='dayTitleForm')return;e.preventDefault();closeDayTitle(true)});
+document.addEventListener('click',e=>{const t=e.target.closest('#dayTitleEdit');if(t&&!$('#dayTitleIn'))titleEditing(true)});
+// what React screens may ask of the old code (app/ui/host.ts)
+window.JEPI_UI.connectHost({renderAll:()=>renderAll(),closeSheet:()=>closeSheet(),toast:m=>showToast(m),day:()=>day,autoTitle:d=>String((DAYS[d]||{}).title||''),titleEditing,
+  closeNotebook:()=>closeNotebook(),shareNotebook:async()=>{await shareLink(true);return planMsg||'링크를 만들었어요'}});
 // ---------- how a trip looks: theme colour, cover, style, handwriting; folding hero header ----------
 // profile.look = {color, cover:'city'|'sea'|'mountain'|'none'|'photo', photo:dataURL, tagline, style:'color'|'note', hand}
 // Lives in the plan's profile, so it syncs across devices and to friends on a shared trip.
@@ -3793,24 +3783,12 @@ document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t||
 document.addEventListener('change',e=>{if(e.target.id==='lkPhoto'&&e.target.files&&e.target.files[0])lookPhoto(e.target.files[0])});
 document.addEventListener('submit',e=>{if(e.target.id!=='lookForm')return;e.preventDefault();saveLook()});
 // ---------- handwritten memos: one line per block, one line per day ----------
-// profile.memo = {b:{"<place id>@<day>": text}, d:[text per day]} — saved with the plan (syncs, shared trips too).
-const memoStore=()=>{profile.memo=profile.memo&&typeof profile.memo==='object'?profile.memo:{};profile.memo.b=profile.memo.b||{};profile.memo.d=Array.isArray(profile.memo.d)?profile.memo.d:[];return profile.memo};
-const memoKey=(it,d)=>it.id+'@'+d;
-const blockMemoOf=(it,d)=>((profile.memo&&profile.memo.b)||{})[memoKey(it,d)]||'';
-const dayMemoOf=d=>((profile.memo&&profile.memo.d)||[])[d]||'';
-function setDayMemo(d,v){const m=memoStore();m.d[d]=String(v||'').trim().slice(0,60);while(m.d.length&&!m.d[m.d.length-1])m.d.pop()}
+// The rules live in app/logic/memo.ts; the memo box in a block's sheet saves itself (app/screens/Extras.tsx MemoBox).
+const memoKey=(it,d)=>JD.logic.memo.blockKey(it.id,d);
+const blockMemoOf=(it,d)=>JD.logic.memo.blockMemo(profile,memoKey(it,d));
+const dayMemoOf=d=>JD.logic.memo.dayMemo(profile,d);
 function renderDayMemo(){const e=$('#dayMemo');if(!e)return;const m=dayMemoOf(day);e.textContent=m?`“${m}”`:'';e.hidden=!m}
 SHEET_EXTRAS.push(it=>it&&it.id?{k:'memo',key:memoKey(it,day),value:blockMemoOf(it,day)}:null);   // drawn by React: Extras.tsx
-let bmDraft=null;
-document.addEventListener('input',e=>{if(e.target.id==='bmIn'){const f=$('#bmForm');if(f)bmDraft={k:f.dataset.bm,v:e.target.value}}});
-function saveBlockMemo(){const f=$('#bmForm');if(!f)return;
-  // the sheet can redraw between typing and tapping 저장, so keep what was typed (bmDraft)
-  const k=f.dataset.bm, v=String(bmDraft&&bmDraft.k===k?bmDraft.v:$('#bmIn').value).trim().slice(0,60), m=memoStore(); bmDraft=null;
-  if(v) m.b[k]=v; else delete m.b[k];
-  TRIP.save('profile',profile); closeSheet(); renderAll(); showToast(v?'메모를 남겼어요':'메모를 지웠어요');
-}
-document.addEventListener('click',e=>{if(e.target.closest('#bmSave'))saveBlockMemo()});
-document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='bmIn'&&!e.isComposing){e.preventDefault();saveBlockMemo()}});
 // ---------- 여행 노트 보기: the whole trip as one notebook (cover + a chapter per day) ----------
 // Read-only. "PDF로 저장" uses the browser's print (print CSS in 17-look.css keeps only the notebook).
 // "링크로 보내기" sends the usual share link with &note=1, so the receiver opens straight into the notebook.
@@ -3839,9 +3817,6 @@ function closeNotebook(){const nb=$('#notebook');if(nb)nb.hidden=true;document.b
 document.addEventListener('click',async e=>{const t=e.target.closest('button');if(!t)return;
   if(t.id==='nbOpen'){openNotebook();return}
   if(t.id==='lookOpen'){openLook();return}
-  if(t.id==='nbClose'){closeNotebook();return}
-  if(t.id==='nbPrint'){window.print();return}
-  if(t.id==='nbShare'){await shareLink(true);showToast(planMsg||'링크를 만들었어요');return}
 });
 // ---------- start-up: runs after every file above has defined its variables ----------
 if(STANDALONE) sample=makeSample();
