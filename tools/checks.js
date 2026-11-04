@@ -828,6 +828,12 @@ module.exports = [
       await p.click('#sheet [data-dogo="course"] >> nth=0'); await p.waitForTimeout(1800);
       const stops = await p.$$eval('#sheet [data-doreroll]', e => e.length);
       ok(stops >= 3 && (await p.textContent('#sheet')).includes('지금 위치에서 걸어서'), 'course of ' + stops + ' stops, walking times between them');
+      await p.click('#sheet [data-dobase="area"]'); await p.waitForTimeout(300);
+      ok(await p.evaluate(() => document.activeElement && document.activeElement.id === 'doAreaQ'), '🗺 동네: the cursor is in the name box');
+      await p.keyboard.type('성수동'); await p.keyboard.press('Enter'); await p.waitForTimeout(600);
+      ok((await p.$$('#sheet [data-doareapick]')).length > 0, 'Enter searches the name');
+      await p.click('#sheet [data-doareapick="0"]'); await p.waitForTimeout(300);
+      ok((await p.textContent('#sheet .eat-bases')).includes('가게 0'), 'picking a hit sets the 동네');
       await p.click('#sheet [data-dicetab="eat"]'); await p.waitForTimeout(300);
       await p.click('#sheet [data-eatbase="near"]').catch(() => {}); await p.waitForTimeout(200);
       await p.click('#sheet [data-eatroll="go"]'); await p.waitForTimeout(1200);

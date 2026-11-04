@@ -90,32 +90,55 @@ function renderDoNear(){
   }
   diceMount({tabs:dice.tab==='eat'?'eat':'do',
     bases:doBases(),
-    picker:doS.base==='area'&&(!doS.area||doS.picking)?{hits:doS.hits.map(h=>({name:h.name,addr:h.addr})),recent:RECENT_AREAS.map(a=>a.name)}:null,
+    picker:doS.base==='area'&&(!doS.area||doS.picking)?{focus:!!doS.focus,hits:doS.hits.map(h=>({name:h.name,addr:h.addr})),recent:RECENT_AREAS.map(a=>a.name)}:null,
     cond:{open:!!doS.cond,txt:doCondTxt(),rows:[...(doS.base==='near'?[dHint('기준'),dPills('doorg',doS.org,orgs),...(MYP.some(x=>x.ll)?[]:[{r:'setPlaces'}])]:[]),
       dHint('언제'),{r:'when',later:doS.when==='later',at:doS.at||''},dHint('코스 길이'),dPills('doclen',doS.clen,[['short','2~3시간 · 3곳 안팎'],['half','반나절 · 4~5곳'],['rest','오늘 끝까지']]),
       dHint('기분'),dPills('domood',doS.mood,DO_MOODS.map(m=>[m[0],m[1]]))]},
     stage,msg:doS.msg||'',acts,foot:'최근 5일 동안 고른 곳은 빼고 굴려요. 영업시간은 지도에서 한 번 확인하세요.'});
 }
 function pushRecentArea(a){RECENT_AREAS=[a,...RECENT_AREAS.filter(x=>x.name!==a.name)].slice(0,6);LS.set('jepi.areas',RECENT_AREAS)}
-document.addEventListener('toggle',e=>{const d=e.target;if(d&&d.classList&&d.classList.contains('cond')){if(dice.tab==='eat')eat.cond=d.open;else doS.cond=d.open}},true);
-document.addEventListener('change',e=>{if(e.target&&e.target.id==='doAt'){doS.at=e.target.value||'18:00';saveDo();renderDice()}});
-document.addEventListener('keydown',e=>{if(e.target&&e.target.id==='doAreaQ'&&e.key==='Enter'&&!e.isComposing){e.preventDefault();const b=document.getElementById('doAreaFind');if(b)b.click()}});
-document.addEventListener('click',async e=>{const t=e.target.closest('button');if(!t||!t.closest('#sheet .dice'))return;
-  if(t.dataset.dobase){doS.base=t.dataset.dobase;doS.pick=null;doS.course=null;doS.msg='';doS.picking=doS.base==='area'&&!doS.area;
-    if(doS.base==='area'&&doS.area&&doS.prevBase==='area')doS.picking=true; doS.prevBase=doS.base; dice.pick=null;dice.rolls=0;renderDice();
-    if(doS.picking)setTimeout(()=>{const i=$('#doAreaQ');if(i)i.focus()},50);return}
-  if(t.id==='doAreaFind'){const q=(($('#doAreaQ')||{}).value||'').trim();if(!q)return;
+// What was pressed in the 🎲 sheet (app/screens/Dice.tsx tells: the button's name, its value, and its other data-…)
+async function diceAct(n,v,more){
+  more=more||{};
+  switch(n){
+  // both tabs
+  case 'dicetab': if(v==='eat'){dice.tab='eat';eatDefaults();eat.chosen=null}else{dice.tab='do';dice.pick=null;dice.rolls=0;dice.msg='';doDefaults(false)}renderDice();return;
+  case 'cond': if(dice.tab==='eat')eat.cond=!!v;else doS.cond=!!v;return;   // the 조건 box opened / closed
+  case 'eatSetPlaces': closeSheet();tab='settings';JD.myplaces.ui.edit=null;renderSettings();renderTabs();return;
+  // 일정 빈 시간에서 굴리기 (160-modes-roll.js)
+  case 'dicegap': dice.gapI=+v;dice.pick=null;dice.msg='';renderDice();return;
+  case 'dicemood': dice.mood=v;dice.pick=null;dice.msg='';renderDice();return;
+  case 'dicewalk': dice.walk=+v;dice.pick=null;renderDice();return;
+  case 'diceGo': diceRoll(false);return;
+  case 'diceAgain': diceRoll(true);return;
+  case 'diceFix': diceFix(false);return;
+  case 'diceForce': diceFix(true);return;
+  case 'diceAI': diceAI();return;
+  // 뭐 먹지 (280-dice-eat.js)
+  case 'eatbase': eat.base=v;eat.pick=null;eat.rolls=0;eat.msg='';dice.pick=null;dice.rolls=0;dice.msg='';if(eat.base==='plan'){const ti=todayIdx();if(ti>=0)day=ti}renderEat();return;
+  case 'eatorg': eat.org=v;eat.pick=null;eat.rolls=0;NB.forgetEat();renderEat();return;
+  case 'eatmeal': eat.meal=v;dice.pick=null;dice.rolls=0;renderEat();return;
+  case 'eatwalk': eat.walk=+v;eat.pick=null;eat.rolls=0;saveEat();renderEat();return;
+  case 'eatmood': eat.mood=v;eat.pick=null;eat.rolls=0;dice.pick=null;dice.rolls=0;saveEat();renderEat();return;
+  case 'eatroll': eatRoll(v==='again');return;
+  case 'eatPick': if(eat.pick){diceLog.push({n:eat.pick.name,d:isoOf(new Date())});diceLog=diceLog.slice(-60);store.set('gp.dice',diceLog);eat.chosen=eat.pick.name;renderEat()}return;
+  // 뭐 하지 (here)
+  case 'dobase': doS.base=v;doS.pick=null;doS.course=null;doS.msg='';doS.picking=doS.base==='area'&&!doS.area;
+    if(doS.base==='area'&&doS.area&&doS.prevBase==='area')doS.picking=true; doS.prevBase=doS.base; dice.pick=null;dice.rolls=0;doS.focus=doS.picking;renderDice();doS.focus=false;return;
+  case 'doAreaFind': {const q=String(v||'').trim();if(!q)return;
     if(!KEYS.kakao){const a={name:q,ll:null};doS.area=a;doS.picking=false;doS.msg=sample?'':'동네를 찾으려면 설정에서 카카오 지도 키나 AI를 연결해 주세요.';renderDice();return}
     try{const j=await kakaoGet('/v2/local/search/keyword.json',{query:q,size:6});doS.hits=(j.documents||[]).map(d=>({name:d.place_name,addr:d.road_address_name||d.address_name||'',ll:[+d.y,+d.x]}));doS.msg=doS.hits.length?'':'찾지 못했어요. 역 이름으로 적어 보세요.'}catch(err){doS.msg=err.message}renderDice();return}
-  if(t.dataset.doareapick!=null){const h=doS.hits[+t.dataset.doareapick];if(h){doS.area={name:h.name,ll:h.ll};pushRecentArea(doS.area);saveDo();doS.hits=[];doS.picking=false;doS.msg=''}renderDice();return}
-  if(t.dataset.doarecent!=null){const a=RECENT_AREAS[+t.dataset.doarecent];if(a){doS.area=a;pushRecentArea(a);saveDo();doS.picking=false;doS.msg=''}renderDice();return}
-  if(t.dataset.doorg){doS.org=t.dataset.doorg;doS.pick=null;doS.course=null;renderDice();return}
-  if(t.dataset.dowhen){doS.when=t.dataset.dowhen;doS.course=null;doS.pick=null;renderDice();return}
-  if(t.dataset.doclen){doS.clen=t.dataset.doclen;saveDo();if(doS.course)doGo('course');else renderDice();return}
-  if(t.dataset.domood){doS.mood=t.dataset.domood;NB.forgetAi();doS.pick=null;doS.course=null;saveDo();renderDice();return}
-  if(t.dataset.dogo){doGo(t.dataset.dogo,!!t.dataset.again);return}
-  if(t.dataset.doreroll!=null){doReroll(+t.dataset.doreroll);return}
-  if(t.id==='doPick'&&doS.pick){diceLog.push({n:doS.pick.name,d:isoOf(new Date())});diceLog=diceLog.slice(-60);store.set('gp.dice',diceLog);doS.chosen=doS.pick.name;renderDice();return}
-  if(t.id==='doSave'){saveCourse();return}
-});
+  case 'doareapick': {const h=doS.hits[+v];if(h){doS.area={name:h.name,ll:h.ll};pushRecentArea(doS.area);saveDo();doS.hits=[];doS.picking=false;doS.msg=''}renderDice();return}
+  case 'doarecent': {const a=RECENT_AREAS[+v];if(a){doS.area=a;pushRecentArea(a);saveDo();doS.picking=false;doS.msg=''}renderDice();return}
+  case 'doorg': doS.org=v;doS.pick=null;doS.course=null;renderDice();return;
+  case 'dowhen': doS.when=v;doS.course=null;doS.pick=null;renderDice();return;
+  case 'doAt': doS.at=v||'18:00';saveDo();renderDice();return;
+  case 'doclen': doS.clen=v;saveDo();if(doS.course)doGo('course');else renderDice();return;
+  case 'domood': doS.mood=v;NB.forgetAi();doS.pick=null;doS.course=null;saveDo();renderDice();return;
+  case 'dogo': doGo(v,!!more.again);return;
+  case 'doreroll': doReroll(+v);return;
+  case 'doPick': if(doS.pick){diceLog.push({n:doS.pick.name,d:isoOf(new Date())});diceLog=diceLog.slice(-60);store.set('gp.dice',diceLog);doS.chosen=doS.pick.name;renderDice()}return;
+  case 'doSave': saveCourse();return;
+  }
+}
 

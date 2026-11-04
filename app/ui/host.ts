@@ -26,6 +26,8 @@ export interface AppHost {
   /** what went wrong, in words the person can act on */
   errText(e: unknown, what: string): string;
   shareNotebook(): Promise<string>;
+  /** 🎲 sheet: something was pressed (its name, its value, its other data-… values) */
+  dice(name: string, value: string, more?: Record<string, string>): void;
 }
 let host: AppHost | null = null;
 export function connectHost(h: AppHost): void { host = h }

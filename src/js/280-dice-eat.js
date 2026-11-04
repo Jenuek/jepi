@@ -80,16 +80,6 @@ function openDiceTab(tab,fromT){
   dice.tab=tab; if(tab==='eat'){eatDefaults(); eat.chosen=null} else doDefaults(fromT!=null);
   openDice(fromT); if(fromT==null) diceOpenAnim();
 }
-document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t||!t.closest('#sheet .dice'))return;
-  if(t.dataset.dicetab){if(t.dataset.dicetab==='eat'){dice.tab='eat';eatDefaults();eat.chosen=null}else{dice.tab='do';dice.pick=null;dice.rolls=0;dice.msg='';doDefaults(false)}renderDice();return}
-  if(t.dataset.eatbase){eat.base=t.dataset.eatbase;eat.pick=null;eat.rolls=0;eat.msg='';dice.pick=null;dice.rolls=0;dice.msg='';if(eat.base==='plan'){const ti=todayIdx();if(ti>=0)day=ti}renderEat();return}
-  if(t.dataset.eatorg){eat.org=t.dataset.eatorg;eat.pick=null;eat.rolls=0;NB.forgetEat();renderEat();return}
-  if(t.dataset.eatmeal){eat.meal=t.dataset.eatmeal;dice.pick=null;dice.rolls=0;renderEat();return}
-  if(t.dataset.eatwalk){eat.walk=+t.dataset.eatwalk;eat.pick=null;eat.rolls=0;saveEat();renderEat();return}
-  if(t.dataset.eatmood){eat.mood=t.dataset.eatmood;eat.pick=null;eat.rolls=0;dice.pick=null;dice.rolls=0;saveEat();renderEat();return}
-  if(t.dataset.eatroll){eatRoll(t.dataset.eatroll==='again');return}
-  if(t.id==='eatPick'&&eat.pick){diceLog.push({n:eat.pick.name,d:isoOf(new Date())});diceLog=diceLog.slice(-60);store.set('gp.dice',diceLog);eat.chosen=eat.pick.name;renderEat();return}
-});
 // home-screen shortcut: ./?dice=eat
 function diceFromUrl(){try{const q=new URLSearchParams(location.search).get('dice');if(q==='eat'||q==='do'){history.replaceState(null,'',location.pathname+location.hash);setTimeout(()=>openDiceTab(q),300)}}catch(_){}}
 
@@ -108,5 +98,3 @@ document.addEventListener('click',async e=>{const t=e.target.closest('button');i
       draft.home.ll=h.ll;draft.home.area='집';draft.home.min=Math.min(240,Math.max(10,Math.ceil(v.min/5)*5));homeMsg=`집 → ${a[0]}: ${v.label} 약 ${v.min}분${v.lines?` (${v.lines})`:''}으로 넣었어요.`;autoSave()}
     catch(err){homeMsg=(err&&err.message)||'계산하지 못했어요'}renderMeRows();return}
 });
-document.addEventListener('click',e=>{const t=e.target.closest('#eatSetPlaces');if(!t)return;closeSheet();tab='settings';JD.myplaces.ui.edit=null;renderSettings();renderTabs()});
-
