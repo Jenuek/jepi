@@ -62,9 +62,14 @@ body.mode-p #daySum,body.mode-p #sumBody,body.mode-p #phase{display:none!importa
 
 /* my cards (♥ places), fanned */
 .pmine{display:grid;gap:6px}
-.pfan{position:relative;height:156px}
-.mcard{position:absolute;top:10px;width:100px;height:140px;border:3px solid var(--pk);border-radius:12px;background:#fff;box-shadow:0 4px 0 var(--pk);padding:0;overflow:hidden;text-align:left;display:flex;flex-direction:column}
-.mcard.m0{left:calc(50% - 160px);transform:rotate(-10deg)}.mcard.m1{left:calc(50% - 50px);top:2px;transform:rotate(-1deg)}.mcard.m2{left:calc(50% + 60px);transform:rotate(9deg)}
+.pmh{display:flex;align-items:baseline;justify-content:space-between;gap:8px}.pmh small{font-size:12px;color:#5c5240}
+/* the cards overlap like a hand of cards; the row scrolls sideways (snaps card by card) */
+.pfan{display:flex;justify-content:center;overflow-x:auto;scroll-snap-type:x proximity;scrollbar-width:none;overscroll-behavior-x:contain;padding:14px 18px 16px;margin:0 -12px;cursor:grab;touch-action:pan-x pan-y}
+.pfan::-webkit-scrollbar{display:none}
+.pfan.many{justify-content:flex-start}
+.mcard{position:relative;flex:0 0 100px;height:140px;border:3px solid var(--pk);border-radius:12px;background:#fff;box-shadow:0 4px 0 var(--pk);padding:0;overflow:hidden;text-align:left;display:flex;flex-direction:column;transform:rotate(var(--tilt,0deg));scroll-snap-align:center;user-select:none;-webkit-user-drag:none}
+.mcard+.mcard{margin-left:-10px}
+.mcard:hover,.mcard:focus-visible{z-index:1}
 .mcard .mb{display:flex;align-items:center;height:26px;padding:0 7px;background:var(--cc);color:#fff;flex-shrink:0}
 .mcard .mn{padding:8px;font-family:var(--f-game);font-size:15px;line-height:1.25;word-break:keep-all}
 

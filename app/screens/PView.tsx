@@ -2,7 +2,7 @@
 // 아래 주사위 판에서 주사위(기분)를 고르고 굴리면 3D 주사위가 한 바퀴 돈 뒤 카드가 나와요.
 // The old code (170-quick-start-pview.js) builds the values: squares, dice, my cards, the drawn card, and whether the day is still closed.
 // Page turning is this screen's own state (it stays while the old code redraws; a new day starts on the page with "now" or the next ?).
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode, type PointerEvent as RPointerEvent, type MouseEvent as RMouseEvent } from 'react';
 import { LiveLine } from '../ui/live';
 
 export interface PSquare { k: 'start' | 'done' | 'now' | 'place' | 'flag' | 'q' | 'end'; top: string; name: string; uid: string; cat: string; stamp: boolean; flag: boolean; gap: number }
@@ -119,14 +119,30 @@ function Tray({ dice, canRoll, rollGap }: { dice: PDie[]; canRoll: boolean; roll
   );
 }
 
+const TILT = [-8, 3, -3, 7, -5, 2];
+/** my cards as a fanned row you drag left and right (touch scrolls by itself; a mouse drags it too) */
 function MyCards({ cards }: { cards: PMyCards }) {
+  const row = useRef<HTMLDivElement>(null);
+  const drag = useRef({ on: false, x: 0, left: 0, moved: false });
+  const down = (e: RPointerEvent) => {
+    if (e.pointerType !== 'mouse' || !row.current) return;
+    drag.current = { on: true, x: e.clientX, left: row.current.scrollLeft, moved: false };
+  };
+  const move = (e: RPointerEvent) => {
+    const d = drag.current, el = row.current; if (!d.on || !el) return;
+    const dx = e.clientX - d.x; if (Math.abs(dx) > 5) d.moved = true;
+    if (d.moved) { el.scrollLeft = d.left - dx; e.preventDefault() }
+  };
+  const up = () => { drag.current.on = false };
+  // a drag is not a tap on the card under the mouse
+  const click = (e: RMouseEvent) => { if (drag.current.moved) { e.stopPropagation(); e.preventDefault(); drag.current.moved = false } };
   return (
     <section className="pmine" aria-label="내 카드">
-      <b className="ph">{`내 카드 ${cards.count}장`}</b>
+      <div className="pmh"><b className="ph">{`내 카드 ${cards.count}장`}</b>{cards.count > 3 && <small>← 옆으로 밀어서 더 보기 →</small>}</div>
       {cards.count ? (
-        <div className="pfan">
+        <div className={cards.count > 3 ? 'pfan many' : 'pfan'} ref={row} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerLeave={up} onClickCapture={click}>
           {cards.list.map((c, i) => (
-            <button key={c.id} type="button" className={`mcard m${i}`} data-pcard={c.id} style={{ '--cc': catColor(c.cat) } as CSSProperties} aria-label={`${c.name}: 내 카드 주사위로 굴리기`}>
+            <button key={c.id} type="button" className="mcard" data-pcard={c.id} style={{ '--cc': catColor(c.cat), '--tilt': `${TILT[i % TILT.length]}deg` } as CSSProperties} aria-label={`${c.name}: 내 카드 주사위로 굴리기`}>
               <span className="mb"><CatIcon cat={c.cat} size={15} /></span><span className="mn">{c.name}</span>
             </button>
           ))}

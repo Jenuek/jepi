@@ -889,7 +889,7 @@ module.exports = [
     }
   },
   {
-    name: 'React screen: P모드 보드게임판 (closed until the morning, 미리 열기, zigzag board with roads, dice 1–6, 3D roll → card, 다시 뽑기, 갈래요 adds it, stamps on a past/now day)',
+    name: 'React screen: P모드 보드게임판 (closed until the morning, 미리 열기, zigzag board with roads, dice 1–6, 3D roll → card, 다시 뽑기, 갈래요 adds it, my cards row drags sideways, stamps on a past/now day)',
     async run({ b, S, device, ok, vis, skipCoach }) {
       const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
       await p.evaluate(() => { let s = 7; Math.random = () => ((s = s * 16807 % 2147483647) / 2147483647) });
@@ -917,6 +917,17 @@ module.exports = [
       const n0 = await count();
       await p.click('#pview [data-pyes]'); await p.waitForTimeout(400);
       ok(await count() === n0 + 1 && await vis(p, '#pview .pboard'), '이 카드로 갈래요 adds it, back to the board');
+      await p.evaluate(() => document.querySelector('.tabs [data-tab="tray"]').click()); await p.waitForTimeout(300);
+      for (let i = 0; i < 6; i++) { await p.evaluate(() => document.querySelector('#cards [data-wish][aria-pressed="false"]')?.click()); await p.waitForTimeout(120) }   // some groups are folded
+      await p.evaluate(() => document.querySelector('.tabs [data-tab="timeline"]').click()); await p.waitForTimeout(300);
+      ok(await p.$$eval('#pview .pfan .mcard', e => e.length) >= 5, 'my cards: every ♥ place is a card (not only 3)');
+      ok(await p.$eval('#pview .pfan', e => e.scrollWidth > e.clientWidth + 20), 'my cards: the row is wider than the screen, so it scrolls');
+      const fan = await p.$eval('#pview .pfan', e => { e.scrollIntoView({ block: 'center' }); const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 } });
+      await p.mouse.move(fan.x, fan.y); await p.mouse.down(); await p.mouse.move(fan.x - 80, fan.y, { steps: 6 }); await p.mouse.move(fan.x - 160, fan.y, { steps: 6 }); await p.mouse.up(); await p.waitForTimeout(250);
+      ok(await p.$eval('#pview .pfan', e => e.scrollLeft) > 40, 'my cards: dragging with the mouse moves the row');
+      ok((await p.getAttribute('#pview .pd.on', 'data-pmood')) === 'any', 'my cards: a drag is not a tap');
+      await p.click('#pview .pfan .mcard >> nth=1'); await p.waitForTimeout(200);
+      ok((await p.getAttribute('#pview .pd.on', 'data-pmood')) === 'mine', 'my cards: tapping a card picks the 내 카드 die');
       const md = (await p.textContent('[data-day="1"]')).match(/(\d+)\/(\d+)/);
       await p.clock.install({ time: new Date(new Date().getFullYear(), +md[1] - 1, +md[2], 14, 10) }); await p.reload(); await p.waitForTimeout(3400); await skipCoach(p);
       await p.click('[data-day="1"]'); await p.waitForTimeout(300);
