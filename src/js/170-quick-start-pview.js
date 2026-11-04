@@ -63,7 +63,7 @@ function pSquares(){
 }
 function pDiceProps(){return P_DICE.map(([k,label,n])=>({k,label,n,on:pSt.mood===k}))}
 function pMyCards(){const ids=wish.filter(id=>PM[id]&&!placed.some(b=>b.id===id));
-  return {count:ids.length,list:ids.slice(0,3).map(id=>({id:String(id),name:String(PM[id].name),cat:String(PM[id].cat)}))}}
+  return {count:ids.length,list:ids.map(id=>({id:String(id),name:String(PM[id].name),cat:String(PM[id].cat)}))}}
 function renderPView(){
   const box=$('#pview'); if(!box) return;
   const on=jp==='P'; box.hidden=!on; $('.grid-wrap').hidden=on; if(!on) return;

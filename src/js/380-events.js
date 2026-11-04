@@ -116,7 +116,7 @@ document.addEventListener('click',e=>{
   if(t.id==='vibeBtn'){askVibes();return}
   if(t.dataset.hotels){askHotels(t.dataset.hotels);return}
   if(t.id==='routeBtn'){askRoutes();return}
-  if(t.dataset.wish){toggleWish(t.dataset.wish);if(!$('#helper').hidden)renderHelper();renderTray();return}
+  if(t.dataset.wish){toggleWish(t.dataset.wish);if(!$('#helper').hidden)renderHelper();renderTray();renderPView();return}
   if(t.dataset.setarea){const k=t.dataset.setarea;profile.stayPicked=k;profile.stays.forEach((st,i)=>{if(i===0||profile.bookedStay===false){st.area=k;if(profile.bookedStay===false)st.name=`숙소 (미정 · ${AREAS[k][0]})`}});TRIP.save('profile',profile);buildDays();renderHelper();return}
   if(t.dataset.slot){const [a,d]=t.dataset.slot.split(',').map(Number);setSlot(a,d);return}
   if(t.closest('#helper')&&t.dataset.radio){let v=t.dataset.val==='true';profile[t.dataset.radio]=v;TRIP.save('profile',profile);renderHelper();return}
