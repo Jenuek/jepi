@@ -26,6 +26,7 @@ import { CustomSheet, type CustomSheetProps } from './screens/CustomSheet';
 import { LookSheet, type LookSheetProps } from './screens/LookSheet';
 import { HelperBody, type HelperBodyProps } from './screens/HelperBody';
 import { AiBox, type AiBoxProps } from './screens/AiBox';
+import { ChatLog, Nudges, type ChatLogProps, type NudgesProps } from './screens/ChatLog';
 import { liveOf, type LiveHandle } from './ui/live';
 
 // Every screen React owns, with the props the old code must pass.
@@ -60,6 +61,8 @@ export interface Screens {
   look: LookSheetProps;
   helper: HelperBodyProps;
   aiBox: AiBoxProps;
+  chat: ChatLogProps;
+  nudges: NudgesProps;
 }
 
 const SCREENS: { [K in keyof Screens]: ComponentType<Screens[K]> } = {
@@ -93,6 +96,8 @@ const SCREENS: { [K in keyof Screens]: ComponentType<Screens[K]> } = {
   look: LookSheet,
   helper: HelperBody,
   aiBox: AiBox,
+  chat: ChatLog,
+  nudges: Nudges,
 };
 
 export interface JepiUI {

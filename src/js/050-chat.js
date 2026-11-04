@@ -8,19 +8,18 @@ function opText(o){const d=x=>`Day ${(+x)+1}`, nm=id=>PM[id]?PM[id].name:id;
   if(o.op==='remove'){const b=placed.find(x=>x.uid===o.uid);return `${b?`Day ${b.day+1} ${nm(b.id)}`:'블록'} 빼기`}
   if(o.op==='mark'){const b=placed.find(x=>x.uid===o.uid);const nm2=b?nm(b.id):((DAYS.flatMap(D=>D.fixed).find(f=>f.id===o.uid)||{}).name||'블록');return `${nm2}에 ${MARKS[o.mark][0]} ${MARKS[o.mark][1]} ${o.on===false?'표시 빼기':'표시'}`}
   return '알 수 없는 변경'}
+let chatRev=0;
 function renderChat(){setTimeout(chatFoldSync,0);
   $('#chatNote').textContent=sample?'':'AI 기능은 더보기 → 설정에서 키를 연결하면 쓸 수 있어요';
   $('#chatInput').disabled=!sample||chatBusy; $('#chatSend').disabled=!sample||chatBusy;
   const start=Math.max(0,chat.length-8);
-  $('#chatLog').innerHTML=chat.slice(start).map((m,k)=>{const i=start+k;
-    if(m.role==='user') return `<div class="msg u">${esc(m.text)}</div>`;
-    if(m.role==='busy') return `<div class="msg a">${m.note?esc(m.note):'일정을 살펴보고 있어요. 보통 10~40초 걸려요.'} <button class="small-btn" type="button" id="chatStop">멈추기</button></div>`;
+  // drawn by React: app/screens/ChatLog.tsx
+  window.JEPI_UI.mount('chat',$('#chatLog'),{rev:++chatRev,msgs:chat.slice(start).map((m,k)=>{const i=start+k;
+    if(m.role==='user') return {r:'u',text:String(m.text)};
+    if(m.role==='busy') return {r:'busy',note:m.note?String(m.note):'일정을 살펴보고 있어요. 보통 10~40초 걸려요.'};
     const allOps=m.ops||[], ops=allOps.filter(o=>o.op!=='add_place');
-    return `<div class="msg a">${esc(m.text)}${allOps.some(o=>o.op==='add_place')?placeRowsHTML(m,i):''}${ops.length?`<ul>${ops.map(o=>`<li>${esc(opText(o))}</li>`).join('')}</ul>`:''}
-      ${ops.length&&m.checked&&m.state==='pending'?(m.warns&&m.warns.length?`<div class="chk bad">⚠ 적용하면 경고 ${m.warns.length}개가 남아요<ul>${m.warns.slice(0,4).map(w=>`<li>${esc(w)}</li>`).join('')}</ul></div>`:`<div class="chk ok">✓ 적용해도 새 경고가 생기지 않는 걸 확인했어요</div>`):''}
-      ${ops.length&&m.state==='pending'?`<div class="acts"><button class="small-btn primary" type="button" data-chatapply="${i}">적용하기</button><button class="small-btn" type="button" data-chatcancel="${i}">그대로 두기</button></div>`:''}
-      ${m.state==='applied'?`<div class="acts"><span class="ai-status">적용했어요.</span>${undoSnap&&undoSnap.i===i?`<button class="small-btn" type="button" data-chatundo="${i}">되돌리기</button>`:''}</div>`:''}
-      ${m.state==='cancelled'?`<div class="acts"><span class="ai-status">적용하지 않았어요.</span></div>`:''}</div>`}).join('');
+    return {r:'a',i,text:String(m.text),places:allOps.some(o=>o.op==='add_place')?placeRows(m):null,ops:ops.map(o=>opText(o)),
+      check:ops.length&&m.checked&&m.state==='pending'?{warns:(m.warns||[]).map(String)}:null,state:String(m.state||''),undo:!!(undoSnap&&undoSnap.i===i)}})});
   const lg=$('#chatLog'); lg.scrollTop=lg.scrollHeight;
 }
 function validOp(o){if(!o||typeof o!=='object') return false;const dOk=x=>Number.isInteger(+x)&&+x>=0&&+x<DAYS.length;
@@ -86,8 +85,10 @@ function renderNudges(){
   if(profile.kind!=='day'&&!profile.staySet&&profile.bookedStay!==false&&!off.stay) C.push(['stay','🏨','숙소를 알려 주세요','체크인·체크아웃과 짐 들고 다니는 시간이 계산돼요.',[['nudgeStayIn','숙소 넣기',1],['nudgeStayNo','아직 예약 전이에요']]]);
   if(profile.dateUnknown&&!off.date) C.push(['date','📅','여행 날짜를 알려 주세요','지금은 대략 한 달 뒤로 계산하고 있어요.',[['nudgeDate','날짜 넣기',1]]]);
   if(!kws.length&&!off.taste) C.push(['taste','💡','취향을 알려 주세요','고른 키워드에 맞는 장소부터 추천해요.',[['nudgeTaste','취향 고르기',1]]]);
-  const dir=profile.direction&&(profile.purpose||profile.direction.purpose)?`<div class="dir-line">🧭 ${esc(profile.purpose||profile.direction.purpose)}</div>`:'';
-  $('#nudges').innerHTML=dir+(C.length?`<div class="nudge"><b class="nt">더 정확한 일정을 위해 알려 주세요</b>${C.map(([k,ic,t,d,bs])=>`<div class="nrow"><span class="ic">${ic}</span><span class="nl" title="${esc(d)}">${t.replace(' 알려 주세요','').replace('을','').replace('를','')}</span><span class="nb">${bs.map(([id,l,pr])=>`<button class="small-btn${pr?' primary':''}" id="${id}">${pr?l.replace(/ .*/,'')==='시간'?'넣기':l.split(' ')[0]==='숙소'?'넣기':'고르기':'예약 전'}</button>`).join('')}<button class="x" data-nudgeoff="${k}" aria-label="${esc(t)} 나중에">✕</button></span></div>`).join('')}</div>`:'');
+  // drawn by React: app/screens/ChatLog.tsx Nudges
+  window.JEPI_UI.mount('nudges',$('#nudges'),{dir:profile.direction&&(profile.purpose||profile.direction.purpose)?String(profile.purpose||profile.direction.purpose):'',
+    rows:C.map(([k,ic,t,d,bs])=>({k,ic,title:d,aria:`${t} 나중에`,label:t.replace(' 알려 주세요','').replace('을','').replace('를',''),
+      btns:bs.map(([id,l,pr])=>({id,primary:!!pr,label:pr?l.replace(/ .*/,'')==='시간'?'넣기':l.split(' ')[0]==='숙소'?'넣기':'고르기':'예약 전'}))}))});
 }
 function goMe(h){tab='me';draft=clone(profile);renderMe();renderTabs();setTimeout(()=>{const el=[...document.querySelectorAll('#meBox h3')].find(x=>x.textContent.includes(h));if(el)el.scrollIntoView({block:'start'})},0)}
 function renderMeta(){if(profile.kind==='day'){$('#helperBtn').hidden=true;$('#tripMeta').textContent=`${PACK.city} · ${(DAYS[0].iso||'').slice(5).replace('-','/')} 하루 코스 · ${profile.meet.time}–${profile.meet.end}`;return}if(profile.dateUnknown){const n=DAYS.length-1;$('#helperBtn').hidden=!needBooking();$('#tripMeta').textContent=`${PACK.city} · 날짜 미정 (대략 ${(DAYS[0].iso||'').slice(5).replace('-','/')}부터) · ${n}박 ${n+1}일`;return}$('#helperBtn').hidden=!needBooking();const n=DAYS.length-1;$('#tripMeta').textContent=`${PACK.city} · ${(DAYS[0].iso||'').replace(/-/g,'.')} – ${(DAYS[n].iso||'').slice(5).replace('-','.')} · ${n}박 ${n+1}일 · ${apName(profile.out.airport)}`}

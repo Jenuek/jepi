@@ -11,12 +11,12 @@ document.addEventListener('focusin',e=>{if(e.target&&e.target.id==='chatInput'&&
 
 // ---------- chat place suggestions: choose per place ----------
 function cpSlot(o){const d=+o.day,st=parse(o.start);return Number.isInteger(d)&&d>=0&&d<DAYS.length&&st!=null?{d,st}:null}
-function placeRowsHTML(m,i){
-  return `<div class="cps">`+(m.ops||[]).map((o,k)=>{if(o.op!=='add_place')return '';const sl=cpSlot(o);
+// place suggestions in a chat message (drawn by React: ChatLog.tsx)
+function placeRows(m){
+  return (m.ops||[]).map((o,k)=>{if(o.op!=='add_place')return null;const sl=cpSlot(o);
     const meta=[AREAS[o.area]?AREAS[o.area][0]:'',CATS[o.category]||'',o.open?String(o.open):''].filter(Boolean).join(' · ');
     const done=o._c==='sched'||o._c==='list'||o._c==='skip'||o._c==='pick';
-    return `<div class="cp${o._c==='skip'?' off':''}"><div class="cp-t"><b>${esc(o.name)}</b>${meta?`<small>${esc(meta)}</small>`:''}${o.note?`<p>${esc(o.note)}</p>`:''}</div>
-    ${done?`<span class="cp-st">${esc(o._txt||'')}</span>`:`<div class="cp-b"><button class="small-btn primary" type="button" data-cp="${i}:${k}:sched">${sl?`일정에 넣기 · Day ${sl.d+1} ${fmt(sl.st)}`:'일정에 넣기 · 시간 고르기'}</button><button class="small-btn" type="button" data-cp="${i}:${k}:list">장소에만</button><button class="small-btn" type="button" data-cp="${i}:${k}:skip">안 함</button></div>`}</div>`}).join('')+`</div>`;
+    return {k,name:String(o.name),meta,note:o.note?String(o.note):'',off:o._c==='skip',done:done?String(o._txt||''):null,schedLabel:sl?`일정에 넣기 · Day ${sl.d+1} ${fmt(sl.st)}`:'일정에 넣기 · 시간 고르기'}}).filter(Boolean);
 }
 function cpEnsure(o){if(o._id&&PM[o._id])return o._id;
   const pl=cleanPlace({name:o.name,local:o.local,area:o.area,cat:o.category,lat:o.lat,lng:o.lng,dur:o.dur,open:o.open,closed:o.closed,cost:o.cost,costNote:o.costNote,tags:o.tags,note:o.note});
