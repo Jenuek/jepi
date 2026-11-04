@@ -20,10 +20,6 @@ const STY={rhythm:{early:'Early riser: starts the day early and ends early.',lat
   gender:{female:'The traveler is a woman: consider practical safety such as well-lit, busy areas late at night and women-friendly lodging. Do not stereotype her interests.',male:''}};
 function styleEn(p){const st=(p&&p.style)||{};return Object.entries(STY).map(([k,m])=>m[st[k]]||'').filter(Boolean).join(' ')}
 let styleOpen=false;
-function styleMoreHTML(p){const st=p.style||{};const n=Object.values(st).filter(v=>v&&v!=='any').length;
-  return `<details class="marks"${n||styleOpen?' open':''}><summary>여행 스타일 더 알려 주기 (선택)${n?` · ${n}개 골랐어요`:''}</summary>
-  <p class="hint">모두 "상관없음"이 기본이에요. 고른 것만 추천에 반영돼요. 하루 리듬과 걷기는 일정 계산에도 쓰여요.</p>
-  ${STYLE_ROWS.map(([k,l,o])=>`<span class="hint">${l}</span>${radioRow('style.'+k,st[k]||'any',[...o,['any',k==='gender'?'밝히지 않음':'상관없음']])}`).join('')}</details>`}
 const walkKm=()=>{const w=profile&&profile.style&&profile.style.walk;return w==='lots'?2:w==='less'?0.7:1.3};
 
 // ---------- optional money budget (per person, in 만원) ----------
@@ -31,11 +27,8 @@ function budgetParts(pr){pr=pr||profile;const t=(+pr.budgetMan||0)*10000;if(!t)r
   const trip=(+pr.tripMan>0?+pr.tripMan*10000:Math.round(t*0.6)), local=(+pr.localMan>0?+pr.localMan*10000:Math.max(0,t-trip));
   return {total:t,trip,local,daily:local/(nightsOf(pr)+1)}}
 function roomCap(){const b=budgetParts();if(!b)return null;const lodge=b.trip*(profile.mode==='flight'?0.5:0.7);return Math.round(lodge/nightsOf(profile)*heads()/1000)*1000}
-function fBudget(p){
-  return `<div class="fsec"><h3>예산 (선택)</h3><div class="fg"><label>1인 총예산 (만원)${inp('budgetMan',p.budgetMan||'','number','min="0" step="10" data-type="num" placeholder="비우면 계산 안 해요"')}</label>
-  <label>그중 교통·숙박 (만원)${inp('tripMan',p.tripMan||'','number','min="0" step="5" data-type="num" placeholder="자동 60%"')}</label>
-  <label>현지 경비 (만원)${inp('localMan',p.localMan||'','number','min="0" step="5" data-type="num" placeholder="나머지"')}</label></div>
-  <p class="hint" id="budgetHint">${budgetHintTxt(p)}</p></div>`}
+// 이번 여행 → 예산 (drawn by React: TripForms.tsx Budget). The hint under it follows what is typed (meSetBudgetHint).
+function partBudget(p){return {f:'budget',man:p.budgetMan||'',trip:p.tripMan||'',local:p.localMan||'',hint:budgetHintTxt(p)}}
 function budgetHintTxt(p){const b=budgetParts(p);return b?`교통·숙박 약 ${won(b.trip)} · 현지 경비 하루 약 ${won(b.daily)}로 계산해요.`:'총예산만 넣으면 교통·숙박 60%, 현지 경비 40%로 나눠요.'}
 function budgetEn(){const b=budgetParts();if(!b)return '';const d=b.daily/(KRW_PER_JPY||1);
   return ` Money budget per person: about ${Math.round(b.total/10000)}만원 in total; local spending about ${yen(d)} (${won(b.daily)}) per day.`}

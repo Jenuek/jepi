@@ -45,13 +45,10 @@ For recurring annual events give their usual dates and use confidence medium or 
     savePack(); progStop(stId); renderAll(); setSt(stId,`이 시기 정보를 받았어요${n?` · 시즌 장소 ${n}곳 추가`:''}.`); return true;
   }catch(e){setSt(stId,e&&e.code==='cancelled'?'멈췄어요. "확인할 것" 탭에서 다시 받을 수 있어요.':errText(e,'시즌 정보를 받지 못했어요'));return false}
 }
-function seasonChecksHTML(){
-  const s=seasonOf(), stale=PACK.season&&!s;
-  let h=`<div class="check-group"><h3>이 시기 여행 팁</h3>`;
-  if(s){h+=`<p class="now-hint" style="margin:0 0 6px">${s.sunrise?`🌅 일출 약 ${esc(s.sunrise)} · `:''}${s.sunset?`🌇 일몰 약 ${esc(s.sunset)}`:''}</p>${s.weather?`<p class="now-hint" style="margin:0 0 6px">${esc(s.weather)}</p>`:''}${(s.notes||[]).map((t,i)=>ckRow('sn'+i+'_'+tripKey(),t)).join('')}`}
-  else h+=`<p class="now-hint" style="margin:0 0 6px">${stale?'여행 날짜가 바뀌어서 시즌 정보를 다시 받아야 해요.':'여행 날짜의 날씨, 해 지는 시간, 축제·행사, 휴무 정보를 받아 추천에 반영할 수 있어요.'}</p>`;
-  if(sample&&!PACK.manual) h+=`<div class="row"><button class="small-btn${s?'':' primary'}" id="seasonBtn">${s?'시즌 정보 다시 받기':'AI로 이 시기 정보 받기'}</button><span class="ai-status" id="st_season"></span></div>`;
-  h+=`<p class="now-hint" style="margin:6px 0 0">행사 날짜는 AI가 아는 예년 기준이라 올해와 다를 수 있어요. 시즌 장소의 "날짜 확인" 링크로 꼭 확인하세요.</p></div>`;
-  return h;
+// 준비하기 → 이 시기 여행 팁 (drawn by React: Checks.tsx)
+function seasonInfo(){
+  const s=seasonOf(), stale=!!(PACK.season&&!s);
+  return {got:s?{sun:`${s.sunrise?`🌅 일출 약 ${s.sunrise} · `:''}${s.sunset?`🌇 일몰 약 ${s.sunset}`:''}`,weather:s.weather||'',notes:(s.notes||[]).map((t,i)=>ckInfo('sn'+i+'_'+tripKey(),t))}:null,
+    stale,canAsk:!!(sample&&!PACK.manual)};
 }
 

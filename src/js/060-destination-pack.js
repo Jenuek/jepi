@@ -76,11 +76,14 @@ const placeLink=p=>`https://www.google.com/maps/search/?api=1&query=${encodeURIC
 const rateTxt=()=>PACK.currency==='KRW'?'':` · 환율 ${yen(KRW_PER_JPY<50?100:1)} ≈ ${won(KRW_PER_JPY*(KRW_PER_JPY<50?100:1))}`;
 let onbBusy=false, placeCtl=null;
 const prog={};
-function progStart(stId,label,btnIds,btnLabel){progStop(stId);const t0=Date.now();const old={};[...new Set(btnIds||[])].forEach(id=>{const b=document.getElementById(id);if(b){old[id]=b.textContent;b.textContent=btnLabel}});
-  const tick=()=>{const e=document.getElementById(stId);if(e){e.classList.add('busy');e.textContent=`${label} · ${Math.round((Date.now()-t0)/1000)}초 지났어요`}};
+// Status lines and buttons React drew are updated through a handle (app/ui/live.tsx), others the old way.
+const liveEl=id=>{const e=document.getElementById(id);return e&&window.JEPI_UI.live(e)};
+function progStart(stId,label,btnIds,btnLabel){progStop(stId);const t0=Date.now();const old={};[...new Set(btnIds||[])].forEach(id=>{const b=document.getElementById(id);if(!b)return;const L=window.JEPI_UI.live(b);if(L){old[id]=null;L.label(btnLabel)}else{old[id]=b.textContent;b.textContent=btnLabel}});
+  const tick=()=>{const L=liveEl(stId),e=document.getElementById(stId),t=`${label} · ${Math.round((Date.now()-t0)/1000)}초 지났어요`;if(L){L.busy(true);L.text(t)}else if(e){e.classList.add('busy');e.textContent=t}};
   tick();const e=document.getElementById(stId);if(e&&e.scrollIntoView)e.scrollIntoView({block:'nearest'});prog[stId]={iv:setInterval(tick,1000),old}}
-function progStop(stId){const p=prog[stId];if(!p)return;clearInterval(p.iv);const e=document.getElementById(stId);if(e)e.classList.remove('busy');Object.entries(p.old).forEach(([id,t])=>{const b=document.getElementById(id);if(b)b.textContent=t});delete prog[stId]}
-const setSt=(id,t)=>{progStop(id);const e=document.getElementById(id);if(e)e.textContent=t};
+function progStop(stId){const p=prog[stId];if(!p)return;clearInterval(p.iv);const L=liveEl(stId),e=document.getElementById(stId);if(L)L.busy(false);else if(e)e.classList.remove('busy');
+  Object.entries(p.old).forEach(([id,t])=>{const b=document.getElementById(id);if(!b)return;const BL=window.JEPI_UI.live(b);if(BL)BL.label(null);else if(t!=null)b.textContent=t});delete prog[stId]}
+const setSt=(id,t)=>{progStop(id);const L=liveEl(id),e=document.getElementById(id);if(L)L.text(t);else if(e)e.textContent=t};
 function errText(e,what){return e&&e.code==='not_granted'?'AI 키가 맞지 않아서 할 수 없어요.':e&&e.code==='rate_limited'?'요청이 많아 잠시 쉬어야 해요. 조금 뒤에 다시 해 주세요.':`${what}. 다시 시도해 주세요.`}
 async function genPack(dest,btn){
   if(!sample){setSt('st_pack','AI가 연결되어 있지 않아요. 더보기 → 설정에서 키를 넣어 주세요.');return false}
@@ -129,7 +132,7 @@ Reply with only JSON: {"places":[{"name":"Korean name","local":"name in local la
     savePack(); setSt(stId,added?`새 장소 ${added}곳을 찾았어요. 장소 탭 맨 위 "✨ 방금 찾은 곳"에 모아 뒀어요.`:'이미 있는 곳과 겹쳐서 새로 추가할 장소가 없었어요. 찾는 말을 바꿔 보세요 (예: 현지인 맛집, 조용한 카페).'); return added;
   }catch(e){setSt(stId,e&&e.code==='cancelled'?'멈췄어요. 장소 블록 탭에서 언제든 다시 찾을 수 있어요.':errText(e,'장소를 찾지 못했어요'));return 0}
 }
-function setBusy(b){['onbNext','onbPrev','onbSkip','onbExample','genPack','meSave'].forEach(id=>{const e=document.getElementById(id);if(e)e.disabled=b||(id==='onbPrev'&&onbStep===0)})}
+function setBusy(b){['onbNext','onbPrev','onbSkip','onbExample','genPack','meSave'].forEach(id=>{const e=document.getElementById(id);if(!e)return;const v=b||(id==='onbPrev'&&onbStep===0),L=window.JEPI_UI.live(e);if(L)L.disabled(v);else e.disabled=v})}
 async function onbAdvance(){
   if(onbBusy) return;
   if(onbStep===0){
@@ -143,14 +146,11 @@ async function onbAdvance(){
   }
   if(onbStep<ONB.length-1){onbStep++;renderOnb()} else await finishOnb();
 }
-function fDest(p){
-  if(p.destMode==='find') return fDestFinder(p);
-  const tb='';
+// 여행지 (drawn by React: TripForms.tsx Dest). Not decided yet → the finder (OnbFinder.tsx).
+function partDest(p){
+  if(p.destMode==='find') return partFinder(p);
   const ready=PACK&&norm(PACK.city)===norm(p.dest||'');
-  return tb+`<div class="fsec"><h3>여행지</h3><label class="fg" style="display:block"><span class="hint">도시나 지역 이름 (국내, 해외 모두 돼요)</span>${inp('dest',p.dest,'text','maxlength="40" placeholder="예: 오사카, 제주, 파리, 방콕" style="margin-top:4px"')}</label>
-  <div class="row"><button class="small-btn" type="button" data-destmode="find">아직 못 정했어요 · 취향으로 추천받기</button></div>
-  <div class="row">${sample?`<button class="small-btn primary" type="button" id="genPack">AI로 여행지 준비하기</button>`:''}<span class="ai-status" id="st_pack">${ready?`${esc(PACK.city)} 준비됨 · 동네 ${Object.keys(AREAS).length}곳 · 장소 ${P.length}곳`:''}</span></div>
-  ${sample?`<p class="hint">AI가 동네, 공항·역, 화폐, 교통비를 정리해요. 여행지를 바꾸면 넣어 둔 블록은 지워져요.</p>`:`<p class="hint">새 여행지 정보는 AI를 연결해야 준비할 수 있어요 (더보기 → 설정). 지금은 장소 없이 블록을 직접 만들어 쓰거나, "예시로 둘러보기"로 도쿄 예시를 볼 수 있어요.</p>`}
-  ${ready&&PACK.currency!=='KRW'?`<div class="fg"><label>환율: 1 ${esc(PACK.currency)}는 몇 원?<input type="number" step="any" min="0" data-pk="rate" value="${esc(+KRW_PER_JPY.toFixed(4))}"></label></div><p class="hint">AI가 넣은 대략적인 값이에요. 바꾸면 비용 계산에 바로 반영돼요.</p>`:''}</div>`;
+  return {f:'dest',dest:p.dest??'',ai:!!sample,ready:ready?`${PACK.city} 준비됨 · 동네 ${Object.keys(AREAS).length}곳 · 장소 ${P.length}곳`:'',
+    rate:ready&&PACK.currency!=='KRW'?{cur:PACK.currency,val:+KRW_PER_JPY.toFixed(4)}:null};
 }
 

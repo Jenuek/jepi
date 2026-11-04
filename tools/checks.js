@@ -589,6 +589,327 @@ module.exports = [
     }
   },
   {
+    name: 'React screen: 이번 여행 forms (typing saves, mode/stay/event buttons redraw the form)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="me"]'); await p.waitForTimeout(250);
+      const prof = () => p.evaluate(() => { const k = Object.keys(localStorage).find(x => x.endsWith('gp.profile')); return JSON.parse(localStorage.getItem(k)) });
+      await p.click('[data-meopen="way"]'); await p.waitForTimeout(150);
+      await p.fill('#meBox [data-pf="out.dep"]', '07:45'); await p.dispatchEvent('#meBox [data-pf="out.dep"]', 'change'); await p.waitForTimeout(900);
+      ok((await prof()).out.dep === '07:45' && (await p.textContent('#meMsg')).includes('자동 저장됨'), 'a time typed in 오가는 길 is saved');
+      ok(await vis(p, '#meBox .home-box') && await vis(p, '#meBox select[data-pf="out.airport"]'), 'flight form: airport list and 출발지 box');
+      await p.click('#meBox [data-radio="mode"][data-val="car"]'); await p.waitForTimeout(900);
+      ok(!(await p.$('#meBox select[data-pf="out.airport"]')) && !(await p.$('#meBox .home-box')) && (await p.textContent('#meBox .mebody')).includes('자동차 비용') && (await prof()).mode === 'car', 'car: no airport list, car cost form, saved');
+      await p.click('[data-meopen="stay"]'); await p.waitForTimeout(150);
+      await p.click('#meBox [data-addstay]'); await p.waitForTimeout(900);
+      ok(await p.$$eval('#meBox .frow', e => e.length) === 2 && (await prof()).stays.length === 2, '+ 숙소 추가: two stays, saved');
+      await p.selectOption('#meBox [data-pf="stays.1.area"]', { index: 2 }); await p.waitForTimeout(900);
+      const a2 = await p.inputValue('#meBox [data-pf="stays.1.area"]');
+      ok((await prof()).stays[1].area === a2, 'choosing a 동네 is saved');
+      await p.click('[data-meopen="ev"]'); await p.waitForTimeout(150);
+      await p.click('#meBox [data-addev]'); await p.waitForTimeout(900);
+      await p.fill('#meBox [data-pf="events.0.name"]', '콘서트'); await p.dispatchEvent('#meBox [data-pf="events.0.name"]', 'change'); await p.waitForTimeout(900);
+      ok((await prof()).events.length === 1 && (await prof()).events[0].name === '콘서트', 'a booked event is added and named');
+      await p.click('[data-meopen="when"]'); await p.waitForTimeout(150);
+      await p.click('#meBox #dateUnknown'); await p.waitForTimeout(900);
+      ok(await p.isDisabled('#meBox [data-pf="startDate"]') && await p.isChecked('#meBox #dateUnknown') && (await prof()).dateUnknown === true, '날짜는 아직 몰라요: date box locked, saved');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'React screen: 예산 hint follows typing, 취향 style rows save and stay open',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      const prof = () => p.evaluate(() => { const k = Object.keys(localStorage).find(x => x.endsWith('gp.profile')); return JSON.parse(localStorage.getItem(k)) });
+      await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="me"]'); await p.waitForTimeout(250);
+      await p.click('[data-meopen="bud"]'); await p.waitForTimeout(150);
+      await p.fill('#meBox [data-pf="budgetMan"]', ''); await p.waitForTimeout(900);
+      const before = await p.textContent('#budgetHint');
+      await p.click('#meBox [data-pf="budgetMan"]'); await p.keyboard.type('200'); await p.waitForTimeout(100);
+      const mid = await p.textContent('#budgetHint');
+      ok(before.includes('총예산만 넣으면') && mid.includes('현지 경비 하루 약'), 'the hint changes while typing');
+      ok(await p.evaluate(() => document.activeElement && document.activeElement.matches('#meBox [data-pf="budgetMan"]')) && await p.inputValue('#meBox [data-pf="budgetMan"]') === '200', 'still typing in the same box');
+      await p.dispatchEvent('#meBox [data-pf="budgetMan"]', 'change'); await p.waitForTimeout(900);
+      ok((await prof()).budgetMan === 200 && await p.inputValue('#meBox [data-pf="budgetMan"]') === '200', 'saved, the box keeps the number');
+      await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="pref"]'); await p.waitForTimeout(250);
+      await p.click('#tasteStyle [data-radio="pace"][data-val="full"]'); await p.waitForTimeout(900);
+      ok((await prof()).pace === 'full' && await p.getAttribute('#tasteStyle [data-radio="pace"][data-val="full"]', 'aria-pressed') === 'true', '속도 saved and shown');
+      await p.click('#tasteStyle details.marks summary'); await p.click('#tasteStyle [data-radio="style.lang"][data-val="high"]'); await p.waitForTimeout(900);
+      ok((await prof()).style.lang === 'high' && await p.evaluate(() => document.querySelector('#tasteStyle details.marks').open) && (await p.textContent('#tasteStyle summary')).includes('1개 골랐어요'), 'a style row is saved, the box stays open and counts it');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'React screen: 처음 설정 (start paths, messages land in React status lines, 준비하기 button relabels and comes back)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      let p = await device(b, S); await p.click('[data-w="new"]'); await p.waitForTimeout(250);
+      const tap = async sel => { await p.click('#onbBody ' + sel); await p.waitForTimeout(250) };
+      ok(await vis(p, '#onbBody [data-pickjp="J"]') && await vis(p, '#onbBody .importFile'), 'J/P choice and backup import');
+      await tap('[data-pickjp="J"]'); await tap('[data-startmode="quick"]:not([data-destmode])');
+      ok(await vis(p, '#onbBody [data-pf="dest"]') && await vis(p, '#onbBody [data-pf="nights"]') && await vis(p, '#onbBody [data-radio="party.type"]'), '가고 싶은 곳: 여행지 · 날짜 · 동행');
+      await p.fill('#onbBody [data-pf="dest"]', '부산'); await p.click('#onbNext'); await p.waitForTimeout(300);
+      ok((await p.textContent('#st_dates')).includes('여행 날짜와 기간을 먼저'), '다음 without dates: the message shows under the dates');
+      ok(await p.inputValue('#onbBody [data-pf="dest"]') === '부산', 'what was typed stays');
+      await tap('[data-destmode="find"]');
+      ok(await vis(p, '#onbBody #destWant') && await vis(p, '#onbBody [data-pf="startDate"]'), '여행지 추천: dates + finder');
+      await p.ctx.close();
+      p = await device(b, S); await p.click('[data-w="new"]'); await p.waitForTimeout(250);
+      await tap('[data-pickjp="P"]'); await tap('[data-q="when"][data-qv="pick"]');
+      ok(await vis(p, '#onbBody [data-pf="startDate"]'), 'P: 날짜 고르기 shows a date box');
+      await tap('[data-q="len"][data-qv="0"]');
+      ok(await vis(p, '#onbBody [data-q="slot"]') && (await p.textContent('#quickStart')).includes('하루 코스 시작하기'), '하루: time slots, button says 하루 코스');
+      await tap('#quickStart');
+      ok((await p.textContent('#onbBody #st_pack')).includes('어디로 갈지'), 'no place: asks where');
+      await p.ctx.close();
+      // with an AI key: 준비하기 relabels the button and shows the time while it waits
+      p = await device(b, S); await p.click('[data-w="new"]'); await p.waitForTimeout(250);
+      if (await p.$('#onbKey_anthropic')) { await p.fill('#onbKey_anthropic', 'sk-ant-test-key'); await p.click('#onbBody [data-onbkey="anthropic"]'); await p.waitForTimeout(300) }
+      await p.route(/api\.anthropic\.com/, async r => { await new Promise(x => setTimeout(x, 2500)); r.fulfill({ status: 503, body: '{}' }) });
+      await tap('[data-pickjp="J"]'); await tap('[data-startmode="quick"]:not([data-destmode])');
+      ok(await vis(p, '#onbBody #genPack'), 'AI connected: 준비하기 button');
+      await p.fill('#onbBody [data-pf="dest"]', '부산'); await p.click('#onbBody #genPack'); await p.waitForTimeout(1300);
+      const busy = { btn: await p.textContent('#genPack'), st: await p.textContent('#st_pack'), cls: await p.getAttribute('#st_pack', 'class') };
+      ok(busy.btn.includes('준비하는 중') && busy.st.includes('초 지났어요') && busy.cls.includes('busy'), 'while waiting: button relabeled, time shown ' + JSON.stringify(busy));
+      await p.waitForTimeout(5000);
+      const done = { btn: await p.textContent('#genPack'), st: await p.textContent('#st_pack'), cls: await p.getAttribute('#st_pack', 'class') };
+      ok(done.btn === 'AI로 여행지 준비하기' && !done.cls.includes('busy') && !done.st.includes('초 지났어요') && done.st.length > 0, 'after it fails: button back, a message instead ' + JSON.stringify(done));
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'React screen: 처음 설정 with AI (talk → 방향, 여행지 추천 cards · 더 보기 · 궁금한 곳, chips flip, buttons relabel while waiting)',
+    async run({ b, S, device, ok, vis }) {
+      const D = c => ({ city: c, country: '일본', why: c + ' 좋아요', season: '선선해요', highlights: ['시장'], flight: '비행 약 2시간', budget: '60만원', caution: '', fit: '' });
+      let turn = 0;
+      const fake = async r => {
+        const body = r.request().postData() || '', say = o => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content: [{ type: 'text', text: JSON.stringify(o) }] }) });
+        if (body.includes('travel companion')) return ++turn < 3 ? say({ reply: '그랬군요. 더 들려주세요.', options: ['쉬고 싶어요', '걷고 싶어요'], done: false, summary: null })
+          : say({ reply: '좋아요.', options: [], done: true, summary: { purpose: '천천히 걷기', keywords: ['산책길'], pace: 'slow', social: 'alone', party: 'solo', reach: 'near', avoid: '', dest: '', nights: null, startDate: null, note: '조용한 여행' } });
+        await new Promise(x => setTimeout(x, 1500));
+        if (body.includes('is considering')) return say({ destinations: [D('레이캬비크')] });
+        return say({ destinations: body.includes('Do not repeat') ? [D('타이베이'), D('하노이')] : ['후쿠오카', '삿포로', '가오슝', '다낭', '제주'].map(D) });
+      };
+      const fresh = async () => {
+        const p = await device(b, S); await p.route(/api\.anthropic\.com/, fake); await p.click('[data-w="new"]'); await p.waitForTimeout(250);
+        if (await p.$('#onbKey_anthropic')) { await p.fill('#onbKey_anthropic', 'sk-ant-test-key'); await p.click('#onbBody [data-onbkey="anthropic"]'); await p.waitForTimeout(300) }
+        await p.click('#onbBody [data-pickjp="J"]'); await p.waitForTimeout(250); return p;
+      };
+      let p = await fresh();
+      await p.click('#onbBody [data-startmode="talk"]'); await p.waitForTimeout(250);
+      ok(await vis(p, '#talkQ') && await p.$$eval('#onbBody .t-opt', e => e.length) === 4, 'talk: first question with 4 answers');
+      await p.click('#onbBody [data-talkopt="0"]'); await p.waitForTimeout(800);
+      ok((await p.textContent('#talkQ')).includes('더 들려주세요') && await p.$$eval('#onbBody .t-dots i.on', e => e.length) === 1, 'an answer: next question, one dot on');
+      await p.fill('#talkInput', '바다'); await p.click('#talkSend'); await p.waitForTimeout(800);
+      await p.click('#talkFinish'); await p.waitForTimeout(800);
+      ok(await vis(p, '#onbBody .t-letter') && await p.inputValue('#onbBody [data-pf="purpose"]') === '천천히 걷기', 'finish: the 방향 letter with the summed-up line');
+      const chip = '#onbBody .t-letter [data-kwtoggle="산책길"]';
+      const before = await p.getAttribute(chip, 'aria-pressed'); await p.click(chip); await p.waitForTimeout(200);
+      ok(before === 'true' && await p.getAttribute(chip, 'aria-pressed') === 'false' && !(await p.evaluate(() => JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k => k.endsWith('gp.kw'))) || '[]'))).includes('산책길'), 'a chip flips off and the keyword is removed');
+      await p.click('#talkApply'); await p.waitForTimeout(300);
+      ok((await p.textContent('#onbBody .t-banner')).includes('천천히 걷기') && await vis(p, '#onbBody #destRecBtn'), 'apply: banner + 여행지 추천');
+      await p.selectOption('#onbBody [data-pf="nights"]', '3'); await p.fill('#onbBody [data-pf="startDate"]', '2026-12-10'); await p.dispatchEvent('#onbBody [data-pf="startDate"]', 'change'); await p.waitForTimeout(300);
+      await p.fill('#destWant', '조용한 바다'); await p.click('#destRecBtn'); await p.waitForTimeout(500);
+      ok((await p.textContent('#destRecBtn')).includes('고르는 중') && (await p.textContent('#st_dest')).includes('초 지났어요'), 'while waiting: 고르는 중… and the time');
+      await p.waitForTimeout(1800);
+      ok(await p.$$eval('#onbBody .area-card', e => e.length) === 5 && (await p.textContent('#destRecBtn')) === 'AI로 여행지 추천받기' && (await p.textContent('#st_dest')).includes('골라 주세요'), 'five cards, button back, a message');
+      ok(await p.inputValue('#destWant') === '조용한 바다', 'what was written in the wish box stays');
+      await p.click('#destMoreBtn'); await p.waitForTimeout(2300);
+      ok(await p.$$eval('#onbBody [data-pickdest]', e => e.length) === 7, '다른 곳 더 보기 adds two');
+      await p.fill('#destAsk', '아이슬란드'); await p.click('#destAskBtn'); await p.waitForTimeout(2300);
+      ok((await p.textContent('#asked-0')).includes('레이캬비크') && (await p.textContent('#st_ask')).includes('정리했어요'), '궁금한 곳: its own card');
+      await p.click('#onbBody [data-pickdest="1"]'); await p.waitForTimeout(400);
+      ok(await p.inputValue('#onbBody [data-pf="dest"]') === '삿포로', 'picking a card fills 여행지');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'React screen: 장소 탭 (♥ stays after redraw, filters, 넣기 then a slot places it, 동네 folds stay folded)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await p.click('.tabs [data-tab="tray"]'); await p.waitForTimeout(300);
+      const n0 = await p.$$eval('#cards .card', e => e.length);
+      ok(n0 > 0 && await p.$$eval('#cards details.zone', e => e.length) > 0, 'cards grouped by 동네 (' + n0 + ')');
+      const id = await p.getAttribute('#cards details[open] .card >> nth=0', 'data-id');
+      await p.click(`#cards [data-wish="${id}"]`); await p.waitForTimeout(200);
+      ok(await p.textContent(`#cards [data-wish="${id}"]`) === '♥' && await p.getAttribute(`#cards [data-wish="${id}"]`, 'aria-pressed') === 'true', '♥ is on after the list redraws');
+      await p.click('#filters [data-cat="wish"]'); await p.waitForTimeout(200);
+      ok(await p.$$eval('#cards .card', e => e.length) === 1 && await p.getAttribute('#filters [data-cat="wish"]', 'aria-pressed') === 'true', '♥ filter: only that place');
+      await p.click('#filters [data-cat="all"]'); await p.selectOption('#catSel', 'food'); await p.waitForTimeout(200);
+      ok(await p.inputValue('#catSel') === 'food' && await p.$$eval('#cards .card', e => e.every(c => c.getAttribute('style').includes('--c-food'))), '분류: only 식사·카페');
+      await p.click('#filters [data-cat="all"]'); await p.waitForTimeout(200);
+      const z = await p.getAttribute('#cards details.zone[open] >> nth=0', 'data-zone');
+      await p.click(`#cards details.zone[data-zone="${z}"] > summary`); await p.waitForTimeout(100);
+      await p.click(`#cards [data-wish="${id}"]`).catch(() => {}); await p.waitForTimeout(200);
+      ok(!(await p.evaluate(z => document.querySelector(`#cards details.zone[data-zone="${z}"]`).open, z)), 'a folded 동네 stays folded after a redraw');
+      const pid = await p.getAttribute('#cards details[open] .card >> nth=0', 'data-id');
+      await p.click(`#cards [data-pick="${pid}"]`); await p.waitForTimeout(250);
+      if (!(await vis(p, '#grid'))) { await p.click('.tabs [data-tab="timeline"]'); await p.waitForTimeout(200) }
+      await p.click('#grid .slot >> nth=0'); await p.waitForTimeout(300);
+      await p.click('.tabs [data-tab="tray"]'); await p.waitForTimeout(200);
+      ok(!(await p.$(`#cards [data-id="${pid}"]`)) && (await p.textContent('#cards')).includes('목록에서 숨겼어요'), '넣기 → slot: placed, hidden from the list');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'React screen: 준비하기 (a tick is saved and stays, 초기화 asks once more, 시즌 정보 button waits then shows tips)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const say = (r, o) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content: [{ type: 'text', text: JSON.stringify(o) }] }) });
+      const p = await device(b, S);
+      await p.route(/api\.anthropic\.com/, async r => { if (!(r.request().postData() || '').includes('sunrise')) return r.fulfill({ status: 503, body: '{}' }); await new Promise(x => setTimeout(x, 1500)); say(r, { sunrise: '06:30', sunset: '17:10', weather: '맑아요', notes: ['얇은 겉옷 챙기기'], events: [] }) });
+      await p.click('[data-w="new"]'); await p.waitForTimeout(250);
+      if (await p.$('#onbKey_anthropic')) { await p.fill('#onbKey_anthropic', 'sk-ant-test-key'); await p.click('#onbBody [data-onbkey="anthropic"]'); await p.waitForTimeout(300) }
+      await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      const open = async () => { await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="check"]'); await p.waitForTimeout(300) };
+      await open();
+      const ck = '#checks .check-group:has(h3:text("여행 전체")) input[data-ck] >> nth=0';
+      const id = await p.getAttribute(ck, 'data-ck');
+      await p.click(ck); await p.waitForTimeout(200);
+      await open();
+      ok(await p.isChecked(`#checks input[data-ck="${id}"]`) && await p.evaluate(id => JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k => k.endsWith('gp.done')))||'{}')[id] === true, id), 'a tick is saved and still on after reopening');
+      ok(await p.$eval(`#checks input[data-ck="${id}"]`, x => x.closest('label').classList.contains('done')), 'the ticked row looks done');
+      const blocks = async () => p.evaluate(() => JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k => k.endsWith('gp.placed3'))) || '[]').length);
+      const before = await blocks();
+      await p.click('#resetBtn'); await p.waitForTimeout(200);
+      ok((await p.textContent('#resetBtn')).includes('한 번 더') && before > 0 && await blocks() === before, '초기화: asks once more first (' + before + ' blocks kept)');
+      await p.click('#seasonBtn'); await p.waitForTimeout(600);
+      ok((await p.textContent('#seasonBtn')).length > 0 && (await p.textContent('#st_season')).includes('초 지났어요'), '시즌 정보: shows the time while waiting');
+      await p.waitForTimeout(2200); await open();
+      ok((await p.textContent('#checks')).includes('얇은 겉옷 챙기기') && (await p.textContent('#seasonBtn')) === '시즌 정보 다시 받기', 'tips arrive as rows, the button says 다시 받기');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'React screen: 🎲 DICE (roll in a free slot → 이걸로 할래요 puts it in the schedule, 다시 counts down, tabs swap) and 지도 cards',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await p.emulateMedia({ reducedMotion: 'reduce' });
+      await p.evaluate(() => { let s = 7; Math.random = () => ((s = s * 16807 % 2147483647) / 2147483647) });   // the same rolls every time
+      const blocks = () => p.evaluate(() => JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k => k.endsWith('gp.placed3'))) || '[]').length);
+      await p.click('#diceFab'); await p.waitForTimeout(400);
+      ok(await vis(p, '#sheet .dice-tabs') && await vis(p, '#sheet [data-dobase="near"]'), 'DICE opens with 뭐 하지/뭐 먹지 tabs');
+      await p.click('#sheet [data-dobase="plan"]'); await p.waitForTimeout(300);
+      ok((await p.textContent('#sheet h3')).includes('빈 시간에서 굴려요') && await vis(p, '#sheet [data-dicegap]'), 'plan view: free slots to pick');
+      await p.click('#diceGo'); await p.waitForTimeout(500);
+      ok(await vis(p, '#sheet .dice-card') && (await p.textContent('#diceAgain')).includes('2번'), 'a roll shows a place, 2 rolls left');
+      await p.click('#diceAgain'); await p.waitForTimeout(500);
+      ok((await p.textContent('#diceAgain')).includes('1번'), '다시 굴리기 counts down');
+      const n0 = await blocks();
+      await p.click('#diceFix'); await p.waitForTimeout(500);
+      if (await vis(p, '#diceForce')) { await p.click('#diceForce'); await p.waitForTimeout(500) }   // a pick that needs 그래도 넣기
+      ok(await blocks() === n0 + 1 && !(await vis(p, '#sheetBg')), '이걸로 할래요: one more block, sheet closed');
+      await p.click('#diceFab'); await p.waitForTimeout(400);
+      await p.click('#sheet [data-dicetab="eat"]'); await p.waitForTimeout(300);
+      ok(await vis(p, '#sheet .dice.eat') && await p.getAttribute('#sheet [data-dicetab="eat"]', 'aria-selected') === 'true', '뭐 먹지 tab');
+      await p.click('#sheet [data-close]'); await p.waitForTimeout(200);
+      await p.click('.tabs [data-tab="map"]'); await p.waitForTimeout(800);
+      ok(await p.$$eval('#mapCards .mcard', e => e.length) > 2 && await p.$$eval('#mapCards .mcard a', e => e.length) > 0, '지도: a card per stop with 안내 시작');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'React screen: 일정표 위쪽 (day buttons switch day, 빈 시간 chip opens/closes its list, 간식비 + changes the total)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      ok(await p.$$eval('#days .day-btn', e => e.length) >= 2 && await p.getAttribute('#days [data-day="0"]', 'aria-pressed') === 'true', 'day buttons, Day 1 chosen');
+      await p.click('#days [data-day="1"]'); await p.waitForTimeout(300);
+      ok(await p.getAttribute('#days [data-day="1"]', 'aria-pressed') === 'true' && (await p.textContent('#daySub')).length > 0, 'tapping Day 2 switches');
+      await p.click('#days [data-day="0"]'); await p.waitForTimeout(300);
+      ok(!(await vis(p, '#sumBody')), 'summary details closed at first');
+      await p.click('#daySum [data-sum="gap"]'); await p.waitForTimeout(200);
+      ok(await vis(p, '#sumBody') && (await p.textContent('#sumBody')).includes('비어 있어요') && await p.getAttribute('#daySum [data-sum="gap"]', 'aria-expanded') === 'true', '빈 시간 chip opens the list');
+      await p.click('#daySum [data-sum="gap"]'); await p.waitForTimeout(200);
+      ok(!(await vis(p, '#sumBody')), 'tapping again closes it');
+      await p.click('#daySum [data-sum="budget"]'); await p.waitForTimeout(200);
+      const before = await p.textContent('#budget .bud-grid > div:nth-child(3) b');
+      await p.click('#budget [data-meal]:not([data-meal^="-"])'); await p.waitForTimeout(200);
+      ok(await p.textContent('#budget .bud-grid > div:nth-child(3) b') !== before && (await p.textContent('#budgetSum')).includes('자세히'), '간식비 + changes the number');
+      ok((await p.textContent('#route')).includes('이동 합계'), 'route line with the total');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'React screen: 일정표 블록 (drag a block: the slot under it lights up, drop moves it, highlight clears; memo shows; 넣기 → slot)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      const n0 = await p.$$eval('#grid .blk', e => e.length);
+      ok(n0 > 3 && await p.$$eval('#grid .slot', e => e.length) >= 30, 'blocks and time slots drawn (' + n0 + ')');
+      const uid = await p.getAttribute('#grid .blk[draggable="true"] >> nth=0', 'data-uid');
+      const startOf = () => p.evaluate(u => { const k = Object.keys(localStorage).find(k => k.endsWith('gp.placed3')); return (JSON.parse(localStorage.getItem(k)) || []).map(x => x.start) }, uid);
+      const before = await startOf();
+      const box = await p.$eval('#grid .slot[data-t="1290"]', el => { el.scrollIntoView({ block: 'center' }); const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 } });
+      const fire = (type, sel, x, y) => p.evaluate(([type, sel, x, y]) => { const dt = new DataTransfer(); const el = document.querySelector(sel); el.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y, dataTransfer: dt })) }, [type, sel, x, y]);
+      await fire('dragstart', `#grid .blk[data-uid="${uid}"]`, 0, 0);
+      await fire('dragover', '#grid', box.x, box.y);
+      ok(await p.$$eval('#grid .slot.drop', e => e.length) === 1 && await p.getAttribute('#grid .slot.drop', 'data-t') === '1290', 'the slot under the pointer lights up');
+      await fire('drop', '#grid', box.x, box.y); await p.waitForTimeout(300);
+      await fire('dragend', '#grid', 0, 0);
+      ok(JSON.stringify(await startOf()) !== JSON.stringify(before) && (await startOf()).includes(1290), 'drop moves the block to that time');
+      ok(await p.$$eval('#grid .slot.drop', e => e.length) === 0, 'the highlight clears');
+      await p.click('#grid .blk:not(.fixed) >> nth=0'); await p.waitForTimeout(300);
+      await p.fill('#bmIn', '사진!'); await p.click('#bmSave'); await p.waitForTimeout(300); await p.keyboard.press('Escape'); await p.waitForTimeout(300);
+      ok((await p.textContent('#grid')).includes('사진!') && await vis(p, '#grid .bmemo'), 'a handwritten memo shows on the block');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'React screen: 일정표 시트 (30분 뒤로 moves the block, 할 일 표시 stays open, 대안 swaps, 빈 시간 → 넣기 places it)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      const placedNow = () => p.evaluate(() => JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k => k.endsWith('gp.placed3'))) || '[]'));
+      const uid = await p.getAttribute('#grid .blk:not(.fixed) >> nth=1', 'data-uid');
+      await p.click(`#grid .blk[data-uid="${uid}"]`); await p.waitForTimeout(300);
+      ok(await vis(p, '#sheet [data-mv="30"]') && await vis(p, '#sheet .alt') && await vis(p, '#sheet #bmIn'), 'a place block: time buttons, 대안, memo box');
+      const t0 = (await p.textContent('#sheet .when'));
+      await p.click('#sheet [data-mv="30"]'); await p.waitForTimeout(300);
+      ok((await p.textContent('#sheet .when')) !== t0, '30분 뒤로: the time in the sheet changes');
+      await p.click('#sheet details.marks summary'); await p.click('#sheet [data-mark="wait+"]'); await p.waitForTimeout(300);
+      ok(await p.getAttribute('#sheet [data-mark="wait+"]', 'aria-pressed') === 'true' && await p.evaluate(() => document.querySelector('#sheet details.marks').open), '할 일 표시 on, the box stays open');
+      const before = (await placedNow()).map(x => x.id).sort().join();
+      const alt = await p.getAttribute('#sheet [data-swap] >> nth=0', 'data-swap');
+      await p.click('#sheet [data-swap] >> nth=0'); await p.waitForTimeout(400);
+      ok((await placedNow()).some(x => x.id === alt) && (await placedNow()).map(x => x.id).sort().join() !== before && (await p.textContent('#sheet h3')).length > 0, '대안 바꾸기: swapped, the sheet shows the new place');
+      const n0 = (await placedNow()).length;
+      await p.click('#sheet [data-close] >> nth=-1'); await p.waitForTimeout(300);
+      await p.$eval('#grid .slot[data-t="1290"]', e => e.click()); await p.waitForTimeout(400);
+      ok((await p.textContent('#sheet h3')).includes('비어 있음') && await p.$$eval('#sheet [data-fill]', e => e.length) > 0, '빈 시간: places that fit');
+      await p.click('#sheet [data-fill] >> nth=0'); await p.waitForTimeout(400);
+      ok((await placedNow()).length === n0 + 1 && !(await vis(p, '#sheetBg')), '넣기: one more block, sheet closed');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'React screen: P 모드 일정 (time-of-day sections, 🎲 tile rolls a place, 다음 → another, 좋아요 adds it)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await p.evaluate(() => { let s = 7; Math.random = () => ((s = s * 16807 % 2147483647) / 2147483647) });
+      const count = () => p.evaluate(() => JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k => k.endsWith('gp.placed3'))) || '[]').length);
+      await p.click('[data-jp="P"]'); await p.waitForTimeout(400); await skipCoach(p);
+      ok(await vis(p, '#pview') && !(await vis(p, '#grid')) && await p.$$eval('#pview section.pb', e => e.length) >= 2, 'P: sections instead of the hour grid');
+      ok(await vis(p, '#pview [data-proll]'), 'a free part has a 🎲 tile');
+      await p.click('#pview [data-proll] >> nth=0'); await p.waitForTimeout(300);
+      const a = await p.textContent('#pview .ptile.on b');
+      await p.click('#pview [data-pnext]'); await p.waitForTimeout(300);
+      ok(a && (await p.textContent('#pview .ptile.on b')) !== a, '다음 → shows another place');
+      const n0 = await count();
+      await p.click('#pview [data-pyes]'); await p.waitForTimeout(400);
+      ok(await count() === n0 + 1, '좋아요 adds it to the day');
+      await p.click('[data-jp="J"]'); await p.waitForTimeout(300);
+      ok(await vis(p, '#grid') && !(await vis(p, '#pview')), 'back to J: the hour grid');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
     name: 'friends: sharing again after a share that stopped half-way (trip on the server, no membership)',
     async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
       const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);

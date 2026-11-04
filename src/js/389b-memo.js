@@ -5,7 +5,6 @@ const memoKey=(it,d)=>it.id+'@'+d;
 const blockMemoOf=(it,d)=>((profile.memo&&profile.memo.b)||{})[memoKey(it,d)]||'';
 const dayMemoOf=d=>((profile.memo&&profile.memo.d)||[])[d]||'';
 function setDayMemo(d,v){const m=memoStore();m.d[d]=String(v||'').trim().slice(0,60);while(m.d.length&&!m.d[m.d.length-1])m.d.pop()}
-function blockMemoHTML(it,d){const m=blockMemoOf(it,d);return m?`<span class="bmemo hand">${esc(m)}</span>`:''}
 function renderDayMemo(){const e=$('#dayMemo');if(!e)return;const m=dayMemoOf(day);e.textContent=m?`“${m}”`:'';e.hidden=!m}
 SHEET_EXTRAS.push(it=>{
   if(!it||!it.id) return '';

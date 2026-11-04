@@ -3,46 +3,18 @@ const TALK_MAX=5;
 const TALK_OPEN={q:'요즘 어떤 마음이 들어서 여행을 떠올리게 됐어요? 막연해도 괜찮아요.',o:['그냥 답답해서 벗어나고 싶어요','지쳐서 푹 쉬고 싶어요','새로운 자극이 필요해요','생각을 정리하고 싶어요']};
 let talk=null;
 function talkReset(){talk={msgs:[{role:'a',text:TALK_OPEN.q}],options:TALK_OPEN.o.slice(),n:0,busy:false,summary:null}}
-function talkBanner(p,next){return `<div class="t-banner"><span>🧭 ${esc(p.purpose||'이번 여행의 방향')}</span><small>${next}</small></div>`}
-function fJP(){return `${onbKeyBox()}${inClaude()?'':`<div class="fsec import-box"><h3>Claude에서 만든 계획이 있나요?</h3><p class="hint">Claude에서 "내 계획 → 백업 파일 받기"로 저장한 파일을 불러오면 그대로 이어서 쓸 수 있어요.</p><input type="file" accept=".json,application/json" class="importFile"><p class="ai-status" id="st_import"></p></div>`}<div class="choose jpc">
-    <button type="button" class="choose-btn jbtn" data-pickjp="J"><span class="big">J</span><b>계획파예요</b><small>미리 짜 두면 마음이 편해요. 시간·동선·예산까지 꼼꼼하게.</small></button>
-    <button type="button" class="choose-btn pbtn" data-pickjp="P"><span class="big">P</span><b>즉흥파예요</b><small>일단 가 보고 정해요. 어디·언제·누구랑만 고르면 끝.</small></button></div><p class="hint" style="text-align:center">언제든 위의 J ⇄ P 스위치로 바꿀 수 있어요.</p>`}
-function fChooser(){
-  return `<div class="choose">
-    <button type="button" class="choose-btn" data-startmode="quick"><b>가고 싶은 곳이 있어요</b><small>여행지·날짜·동행만 정하고 바로 시작해요</small></button>
-    <button type="button" class="choose-btn" data-startmode="talk"${sample?'':' disabled'}><b>아직 막연해요 · 이야기하면서 정할래요</b><small>${sample?'질문 몇 개로 이번 여행의 방향을 함께 찾아요':'AI를 연결하면 쓸 수 있어요'}</small></button>
-    <button type="button" class="choose-btn" data-startmode="quick" data-destmode="find"><b>여행지만 못 정했어요</b><small>취향과 조건으로 여행지를 추천받아요</small></button>
-    <button type="button" class="choose-btn" data-startmode="day"><b>☀️ 하루 코스 짜기</b><small>친구랑 혹은 혼자, 하루 놀 동네 코스를 가볍게 짜요</small></button></div>`;
-}
-function fTalk(p){
+// 처음 설정 parts drawn by React (app/screens/OnbBody.tsx)
+const partBanner=(p,next)=>({f:'banner',purpose:p.purpose||'',next});
+function partJP(){return {f:'jp',keyBox:!!(STANDALONE&&!sample),keyHelpHTML:KEY_HELP.anthropic,importBox:!inClaude()}}
+// drawn by React: app/screens/OnbTalk.tsx
+function partTalk(p){
   if(!talk) talkReset();
   const t=talk, S=t.summary, last=[...t.msgs].reverse().find(m=>m.role==='a'), hist=[];
   const ok=t.msgs.filter(m=>!m.err);for(let k=0;k<ok.length;k++){const m=ok[k];if(m.role==='u')hist.push([ok[k-1]?ok[k-1].text:'',m.text])}
-  const dots=Array.from({length:TALK_MAX},(_,k)=>`<i class="${k<t.n?'on':''}"></i>`).join('');
-  let h=`<div class="talk2${S?' done':''}">
-    <div class="t-dots" aria-label="${Math.min(t.n,TALK_MAX)} / ${TALK_MAX}">${dots}</div>
-    ${hist.length?`<details class="t-hist"><summary>지금까지 나눈 이야기</summary>${hist.map(([q,a])=>`<p class="t-hq">${esc(q)}</p><p class="t-ha">${esc(a)}</p>`).join('')}</details>`:''}`;
-  if(!S){
-    h+=t.busy?`<p class="t-q t-wait">잠시 생각을 정리하고 있어요<span class="t-ell"></span></p>`
-      :`<p class="t-q" id="talkQ">${esc(last?last.text:'')}</p>
-      ${t.options.length?`<div class="t-opts">${t.options.map((o,i)=>`<button type="button" class="t-opt" data-talkopt="${i}">${esc(o)}</button>`).join('')}</div>`:''}
-      <div class="t-write"><textarea id="talkInput" rows="2" maxlength="300" placeholder="떠오르는 대로 적어 보세요"></textarea><button type="button" class="t-send" id="talkSend" aria-label="보내기">→</button></div>
-      ${t.failed?'<div class="row"><button type="button" class="small-btn primary" id="talkRetry">다시 시도하기</button></div>':''}
-      <div class="t-links">${t.n>=2?'<button type="button" class="t-link" id="talkFinish">이 정도로 정리해 줘</button>':''}<button type="button" class="t-link" data-startmode="quick">건너뛰고 직접 고를게요</button></div>`;
-    h+=`<p class="ai-status" id="st_talk"></p></div>`;
-  }else{
-    const d=p.direction||{};
-    h+=`${last?`<p class="t-close">${esc(last.text)}</p>`:''}
-    <div class="t-letter"><span class="t-label">이번 여행의 방향</span><p class="t-note">${esc(S.note||p.purpose||'')}</p>
-    <label class="t-field"><span>한 줄로 말하면</span>${inp('purpose',p.purpose,'text','maxlength="80"')}</label>
-    <div class="t-field"><span>마음에 담아 둘 단어</span><div class="chips">${[...new Set([...S.keywords,...kws])].map(k=>`<button type="button" data-kwtoggle="${esc(k)}" aria-pressed="${kws.some(x=>norm(x)===norm(k))}">${esc(k)}</button>`).join('')}</div></div>
-    <div class="t-field"><span>여행의 속도</span>${radioRow('pace',p.pace,[['slow','느긋하게'],['normal','보통'],['full','꽉 채워서']])}</div>
-    ${p.party.type==='solo'?`<div class="t-field"><span>사람과의 거리</span>${radioRow('social',p.social,[['alone','혼자가 좋아요'],['some','가끔은 대화도'],['social','많이 만나고 싶어요']])}</div>`:''}
-    <label class="t-field"><span>피하고 싶은 것</span>${inp('direction.avoid',d.avoid||'','text','maxlength="80" placeholder="예: 사람 많은 관광지"')}</label>
-    <div class="row"><button type="button" class="small-btn primary" id="talkApply">${S.dest?`${esc(S.dest)}(으)로 이어 가기`:'이 방향으로 여행지 찾으러 가기'}</button><button type="button" class="t-link" id="talkRedo">다시 이야기하기</button></div>
-    <p class="hint">대화 내용은 저장하지 않고, 이 방향만 남겨요.</p></div></div>`;
-  }
-  return h;
+  const d=p.direction||{};
+  return {f:'talk',n:t.n,max:TALK_MAX,hist,last:last?last.text:'',busy:!!t.busy,options:t.options.slice(),failed:!!t.failed,
+    done:S?{note:S.note||p.purpose||'',purpose:p.purpose??'',chips:[...new Set([...S.keywords,...kws])].map(k=>({k,on:kws.some(x=>norm(x)===norm(k))})),
+      pace:p.pace,solo:p.party.type==='solo',social:p.social,avoid:d.avoid||'',applyLabel:S.dest?`${S.dest}(으)로 이어 가기`:'이 방향으로 여행지 찾으러 가기'}:null};
 }
 async function talkSend(text,opt){
   opt=opt||{};

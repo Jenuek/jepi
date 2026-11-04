@@ -13,6 +13,16 @@ import { SettingsScreen, type SettingsScreenProps } from './screens/SettingsScre
 import { TasteKeywords, type TasteKeywordsProps } from './screens/TasteKeywords';
 import { FindSheet, type FindSheetProps } from './screens/FindSheet';
 import { MeRows, type MeRowsProps } from './screens/MeRows';
+import { TasteStyle, type TasteStyleProps } from './screens/TasteStyle';
+import { OnbBody, type OnbBodyProps } from './screens/OnbBody';
+import { TrayCards, TrayFilters, type TrayCardsProps, type TrayFiltersProps } from './screens/Tray';
+import { Checks, type ChecksProps } from './screens/Checks';
+import { Dice, MapCards, type DiceProps, type MapCardsProps } from './screens/Dice';
+import { DayButtons, DaySum, SumBody, Route, BudgetSum, Budget, type DaysProps, type DaySumProps, type SumBodyProps, type RouteProps, type BudgetSumProps, type BudgetProps } from './screens/DayTop';
+import { DayGrid, type DayGridProps } from './screens/DayGrid';
+import { BlockSheet, FillSheet, type BlockSheetProps, type FillSheetProps } from './screens/BlockSheet';
+import { PView, type PViewProps } from './screens/PView';
+import { liveOf, type LiveHandle } from './ui/live';
 
 // Every screen React owns, with the props the old code must pass.
 export interface Screens {
@@ -25,6 +35,23 @@ export interface Screens {
   keywords: TasteKeywordsProps;
   find: FindSheetProps;
   me: MeRowsProps;
+  tasteStyle: TasteStyleProps;
+  onb: OnbBodyProps;
+  trayCards: TrayCardsProps;
+  trayFilters: TrayFiltersProps;
+  checks: ChecksProps;
+  dice: DiceProps;
+  mapCards: MapCardsProps;
+  days: DaysProps;
+  daySum: DaySumProps;
+  sumBody: SumBodyProps;
+  route: RouteProps;
+  budgetSum: BudgetSumProps;
+  budget: BudgetProps;
+  grid: DayGridProps;
+  block: BlockSheetProps;
+  fill: FillSheetProps;
+  pview: PViewProps;
 }
 
 const SCREENS: { [K in keyof Screens]: ComponentType<Screens[K]> } = {
@@ -37,10 +64,29 @@ const SCREENS: { [K in keyof Screens]: ComponentType<Screens[K]> } = {
   keywords: TasteKeywords,
   find: FindSheet,
   me: MeRows,
+  tasteStyle: TasteStyle,
+  onb: OnbBody,
+  trayCards: TrayCards,
+  trayFilters: TrayFilters,
+  checks: Checks,
+  dice: Dice,
+  mapCards: MapCards,
+  days: DayButtons,
+  daySum: DaySum,
+  sumBody: SumBody,
+  route: Route,
+  budgetSum: BudgetSum,
+  budget: Budget,
+  grid: DayGrid,
+  block: BlockSheet,
+  fill: FillSheet,
+  pview: PView,
 };
 
 export interface JepiUI {
   mount<K extends keyof Screens>(name: K, el: Element, props: Screens[K]): void;
+  /** a status line / button React drew (app/ui/live.tsx), or null */
+  live(el: Element | null): LiveHandle | null;
 }
 
 declare global {
@@ -54,6 +100,7 @@ const roots = new WeakMap<Element, { root: Root; host: HTMLElement; name: string
 
 export function installBridge(): void {
   window.JEPI_UI = {
+    live: liveOf,
     mount(name, el, props) {
       let cur = roots.get(el);
       if (!cur || cur.host.parentNode !== el || cur.name !== name) {

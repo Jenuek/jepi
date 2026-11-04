@@ -41,11 +41,11 @@ document.addEventListener('click',e=>{
     if(onbBusy){setSt('st_pack','이미 준비하는 중이에요. 잠시만 기다려 주세요.');return}
     setSt('st_pack','요청을 보내는 중이에요…');
     (async()=>{const inOnb=!$('#onb').hidden;if(await genPack(dest)){if(inOnb)renderOnb();else{commitProfile(draft);renderAll();renderMe();await morePlaces(24,'st_pack','');renderAll()}}})()
-      .catch(err=>{onbBusy=false;setBusy(false);t.textContent='AI로 여행지 준비하기';setSt('st_pack','문제가 생겼어요: '+((err&&(err.message||err.code))||err)+' · 다시 눌러 주세요.')});
+      .catch(err=>{onbBusy=false;setBusy(false);{const L=window.JEPI_UI.live(t);if(L)L.label(null);else t.textContent='AI로 여행지 준비하기'}setSt('st_pack','문제가 생겼어요: '+((err&&(err.message||err.code))||err)+' · 다시 눌러 주세요.')});
     return}
   if(t.id==='onbExample'){if(onbBusy)return;demoEnter();return}
   if(t.dataset.radio&&!t.closest('#helper')){if(t.dataset.radio.startsWith('style.'))styleOpen=true;let v=t.dataset.val;if(v==='true')v=true;else if(v==='false')v=false;if(draft){setPath(draft,t.dataset.radio,v);if(t.dataset.radio==='mode')draft.local=v==='car'?'car':'transit';if(t.dataset.radio==='party.type'){const q=draft.party;if(v==='couple')q.adults=2;if(v==='friends'&&q.adults<2)q.adults=3;if(v==='family'){if(q.adults<2)q.adults=2;if(!q.kids)q.kids=1;draft.pace='slow'}fixProfile(draft)}rerenderForm()}return}
-  if(t.dataset.kwtoggle){const k=t.dataset.kwtoggle,i=kws.findIndex(x=>norm(x)===norm(k));if(i>=0)kws.splice(i,1);else kws.push(k);store.set('gp.kw',kws);t.setAttribute('aria-pressed',String(i<0));renderPref();return}
+  if(t.dataset.kwtoggle){const k=t.dataset.kwtoggle,i=kws.findIndex(x=>norm(x)===norm(k));if(i>=0)kws.splice(i,1);else kws.push(k);store.set('gp.kw',kws);{const L=window.JEPI_UI.live(t);if(L)L.pressed(i<0);else t.setAttribute('aria-pressed',String(i<0))}renderPref();return}
   if(t.dataset.addstay&&draft){const n=nightsOf(draft);draft.stays.push({name:'숙소 '+(draft.stays.length+1),area:firstArea(),checkin:'15:00',checkout:'11:00',from:Math.max(0,n-1),to:n});rerenderForm();return}
   if(t.dataset.delstay!=null&&draft){draft.stays.splice(+t.dataset.delstay,1);rerenderForm();return}
   if(t.dataset.addev&&draft){draft.events.push({name:'',day:0,start:'19:00',end:'21:00',area:firstArea()});rerenderForm();return}
@@ -138,7 +138,7 @@ document.addEventListener('click',e=>{
   if(sh){const uid=sh.dataset.uid, b=placed.find(x=>x.uid===uid);
     if(t.dataset.close){closeSheet();return}
     if(t.dataset.swap&&b){b.id=t.dataset.swap;b.start=+t.dataset.start;b.dur=+t.dataset.dur;save();renderAll();openSheet(uid);return}
-    if(t.dataset.mark){toggleMark(uid,t.dataset.mark);renderAll();openSheet(uid);const m=$('#sheet .marks');if(m)m.open=true;return}
+    if(t.dataset.mark){toggleMark(uid,t.dataset.mark);renderAll();openSheet(uid,{marksOpen:true});return}
     if(t.dataset.pairblock){makePairBlock(uid,t.dataset.pairblock);return}
     if(t.dataset.home){profile.home.min=Math.max(10,Math.min(240,(+profile.home.min||60)+ +t.dataset.home));store.set('gp.profile',profile);buildDays();renderAll();openSheet('f0a');return}
     if(!b) return;
@@ -176,11 +176,13 @@ document.addEventListener('dragstart',e=>{
   if(c){drag={type:'new',id:c.dataset.id}} else if(b&&b.dataset.uid){drag={type:'move',uid:b.dataset.uid}} else return;
   try{e.dataTransfer.setData('text/plain','x');e.dataTransfer.effectAllowed='move'}catch(_){}
 });
-document.addEventListener('dragend',()=>{drag=null;document.querySelectorAll('.slot.drop').forEach(s=>s.classList.remove('drop'))});
+// the slot under a dragged card (React draws the slots: marked through a handle)
+const dropMark=(el,on)=>{const L=window.JEPI_UI.live(el);if(L)L.cls('drop',on);else el.classList.toggle('drop',on)};
+document.addEventListener('dragend',()=>{drag=null;document.querySelectorAll('.slot.drop').forEach(s=>dropMark(s,false))});
 const gridEl=$('#grid');
 gridEl.addEventListener('dragover',e=>{if(!drag)return;e.preventDefault();
-  document.querySelectorAll('.slot.drop').forEach(s=>s.classList.remove('drop'));
-  const s=document.elementsFromPoint(e.clientX,e.clientY).find(el=>el.classList&&el.classList.contains('slot')); if(s) s.classList.add('drop')});
+  const s=document.elementsFromPoint(e.clientX,e.clientY).find(el=>el.classList&&el.classList.contains('slot'));
+  document.querySelectorAll('.slot.drop').forEach(x=>{if(x!==s)dropMark(x,false)}); if(s&&!s.classList.contains('drop')) dropMark(s,true)});
 gridEl.addEventListener('drop',e=>{if(!drag)return;e.preventDefault();
   const H=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hour'))||60;
   const r=gridEl.getBoundingClientRect(); const m=dayStart(day)+Math.floor(((e.clientY-r.top)/H*60)/30)*30;

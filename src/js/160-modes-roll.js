@@ -3,11 +3,9 @@ let jp='J';
 function setJP(m,quiet){jp=m==='P'?'P':'J';{const ci=document.getElementById('chatInput');if(ci)ci.placeholder=jp==='P'?'뭐 하고 싶어요? 말로 해도 돼요':'AI에게 말로 부탁하기'}document.body.classList.toggle('mode-p',jp==='P');document.querySelectorAll('[data-jp]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.jp===jp)));if(!quiet)store.set('gp.jp',jp)}
 
 // ---------- one-day course ----------
-function fDay(p){const m=p.meet||{};
-  return `${fDest(p)}<div class="fsec" id="datesSec"><h3>언제, 어디서 만나요?</h3><div class="fg">
-  <label>날짜<input type="date" data-pf="startDate" value="${p.dateSet!==false?esc(p.startDate):''}"></label>
-  <label>만나는 시간${inp('meet.time',m.time||'11:00','time')}</label><label>헤어지는 시간${inp('meet.end',m.end||'20:00','time')}</label>
-  <label>만나는 동네<select data-pf="meet.area">${areaOpts(m.area)}</select></label></div><p class="ai-status" id="st_dates"></p></div>${fParty(p)}`}
+// 하루 코스: 여행지 + 언제·어디서 만나요 + 누구와 (drawn by React: TripForms.tsx)
+function partsDay(p){const m=p.meet||{};
+  return [partDest(p),{f:'day',date:p.dateSet!==false?String(p.startDate??''):'',time:m.time||'11:00',end:m.end||'20:00',area:m.area,areas:optsOf(AREAS)},partParty(p)]}
 
 // ---------- DICE: roll for an empty slot ----------
 const DICE_MOODS=[['any','상관없음'],['hungry','배고파'],['quiet','조용히'],['move','움직이고 싶어'],['drink','한잔'],['rain','비 와요']];
@@ -71,19 +69,16 @@ function diceFix(force){
   applyOpsCore(r.ops); save(); learnFrom(c.p); diceLog.push({n:c.p.name,d:DAYS[day].iso}); diceLog=diceLog.slice(-60); store.set('gp.dice',diceLog);
   closeSheet(); renderAll();
 }
-function renderDiceDo(){
+function renderDiceDo(top){
   if($('#sheet').dataset.uid!=='dice') return;
   const D=DAYS[day], gs=diceGaps(day), c=dice.pick, left=Math.max(0,3-dice.rolls);
   const reasons=c?[isWish(c.p.id)?'♥ 가고 싶은 곳':'',...matchKw(c.p.id).slice(0,2).map(k=>'#'+k),c.p.season?'🗓 '+c.p.season:'',recOf(c.p)?`👍 ${recOf(c.p)}`:'',c.tm?`${c.mode} ${c.tm}분`:'바로 옆'].filter(Boolean):[];
-  $('#sheet').innerHTML=`<div class="dice">
-    <h3>🎲 DICE <span class="hint">· ${esc(D.date)} 빈 시간에서 굴려요</span></h3>
-    ${gs.length?`<span class="hint">언제</span><div class="radio">${gs.map((g,i)=>`<button type="button" data-dicegap="${i}" aria-pressed="${i===dice.gapI}">${fmt(g.s)}–${fmt(g.e)}</button>`).join('')}</div>`:''}
-    ${dice.lunch?'':`<span class="hint">지금 기분</span><div class="radio">${DICE_MOODS.map(([k,l])=>`<button type="button" data-dicemood="${k}" aria-pressed="${dice.mood===k}">${l}</button>`).join('')}</div>`}
-    <div class="dice-stage">${dice.rolling?`<div class="die spin" aria-hidden="true">${FACES[Math.floor(Math.random()*6)]}</div>`:c?`<div class="dice-card" style="--cc:var(--c-${c.p.cat})"><b>${esc(c.p.name)}</b><span class="mono hint">${fmt(c.arr)}–${fmt(c.arr+c.dur)} · ${esc(c.p.area)}</span><p>${esc(c.p.note||'')}</p><div class="tags">${reasons.map(x=>`<span class="tag">${esc(x)}</span>`).join('')}</div></div>`:`<div class="die" aria-hidden="true">⚄</div>`}</div>
-    ${dice.msg?`<p class="hint" style="color:var(--warn)">${esc(dice.msg)}</p>`:''}
-    <div class="row dice-acts">${c&&!dice.rolling?`<button type="button" class="small-btn primary" id="diceFix">이걸로 할래요</button>${dice.force?'<button type="button" class="small-btn" id="diceForce">그래도 넣기</button>':''}<button type="button" class="small-btn" id="diceAgain"${left?'':' disabled'}>다시 굴리기 (${left}번)</button>`:dice.rolling?'':`<button type="button" class="dice-go" id="diceGo">🎲 굴리기</button>`}</div>
-    ${sample&&!PACK.manual?`<div class="row"><button type="button" class="small-btn primary" id="diceAI">🔎 AI가 새로 찾아서 굴리기</button><span class="ai-status" id="st_dice"></span></div>`:''}
-    <div class="row"><button type="button" class="small-btn" data-close="1">닫기</button></div></div>`;
+  diceMount({...top,head:D.date||'',rows:[...(gs.length?[dHint('언제'),dPills('dicegap',dice.gapI,gs.map((g,i)=>[i,`${fmt(g.s)}–${fmt(g.e)}`]))]:[]),
+      ...(dice.lunch?[]:[dHint('지금 기분'),dPills('dicemood',dice.mood,DICE_MOODS.map(([k,l])=>[k,l]))])],
+    stage:dice.rolling?dSpin():c?{s:'planCard',cat:c.p.cat,name:c.p.name,line:`${fmt(c.arr)}–${fmt(c.arr+c.dur)} · ${c.p.area}`,note:c.p.note||'',tags:reasons}:{s:'die',face:'⚄'},
+    msg:dice.msg||'',acts:c&&!dice.rolling?[dBtn('small-btn primary','이걸로 할래요',{id:'diceFix'}),...(dice.force?[dBtn('small-btn','그래도 넣기',{id:'diceForce'})]:[]),dBtn('small-btn',`다시 굴리기 (${left}번)`,{id:'diceAgain',disabled:!left})]
+      :dice.rolling?[]:[dBtn('dice-go','🎲 굴리기',{id:'diceGo'})],
+    ai:sample&&!PACK.manual?{primary:true}:null});
 }
 async function diceAI(){
   const mood=(DICE_MOODS.find(m=>m[0]===dice.mood)||[])[1]||'';

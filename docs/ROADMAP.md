@@ -40,7 +40,49 @@
     연결 부분(`bridge.ts`)이 화면마다 보이지 않는 자리(`.jepi-root`)를 만들고, 예전 코드가 그 자리를 덮어쓰면 다음에 새로 시작해요. 점검 176개 통과.
   - [x] 이번 여행의 틀 (`MeRows.tsx`: 줄·펼치기·저장 안내·버튼) — 예전과 같음. 펼친 안의 입력 칸은 아직 예전 HTML(다시 그릴 때마다 새로).
     "자동 저장됨"은 `meSetMsg`로 안내만 바꿔요(입력 중인 칸은 그대로). 점검 182개 통과.
-  - [ ] 다음: 입력 폼 조각들(`030-forms.js`의 fParty·fBudget·fStay·fFlight·fHome·fEvents·dateFields·fStyle…, `140`·`160`·`170`의 fDest·fJP·fQuick·fTalk…)을
+  - [x] 이번 여행의 입력 폼 (`TripForms.tsx`): 누구와·예약 상태·기간·오가는 길·출발지·숙소·예약한 일정 — 14가지 상태 모두 예전과 같음(`tools/compare/forms.js`).
+    예전 코드는 폼에 넣을 값만 만들어요(`030-forms.js`의 `partParty`·`partTrip`·`partFlight`·`partHome`·`partStay`·`partEvents`, `280`의 `partHomeBox`).
+    AI 붙여 넣기 칸과 날짜 안내 줄(`st_…`)은 예전 코드가 글자를 직접 바꿔서 아직 예전 HTML 조각으로 끼워 넣어요. 점검 추가(입력·자동차·숙소 추가·동네·예약한 일정·날짜 미정). 점검 200개 통과.
+    예전 문자열 버전 fFlight·fStay·fHome·fEvents·fTrip·homeBoxHTML·renderMeOld(안 쓰던 것)는 지움.
+    **아직 예전 HTML 두 벌**: fParty·dateFields는 처음 설정(renderOnb)과 하루 코스(fDay)가 아직 문자열로 써서 남겨 둠 → 그 화면을 옮길 때 지워요.
+  - [x] 예산 폼(`TripForms.tsx` Budget)과 취향 탭의 "어떤 여행을 원하나요?"(`TasteStyle.tsx`, #tasteStyle) — 예전과 같음(`tools/compare/taste.js` 8가지).
+    예산 아래 안내는 예전엔 입력할 때 글자를 직접 바꿨는데, 이제 상태값(`meSetBudgetHint`)으로 바꿔요(입력 중인 칸은 그대로). fBudget·fStyle·styleOnly 문자열 버전은 지움.
+    **아직 예전 HTML 두 벌**: styleMoreHTML(여행 스타일 더)은 처음 설정의 여행지 추천(fDestFinder)이 아직 문자열로 써서 남겨 둠. 점검 206개 통과.
+  - [x] 처음 설정 본문(#onbBody, `OnbBody.tsx`): J/P 고르기(AI 키·백업 불러오기)·시작 방법·가고 싶은 곳(여행지·날짜·동행)·P 가볍게 시작·하루 코스,
+    그리고 이번 여행의 언제·어디(여행지)·하루 코스 폼 — 13가지 상태 모두 예전과 같음(`tools/compare/onb.js`).
+    **새 연결 방식**: 예전 코드가 안내 줄(`st_pack`·`st_dates`·`st_onb`·`st_import`)과 버튼("준비하는 중…", 잠그기)을 직접 바꾸던 걸
+    `app/ui/live.tsx`(LiveLine·LiveButton)로 — 예전 도우미(setSt·progStart·progStop·setBusy)가 `JEPI_UI.live(요소)`로 먼저 물어보고, 리액트가 그린 거면 그쪽으로 알려요.
+    앞으로 다른 화면도 이 방식으로 옮기면 돼요. 예전 문자열 버전 fParty·dateFields·fDates·fDest·fDay·fJP·fChooser·fQuick·talkBanner·onbKeyBox는 지움.
+    점검 추가(시작 방법별 화면, 날짜 먼저 안내, 어디로 안내, AI 준비하기 중 버튼·시간 표시와 실패 뒤 되돌림). 점검 218개 통과.
+    처음 설정의 틀(#onb 제목·다음 버튼)은 body.html 그대로.
+  - [x] 이야기하면서 정하기(`OnbTalk.tsx`)와 여행지 추천(`OnbFinder.tsx`, 카드·더 보기·궁금한 곳) — 가짜 AI로 13가지 상태 모두 예전과 같음(`tools/compare/onb-ai.js`).
+    "여행 스타일 더"는 취향 탭과 같은 조각(`TasteStyle.tsx`의 StyleMore). 취향 키워드 칩은 누르면 예전 코드가 눌림 표시를 직접 바꿨는데 → `LiveChip`(live 연결)으로.
+    이제 처음 설정·이번 여행·취향 탭에 예전 HTML 문자열 폼이 남아 있지 않아요(AI 붙여 넣기 칸만 예전 조각). 안 쓰던 fTaste도 지움. 점검 추가(대화·방향·칩·추천 카드·기다리는 동안 버튼). 점검 230개 통과.
+  - [x] 장소 탭의 필터와 카드 목록(`Tray.tsx`: #filters·#cards, 같은 곳 같아요 카드 포함) — 11가지 상태 모두 예전과 같음(`tools/compare/tray.js`).
+    예전 코드는 카드마다 보여 줄 값만 만들어요(`340-render.js`의 `cardInfo`, `388-dedup.js`의 `dupInfo`). 다른 기능이 카드에 더하는 것(CARD_EXTRAS: 친구 "가고 싶어요")만 예전 HTML 조각.
+    장소 탭의 위쪽(제목·추천 안내 #recSt·묶어 보기 버튼·이 날 문 여는 곳만·AI로 더 찾기)은 body.html 그대로. 점검 추가(♥·필터·분류·접힌 동네 유지·넣기). 점검 237개 통과.
+  - [x] 준비하기(`Checks.tsx`, #checks): 일정 경고·예약·준비·이 시기 여행 팁·여행 전체·일정 초기화 — 가짜 AI 포함 6가지 상태 모두 예전과 같음(`tools/compare/checks.js`).
+    "시즌 정보 받기" 버튼과 안내 줄은 live 연결. 예전 ckRow·seasonChecksHTML 지움(`ckInfo`·`seasonInfo`가 값만 만들어요). 점검 243개 통과.
+  - [x] 🎲 DICE 시트(`Dice.tsx`: 뭐 하지 주변·동네·일정 빈 시간, 뭐 먹지 주변·일정)와 지도 아래 카드(#mapCards) — 14가지 상태 모두 예전과 같음(`tools/compare/dice.js`, 주사위 난수를 같게 고정).
+    세 가지 예전 화면이 같은 조각(탭·기준 버튼·조건 상자·주사위/카드·버튼 줄)을 값으로 넘겨요. "AI가 새로 찾아서 굴리기"는 live 연결.
+    **고친 것**: 일정 빈 시간 보기에서 예전 코드가 그려진 시트 맨 위에 탭·기준 버튼을 끼워 넣던 것(insertAdjacentHTML) → 값으로 넘김.
+    지도 자체(Leaflet)는 그대로 예전 코드. 점검 251개 통과.
+  - [x] 일정표 ① 위쪽(`DayTop.tsx`): 날짜 버튼(#days)·요약 줄(#daySum)과 펼친 내용(#sumBody)·동선(#route)·예산(#budgetSum·#budget) — 48가지 캡처 모두 예전과 같음(`tools/compare/daytop.js`, 예산 넘을 때·여럿일 때 포함).
+    굵은 글씨가 섞인 줄은 `segs(…)`로 글자 조각을 만들어 넘겨요(DayTop.tsx의 Line). 상자(#sumBody 숨기기, 패널의 sum-… 표시)는 예전 코드가 그대로 열고 닫아요.
+    점검 추가. 🎲 점검이 주사위 난수에 따라 가끔 실패하던 것도 고침(난수 고정 + "그래도 넣기" 경우). 점검 259개 통과.
+  - [x] 일정표 ② 본체(`DayGrid.tsx`, #grid): 시간 줄·빈칸·이동 칩·블록(손글씨 메모 포함)·권역 띠·일몰 선 — 6가지 상태 모두 예전과 같음(`tools/compare/grid.js`).
+    블록에 다른 기능이 더하는 표시(BLOCK_BADGES: 🔔·👍)만 예전 HTML 조각. 끌어다 놓을 때 빈칸 강조(.drop)는 예전 코드가 직접 바꾸던 것 → `LiveSlot`(live 연결).
+    점검 추가(끌어서 옮기기·강조·메모). 점검 265개 통과.
+  - [x] 일정표 ③ 블록 시트·빈 시간 시트(`BlockSheet.tsx`: 대안 목록·할 일 표시 포함) — 8가지 상태 모두 예전과 같음(`tools/compare/sheets.js`).
+    할 일 표시를 누른 뒤 예전 코드가 상자를 직접 열던 것 → `openSheet(uid,{marksOpen:true})`. 시트에 다른 기능이 더하는 것(SHEET_EXTRAS: 손글씨 메모·🔔·가고 싶어요)은 예전 HTML 조각.
+  - [x] P 모드 일정(`PView.tsx`, #pview): 시간 구간·🎲 칸·다음·그만·다 봤어요·좋아요 — 7가지 상태 모두 예전과 같음(`tools/compare/pview.js`). 점검 278개 통과.
+  - **이제 주요 화면은 모두 리액트예요.** 남은 예전 HTML(작은 것들, 다음 순서 추천):
+    1. 다른 기능이 끼워 넣는 조각: SHEET_EXTRAS(메모·🔔·가고 싶어요), BLOCK_BADGES, CARD_EXTRAS, SETTINGS_EXTRA → 각각 작은 리액트 조각으로.
+    2. AI 붙여 넣기 칸(pasteBox·aiFill — 예전 코드가 안내 글을 직접 바꿈 → live 방식).
+    3. 다른 시트: 직접 블록 만들기(`040`), 여행 꾸미기(`389a`), 예약 도우미(`100`), AI 빈 시간 추천 상자(`340`의 aiState), 같은 장소 제안(`388`).
+    4. 채팅(`050` #chatLog·#nudges), 첫 화면(`381`), 계획 메뉴(`300`), 여행 단계 띠(`250`), 날짜 제목 고치기(`389-titles`), 여행 노트(`389c`), 장소 탭 추천 안내(#recSt).
+    5. 그다음 2단계 뒷부분 ②(여행 데이터를 한 곳으로)와 친구 합치기 규칙 → 4단계 앱 포장.
+  - 참고(예전 계획): 입력 폼 조각들(`030-forms.js`의 fParty·fBudget·fStay·fFlight·fHome·fEvents·dateFields·fStyle…, `140`·`160`·`170`의 fDest·fJP·fQuick·fTalk…)을
     하나씩 리액트로. 처음 설정(`renderOnb`)·이번 여행·취향(renderTasteStyle)이 같이 써요.
     방법: 칸 이름(`data-pf`, `data-radio`)은 그대로, 폼 전체는 다시 그릴 때마다 새로(rev 키) — 예전 코드가 값을 바꾼 뒤 다시 그리는 방식과 같아서 안전해요.
     처음 설정의 틀(#onb, body.html의 고정 HTML)은 옮겨도 얻는 게 적어 폼을 다 옮긴 뒤에.
