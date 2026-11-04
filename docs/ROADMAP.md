@@ -90,7 +90,7 @@
        ~~AI 빈 시간 추천 상자(`AiBox.tsx`)~~ — "○초째" 시계는 live 연결. 예전과 같음(`tools/compare/aibox.js`: 기다림·못 찾음·실패).
     4. ~~채팅(`ChatLog.tsx`, 더 정확하게 줄 포함)~~, ~~첫 화면(`Welcome.tsx`)~~, ~~계획 메뉴(`PlanMenu.tsx`)~~, ~~여행 단계 띠(`Phase.tsx`)~~, ~~여행 노트(`Notebook.tsx`)~~ —
        모두 예전과 같음(`tools/compare/` chat·welcome·planmenu·phase(시계를 여행 날로 옮겨서)·notebook). 점검 298개 통과.
-       **예전 HTML로 남겨 둔 것(일부러)**: 날짜 제목 고치기 폼(`389-titles`, 머리글 틀에 붙는 작은 폼), 장소 탭 추천 안내 한 줄(#recSt, 글자만),
+       **예전 HTML로 남겨 둔 것(일부러)**: 날짜 제목 고치기 폼(`389-titles`, 머리글 틀에 붙는 작은 폼), 장소 탭 추천 안내 한 줄(#recSt, 글자만), 머리글 커버 그림(#heroArt, `389a`의 renderLook),
        body.html의 고정 틀(머리글·아래 탭·처음 설정/예약 도우미의 제목과 이전·다음 버튼). 리액트 화면 안을 예전 코드가 직접 고치는 곳은 이제 없어요.
     5. **다음**: 실제 기기 확인(배포 뒤) → 2단계 뒷부분 ②(여행 데이터를 한 곳으로)와 친구 합치기 규칙 → 4단계 앱 포장.
   - 참고(예전 계획): 입력 폼 조각들(`030-forms.js`의 fParty·fBudget·fStay·fFlight·fHome·fEvents·dateFields·fStyle…, `140`·`160`·`170`의 fDest·fJP·fQuick·fTalk…)을
