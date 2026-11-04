@@ -19,6 +19,10 @@ export interface AppHost {
   /** 여행 꾸미기: rename the open plan ('' or the same name = no change), and AI day titles for this trip */
   renamePlan(name: string): void;
   aiDayTitles(tripName: string): Promise<string[]>;
+  /** 첫 화면: start a new trip / open the demo / after logging in, open what came with the account (or a pending invite) */
+  welcomeNew(): void;
+  welcomeDemo(): void;
+  welcomeLoggedIn(): Promise<void>;
   /** what went wrong, in words the person can act on */
   errText(e: unknown, what: string): string;
   shareNotebook(): Promise<string>;

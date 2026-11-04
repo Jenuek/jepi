@@ -71,5 +71,3 @@ async function syncBoot(){
   setTimeout(syncNow,800);
 }
 
-// email + password (app/data/account.ts): the first screen uses these too
-const sbErrText=m=>ACC.errText(m), sbSignIn=(em,pw,join)=>ACC.signIn(em,pw,join);
