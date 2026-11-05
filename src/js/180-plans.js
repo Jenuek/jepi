@@ -31,7 +31,7 @@ function applyPlanData(d){
   d=d||{}; loadPack(packFrom(d.pack)||blankPack());
   custom=Array.isArray(d.custom)?d.custom:[]; custom.forEach(addCustomToData);
   profile=d.profile&&typeof d.profile==='object'?d.profile:clone(PROFILE_EXAMPLE); fixProfile(profile);
-  placed=(Array.isArray(d.placed)?d.placed:[]).filter(b=>PM[b.id]).map(b=>({uid:'u'+(uidN++),id:b.id,day:b.day,start:b.start,dur:b.dur||PM[b.id].dur,mk:Array.isArray(b.mk)?b.mk.filter(m=>MARKS[m]):undefined}));
+  placed=(Array.isArray(d.placed)?d.placed:[]).filter(b=>PM[b.id]).map(b=>({uid:TRIP.uids.next(),id:b.id,day:b.day,start:b.start,dur:b.dur||PM[b.id].dur,mk:Array.isArray(b.mk)?b.mk.filter(m=>MARKS[m]):undefined}));
   fmarks=d.fmarks&&typeof d.fmarks==='object'?d.fmarks:{}; wish=Array.isArray(d.wish)?d.wish:[]; meals=d.meals&&typeof d.meals==='object'?d.meals:{}; done=d.done&&typeof d.done==='object'?d.done:{};
   TRIP.save('profile',profile); savePack(); TRIP.save('custom',custom); TRIP.save('fmarks',fmarks); TRIP.save('wish',wish); TRIP.save('meals',meals); TRIP.save('done',done);
   chat=[]; undoSnap=null; aiState=null; selected=null; pSt.draw=null; hVibe=null; hotelRecs={}; routeInfo=null; destRecs=null; destAsked=[];

@@ -50,11 +50,7 @@ function marksInfo(it,forceOpen){
     bagHint:nb.length?`근처 짐 보관: ${nb.map(x=>`${x.p.name} (${x.d<0.1?'바로 옆':Math.round(x.d*1000)+'m'})`).join(', ')}`:'',
     pairs:pend.map(T=>({T,label:`${MARKS[T+'-'][0]} ${PAIRS[T].pair} 블록 만들기`}))};
 }
-function toggleMark(uid,m){
-  const b=placed.find(x=>x.uid===uid);
-  if(b){b.mk=b.mk||[];const i=b.mk.indexOf(m);if(i>=0)b.mk.splice(i,1);else b.mk.push(m);save()}
-  else{fmarks[uid]=fmarks[uid]||[];const a=fmarks[uid],i=a.indexOf(m);if(i>=0)a.splice(i,1);else a.push(m);if(!a.length)delete fmarks[uid];if(!DRY)TRIP.save('fmarks',fmarks)}
-}
+const toggleMark=(uid,m)=>TRIP.toggleMark(uid,m);   // app/data/trip.ts
 function makePairBlock(uid,T){
   const it=dayItems(day).find(x=>x.uid===uid); if(!it) return;
   // put the closing block before the next block that needs it (lodging, airport) or late in the day
@@ -66,7 +62,7 @@ function makePairBlock(uid,T){
   start=Math.max(dayStart(d),Math.min(1410,Math.round(start/15)*15));
   const c={id:'c'+Date.now().toString(36),name:`${PAIRS[T].pair} · ${it.name.replace(/ \(.*\)$/,'')}`.slice(0,40),area:nearestArea(it.ll)||firstArea(),cat:T==='wait'?'food':'trip',dur:PAIRS[T].dur,cost:0,memo:`${it.name}에서 시작한 일을 마무리해요.`,tags:'',drop:false,ll:it.ll};
   custom.push(c); TRIP.save('custom',custom); addCustomToData(c);
-  placed.push({uid:'u'+(uidN++),id:c.id,day:d,start,dur:c.dur,mk:[T+'-']}); save();
+  TRIP.blocks.add({id:c.id,day:d,start,dur:c.dur,mk:[T+'-']});
   day=d; closeSheet(); renderAll();
 }
 

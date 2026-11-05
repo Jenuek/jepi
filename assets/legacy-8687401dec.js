@@ -477,7 +477,7 @@ function saveCustomForm(f){
   const i=custom.findIndex(x=>x.id===c.id); if(i>=0) custom[i]=c; else custom.push(c); TRIP.save('custom',custom); addCustomToData(c);
   const asCard=f.dataset.card==='1';
   if(asCard){if(!isWish(c.id))toggleWish(c.id);showToast('내 카드에 담았어요')}
-  else if(!editId){const st=parse($('#cfStart').value);placed.push({uid:'u'+(uidN++),id:c.id,day,start:Math.max(dayStart(day),Math.min(1410,st??600)),dur:c.dur});save()}
+  else if(!editId){const st=parse($('#cfStart').value);TRIP.blocks.add({id:c.id,day,start:Math.max(dayStart(day),Math.min(1410,st??600)),dur:c.dur})}
   {const prev=editId?(custom.find(x=>x.id===c.id)||{}):{};if(RS.status==='on'&&(c.share||prev.share!==undefined))shareCustom(c,c.share)}
   closeSheet(); renderAll();
 }
@@ -910,11 +910,7 @@ function marksInfo(it,forceOpen){
     bagHint:nb.length?`근처 짐 보관: ${nb.map(x=>`${x.p.name} (${x.d<0.1?'바로 옆':Math.round(x.d*1000)+'m'})`).join(', ')}`:'',
     pairs:pend.map(T=>({T,label:`${MARKS[T+'-'][0]} ${PAIRS[T].pair} 블록 만들기`}))};
 }
-function toggleMark(uid,m){
-  const b=placed.find(x=>x.uid===uid);
-  if(b){b.mk=b.mk||[];const i=b.mk.indexOf(m);if(i>=0)b.mk.splice(i,1);else b.mk.push(m);save()}
-  else{fmarks[uid]=fmarks[uid]||[];const a=fmarks[uid],i=a.indexOf(m);if(i>=0)a.splice(i,1);else a.push(m);if(!a.length)delete fmarks[uid];if(!DRY)TRIP.save('fmarks',fmarks)}
-}
+const toggleMark=(uid,m)=>TRIP.toggleMark(uid,m);   // app/data/trip.ts
 function makePairBlock(uid,T){
   const it=dayItems(day).find(x=>x.uid===uid); if(!it) return;
   // put the closing block before the next block that needs it (lodging, airport) or late in the day
@@ -926,7 +922,7 @@ function makePairBlock(uid,T){
   start=Math.max(dayStart(d),Math.min(1410,Math.round(start/15)*15));
   const c={id:'c'+Date.now().toString(36),name:`${PAIRS[T].pair} · ${it.name.replace(/ \(.*\)$/,'')}`.slice(0,40),area:nearestArea(it.ll)||firstArea(),cat:T==='wait'?'food':'trip',dur:PAIRS[T].dur,cost:0,memo:`${it.name}에서 시작한 일을 마무리해요.`,tags:'',drop:false,ll:it.ll};
   custom.push(c); TRIP.save('custom',custom); addCustomToData(c);
-  placed.push({uid:'u'+(uidN++),id:c.id,day:d,start,dur:c.dur,mk:[T+'-']}); save();
+  TRIP.blocks.add({id:c.id,day:d,start,dur:c.dur,mk:[T+'-']});
   day=d; closeSheet(); renderAll();
 }
 
@@ -935,8 +931,8 @@ let DRY=false;
 function applyOpsCore(ops){
   for(const o of ops){
     const st=parse(o.start);
-    if(o.op==='add'&&PM[o.id]&&!placed.some(b=>b.id===o.id)) placed.push({uid:'u'+(uidN++),id:o.id,day:+o.day,start:Math.max(dayStart(+o.day),Math.min(1410,st)),dur:Math.max(15,+o.dur||PM[o.id].dur)});
-    if(o.op==='add_custom'){const c={id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),name:String(o.name).slice(0,40),area:AREAS[o.area]?o.area:firstArea(),cat:CATS[o.category]?o.category:'walk',dur:Math.max(15,+o.dur||60),cost:Math.max(0,+o.cost||0),memo:'AI가 만든 블록이에요.',tags:'',drop:false};custom.push(c);addCustomToData(c);placed.push({uid:'u'+(uidN++),id:c.id,day:+o.day,start:Math.max(dayStart(+o.day),Math.min(1410,st)),dur:c.dur})}
+    if(o.op==='add'&&PM[o.id]&&!placed.some(b=>b.id===o.id)) placed.push({uid:TRIP.uids.next(),id:o.id,day:+o.day,start:Math.max(dayStart(+o.day),Math.min(1410,st)),dur:Math.max(15,+o.dur||PM[o.id].dur)});
+    if(o.op==='add_custom'){const c={id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),name:String(o.name).slice(0,40),area:AREAS[o.area]?o.area:firstArea(),cat:CATS[o.category]?o.category:'walk',dur:Math.max(15,+o.dur||60),cost:Math.max(0,+o.cost||0),memo:'AI가 만든 블록이에요.',tags:'',drop:false};custom.push(c);addCustomToData(c);placed.push({uid:TRIP.uids.next(),id:c.id,day:+o.day,start:Math.max(dayStart(+o.day),Math.min(1410,st)),dur:c.dur})}
     if(o.op==='move'){const b=placed.find(x=>x.uid===o.uid);if(b){if(o.day!=null)b.day=+o.day;if(st!=null)b.start=Math.max(dayStart(b.day),Math.min(1410,st));if(o.dur)b.dur=Math.max(15,+o.dur)}}
     if(o.op==='remove') placed=placed.filter(x=>x.uid!==o.uid);
     if(o.op==='add_place'&&!DRY){const pl=cleanPlace({name:o.name,local:o.local,area:o.area,cat:o.category,lat:o.lat,lng:o.lng,dur:o.dur,open:o.open,closed:o.closed,cost:o.cost,costNote:o.costNote,tags:o.tags,note:o.note});if(pl&&!P.some(p=>norm(p.name)===norm(pl.name))){PACK.places.push(pl);addPackPlace(pl);FRESH.add(pl.id);savePack()}}
@@ -945,10 +941,10 @@ function applyOpsCore(ops){
 }
 function warnSet(){const s=new Map();DAYS.forEach((_,d)=>analyze(d).items.forEach(it=>it.warns.forEach(w=>{const k=`${d}|${it.name}|${w.replace(/\d+/g,'#')}`;if(!s.has(k))s.set(k,`Day ${d+1} ${it.name}: ${w}`)})));return s}
 function simulateOps(ops){
-  const bk={placed,custom,fmarks,uidN,n:P.length};
+  const bk={placed,custom,fmarks,uidN:TRIP.uids.get(),n:P.length};
   DRY=true; placed=clone(placed); custom=clone(custom); fmarks=clone(fmarks);
   try{applyOpsCore(ops); return warnSet()}
-  finally{const extra=P.splice(bk.n);extra.forEach(p=>{delete PM[p.id]});placed=bk.placed;custom=bk.custom;fmarks=bk.fmarks;uidN=bk.uidN;DRY=false}
+  finally{const extra=P.splice(bk.n);extra.forEach(p=>{delete PM[p.id]});placed=bk.placed;custom=bk.custom;fmarks=bk.fmarks;TRIP.uids.set(bk.uidN);DRY=false}
 }
 function repairOps(ops){
   const base=warnSet(); const fresh=m=>[...m.entries()].filter(([k])=>!base.has(k)).map(([,v])=>v);
@@ -967,8 +963,7 @@ function repairOps(ops){
 
 // ---------- booking helper: wish list → where to stay → flight times → search links ----------
 let wish=[], hStep=0, hVibe=null, hBusy=false;
-const isWish=id=>wish.includes(id);
-function toggleWish(id){const i=wish.indexOf(id);if(i>=0)wish.splice(i,1);else wish.push(id);TRIP.save('wish',wish)}
+const isWish=id=>TRIP.wish.has(id), toggleWish=id=>TRIP.wish.toggle(id);   // app/data/trip.ts
 const needBooking=()=>profile.kind!=='day'&&(profile.bookedFlight===false||profile.bookedStay===false);
 const ymd=i=>{const d=dateOf(profile,i);return d?`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`:''};
 const guests=()=>({a:profile.party.adults||1,k:profile.party.kids||0});
@@ -1018,11 +1013,11 @@ List:
 ${text.slice(0,4000)}
 Area keys: ${areaList}
 Reply with only JSON: {"places":[{"name":"Korean name","local":"name in local language","area":"area key","cat":"food|music|art|walk|shop|night|trip","lat":0.0000,"lng":0.0000,"dur":minutes,"open":"HH:MM-HH:MM or null","closed":[0-6],"cost":typical spend in ${PACK.currency},"tags":["short Korean"],"note":"one Korean sentence","cash":false}]}`,{cache:false});
-    let n=0,added=0;
+    let n=0,added=0;const got=[];
     (Array.isArray(r&&r.places)?r.places:[]).slice(0,40).forEach(x=>{const ex=P.find(p=>norm(p.name)===norm(x&&x.name||''));
-      if(ex){if(!isWish(ex.id))wish.push(ex.id);n++;return}
-      const pl=cleanPlace(x);if(pl){PACK.places.push(pl);addPackPlace(pl);wish.push(pl.id);n++;added++}});
-    TRIP.save('wish',wish); savePack(); progStop(stId); renderHelper(); renderTray(); setSt(stId,n?`${n}곳에 ♥를 붙였어요${added?` (새로 찾은 곳 ${added}곳)`:''}.`:'목록에서 장소를 찾지 못했어요.');
+      if(ex){got.push(ex.id);n++;return}
+      const pl=cleanPlace(x);if(pl){PACK.places.push(pl);addPackPlace(pl);got.push(pl.id);n++;added++}});
+    TRIP.wish.add(got); savePack(); progStop(stId); renderHelper(); renderTray(); setSt(stId,n?`${n}곳에 ♥를 붙였어요${added?` (새로 찾은 곳 ${added}곳)`:''}.`:'목록에서 장소를 찾지 못했어요.');
   }catch(e){setSt(stId,errText(e,'장소를 찾지 못했어요'))}
 }
 async function askVibes(){
@@ -1279,7 +1274,7 @@ In the summary, pace is slow|normal|full, social is alone|some|social, party is 
     if(Number.isInteger(+S.nights)&&+S.nights>=1&&+S.nights<=MAX_N&&S.nights!==null){draft.nights=+S.nights;draft.nightsSet=true}
     if(/^\d{4}-\d{2}-\d{2}$/.test(String(S.startDate||''))&&String(S.startDate)>=isoPlus(0)){draft.startDate=S.startDate;draft.dateSet=true;draft.dateUnknown=false}
     draft.direction={purpose:talk.summary.purpose,avoid:String(S.avoid||'').slice(0,80),note:talk.summary.note};
-    talk.summary.keywords.forEach(k=>{if(!kws.some(x=>norm(x)===norm(k)))kws.push(k)}); TRIP.kws.save(kws);
+    TRIP.keywords.addAll(talk.summary.keywords);
   }
   rerenderForm(); scrollTalk();
 }
@@ -1519,7 +1514,7 @@ function pRollDo(gi,auto){
   clearTimeout(pSpinT); renderPView();
   if(spin) pSpinT=setTimeout(()=>{if(pSt.draw){pSt.draw.rolling=false;renderPView()}},1100);
 }
-function learnFrom(p){const t=tagsOf(p.id)[0];if(t&&!kws.some(x=>norm(x)===norm(t))&&kws.length<12){kws.push(t);TRIP.kws.save(kws)}}
+function learnFrom(p){const t=tagsOf(p.id)[0];if(t)TRIP.keywords.add(t,12)}
 function pYes(){const d=pSt.draw; if(!d||!d.cand) return; const c=d.cand; learnFrom(c.p);
   const r=repairOps([{op:'add',day,id:c.p.id,start:fmt(c.arr),dur:c.dur}]); applyOpsCore(r.ops); save();
   diceLog.push({n:c.p.name,d:DAYS[day].iso}); diceLog=diceLog.slice(-60); store.set('gp.dice',diceLog); pSt.draw=null; renderAll();}
@@ -1572,7 +1567,7 @@ function applyPlanData(d){
   d=d||{}; loadPack(packFrom(d.pack)||blankPack());
   custom=Array.isArray(d.custom)?d.custom:[]; custom.forEach(addCustomToData);
   profile=d.profile&&typeof d.profile==='object'?d.profile:clone(PROFILE_EXAMPLE); fixProfile(profile);
-  placed=(Array.isArray(d.placed)?d.placed:[]).filter(b=>PM[b.id]).map(b=>({uid:'u'+(uidN++),id:b.id,day:b.day,start:b.start,dur:b.dur||PM[b.id].dur,mk:Array.isArray(b.mk)?b.mk.filter(m=>MARKS[m]):undefined}));
+  placed=(Array.isArray(d.placed)?d.placed:[]).filter(b=>PM[b.id]).map(b=>({uid:TRIP.uids.next(),id:b.id,day:b.day,start:b.start,dur:b.dur||PM[b.id].dur,mk:Array.isArray(b.mk)?b.mk.filter(m=>MARKS[m]):undefined}));
   fmarks=d.fmarks&&typeof d.fmarks==='object'?d.fmarks:{}; wish=Array.isArray(d.wish)?d.wish:[]; meals=d.meals&&typeof d.meals==='object'?d.meals:{}; done=d.done&&typeof d.done==='object'?d.done:{};
   TRIP.save('profile',profile); savePack(); TRIP.save('custom',custom); TRIP.save('fmarks',fmarks); TRIP.save('wish',wish); TRIP.save('meals',meals); TRIP.save('done',done);
   chat=[]; undoSnap=null; aiState=null; selected=null; pSt.draw=null; hVibe=null; hotelRecs={}; routeInfo=null; destRecs=null; destAsked=[];
@@ -2461,13 +2456,12 @@ async function syncBoot(){
 
 // ---------- state ----------
 const store=JD.storage; // same as LS (app/data/storage.ts)
-let uidN=1;
 loadPack(packFrom(store.get('gp.pack',null))||blankPack());
 let profile=TRIP.load('profile',null); const firstRun=!profile||typeof profile!=='object'; if(firstRun){profile=clone(PROFILE_EXAMPLE);Object.assign(profile,{dest:'',pace:'normal',social:'some',breakfast:true,purpose:'',party:{type:'solo',adults:1,kids:0},flightSet:false,staySet:false,dateSet:false,nightsSet:false,dateUnknown:false,startDate:isoPlus(30)});profile.stays[0].name='숙소'}
 let custom=TRIP.load('custom',[]); if(!Array.isArray(custom)) custom=[]; custom.forEach(addCustomToData);
 let placed=TRIP.load('placed',null);
 if(!Array.isArray(placed)) placed=DEFAULT.map(b=>({...b}));
-placed=placed.filter(b=>PM[b.id]).map(b=>({uid:'u'+(uidN++),id:b.id,day:b.day,start:b.start,dur:b.dur||PM[b.id].dur,mk:Array.isArray(b.mk)?b.mk.filter(m=>MARKS[m]):undefined}));
+placed=placed.filter(b=>PM[b.id]).map(b=>({uid:TRIP.uids.next(),id:b.id,day:b.day,start:b.start,dur:b.dur||PM[b.id].dur,mk:Array.isArray(b.mk)?b.mk.filter(m=>MARKS[m]):undefined}));
 fmarks=TRIP.load('fmarks',{}); diceLog=store.get('gp.dice',[]); if(!Array.isArray(diceLog)) diceLog=[]; wish=TRIP.load('wish',[]); if(!Array.isArray(wish)) wish=[]; if(!fmarks||typeof fmarks!=='object') fmarks={};
 let done=TRIP.load('done',{});
 let homeMin=60;
@@ -2478,7 +2472,10 @@ const mealOf=d=>meals[d]!=null?+meals[d]:(PACK.snack||1000);
 // React reads the live copies through TRIP.get(part) (app/data/trip.ts)
 TRIP.connect({profile:()=>profile,placed:()=>placed,custom:()=>custom,fmarks:()=>fmarks,wish:()=>wish,meals:()=>meals,done:()=>done,kws:()=>kws});
 let day=0, tab='timeline', cat='all', selected=null, aiState=null, sample=null, group='zone', zoneOpen={}, resetArm=false;
-const save=()=>{if(DRY)return;keepShared();TRIP.save('placed',placed)};   // saved without uids (app/data/trip.ts)
+// changes to the trip happen in app/data/trip.ts (TRIP.blocks / wish / toggleMark …); not while an AI check tries them out on a copy,
+// and blocks first keep the places other travelers shared that they use
+TRIP.connectSaving(part=>{if(DRY)return false;if(part==='placed')keepShared();return true});
+const save=()=>TRIP.blocks.saved();   // saved without uids
 
 // ---------- helpers ----------
 const $=s=>document.querySelector(s);
@@ -2746,7 +2743,7 @@ function renderAll(){touchPlan();renderMeta();renderNudges();renderDays();render
 // ---------- actions ----------
 function place(id,start,d=day){
   const p=PM[id]; start=Math.max(dayStart(d),Math.min(1410,start));
-  placed.push({uid:'u'+(uidN++),id,day:d,start,dur:p.dur}); save();
+  TRIP.blocks.add({id,day:d,start,dur:p.dur});
 }
 // A block's sheet, drawn by React: app/screens/BlockSheet.tsx. opt.marksOpen: keep the 할 일 표시 box open.
 let sheetRev=0;
@@ -2937,27 +2934,27 @@ function blockAct(n,v,o){
   case 'totray': closeSheet();tab='tray';renderTabs();return;
   case 'newcustom': openCustom(null,+v);return;
   case 'editcustom': openCustom(v,null);return;
-  case 'swap': if(b){b.id=v;b.start=+o.start;b.dur=+o.dur;save();renderAll();openSheet(uid)}return;
+  case 'swap': if(b){TRIP.blocks.change(uid,{id:v,start:+o.start,dur:+o.dur});renderAll();openSheet(uid)}return;
   case 'mark': toggleMark(uid,v);renderAll();openSheet(uid,{marksOpen:true});return;
   case 'pairblock': makePairBlock(uid,v);return;
   case 'home': profile.home.min=Math.max(10,Math.min(240,(+profile.home.min||60)+ +v));TRIP.save('profile',profile);buildDays();renderAll();openSheet('f0a');return;
   }
   if(!b) return;
-  if(n==='mv'){b.start=Math.max(dayStart(day),Math.min(1410,b.start+ +v));save();renderAll();openSheet(uid);return}
-  if(n==='du'){b.dur=Math.max(30,Math.min(720,b.dur+ +v));save();renderAll();openSheet(uid);return}
-  if(n==='del'){placed=placed.filter(x=>x.uid!==uid);save();closeSheet();renderAll();return}
+  if(n==='mv'){TRIP.blocks.change(uid,{start:Math.max(dayStart(day),Math.min(1410,b.start+ +v))});renderAll();openSheet(uid);return}
+  if(n==='du'){TRIP.blocks.change(uid,{dur:Math.max(30,Math.min(720,b.dur+ +v))});renderAll();openSheet(uid);return}
+  if(n==='del'){TRIP.blocks.remove(uid);closeSheet();renderAll();return}
 }
 // 🛠 AI에게 경고 해결 맡기기 (the check list's button and the 경고 chip above the 일정표)
 function fixWarns(){const ws=[];DAYS.forEach((_,d)=>analyze(d).items.forEach(it=>it.warns.forEach(w=>ws.push(`Day ${d+1} ${it.name}: ${w}`))));tab='timeline';renderTabs();sendChat('지금 일정의 경고를 모두 해결해 줘. 꼭 필요한 것만 바꾸고, 바꿀 수 없는 고정 일정은 그대로 둬.\n'+ws.slice(0,20).join('\n'));const c=$('#chat');if(c)c.scrollIntoView({block:'start'})}
 // 준비하기 (Checks.tsx): a tick, a warning (go to its block), 경고 해결, 시즌 정보, 모두 지우기
 function checksAct(n,v,o){
   switch(n){
-  case 'ck': done[v]=!!o;TRIP.save('done',done);renderChecks();return;
+  case 'ck': TRIP.tick(v,!!o);renderChecks();return;
   case 'goto': {const [d,u]=String(v).split('~');day=+d;tab='timeline';renderAll();openSheet(u);return}
   case 'fix': fixWarns();return;
   case 'season': genSeason('st_season');return;
   case 'reset': if(!resetArm){resetArm=true;renderChecks();return}
-    resetArm=false;fmarks={};TRIP.save('fmarks',fmarks);placed=DEFAULT.map(b=>({uid:'u'+(uidN++),id:b.id,day:b.day,start:b.start,dur:PM[b.id].dur}));save();renderAll();return;
+    resetArm=false;fmarks={};TRIP.save('fmarks',fmarks);placed=DEFAULT.map(b=>({uid:TRIP.uids.next(),id:b.id,day:b.day,start:b.start,dur:PM[b.id].dur}));save();renderAll();return;
   }
 }
 // ✨ 빈 시간 채우기 results (AiBox.tsx): stop, close, put one in
@@ -2972,15 +2969,15 @@ function gridAct(n,v){
   case 'day': day=+v;renderAll();return;
   case 'slot': if(!selected){openFill(+v);return} place(selected,+v); selected=null; renderAll(); return;   // an empty time: fill it, or put the chosen card there
   case 'blk': openSheet(v);return;
-  case 'meal': meals[day]=Math.max(0,Math.min((PACK.snack||1000)*20,mealOf(day)+ +v));TRIP.save('meals',meals);renderBudget();return;
+  case 'meal': TRIP.setMeal(day,Math.max(0,Math.min((PACK.snack||1000)*20,mealOf(day)+ +v)));renderBudget();return;
   }
 }
 // 취향 키워드 (TasteKeywords.tsx, and the chips in 처음 설정): toggle returns whether the keyword is on now
 function kwAct(n,v){
   switch(n){
-  case 'toggle': {const i=kws.findIndex(x=>norm(x)===norm(v));if(i>=0)kws.splice(i,1);else kws.push(v);TRIP.kws.save(kws);renderPref();return i<0}
-  case 'del': kws.splice(+v,1);saveKw();return;
-  case 'add': {const k=String(v||'').trim();if(k&&!kws.some(x=>norm(x)===norm(k))){kws.push(k);saveKw()}return}   // a suggestion, or what was typed
+  case 'toggle': {const on=TRIP.keywords.toggle(v);renderPref();return on}
+  case 'del': TRIP.keywords.remove(+v);saveKw();return;
+  case 'add': if(TRIP.keywords.add(v))saveKw();return;   // a suggestion, or what was typed
   case 'reset': kws=DEFAULT_KW.slice();saveKw();return;
   }
 }
@@ -3351,7 +3348,7 @@ function mergePlaces(aId,bId){
 document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
   if(t.dataset.dupuse){ // typing a name in "직접 만들기" found a place that is already there → schedule that one instead
     const p=PM[t.dataset.dupuse]; if(!p) return; const st=$('#cfStart')?parse($('#cfStart').value):null;
-    placed.push({uid:'u'+(uidN++),id:p.id,day,start:Math.max(dayStart(day),Math.min(1410,st??600)),dur:p.dur});save();closeSheet();renderAll();showToast(`이미 있는 "${p.name}"을(를) 일정에 넣었어요`);return}
+    TRIP.blocks.add({id:p.id,day,start:Math.max(dayStart(day),Math.min(1410,st??600)),dur:p.dur});closeSheet();renderAll();showToast(`이미 있는 "${p.name}"을(를) 일정에 넣었어요`);return}
 });
 // --- while typing a new place's name: show places that are already there ---
 document.addEventListener('input',e=>{

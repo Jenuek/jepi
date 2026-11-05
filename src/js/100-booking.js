@@ -1,7 +1,6 @@
 // ---------- booking helper: wish list → where to stay → flight times → search links ----------
 let wish=[], hStep=0, hVibe=null, hBusy=false;
-const isWish=id=>wish.includes(id);
-function toggleWish(id){const i=wish.indexOf(id);if(i>=0)wish.splice(i,1);else wish.push(id);TRIP.save('wish',wish)}
+const isWish=id=>TRIP.wish.has(id), toggleWish=id=>TRIP.wish.toggle(id);   // app/data/trip.ts
 const needBooking=()=>profile.kind!=='day'&&(profile.bookedFlight===false||profile.bookedStay===false);
 const ymd=i=>{const d=dateOf(profile,i);return d?`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`:''};
 const guests=()=>({a:profile.party.adults||1,k:profile.party.kids||0});
@@ -51,11 +50,11 @@ List:
 ${text.slice(0,4000)}
 Area keys: ${areaList}
 Reply with only JSON: {"places":[{"name":"Korean name","local":"name in local language","area":"area key","cat":"food|music|art|walk|shop|night|trip","lat":0.0000,"lng":0.0000,"dur":minutes,"open":"HH:MM-HH:MM or null","closed":[0-6],"cost":typical spend in ${PACK.currency},"tags":["short Korean"],"note":"one Korean sentence","cash":false}]}`,{cache:false});
-    let n=0,added=0;
+    let n=0,added=0;const got=[];
     (Array.isArray(r&&r.places)?r.places:[]).slice(0,40).forEach(x=>{const ex=P.find(p=>norm(p.name)===norm(x&&x.name||''));
-      if(ex){if(!isWish(ex.id))wish.push(ex.id);n++;return}
-      const pl=cleanPlace(x);if(pl){PACK.places.push(pl);addPackPlace(pl);wish.push(pl.id);n++;added++}});
-    TRIP.save('wish',wish); savePack(); progStop(stId); renderHelper(); renderTray(); setSt(stId,n?`${n}곳에 ♥를 붙였어요${added?` (새로 찾은 곳 ${added}곳)`:''}.`:'목록에서 장소를 찾지 못했어요.');
+      if(ex){got.push(ex.id);n++;return}
+      const pl=cleanPlace(x);if(pl){PACK.places.push(pl);addPackPlace(pl);got.push(pl.id);n++;added++}});
+    TRIP.wish.add(got); savePack(); progStop(stId); renderHelper(); renderTray(); setSt(stId,n?`${n}곳에 ♥를 붙였어요${added?` (새로 찾은 곳 ${added}곳)`:''}.`:'목록에서 장소를 찾지 못했어요.');
   }catch(e){setSt(stId,errText(e,'장소를 찾지 못했어요'))}
 }
 async function askVibes(){

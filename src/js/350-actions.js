@@ -1,7 +1,7 @@
 // ---------- actions ----------
 function place(id,start,d=day){
   const p=PM[id]; start=Math.max(dayStart(d),Math.min(1410,start));
-  placed.push({uid:'u'+(uidN++),id,day:d,start,dur:p.dur}); save();
+  TRIP.blocks.add({id,day:d,start,dur:p.dur});
 }
 // A block's sheet, drawn by React: app/screens/BlockSheet.tsx. opt.marksOpen: keep the 할 일 표시 box open.
 let sheetRev=0;

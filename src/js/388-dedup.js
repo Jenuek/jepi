@@ -37,7 +37,7 @@ function mergePlaces(aId,bId){
 document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
   if(t.dataset.dupuse){ // typing a name in "직접 만들기" found a place that is already there → schedule that one instead
     const p=PM[t.dataset.dupuse]; if(!p) return; const st=$('#cfStart')?parse($('#cfStart').value):null;
-    placed.push({uid:'u'+(uidN++),id:p.id,day,start:Math.max(dayStart(day),Math.min(1410,st??600)),dur:p.dur});save();closeSheet();renderAll();showToast(`이미 있는 "${p.name}"을(를) 일정에 넣었어요`);return}
+    TRIP.blocks.add({id:p.id,day,start:Math.max(dayStart(day),Math.min(1410,st??600)),dur:p.dur});closeSheet();renderAll();showToast(`이미 있는 "${p.name}"을(를) 일정에 넣었어요`);return}
 });
 // --- while typing a new place's name: show places that are already there ---
 document.addEventListener('input',e=>{

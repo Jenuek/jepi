@@ -29,27 +29,27 @@ function blockAct(n,v,o){
   case 'totray': closeSheet();tab='tray';renderTabs();return;
   case 'newcustom': openCustom(null,+v);return;
   case 'editcustom': openCustom(v,null);return;
-  case 'swap': if(b){b.id=v;b.start=+o.start;b.dur=+o.dur;save();renderAll();openSheet(uid)}return;
+  case 'swap': if(b){TRIP.blocks.change(uid,{id:v,start:+o.start,dur:+o.dur});renderAll();openSheet(uid)}return;
   case 'mark': toggleMark(uid,v);renderAll();openSheet(uid,{marksOpen:true});return;
   case 'pairblock': makePairBlock(uid,v);return;
   case 'home': profile.home.min=Math.max(10,Math.min(240,(+profile.home.min||60)+ +v));TRIP.save('profile',profile);buildDays();renderAll();openSheet('f0a');return;
   }
   if(!b) return;
-  if(n==='mv'){b.start=Math.max(dayStart(day),Math.min(1410,b.start+ +v));save();renderAll();openSheet(uid);return}
-  if(n==='du'){b.dur=Math.max(30,Math.min(720,b.dur+ +v));save();renderAll();openSheet(uid);return}
-  if(n==='del'){placed=placed.filter(x=>x.uid!==uid);save();closeSheet();renderAll();return}
+  if(n==='mv'){TRIP.blocks.change(uid,{start:Math.max(dayStart(day),Math.min(1410,b.start+ +v))});renderAll();openSheet(uid);return}
+  if(n==='du'){TRIP.blocks.change(uid,{dur:Math.max(30,Math.min(720,b.dur+ +v))});renderAll();openSheet(uid);return}
+  if(n==='del'){TRIP.blocks.remove(uid);closeSheet();renderAll();return}
 }
 // 🛠 AI에게 경고 해결 맡기기 (the check list's button and the 경고 chip above the 일정표)
 function fixWarns(){const ws=[];DAYS.forEach((_,d)=>analyze(d).items.forEach(it=>it.warns.forEach(w=>ws.push(`Day ${d+1} ${it.name}: ${w}`))));tab='timeline';renderTabs();sendChat('지금 일정의 경고를 모두 해결해 줘. 꼭 필요한 것만 바꾸고, 바꿀 수 없는 고정 일정은 그대로 둬.\n'+ws.slice(0,20).join('\n'));const c=$('#chat');if(c)c.scrollIntoView({block:'start'})}
 // 준비하기 (Checks.tsx): a tick, a warning (go to its block), 경고 해결, 시즌 정보, 모두 지우기
 function checksAct(n,v,o){
   switch(n){
-  case 'ck': done[v]=!!o;TRIP.save('done',done);renderChecks();return;
+  case 'ck': TRIP.tick(v,!!o);renderChecks();return;
   case 'goto': {const [d,u]=String(v).split('~');day=+d;tab='timeline';renderAll();openSheet(u);return}
   case 'fix': fixWarns();return;
   case 'season': genSeason('st_season');return;
   case 'reset': if(!resetArm){resetArm=true;renderChecks();return}
-    resetArm=false;fmarks={};TRIP.save('fmarks',fmarks);placed=DEFAULT.map(b=>({uid:'u'+(uidN++),id:b.id,day:b.day,start:b.start,dur:PM[b.id].dur}));save();renderAll();return;
+    resetArm=false;fmarks={};TRIP.save('fmarks',fmarks);placed=DEFAULT.map(b=>({uid:TRIP.uids.next(),id:b.id,day:b.day,start:b.start,dur:PM[b.id].dur}));save();renderAll();return;
   }
 }
 // ✨ 빈 시간 채우기 results (AiBox.tsx): stop, close, put one in
@@ -64,15 +64,15 @@ function gridAct(n,v){
   case 'day': day=+v;renderAll();return;
   case 'slot': if(!selected){openFill(+v);return} place(selected,+v); selected=null; renderAll(); return;   // an empty time: fill it, or put the chosen card there
   case 'blk': openSheet(v);return;
-  case 'meal': meals[day]=Math.max(0,Math.min((PACK.snack||1000)*20,mealOf(day)+ +v));TRIP.save('meals',meals);renderBudget();return;
+  case 'meal': TRIP.setMeal(day,Math.max(0,Math.min((PACK.snack||1000)*20,mealOf(day)+ +v)));renderBudget();return;
   }
 }
 // 취향 키워드 (TasteKeywords.tsx, and the chips in 처음 설정): toggle returns whether the keyword is on now
 function kwAct(n,v){
   switch(n){
-  case 'toggle': {const i=kws.findIndex(x=>norm(x)===norm(v));if(i>=0)kws.splice(i,1);else kws.push(v);TRIP.kws.save(kws);renderPref();return i<0}
-  case 'del': kws.splice(+v,1);saveKw();return;
-  case 'add': {const k=String(v||'').trim();if(k&&!kws.some(x=>norm(x)===norm(k))){kws.push(k);saveKw()}return}   // a suggestion, or what was typed
+  case 'toggle': {const on=TRIP.keywords.toggle(v);renderPref();return on}
+  case 'del': TRIP.keywords.remove(+v);saveKw();return;
+  case 'add': if(TRIP.keywords.add(v))saveKw();return;   // a suggestion, or what was typed
   case 'reset': kws=DEFAULT_KW.slice();saveKw();return;
   }
 }

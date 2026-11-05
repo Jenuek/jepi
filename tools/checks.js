@@ -1161,6 +1161,43 @@ module.exports = [
     }
   },
   {
+    name: 'data: changing the trip in one place (app/data/trip.ts): blocks · 할 일 표시 · ♥ · 체크 · 간식비 · 키워드 · not saved during a try-out',
+    async run({ b, S, device, ok, skipCoach }) {
+      const p = await device(b, S);
+      await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await p.waitForTimeout(400); await skipCoach(p);
+      const r = await p.evaluate(() => {
+        const T = window.JEPI_DATA.trip, saved = k => JSON.parse(localStorage.getItem(k) || 'null');
+        const out = {}, n0 = T.get('placed').length, id = T.get('placed')[0].id;
+        const nb = T.blocks.add({ id, day: 0, start: 1200, dur: 60 });
+        out.added = /^u\d+$/.test(nb.uid) && saved('gp.placed3').length === n0 + 1 && !('uid' in saved('gp.placed3')[n0]);
+        T.blocks.change(nb.uid, { start: 1230, dur: 90 });
+        out.changed = saved('gp.placed3')[n0].start === 1230 && saved('gp.placed3')[n0].dur === 90;
+        T.toggleMark(nb.uid, 'bag+'); out.marked = JSON.stringify(saved('gp.placed3')[n0].mk) === '["bag+"]';
+        T.toggleMark(nb.uid, 'bag+'); out.unmarked = !('mk' in saved('gp.placed3')[n0]);
+        T.toggleMark('f0a', 'bag+'); out.fixedMark = JSON.stringify((saved('gp.fmarks') || {}).f0a) === '["bag+"]';
+        T.toggleMark('f0a', 'bag+'); out.fixedOff = !('f0a' in (saved('gp.fmarks') || {}));
+        T.blocks.remove(nb.uid); out.removed = saved('gp.placed3').length === n0;
+        const w = T.wish.toggle(id); out.wish = w === true && saved('gp.wish').includes(id) && T.wish.has(id);
+        T.wish.add([id, id]); out.wishOnce = saved('gp.wish').filter(x => x === id).length === 1;
+        T.wish.toggle(id); out.unwish = !saved('gp.wish').includes(id);
+        T.tick('test-ck', true); out.tick = saved('gp.done')['test-ck'] === true;
+        T.setMeal(0, 2500); out.meal = +saved('gp.meal2')[0] === 2500;
+        const k0 = T.kws.get().length;
+        out.kwAdd = T.keywords.add('골목 산책') === true && T.keywords.add('골목산책') === false && saved('gp.kw').length === k0 + 1;
+        out.kwOff = T.keywords.toggle('골목 산책') === false && saved('gp.kw').length === k0;
+        out.kwMax = T.keywords.add('새 키워드', 0) === false;
+        // an AI check tries changes out on a copy: nothing may be saved meanwhile
+        const before = localStorage.getItem('gp.placed3');
+        T.connectSaving(() => false); T.blocks.add({ id, day: 0, start: 1300, dur: 30 });
+        out.dry = localStorage.getItem('gp.placed3') === before;
+        return out;
+      });
+      for (const [k, v] of Object.entries(r)) ok(v === true, k);
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
     name: 'data: 친구와 함께 merge rules (app/data/merge.ts) case by case',
     async run({ b, S, device, ok }) {
       const p = await device(b, S);

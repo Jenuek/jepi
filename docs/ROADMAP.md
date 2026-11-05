@@ -26,6 +26,10 @@
       리액트는 `TRIP.get(part)`로 지금 값을 읽고 `TRIP.on(fn)`으로 바뀜을 들을 수 있어요(예전 코드가 `TRIP.connect`로 자기 사본을 알려 줌).
       저장 이름은 그대로라 예전 버전 데이터가 그대로 열려요. 같은 동작 뒤 기기에 저장된 내용이 예전과 똑같은지 비교(`tools/compare/saved.js`, 6단계 모두 같음). 점검 317개 통과.
     - [ ] ①-b 바꾸기도 한 곳으로: 예전 코드가 사본을 직접 고치는 곳(블록 옮기기·♥·체크…)을 `TRIP`의 동작(예: moveBlock, toggleWish)으로 하나씩 옮기기 → 그다음 사본을 TRIP이 들고 예전 코드는 읽기만.
+      - [x] 첫 묶음: 블록 넣기·바꾸기·빼기(`TRIP.blocks`), 할 일 표시(`TRIP.toggleMark`), ♥(`TRIP.wish`), 준비 체크(`TRIP.tick`), 간식비(`TRIP.setMeal`),
+        취향 키워드(`TRIP.keywords`), 블록 번호(`TRIP.uids`). AI 점검이 사본으로 해 볼 때는 저장하지 않게(`TRIP.connectSaving`).
+        기기에 저장되는 내용 비교(`saved.js`) 포함 모두 예전과 같음, 동작을 하나씩 확인하는 점검 추가.
+      - [ ] 다음 묶음: AI 바꾸기 적용(`applyOpsCore`)·되돌리기, 직접 만든 장소(`custom`), 여행 정보(`profile` — 이번 여행 고치기), 계획 열기·새 계획(`plans`, 여러 부분을 한꺼번에 바꿈).
   - [x] 친구와 함께: 합치기 규칙(`app/data/merge.ts`)과 서버 주고받기(`app/data/trips.ts`: 올리기·받기·공유·초대·참여·나가기·끝내기·가고 싶어요)를 옮김.
     예전 `384-trips.js`에는 화면 쪽만(친구 패널, 열린 계획에 넣기 applyIfOpen, 안내). `TRIPS`는 `JD.trips.state`와 같은 객체.
     합치기 규칙을 경우별로 바로 확인하는 점검 추가(다른 날 고침 둘 다 남음·지운 블록·필드별·추가된 장소·♥는 내 것·같은 것 둘 다 고치면 내 것·이름 붙이기).

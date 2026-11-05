@@ -22,7 +22,7 @@ function saveCustomForm(f){
   const i=custom.findIndex(x=>x.id===c.id); if(i>=0) custom[i]=c; else custom.push(c); TRIP.save('custom',custom); addCustomToData(c);
   const asCard=f.dataset.card==='1';
   if(asCard){if(!isWish(c.id))toggleWish(c.id);showToast('내 카드에 담았어요')}
-  else if(!editId){const st=parse($('#cfStart').value);placed.push({uid:'u'+(uidN++),id:c.id,day,start:Math.max(dayStart(day),Math.min(1410,st??600)),dur:c.dur});save()}
+  else if(!editId){const st=parse($('#cfStart').value);TRIP.blocks.add({id:c.id,day,start:Math.max(dayStart(day),Math.min(1410,st??600)),dur:c.dur})}
   {const prev=editId?(custom.find(x=>x.id===c.id)||{}):{};if(RS.status==='on'&&(c.share||prev.share!==undefined))shareCustom(c,c.share)}
   closeSheet(); renderAll();
 }
