@@ -7,6 +7,11 @@ module.exports = { name: 'prompts', async run(t) {
   await p.route(/api\.anthropic\.com/, r => {
     let q = ''; try { const j = JSON.parse(r.request().postData() || '{}'); q = (j.messages || []).map(m => typeof m.content === 'string' ? m.content : JSON.stringify(m.content)).join('\n') + '\n[system] ' + (typeof j.system === 'string' ? j.system : JSON.stringify(j.system || '')) } catch (_) { q = r.request().postData() || '' }
     sent.push(q.replace(/\d{4}-\d{2}-\d{2}T[\d:.]+Z?/g, '<time>'));
+    // the chat: propose putting the first candidate on top of the first fixed block, so the app asks once more to fix it
+    if (q.includes('You help edit a trip schedule') && !q.includes('Your previous answer')) {
+      const id = (q.match(/Candidate places[^\n]*\n\[\["([^"]+)"/) || [])[1];
+      if (id) return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content: [{ type: 'text', text: JSON.stringify({ reply: '넣어 볼게요.', ops: [{ op: 'add', day: 0, id, start: '03:00', dur: 600 }] }) }] }) });
+    }
     r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content: [{ type: 'text', text: '{}' }] }) });
   });
   const show = async k => { await t.page.evaluate(([k, s]) => { let d = document.getElementById('sentPrompts'); if (!d) { d = document.createElement('pre'); d.id = 'sentPrompts'; d.hidden = true; document.body.append(d) } d.textContent = s }, [k, sent.join('\n=====\n')]); await grab(k, '#sentPrompts'); sent.length = 0 };
@@ -18,7 +23,7 @@ module.exports = { name: 'prompts', async run(t) {
   await p.click('#aiBtn'); await p.waitForTimeout(300); if (await p.$('#sheet [data-find="where:near"]')) await p.click('#sheet [data-find="where:near"]'); await p.click('#findGo'); await p.waitForTimeout(2500); await show('fill');
   await p.click('#sheet [data-close] >> nth=-1').catch(() => {}); await p.keyboard.press('Escape'); await p.waitForTimeout(300);
   // 채팅
-  await p.fill('#chatInput', '저녁에 하나 넣어 줘'); await p.click('#chatSend'); await p.waitForTimeout(2500); await show('chat');
+  await p.fill('#chatInput', '저녁에 하나 넣어 줘'); await p.click('#chatSend'); await p.waitForTimeout(4000); await show('chat');
   // 시즌 정보
   await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="check"]'); await p.waitForTimeout(300);
   await p.click('#seasonBtn').catch(() => {}); await p.waitForTimeout(2500); await show('season');

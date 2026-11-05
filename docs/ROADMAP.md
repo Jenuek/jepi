@@ -54,7 +54,9 @@
   - [x] 여행지 준비(`asks.destination`)와 장소 더 찾기(`asks.morePlaces`)도 같은 곳으로. 질문 글 비교에 이 둘을 더해 8가지 모두 글자까지 같음.
   - [x] 빈 시간 채우기(`asks.fillDay`), 예약 내용 읽기(`asks.readBooking`), 날짜 제목(`asks.dayTitles`), 하루 비용·간식비(`check.dayCost`·`mealOf`). 질문 글 비교 10가지 모두 같음.
   - [x] 여행지 추천·이 곳은 어때요(`asks.destinations`)와 이야기하며 정하기 한 차례(`asks.talkTurn`, 깨진 답에서 말만 건지기 포함). 질문 글 비교 13가지 모두 같음.
-  - [ ] 다음: 채팅(`050`), 지도(Leaflet), 카드 끌어 놓기, 남은 화면 값 만들기(render…).
+  - [x] 채팅(`asks.chatAnswer`·`opText`·`validOp`): 질문, 바꿀 내용 확인, 경고가 생기면 한 번 더 고쳐 달라고 묻기. 대화 목록·적용·되돌리기는 화면 쪽.
+    질문 글 비교에 채팅의 "고쳐 달라" 두 번째 질문까지 넣음, 13가지 모두 같음. **이제 AI에게 묻는 모든 질문 글이 `app/data/asks.ts`에 있어요.**
+  - [ ] 다음: 지도(Leaflet), 카드 끌어 놓기, 남은 화면 값 만들기(render…).
   - [x] 친구와 함께: 합치기 규칙(`app/data/merge.ts`)과 서버 주고받기(`app/data/trips.ts`: 올리기·받기·공유·초대·참여·나가기·끝내기·가고 싶어요)를 옮김.
     예전 `384-trips.js`에는 화면 쪽만(친구 패널, 열린 계획에 넣기 applyIfOpen, 안내). `TRIPS`는 `JD.trips.state`와 같은 객체.
     합치기 규칙을 경우별로 바로 확인하는 점검 추가(다른 날 고침 둘 다 남음·지운 블록·필드별·추가된 장소·♥는 내 것·같은 것 둘 다 고치면 내 것·이름 붙이기).
