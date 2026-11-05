@@ -1572,5 +1572,34 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'React frame: 처음 설정의 틀 (제목 · 다음 · 준비하는 동안 잠김 · 기다리지 않고 시작)',
+    async run({ b, S, device, ok, vis }) {
+      const say = (r, o) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content: [{ type: 'text', text: JSON.stringify(o) }] }) });
+      const p = await device(b, S);
+      await p.route(/api\.anthropic\.com/, async r => { const q = r.request().postData() || '';
+        if (q.includes('not a real travel destination')) { await new Promise(x => setTimeout(x, 1500)); return say(r, { ok: true, city: '도쿄', country: '일본', intl: true, currency: 'JPY', symbol: '¥', rate: 9, transit: '지하철', fare: { base: 180, perKm: 10, max: 0 }, snack: 1500, step: 100,
+          areas: [{ key: 'shinjuku', name: '신주쿠', lat: 35.69, lng: 139.7, zone: 'west' }, { key: 'asakusa', name: '아사쿠사', lat: 35.71, lng: 139.79, zone: 'east' }], zones: { west: '서부', east: '동부' },
+          gateways: [{ key: 'hnd', name: '하네다', kind: 'air', iata: 'HND', lat: 35.55, lng: 139.78, min: 30, fare: 500 }], checks: ['교통카드 챙기기'], arrivalNote: '' }) }
+        await new Promise(x => setTimeout(x, 4000)); r.fulfill({ status: 503, body: '{}' }) });
+      await p.click('[data-w="new"]'); await p.waitForTimeout(250);
+      ok(await vis(p, '#onb') && (await p.textContent('#onbTitle')) === '어떤 여행자예요?' && await p.$eval('#onbPrev', e => e.disabled) && !(await vis(p, '#onbNext')), 'first question: title shown, 이전 locked, 다음 hidden');
+      await p.fill('#onbKey_anthropic', 'sk-ant-test-key'); await p.click('#onbBody [data-onbkey="anthropic"]'); await p.waitForTimeout(300);
+      const tap = async sel => { await p.click('#onbBody ' + sel); await p.waitForTimeout(250) };
+      await tap('[data-pickjp="J"]');
+      ok((await p.textContent('#onbTitle')) === '어떻게 시작할까요?', 'after J: 어떻게 시작할까요?');
+      await tap('[data-startmode="quick"]:not([data-destmode])');
+      ok(await vis(p, '#onbNext') && (await p.textContent('#onbNext')) === '일정표 만들기' && !(await vis(p, '#onbSkip')), '가고 싶은 곳: 일정표 만들기 button, no skip');
+      await p.fill('#onbBody [data-pf="dest"]', '도쿄'); await p.fill('#onbBody [data-pf="startDate"]', '2027-03-01'); await p.selectOption('#onbBody [data-pf="nights"]', { index: 2 }); await p.waitForTimeout(250);
+      await p.click('#onbNext'); await p.waitForTimeout(400);
+      ok((await p.textContent('#onbNext')) === '준비하는 중…' && await p.$eval('#onbNext', e => e.disabled) && await p.$eval('#onbExample', e => e.disabled), 'preparing: 다음 relabelled and locked, 데모 locked');
+      await p.waitForTimeout(2200);
+      ok((await p.textContent('#onbNext')) === '장소 찾는 중…' && await vis(p, '#onbSkip') && (await p.textContent('#onbSkip')) === '기다리지 않고 시작' && !(await p.$eval('#onbSkip', e => e.disabled)), 'finding places: 기다리지 않고 시작 can be pressed');
+      await p.click('#onbSkip'); await p.waitForTimeout(800);
+      ok(!(await vis(p, '#onb')) && (await p.textContent('#tripMeta')).includes('도쿄'), 'skip: the schedule opens');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];

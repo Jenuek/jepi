@@ -4,10 +4,6 @@ function goTab(name){tab=name;autoMsg='';if(tab==='me'){draft=clone(profile);meO
 document.addEventListener('click',e=>{
   const t=e.target.closest('button,input,label'); if(!t) return;
   if(t.dataset.tab){if(!t.closest('.tabs'))goTab(t.dataset.tab);return}
-  if(t.id==='onbPrev'){if(onbStep>0){onbStep--;renderOnb()}return}
-  if(t.id==='onbSkip'&&placeCtl){placeCtl.abort();return}
-  if(t.id==='onbNext'||t.id==='onbSkip'){onbAdvance();return}
-  if(t.id==='onbExample'){if(onbBusy)return;demoEnter();return}
   if(t.dataset.jp){setJP(t.dataset.jp);renderAll();return}
   if(t.id==='diceFab'){openDiceTab(mealNow()==='snack'?'do':'eat',null);return}
   if(t.id==='coachAgain'){showCoach(0);return}

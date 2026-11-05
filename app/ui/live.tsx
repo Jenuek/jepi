@@ -26,7 +26,8 @@ export function liveOf(el: Element | null): LiveHandle | null {
 }
 
 const noop = () => {};
-function useHandle(h: Partial<LiveHandle>) {
+/** Registers the element behind the returned ref as a live element (for screens that keep their own state). */
+export function useHandle(h: Partial<LiveHandle>) {
   const ref = useRef<HTMLElement>(null);
   useLayoutEffect(() => {
     const el = ref.current; if (!el) return;

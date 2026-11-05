@@ -84,7 +84,7 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 | 장소 탭 위쪽 / 지도 위쪽 (이 날·전체·내 위치) | 화면 `app/screens/Tops.tsx` (리액트), 값은 `340-render.js`(drawTrayTop·trayAct) / `210-map.js`(mapTop·mapTopAct) |
 | 아래 탭 / 접히는 머리글 줄 | 화면 `app/screens/Bars.tsx` (리액트), 값은 `340-render.js`(tabs·renderTabs, 탭 바꾸기는 `380-events.js`의 `goTab`) / `389a-look.js`(miniBar·heroWatch) |
 | 일정표 아래 대화 칸 (접기·칩·메시지 칸) | 화면 `app/screens/Dock.tsx` (리액트), 값은 `050-chat.js`의 `dock({…})`, 채팅 목록은 `ChatLog.tsx` |
-| 고정 틀 (예약 도우미 틀·처음 안내·장소 고른 뒤 안내 줄) | 화면 `app/screens/Frames.tsx` (리액트), 보여 줄 값은 `100-booking.js`(helperView)·`370-reset-guide.js`(coachView)·`340-render.js`(bannerView) |
+| 고정 틀 (처음 설정 틀·예약 도우미 틀·처음 안내·장소 고른 뒤 안내 줄) | 화면 `app/screens/Frames.tsx` (리액트), 보여 줄 값은 `030-forms.js`(onbView)·`100-booking.js`(helperView)·`370-reset-guide.js`(coachView)·`340-render.js`(bannerView) |
 | 직접 블록 만들기 / 예약 도우미 / 계획 메뉴 / 여행 단계 띠 | `app/screens/CustomSheet.tsx` (`040-manual-blocks.js`, 같은 장소 제안 `388-dedup.js`) / `HelperBody.tsx` (`100-booking.js`·`150-lodging.js`) / `PlanMenu.tsx` (`300-intro-header.js`) / `Phase.tsx` (`250-phase-strip.js`) |
 | 일정표 시트 (블록 누름·빈 시간 누름) / P모드 보드게임판 | 화면 `app/screens/BlockSheet.tsx` / `PView.tsx` (리액트), 값은 `350-actions.js`(openSheet·altsInfo)·`080-todos.js`(marksInfo)·`340-render.js`(openFill) / `170-quick-start-pview.js`, 모양 `src/css/19-pmode.css` |
 | 일정표 본체 (시간 줄·블록·이동·권역 띠·일몰 선) | 화면 `app/screens/DayGrid.tsx` (리액트), 값은 `340-render.js`의 renderTimeline, 끌어다 놓기 `380-events.js` |

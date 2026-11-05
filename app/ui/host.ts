@@ -80,6 +80,8 @@ export interface AppHost {
   tray(name: string, value?: string): void;
   /** the map's top: day / all (which days), me (내 위치) */
   mapTop(name: string): void;
+  /** the 처음 설정 frame: prev, next, skip, example (데모 둘러보기) */
+  onbFrame(name: string): void;
   /** a bottom tab was pressed (timeline, tray, map, more) */
   tab(name: string): void;
   /** the folded header's ‹ › (-1 / 1) */

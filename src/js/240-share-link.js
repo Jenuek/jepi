@@ -26,7 +26,7 @@ async function openShared(){
   try{const v=JSON.parse(await unpackText(m[1])); if(!v||!v.d||!v.d.profile) throw 0;
     snapshotCurrent(); const nid='p'+Date.now().toString(36);
     TRIP.plans.put(nid,v.d); plans.unshift({id:nid,name:String(v.n||'공유받은 계획').slice(0,30)+' (공유받음)',custom_name:true,updated:Date.now()});
-    curPlan=nid; savePlans(); $('#onb').hidden=true; applyPlanData(v.d); snapshotCurrent(); tab='timeline'; renderTabs();
+    curPlan=nid; savePlans(); onbFrame({open:false}); applyPlanData(v.d); snapshotCurrent(); tab='timeline'; renderTabs();
     history.replaceState(null,'',location.pathname); showToast('공유받은 계획을 내 계획에 추가했어요.');if(asNote)setTimeout(()=>openNotebook(),400);
   }catch(_){history.replaceState(null,'',location.pathname);showToast('공유 링크가 잘렸거나 손상됐어요.')}
 }

@@ -331,17 +331,31 @@ const ONB=[
     :p.destMode==='find'?[...(p.fromTalk?[partBanner(p,'날짜·기간·예산을 확인하고 아래 "AI로 여행지 추천받기"를 눌러 주세요.')]:[]),{f:'dates',dates:datesInfo(p)},partDest(p)]
     :[...(p.fromTalk?[partBanner(p,'날짜와 동행을 확인하고 "AI로 여행지 준비하기"를 눌러 주세요.')]:[]),partDest(p),{f:'dates',dates:datesInfo(p)},partParty(p)]}
 ];
-function openOnb(){draft=clone(profile);draft.startMode=undefined;draft.jpPicked=false;draft.q=null;draft.destMode='';draft.fromTalk=false;draft.dateSet=false;draft.nightsSet=false;draft.dateUnknown=false;talk=null;onbStep=0;$('#meBox').innerHTML='';$('#onb').hidden=false;renderOnb()}
-function renderOnb(){const st=ONB[onbStep];$('#onbStep').textContent=ONB.length>1?`${onbStep+1} / ${ONB.length}`:'';
-  const md=draft&&draft.startMode;$('#onbTitle').textContent=!draft.jpPicked?'어떤 여행자예요?':md==='pq'?'가볍게 시작해요':!md?'어떻게 시작할까요?':md==='talk'?'이번 여행, 어떤 여행이면 좋을까요?':md==='day'?'오늘 어디서 놀아요?':st.t;$('#onbSub').textContent=!draft.jpPicked?'고르는 쪽에 맞춰 화면과 시작 방법이 달라져요.':md==='pq'?'네 가지만 누르면 바로 굴릴 수 있어요.':!md?'편한 방법을 골라 주세요. 언제든 바꿀 수 있어요.':md==='talk'?'정답은 없어요. 떠오르는 대로 답하면 방향을 정리해 드릴게요.':md==='day'?'동네와 시간만 정하면 하루 코스를 바로 짤 수 있어요.':st.s;
-  window.JEPI_UI.mount('onb',$('#onbBody'),{parts:st.f(fixProfile(draft)),rev:++onbRev});$('#onbPrev').disabled=onbStep===0;$('#onbPrev').hidden=ONB.length===1;$('#onbNext').textContent=onbStep===ONB.length-1?'일정표 만들기':'다음';$('#onbSkip').hidden=onbStep===ONB.length-1;$('#onbNext').hidden=!draft.jpPicked||!md||['talk','pq','day'].includes(md);$('#onb').scrollTop=0}
+function openOnb(){draft=clone(profile);draft.startMode=undefined;draft.jpPicked=false;draft.q=null;draft.destMode='';draft.fromTalk=false;draft.dateSet=false;draft.nightsSet=false;draft.dateUnknown=false;talk=null;onbStep=0;$('#meBox').innerHTML='';onbFrame({open:true});renderOnb()}
+// the frame (title, 이전/다음/건너뛰기) is drawn by React (app/screens/Frames.tsx) from onbView; onbFrame({…}) changes some of it and draws again
+let onbView={open:false,step:'',title:'',sub:'',prevOff:false,prevHidden:false,nextLabel:'다음',nextOff:false,nextHidden:false,skipLabel:'건너뛰기',skipOff:false,skipHidden:false,exampleOff:false};
+function onbFrame(p){onbView={...onbView,...p};window.JEPI_UI.mount('onbFrame',$('#onbMount'),onbView)}
+// pressed in the frame
+function onbFrameAct(n){
+  if(n==='prev'){if(onbStep>0){onbStep--;renderOnb()}}
+  else if(n==='skip'&&placeCtl)placeCtl.abort();
+  else if(n==='next'||n==='skip')onbAdvance();
+  else if(n==='example'){if(onbBusy)return;demoEnter()}
+}
+function renderOnb(){const st=ONB[onbStep];
+  const md=draft&&draft.startMode;
+  onbFrame({step:ONB.length>1?`${onbStep+1} / ${ONB.length}`:'',
+    title:!draft.jpPicked?'어떤 여행자예요?':md==='pq'?'가볍게 시작해요':!md?'어떻게 시작할까요?':md==='talk'?'이번 여행, 어떤 여행이면 좋을까요?':md==='day'?'오늘 어디서 놀아요?':st.t,
+    sub:!draft.jpPicked?'고르는 쪽에 맞춰 화면과 시작 방법이 달라져요.':md==='pq'?'네 가지만 누르면 바로 굴릴 수 있어요.':!md?'편한 방법을 골라 주세요. 언제든 바꿀 수 있어요.':md==='talk'?'정답은 없어요. 떠오르는 대로 답하면 방향을 정리해 드릴게요.':md==='day'?'동네와 시간만 정하면 하루 코스를 바로 짤 수 있어요.':st.s,
+    prevOff:onbStep===0,prevHidden:ONB.length===1,nextLabel:onbStep===ONB.length-1?'일정표 만들기':'다음',skipHidden:onbStep===ONB.length-1,nextHidden:!draft.jpPicked||!md||['talk','pq','day'].includes(md)});
+  window.JEPI_UI.mount('onb',$('#onbBody'),{parts:st.f(fixProfile(draft)),rev:++onbRev});$('#onb').scrollTop=0}
 function commitProfile(p){profile=fixProfile(clone(p));TRIP.save('profile',profile);TRIP.kws.save(kws);buildDays();placed=placed.filter(b=>b.day<DAYS.length);save();if(day>=DAYS.length)day=0}
 async function finishOnb(){commitProfile(draft);day=0;
   if(sample&&!PACK.example&&!PACK.manual&&P.length<8){onbBusy=true;setBusy(true);placeCtl=new AbortController();
-    const nx=$('#onbNext'),sk=$('#onbSkip'); nx.textContent='장소 찾는 중…'; sk.hidden=false; sk.disabled=false; sk.textContent='기다리지 않고 시작';
+    onbFrame({nextLabel:'장소 찾는 중…',skipHidden:false,skipOff:false,skipLabel:'기다리지 않고 시작'});
     const st=$('#st_onb'); if(st) st.scrollIntoView({block:'nearest'});
     await morePlaces(24,'st_onb','',placeCtl.signal); if(placeCtl&&!placeCtl.signal.aborted) await genSeason('st_onb',placeCtl.signal); placeCtl=null; onbBusy=false; setBusy(false)}
-  $('#onb').hidden=true;renderAll();if(tab==='me'){draft=clone(profile);renderMe()}
+  onbFrame({open:false});renderAll();if(tab==='me'){draft=clone(profile);renderMe()}
   if(needBooking()) openHelper(0); else maybeCoach()}
 function renderMe(){renderMeRows()}
 function rerenderForm(){
@@ -714,7 +728,7 @@ Reply with only JSON: {"places":[{"name":"Korean name","local":"name in local la
     savePack(); setSt(stId,added?`새 장소 ${added}곳을 찾았어요. 장소 탭 맨 위 "✨ 방금 찾은 곳"에 모아 뒀어요.`:'이미 있는 곳과 겹쳐서 새로 추가할 장소가 없었어요. 찾는 말을 바꿔 보세요 (예: 현지인 맛집, 조용한 카페).'); return added;
   }catch(e){setSt(stId,e&&e.code==='cancelled'?'멈췄어요. 장소 블록 탭에서 언제든 다시 찾을 수 있어요.':errText(e,'장소를 찾지 못했어요'));return 0}
 }
-function setBusy(b){['onbNext','onbPrev','onbSkip','onbExample','genPack','meSave'].forEach(id=>{const e=document.getElementById(id);if(!e)return;const v=b||(id==='onbPrev'&&onbStep===0),L=window.JEPI_UI.live(e);if(L)L.disabled(v);else e.disabled=v})}
+function setBusy(b){onbFrame({nextOff:b,prevOff:b||onbStep===0,skipOff:b,exampleOff:b});['genPack','meSave'].forEach(id=>{const e=document.getElementById(id);if(!e)return;const v=b,L=window.JEPI_UI.live(e);if(L)L.disabled(v);else e.disabled=v})}
 async function onbAdvance(){
   if(onbBusy) return;
   if(onbStep===0){
@@ -1618,10 +1632,10 @@ async function downloadText(name,text){
 // restore a backup file (.json made by "백업 파일 받기")
 function importBackup(file,after){
   if(!file) return; const rd=new FileReader();
-  rd.onload=()=>{try{const v=JSON.parse(String(rd.result||''));if(v&&v.jepi===2){$('#onb').hidden=true;if(!importAll(v))throw 0;tab='timeline';renderTabs();if(after)after(true);return}if(!v||!v.data||!v.data.profile)throw 0;
+  rd.onload=()=>{try{const v=JSON.parse(String(rd.result||''));if(v&&v.jepi===2){onbFrame({open:false});if(!importAll(v))throw 0;tab='timeline';renderTabs();if(after)after(true);return}if(!v||!v.data||!v.data.profile)throw 0;
       snapshotCurrent(); const nid='p'+Date.now().toString(36); TRIP.plans.put(nid,v.data);
       plans.unshift({id:nid,name:String(v.name||'불러온 계획').slice(0,40),custom_name:true,updated:Date.now()}); curPlan=nid; savePlans();
-      $('#onb').hidden=true; applyPlanData(v.data); snapshotCurrent(); tab='timeline'; renderTabs(); planMsg='백업을 불러왔어요.'; if(after) after(true);
+      onbFrame({open:false}); applyPlanData(v.data); snapshotCurrent(); tab='timeline'; renderTabs(); planMsg='백업을 불러왔어요.'; if(after) after(true);
     }catch(_){planMsg='JEPI 백업 파일이 아니거나 손상됐어요.';renderPlans();setSt('st_import','JEPI 백업 파일이 아니거나 손상됐어요.');if(after)after(false)}};
   rd.readAsText(file);
 }
@@ -1944,7 +1958,7 @@ async function openShared(){
   try{const v=JSON.parse(await unpackText(m[1])); if(!v||!v.d||!v.d.profile) throw 0;
     snapshotCurrent(); const nid='p'+Date.now().toString(36);
     TRIP.plans.put(nid,v.d); plans.unshift({id:nid,name:String(v.n||'공유받은 계획').slice(0,30)+' (공유받음)',custom_name:true,updated:Date.now()});
-    curPlan=nid; savePlans(); $('#onb').hidden=true; applyPlanData(v.d); snapshotCurrent(); tab='timeline'; renderTabs();
+    curPlan=nid; savePlans(); onbFrame({open:false}); applyPlanData(v.d); snapshotCurrent(); tab='timeline'; renderTabs();
     history.replaceState(null,'',location.pathname); showToast('공유받은 계획을 내 계획에 추가했어요.');if(asNote)setTimeout(()=>openNotebook(),400);
   }catch(_){history.replaceState(null,'',location.pathname);showToast('공유 링크가 잘렸거나 손상됐어요.')}
 }
@@ -2898,10 +2912,6 @@ function goTab(name){tab=name;autoMsg='';if(tab==='me'){draft=clone(profile);meO
 document.addEventListener('click',e=>{
   const t=e.target.closest('button,input,label'); if(!t) return;
   if(t.dataset.tab){if(!t.closest('.tabs'))goTab(t.dataset.tab);return}
-  if(t.id==='onbPrev'){if(onbStep>0){onbStep--;renderOnb()}return}
-  if(t.id==='onbSkip'&&placeCtl){placeCtl.abort();return}
-  if(t.id==='onbNext'||t.id==='onbSkip'){onbAdvance();return}
-  if(t.id==='onbExample'){if(onbBusy)return;demoEnter();return}
   if(t.dataset.jp){setJP(t.dataset.jp);renderAll();return}
   if(t.id==='diceFab'){openDiceTab(mealNow()==='snack'?'do':'eat',null);return}
   if(t.id==='coachAgain'){showCoach(0);return}
@@ -3082,7 +3092,7 @@ function renderDemoBar(){
 }
 document.addEventListener('click',e=>{if(e.target.closest('#demoExit'))demoExit()});
 // test hooks (local checks only)
-if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__jepi={demoEnter,navLink,routeProvider,sync:()=>syncNow(),state:()=>({cur:curPlan,plans:plans.map(p=>({id:p.id,shared:p.shared,role:p.role}))}),demoLikeTrip(){const d=demoOsaka();d.pack.demo=false;applyPlanData({profile:d.profile,pack:d.pack,placed:d.placed});$('#onb').hidden=true;snapshotCurrent();renderAll()}};
+if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__jepi={demoEnter,navLink,routeProvider,sync:()=>syncNow(),state:()=>({cur:curPlan,plans:plans.map(p=>({id:p.id,shared:p.shared,role:p.role}))}),demoLikeTrip(){const d=demoOsaka();d.pack.demo=false;applyPlanData({profile:d.profile,pack:d.pack,placed:d.placed});onbFrame({open:false});snapshotCurrent();renderAll()}};
 // ---------- tidy day screen: one summary line; details open on tap ----------
 // The route strip, today's cost, warnings, free gaps and "tell us more" nudges used to sit above the
 // timeline all at once. Now one line of chips shows the numbers and each chip opens its part.
@@ -3370,7 +3380,7 @@ function titleEditing(on){
 document.addEventListener('click',e=>{const t=e.target.closest('#dayTitleEdit');if(t&&!$('#dayTitleIn'))titleEditing(true)});
 // what React screens may ask of the old code (app/ui/host.ts)
 window.JEPI_UI.connectHost({renderAll:()=>renderAll(),closeSheet:()=>closeSheet(),reopenSheet:()=>{const u=$('#sheet').dataset.uid;if(u&&u!=='dice'&&!$('#sheetBg').hidden)openSheet(u)},toast:m=>showToast(m),day:()=>day,autoTitle:d=>String((DAYS[d]||{}).title||''),titleEditing,
-  closeNotebook:()=>closeNotebook(),renamePlan:nm=>lookRenamePlan(nm),aiDayTitles:n=>lookAiTitles(n),errText:(e,w)=>errText(e,w),welcomeNew:()=>{closeWelcome();openOnb()},welcomeDemo:()=>demoEnter(),welcomeLoggedIn:()=>welcomeLoggedIn(),dice:(n,v,m)=>diceAct(n,v,m),place:(n,v)=>placeAct(n,v),plans:(n,v,v2)=>plansAct(n,v,v2),helper:(n,v,v2)=>helperAct(n,v,v2),helperFrame:n=>helperFrameAct(n),dock:(n,v)=>dockAct(n,v),tray:(n,v)=>trayAct(n,v),tab:n=>goTab(n),miniDay:s=>{const n=day+s;if(n>=0&&n<DAYS.length){day=n;renderAll()}},mapTop:n=>mapTopAct(n),coach:n=>coachAct(n),banner:()=>{selected=null;renderAll()},chat:(n,v)=>chatAct(n,v),pview:(n,v)=>pviewAct(n,v),kw:(n,v)=>kwAct(n,v),grid:(n,v)=>gridAct(n,v),block:(n,v,o)=>blockAct(n,v,o),checks:(n,v,o)=>checksAct(n,v,o),aibox:(n,v)=>aiboxAct(n,v),settings:(n,v,v2)=>settingsAct(n,v,v2),form:(n,v,o)=>formAct(n,v,o),sum:(n,v)=>sumAct(n,v),trip:(a,u,t)=>tripAct(a,u,t),want:p=>wantAct(p),find:(n,v,t)=>findAct(n,v,t),planMenu:(n,v)=>planMenuAct(n,v),more:id=>moreAct(id),mapCard:i=>mapCardAct(i),nudge:(n,v)=>nudgeAct(n,v),importFile:f=>importBackup(f,ok=>{if(ok){maybeCoach()}}),shareNotebook:async()=>{await shareLink(true);return planMsg||'링크를 만들었어요'}});
+  closeNotebook:()=>closeNotebook(),renamePlan:nm=>lookRenamePlan(nm),aiDayTitles:n=>lookAiTitles(n),errText:(e,w)=>errText(e,w),welcomeNew:()=>{closeWelcome();openOnb()},welcomeDemo:()=>demoEnter(),welcomeLoggedIn:()=>welcomeLoggedIn(),dice:(n,v,m)=>diceAct(n,v,m),place:(n,v)=>placeAct(n,v),plans:(n,v,v2)=>plansAct(n,v,v2),helper:(n,v,v2)=>helperAct(n,v,v2),helperFrame:n=>helperFrameAct(n),dock:(n,v)=>dockAct(n,v),tray:(n,v)=>trayAct(n,v),tab:n=>goTab(n),onbFrame:n=>onbFrameAct(n),miniDay:s=>{const n=day+s;if(n>=0&&n<DAYS.length){day=n;renderAll()}},mapTop:n=>mapTopAct(n),coach:n=>coachAct(n),banner:()=>{selected=null;renderAll()},chat:(n,v)=>chatAct(n,v),pview:(n,v)=>pviewAct(n,v),kw:(n,v)=>kwAct(n,v),grid:(n,v)=>gridAct(n,v),block:(n,v,o)=>blockAct(n,v,o),checks:(n,v,o)=>checksAct(n,v,o),aibox:(n,v)=>aiboxAct(n,v),settings:(n,v,v2)=>settingsAct(n,v,v2),form:(n,v,o)=>formAct(n,v,o),sum:(n,v)=>sumAct(n,v),trip:(a,u,t)=>tripAct(a,u,t),want:p=>wantAct(p),find:(n,v,t)=>findAct(n,v,t),planMenu:(n,v)=>planMenuAct(n,v),more:id=>moreAct(id),mapCard:i=>mapCardAct(i),nudge:(n,v)=>nudgeAct(n,v),importFile:f=>importBackup(f,ok=>{if(ok){maybeCoach()}}),shareNotebook:async()=>{await shareLink(true);return planMsg||'링크를 만들었어요'}});
 // ---------- how a trip looks: theme colour, cover, style, handwriting; folding hero header ----------
 // profile.look = {color, cover:'city'|'sea'|'mountain'|'none'|'photo', photo:dataURL, tagline, style:'color'|'note', hand}
 // Lives in the plan's profile, so it syncs across devices and to friends on a shared trip.
@@ -3401,7 +3411,7 @@ function renderLook(){
   renderDayMemo(); miniUpdate();
 }
 // --- folding header: the hero scrolls away and a one-line bar takes its place ---
-// (drawn by React: app/screens/Bars.tsx, from miniView; mini({…}) changes some of it and draws again)
+// (drawn by React: app/screens/Bars.tsx, from miniView; miniBar({…}) changes some of it and draws again)
 let miniView={on:false,day:'',dayHidden:false,title:'',navHidden:false};
 function miniBar(p){miniView={...miniView,...p};window.JEPI_UI.mount('mini',$('#miniMount'),miniView)}
 function miniUpdate(){
@@ -3472,7 +3482,7 @@ function closeNotebook(){const nb=$('#notebook');if(nb)nb.hidden=true;document.b
 
 // ---------- start-up: runs after every file above has defined its variables ----------
 if(STANDALONE) sample=makeSample();
-tabs({}); miniBar({}); dock({}); drawTrayTop(); mapTop({}); drawHelperFrame(); drawCoach(); drawBanner();   // the fixed frames (React)
+onbFrame({}); tabs({}); miniBar({}); dock({}); drawTrayTop(); mapTop({}); drawHelperFrame(); drawCoach(); drawBanner();   // the fixed frames (React)
 plans=TRIP.plans.list()||[]; if(!Array.isArray(plans)) plans=[]; curPlan=TRIP.plans.current()||''; if(!curPlan){curPlan='p'+Date.now().toString(36);savePlans()}
 setZoom(store.get('gp.zoom',60),true);
 setJP(store.get('gp.jp',profile.kind==='day'?'P':'J'),true);
