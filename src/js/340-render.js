@@ -46,17 +46,17 @@ function dayCost(d){
 }
 function renderBudget(){
   const c=dayCost(day); let tY=0,tK=0; DY.days.forEach((_,i)=>{const x=dayCost(i);tY+=x.yen;tK+=x.krw});
-  const bp=budgetParts(), dl=bp?bp.daily/(KRW_PER_JPY||1):0, pct=bp&&dl?Math.round(c.yen/dl*100):0;
+  const bp=budgetParts(), dl=bp?bp.daily/(PLC.rate()||1):0, pct=bp&&dl?Math.round(c.yen/dl*100):0;
   const KRW=PK.pack.currency==='KRW', h=heads(), one=h>1?' (1인)':'', B=(t,cls)=>({t,tag:'b',cls});
-  window.JEPI_UI.mount('budgetSum',$('#budgetSum'),{segs:segs(`💰 오늘 예상${one} `,B(yen(c.yen)),KRW?'':` · 약 ${won(c.yen*KRW_PER_JPY+c.krw)}`,
+  window.JEPI_UI.mount('budgetSum',$('#budgetSum'),{segs:segs(`💰 오늘 예상${one} `,B(yen(c.yen)),KRW?'':` · 약 ${won(c.yen*PLC.rate()+c.krw)}`,
     ...(bp?[' · ',{t:`예산의 ${pct}%`,tag:'span',cls:pct>100?'over':''}]:[]))});
-  const local=bp?bp.local/(KRW_PER_JPY||1):0;
+  const local=bp?bp.local/(PLC.rate()||1):0;
   window.JEPI_UI.mount('budget',$('#budget'),{act:yen(c.act),tr:yen(c.tr),meal:yen(c.meal),step:PK.pack.step,home:c.krw?won(c.krw):'',
     bar:bp?{pct,over:pct>100,line:segs('하루 현지 예산 ',B(yen(dl),'mono'),` 중 ${pct}% 사용`,...(pct>100?[' · ',{t:`${yen(c.yen-dl)} 넘어요`,tag:'span',color:'#c27a00'}]:[]),
       ' · 여행 전체 현지 예산 ',B(yen(local),'mono'),` 중 ${Math.round(tY/local*100)}%`)}:null,
-    totalLabel:`오늘 예상${one}`,total:yen(c.yen),totalSub:KRW?'집 오가는 교통 포함 '+won(c.yen+c.krw):'약 '+won(c.yen*KRW_PER_JPY+c.krw),
-    group:h>1?segs(`${h}명 합계 오늘 `,B(yen(c.yen*h),'mono'),KRW?'':` (약 ${won((c.yen*KRW_PER_JPY+c.krw)*h)})`,' · 여행 전체 ',B(yen(tY*h),'mono'),KRW?'':` (약 ${won((tY*KRW_PER_JPY+tK)*h)})`):null,
-    trip:segs(`여행 전체 현지 예상${one} `,B(yen(tY),'mono'),` ${KRW?'':`(약 ${won(tY*KRW_PER_JPY+tK)}) `}· 쇼핑 제외 · 미리 결제한 교통편·숙소·예약은 제외${rateTxt()}`)});
+    totalLabel:`오늘 예상${one}`,total:yen(c.yen),totalSub:KRW?'집 오가는 교통 포함 '+won(c.yen+c.krw):'약 '+won(c.yen*PLC.rate()+c.krw),
+    group:h>1?segs(`${h}명 합계 오늘 `,B(yen(c.yen*h),'mono'),KRW?'':` (약 ${won((c.yen*PLC.rate()+c.krw)*h)})`,' · 여행 전체 ',B(yen(tY*h),'mono'),KRW?'':` (약 ${won((tY*PLC.rate()+tK)*h)})`):null,
+    trip:segs(`여행 전체 현지 예상${one} `,B(yen(tY),'mono'),` ${KRW?'':`(약 ${won(tY*PLC.rate()+tK)}) `}· 쇼핑 제외 · 미리 결제한 교통편·숙소·예약은 제외${rateTxt()}`)});
 }
 // a line of text and bold/colored parts for React (DayTop.tsx Line): neighbouring text is merged, empty text dropped
 function segs(...xs){const out=[];xs.forEach(x=>{if(x==null||x==='')return;if(typeof x==='string'&&typeof out[out.length-1]==='string')out[out.length-1]+=x;else out.push(x)});return out}

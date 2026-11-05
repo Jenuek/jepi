@@ -6,10 +6,10 @@ PK.pack=null;
 const wipe=o=>{for(const k of Object.keys(o)) delete o[k]};
 const firstArea=PLC.firstArea, firstGw=PLC.firstGw, cityLL=PLC.cityLL, nearestArea=PLC.nearestArea, addPackPlace=PLC.addPackPlace,
   loadPack=PLC.loadPack, savePack=PLC.savePack, packFrom=PLC.packFrom, manualPack=PLC.manualPack, cleanPack=PLC.cleanPack, cleanPlace=PLC.cleanPlace;
-// after a destination is loaded: its money rate, and other travelers' 👍 places of that city (070-shared-recs.js)
-PLC.connectPlaces(pk=>{KRW_PER_JPY=+pk.rate>0?+pk.rate:1;if(RS.status!=='off'){SHARED_IDS.clear();rebuildShared()}});
+// after a destination is loaded: other travelers' 👍 places of that city (070-shared-recs.js)
+PLC.connectPlaces(pk=>{if(RS.status!=='off'){SHARED_IDS.clear();rebuildShared()}});
 const placeLink=p=>`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((p.local||p.name)+' '+(PK.pack.city||''))}`;
-const rateTxt=()=>PK.pack.currency==='KRW'?'':` · 환율 ${yen(KRW_PER_JPY<50?100:1)} ≈ ${won(KRW_PER_JPY*(KRW_PER_JPY<50?100:1))}`;
+const rateTxt=()=>PK.pack.currency==='KRW'?'':` · 환율 ${yen(PLC.rate()<50?100:1)} ≈ ${won(PLC.rate()*(PLC.rate()<50?100:1))}`;
 let onbBusy=false, placeCtl=null;
 const prog={};
 // Status lines and buttons React drew are updated through a handle (app/ui/live.tsx), others the old way.
@@ -92,6 +92,6 @@ function partDest(p){
   if(p.destMode==='find') return partFinder(p);
   const ready=PK.pack&&norm(PK.pack.city)===norm(p.dest||'');
   return {f:'dest',dest:p.dest??'',ai:!!sample,ready:ready?`${PK.pack.city} 준비됨 · 동네 ${Object.keys(AREAS).length}곳 · 장소 ${P.length}곳`:'',
-    rate:ready&&PK.pack.currency!=='KRW'?{cur:PK.pack.currency,val:+KRW_PER_JPY.toFixed(4)}:null};
+    rate:ready&&PK.pack.currency!=='KRW'?{cur:PK.pack.currency,val:+PLC.rate().toFixed(4)}:null};
 }
 

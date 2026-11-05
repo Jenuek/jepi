@@ -16,7 +16,7 @@ Day: ${D.iso} (${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][wd]}).
 Current schedule (fixed and placed):
 ${items}
 
-Free gaps (90+ min): ${gaps.map(g=>fmt(g[0])+'-'+fmt(g[1])).join(', ')}${(()=>{const b=budgetParts();if(!b)return '';const dl=b.daily/(KRW_PER_JPY||1),used=dayCost(day).yen,rem=dl-used;return `\nBudget today per person: ${yen(dl)}; already planned ${yen(used)}. ${rem>0?`Keep new picks within about ${yen(rem)} in total.`:'Already over budget today: prefer free or very cheap places.'}`})()}
+Free gaps (90+ min): ${gaps.map(g=>fmt(g[0])+'-'+fmt(g[1])).join(', ')}${(()=>{const b=budgetParts();if(!b)return '';const dl=b.daily/(PLC.rate()||1),used=dayCost(day).yen,rem=dl-used;return `\nBudget today per person: ${yen(dl)}; already planned ${yen(used)}. ${rem>0?`Keep new picks within about ${yen(rem)} in total.`:'Already over budget today: prefer free or very cheap places.'}`})()}
 
 Candidates (only choose from these ids; respect opening hours):
 ${JSON.stringify(cands)}

@@ -10,3 +10,5 @@ const CUR=TRIP.cur;
 const PL=TRIP.planList;
 // the trip's days and the places they start from (app/data/days.ts): DY.days, DY.loc, DY.locArea, DY.locZone, DY.gmpBy, DY.homeMin
 const DY=JD.days.state;
+// how the traveler is described to the AI, and money text (app/data/traveler.ts)
+const TV=JD.traveler;

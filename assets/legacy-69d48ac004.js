@@ -15,6 +15,8 @@ const CUR=TRIP.cur;
 const PL=TRIP.planList;
 // the trip's days and the places they start from (app/data/days.ts): DY.days, DY.loc, DY.locArea, DY.locZone, DY.gmpBy, DY.homeMin
 const DY=JD.days.state;
+// how the traveler is described to the AI, and money text (app/data/traveler.ts)
+const TV=JD.traveler;
 // ---------- demo sandbox ----------
 // The sandbox itself (copy aside on entering, put back on leaving or on the next launch) is in app/data/demo.ts
 // and has already run before this script. DEMO.on is true while the demo is open.
@@ -50,22 +52,17 @@ const DEFAULT_KW=[];
 const tagsOf=PLC.tagsOf;
 const mustOf=PLC.mustOf;
 const norm=JD.logic.places.norm;   // app/logic/places.ts
-let KRW_PER_JPY=8.4; // 100엔 = 약 840원 (2026-10-28 기준)
-const yen=n=>((PK.pack&&PK.pack.symbol)||'¥')+Math.round(n).toLocaleString('ko-KR');
-const won=n=>'₩'+(Math.round(n/10)*10).toLocaleString('ko-KR');
+const yen=TV.yen;   // app/data/traveler.ts
+const won=TV.won;   // app/data/traveler.ts
 // the fare of a trip, and an airport / station nearby: app/data/check.ts
 const gwNear=x=>JD.check.gwNear(x), fareOf=(a,b,mode)=>JD.check.fareOf(a,b,mode);
 const DEFAULT=[];
 // ---------- profile: trip facts entered by the viewer ----------
 const PROFILE_EXAMPLE={dest:'도쿄',mode:'flight',local:'transit',startDate:'2026-11-07',nights:3,out:{airport:'hnd',dep:'08:15',arr:'10:20',flight:''},back:{airport:'hnd',dep:'19:30',arr:'22:05',flight:''},home:{area:'',min:60,fare:1550,byMin:120},stays:[{name:'시부야 숙소',area:'shibuya',checkin:'15:00',checkout:'11:00',from:0,to:3}],events:[],purpose:'',pace:'slow',social:'some',breakfast:false};
 const clone=o=>JSON.parse(JSON.stringify(o));
-const heads=()=>{const q=(CUR.profile&&CUR.profile.party)||{};return Math.max(1,(+q.adults||1)+(+q.kids||0))};
-const PARTY_KO={solo:'혼자',couple:'연인·부부',friends:'친구',family:'가족'};
-function partyEn(q){q=q||CUR.profile.party||{type:'solo'};
-  if(q.type==='couple') return 'A couple traveling together: favour places with good atmosphere for two, scenic spots and night views; avoid solo-counter-only places.';
-  if(q.type==='friends') return `A group of ${q.adults} friends: favour places that seat a group, shared food, activities and lively spots; avoid tiny counter-only bars.`;
-  if(q.type==='family') return `A family: ${q.adults} adult(s)${q.kids?` and ${q.kids} child(ren)`:''}. ${q.kids?'Favour kid-friendly places, parks and hands-on spots, avoid bars and late nights, keep transfers short and leave rest breaks.':'Favour comfortable, easy-going places for all ages.'}`;
-  return 'Traveling alone: include solo-friendly places (counter seats, single portions) and places where it is easy to be on one\'s own.'}
+const heads=TV.heads;   // app/data/traveler.ts
+const PARTY_KO=TV.PARTY_KO;   // app/data/traveler.ts
+const partyEn=TV.partyEn;   // app/data/traveler.ts
 const tmin=JD.days.tmin;
 const apName=k=>(AIRPORTS[k]||AIRPORTS[firstGw()]).name;
 const MODE_WORD=JD.days.MODE_WORD;
@@ -73,11 +70,7 @@ const WDE=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const MAX_N=JD.days.MAX_N;
 // dates, tidying 여행 정보 and making the days with their fixed blocks: app/data/days.ts (the days themselves: DY.days …)
 const nightsOf=JD.days.nightsOf, dateOf=JD.days.dateOf, mdOf=JD.days.mdOf, arrEnd=JD.days.arrEnd, fixProfile=JD.days.fixProfile, buildDays=JD.days.buildDays;
-function profileSummary(){
-  const pace={slow:'Unhurried: one main thing per day, the rest relaxed.',normal:'Balanced pace.',full:'Wants a full schedule.'}[CUR.profile.pace]||'';
-  const social=CUR.profile.party.type!=='solo'?'':({alone:'Prefers time alone.',some:'Mostly alone with a few chances to meet people.',social:'Wants many chances to meet people.'}[CUR.profile.social]||'');
-  return `${CUR.profile.kind==='day'?`This is a one-day outing (not an overnight trip) from ${CUR.profile.meet.time} to ${CUR.profile.meet.end}, meeting around ${(AREAS[CUR.profile.meet.area]||[''])[0]}.\n`:''}Who: ${partyEn(CUR.profile.party)}\nTraveler: ${styleEn(CUR.profile)} ${pace} ${social} ${CUR.profile.breakfast?'Eats breakfast.':'Usually skips breakfast.'} ${BUDGET_EN[CUR.profile.budget]||''}${budgetEn()}${CUR.profile.purpose?` Trip purpose in their own words: "${CUR.profile.purpose}".`:''}${CUR.profile.direction&&CUR.profile.direction.avoid?` Wants to avoid: "${CUR.profile.direction.avoid}".`:''}${CUR.profile.direction&&CUR.profile.direction.note?` Direction of this trip: ${CUR.profile.direction.note}`:''}\nInterest keywords (prefer candidates whose tags match more of these): ${CUR.kws.join(', ')||'(none given)'}${seasonSummary()}`;
-}
+const profileSummary=TV.profileSummary;   // app/data/traveler.ts
 
 // ---------- forms shared by onboarding and the "내 정보" tab ----------
 let draft=null, onbStep=0, onbRev=0;
@@ -202,7 +195,7 @@ async function formAct(n,v,o){
     catch(err){homeMsg=(err&&err.message)||'계산하지 못했어요'}renderMeRows();return}
   }
 }
-function onPf(e){const el=e.target;if(el&&el.dataset&&el.dataset.pk&&e.type==='change'){const v=+el.value;if(v>0){PK.pack[el.dataset.pk]=v;KRW_PER_JPY=v;savePack();renderBudget()}return}
+function onPf(e){const el=e.target;if(el&&el.dataset&&el.dataset.pk&&e.type==='change'){const v=+el.value;if(v>0){PK.pack[el.dataset.pk]=v;savePack();renderBudget()}return}
   if(!el||!el.dataset||!el.dataset.pf||!draft) return;let v=el.value;if(el.dataset.type==='num') v=+v;setPath(draft,el.dataset.pf,v);
   if(el.dataset.pf==='startDate'&&el.value){draft.dateSet=true;draft.dateUnknown=false} if(el.dataset.pf==='nights') draft.nightsSet=true;
   if(/^(out|back)\./.test(el.dataset.pf)) draft.flightSet=true; if(/^stays\./.test(el.dataset.pf)) draft.staySet=true;
@@ -372,10 +365,10 @@ PK.pack=null;
 const wipe=o=>{for(const k of Object.keys(o)) delete o[k]};
 const firstArea=PLC.firstArea, firstGw=PLC.firstGw, cityLL=PLC.cityLL, nearestArea=PLC.nearestArea, addPackPlace=PLC.addPackPlace,
   loadPack=PLC.loadPack, savePack=PLC.savePack, packFrom=PLC.packFrom, manualPack=PLC.manualPack, cleanPack=PLC.cleanPack, cleanPlace=PLC.cleanPlace;
-// after a destination is loaded: its money rate, and other travelers' 👍 places of that city (070-shared-recs.js)
-PLC.connectPlaces(pk=>{KRW_PER_JPY=+pk.rate>0?+pk.rate:1;if(RS.status!=='off'){SHARED_IDS.clear();rebuildShared()}});
+// after a destination is loaded: other travelers' 👍 places of that city (070-shared-recs.js)
+PLC.connectPlaces(pk=>{if(RS.status!=='off'){SHARED_IDS.clear();rebuildShared()}});
 const placeLink=p=>`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((p.local||p.name)+' '+(PK.pack.city||''))}`;
-const rateTxt=()=>PK.pack.currency==='KRW'?'':` · 환율 ${yen(KRW_PER_JPY<50?100:1)} ≈ ${won(KRW_PER_JPY*(KRW_PER_JPY<50?100:1))}`;
+const rateTxt=()=>PK.pack.currency==='KRW'?'':` · 환율 ${yen(PLC.rate()<50?100:1)} ≈ ${won(PLC.rate()*(PLC.rate()<50?100:1))}`;
 let onbBusy=false, placeCtl=null;
 const prog={};
 // Status lines and buttons React drew are updated through a handle (app/ui/live.tsx), others the old way.
@@ -458,7 +451,7 @@ function partDest(p){
   if(p.destMode==='find') return partFinder(p);
   const ready=PK.pack&&norm(PK.pack.city)===norm(p.dest||'');
   return {f:'dest',dest:p.dest??'',ai:!!sample,ready:ready?`${PK.pack.city} 준비됨 · 동네 ${Object.keys(AREAS).length}곳 · 장소 ${P.length}곳`:'',
-    rate:ready&&PK.pack.currency!=='KRW'?{cur:PK.pack.currency,val:+KRW_PER_JPY.toFixed(4)}:null};
+    rate:ready&&PK.pack.currency!=='KRW'?{cur:PK.pack.currency,val:+PLC.rate().toFixed(4)}:null};
 }
 
 // ---------- demo trip: a generic first-timer's Osaka, 3 nights / 4 days ----------
@@ -599,8 +592,8 @@ const applyOpsCore=OPS.apply, warnSet=OPS.warnings, simulateOps=OPS.simulate, re
 CUR.wish=[]; let hStep=0, hVibe=null, hBusy=false;
 const isWish=id=>TRIP.wish.has(id), toggleWish=id=>TRIP.wish.toggle(id);   // app/data/trip.ts
 const needBooking=()=>CUR.profile.kind!=='day'&&(CUR.profile.bookedFlight===false||CUR.profile.bookedStay===false);
-const ymd=i=>{const d=dateOf(CUR.profile,i);return d?`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`:''};
-const guests=()=>({a:CUR.profile.party.adults||1,k:CUR.profile.party.kids||0});
+const ymd=TV.ymd;   // app/data/traveler.ts
+const guests=TV.guests;   // app/data/traveler.ts
 function hotelLinks(areaName){
   const q=encodeURIComponent(`${areaName}, ${PK.pack.city}`), ci=ymd(0), co=ymd(nightsOf(CUR.profile)), g=guests(), cap=roomCap();
   return [['부킹닷컴',`https://www.booking.com/searchresults.ko.html?ss=${q}&checkin=${ci}&checkout=${co}&group_adults=${g.a}&group_children=${g.k}&no_rooms=1${cap?`&selected_currency=KRW&nflt=${encodeURIComponent(`price=KRW-min-${cap}-1`)}`:''}`],
@@ -725,8 +718,7 @@ function setSlot(a,d){
 // ---------- season & time-of-day: what is special on these dates, and when each place is best ----------
 // season facts of this trip and what they mean for places: app/data/season.ts
 const SN=JD.season, BEST_KO=SN.BEST_KO, tripKey=SN.tripKey, seasonOf=SN.seasonOf, sunsetMin=SN.sunsetMin, outOfSeason=SN.outOfSeason, mdTxt=SN.mdTxt, bestTips=SN.bestTips;
-function seasonSummary(){const s=seasonOf(); if(!s) return '';
-  return `\nSeason on these dates: sunrise ~${s.sunrise||'?'}, sunset ~${s.sunset||'?'}. ${s.weather||''} ${(s.notes||[]).join(' ')}\nPlaces have a "best" time of day (morning/day/sunset/evening/night); schedule them in that window. Seasonal places only happen within their date range.`}
+const seasonSummary=TV.seasonSummary;   // app/data/traveler.ts
 async function genSeason(stId,signal){
   if(!sample) return false;
   progStart(stId,'이 시기만의 특징과 행사를 찾는 중이에요 (보통 30초~1분)',['seasonBtn'],'찾는 중…');
@@ -764,7 +756,7 @@ function seasonInfo(){
 
 // ---------- destination finder: for travelers who have not picked a place yet ----------
 let destRecs=null, destAsked=[], destBusy=false;
-const BUDGET_EN={low:'Tight budget.',mid:'Moderate budget.',high:'Comfortable budget, happy to spend for good experiences.'};
+const BUDGET_EN=TV.BUDGET_EN;   // app/data/traveler.ts
 const REACH_EN={domestic:'Domestic only: places inside South Korea.',near:'Short trip abroad: about 3 hours or less by plane from Seoul (Japan, Taiwan, Hong Kong, eastern China and similar).',far:'Anywhere in the world is fine, including long-haul.'};
 // drawn by React: app/screens/OnbFinder.tsx
 function partFinder(p){
@@ -799,29 +791,18 @@ Reply with only JSON: {"destinations":[{"city":"Korean name of the city or regio
 
 // ---------- optional travel style (every item defaults to "doesn't matter") ----------
 const STYLE_ROWS=JD.days.STYLE_ROWS;   // app/data/days.ts
-const STY={rhythm:{early:'Early riser: starts the day early and ends early.',late:'Late starter: begins around 10:00 and enjoys evenings and nights.'},
-  walk:{lots:'Happy to walk a lot.',less:'Wants to walk as little as possible: prefer short transfers, direct transit or taxis.'},
-  fame:{famous:'Prefers famous must-see landmarks.',hidden:'Prefers lesser-known places locals go to over tourist hotspots.'},
-  crowd:{ok:'Crowds are fine.',avoid:'Avoids crowds: prefer quieter places and off-peak times.'},
-  food:{familiar:'Prefers familiar, easy food.',adventurous:'Wants to try adventurous local food.'},
-  comfort:{comfort:'Values comfort and easy logistics.',experience:'Fine with some hassle for special experiences.'},
-  exp:{new:'Little travel experience: prefer easy-to-navigate areas and simple transit, and mention practical tips.',pro:'Experienced traveler: comfortable with complex transit and off-the-beaten-path places.'},
-  lang:{low:'Not confident in English or the local language: prefer places with picture, Korean or English menus and ticket machines, avoid phone-only reservations.',mid:'Can manage basic English.',high:'Communicates well in English or the local language.'},
-  gender:{female:'The traveler is a woman: consider practical safety such as well-lit, busy areas late at night and women-friendly lodging. Do not stereotype her interests.',male:''}};
-function styleEn(p){const st=(p&&p.style)||{};return Object.entries(STY).map(([k,m])=>m[st[k]]||'').filter(Boolean).join(' ')}
+const STY=TV.STY;   // app/data/traveler.ts
+const styleEn=TV.styleEn;   // app/data/traveler.ts
 let styleOpen=false;
 const walkKm=()=>JD.check.walkKm();   // app/data/check.ts
 
 // ---------- optional money budget (per person, in 만원) ----------
-function budgetParts(pr){pr=pr||CUR.profile;const t=(+pr.budgetMan||0)*10000;if(!t)return null;
-  const trip=(+pr.tripMan>0?+pr.tripMan*10000:Math.round(t*0.6)), local=(+pr.localMan>0?+pr.localMan*10000:Math.max(0,t-trip));
-  return {total:t,trip,local,daily:local/(nightsOf(pr)+1)}}
-function roomCap(){const b=budgetParts();if(!b)return null;const lodge=b.trip*(CUR.profile.mode==='flight'?0.5:0.7);return Math.round(lodge/nightsOf(CUR.profile)*heads()/1000)*1000}
+const budgetParts=TV.budgetParts;   // app/data/traveler.ts
+const roomCap=TV.roomCap;   // app/data/traveler.ts
 // 이번 여행 → 예산 (drawn by React: TripForms.tsx Budget). The hint under it follows what is typed (meSetBudgetHint).
 function partBudget(p){return {f:'budget',man:p.budgetMan||'',trip:p.tripMan||'',local:p.localMan||'',hint:budgetHintTxt(p)}}
 function budgetHintTxt(p){const b=budgetParts(p);return b?`교통·숙박 약 ${won(b.trip)} · 현지 경비 하루 약 ${won(b.daily)}로 계산해요.`:'총예산만 넣으면 교통·숙박 60%, 현지 경비 40%로 나눠요.'}
-function budgetEn(){const b=budgetParts();if(!b)return '';const d=b.daily/(KRW_PER_JPY||1);
-  return ` Money budget per person: about ${Math.round(b.total/10000)}만원 in total; local spending about ${yen(d)} (${won(b.daily)}) per day.`}
+const budgetEn=TV.budgetEn;   // app/data/traveler.ts
 
 // ---------- finding the trip's direction through a short conversation (only the summary is kept) ----------
 const TALK_MAX=5;
@@ -2146,17 +2127,17 @@ function dayCost(d){
 }
 function renderBudget(){
   const c=dayCost(day); let tY=0,tK=0; DY.days.forEach((_,i)=>{const x=dayCost(i);tY+=x.yen;tK+=x.krw});
-  const bp=budgetParts(), dl=bp?bp.daily/(KRW_PER_JPY||1):0, pct=bp&&dl?Math.round(c.yen/dl*100):0;
+  const bp=budgetParts(), dl=bp?bp.daily/(PLC.rate()||1):0, pct=bp&&dl?Math.round(c.yen/dl*100):0;
   const KRW=PK.pack.currency==='KRW', h=heads(), one=h>1?' (1인)':'', B=(t,cls)=>({t,tag:'b',cls});
-  window.JEPI_UI.mount('budgetSum',$('#budgetSum'),{segs:segs(`💰 오늘 예상${one} `,B(yen(c.yen)),KRW?'':` · 약 ${won(c.yen*KRW_PER_JPY+c.krw)}`,
+  window.JEPI_UI.mount('budgetSum',$('#budgetSum'),{segs:segs(`💰 오늘 예상${one} `,B(yen(c.yen)),KRW?'':` · 약 ${won(c.yen*PLC.rate()+c.krw)}`,
     ...(bp?[' · ',{t:`예산의 ${pct}%`,tag:'span',cls:pct>100?'over':''}]:[]))});
-  const local=bp?bp.local/(KRW_PER_JPY||1):0;
+  const local=bp?bp.local/(PLC.rate()||1):0;
   window.JEPI_UI.mount('budget',$('#budget'),{act:yen(c.act),tr:yen(c.tr),meal:yen(c.meal),step:PK.pack.step,home:c.krw?won(c.krw):'',
     bar:bp?{pct,over:pct>100,line:segs('하루 현지 예산 ',B(yen(dl),'mono'),` 중 ${pct}% 사용`,...(pct>100?[' · ',{t:`${yen(c.yen-dl)} 넘어요`,tag:'span',color:'#c27a00'}]:[]),
       ' · 여행 전체 현지 예산 ',B(yen(local),'mono'),` 중 ${Math.round(tY/local*100)}%`)}:null,
-    totalLabel:`오늘 예상${one}`,total:yen(c.yen),totalSub:KRW?'집 오가는 교통 포함 '+won(c.yen+c.krw):'약 '+won(c.yen*KRW_PER_JPY+c.krw),
-    group:h>1?segs(`${h}명 합계 오늘 `,B(yen(c.yen*h),'mono'),KRW?'':` (약 ${won((c.yen*KRW_PER_JPY+c.krw)*h)})`,' · 여행 전체 ',B(yen(tY*h),'mono'),KRW?'':` (약 ${won((tY*KRW_PER_JPY+tK)*h)})`):null,
-    trip:segs(`여행 전체 현지 예상${one} `,B(yen(tY),'mono'),` ${KRW?'':`(약 ${won(tY*KRW_PER_JPY+tK)}) `}· 쇼핑 제외 · 미리 결제한 교통편·숙소·예약은 제외${rateTxt()}`)});
+    totalLabel:`오늘 예상${one}`,total:yen(c.yen),totalSub:KRW?'집 오가는 교통 포함 '+won(c.yen+c.krw):'약 '+won(c.yen*PLC.rate()+c.krw),
+    group:h>1?segs(`${h}명 합계 오늘 `,B(yen(c.yen*h),'mono'),KRW?'':` (약 ${won((c.yen*PLC.rate()+c.krw)*h)})`,' · 여행 전체 ',B(yen(tY*h),'mono'),KRW?'':` (약 ${won((tY*PLC.rate()+tK)*h)})`):null,
+    trip:segs(`여행 전체 현지 예상${one} `,B(yen(tY),'mono'),` ${KRW?'':`(약 ${won(tY*PLC.rate()+tK)}) `}· 쇼핑 제외 · 미리 결제한 교통편·숙소·예약은 제외${rateTxt()}`)});
 }
 // a line of text and bold/colored parts for React (DayTop.tsx Line): neighbouring text is merged, empty text dropped
 function segs(...xs){const out=[];xs.forEach(x=>{if(x==null||x==='')return;if(typeof x==='string'&&typeof out[out.length-1]==='string')out[out.length-1]+=x;else out.push(x)});return out}
@@ -2436,7 +2417,7 @@ Day: ${D.iso} (${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][wd]}).
 Current schedule (fixed and placed):
 ${items}
 
-Free gaps (90+ min): ${gaps.map(g=>fmt(g[0])+'-'+fmt(g[1])).join(', ')}${(()=>{const b=budgetParts();if(!b)return '';const dl=b.daily/(KRW_PER_JPY||1),used=dayCost(day).yen,rem=dl-used;return `\nBudget today per person: ${yen(dl)}; already planned ${yen(used)}. ${rem>0?`Keep new picks within about ${yen(rem)} in total.`:'Already over budget today: prefer free or very cheap places.'}`})()}
+Free gaps (90+ min): ${gaps.map(g=>fmt(g[0])+'-'+fmt(g[1])).join(', ')}${(()=>{const b=budgetParts();if(!b)return '';const dl=b.daily/(PLC.rate()||1),used=dayCost(day).yen,rem=dl-used;return `\nBudget today per person: ${yen(dl)}; already planned ${yen(used)}. ${rem>0?`Keep new picks within about ${yen(rem)} in total.`:'Already over budget today: prefer free or very cheap places.'}`})()}
 
 Candidates (only choose from these ids; respect opening hours):
 ${JSON.stringify(cands)}

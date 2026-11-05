@@ -16,9 +16,8 @@ const DEFAULT_KW=[];
 const tagsOf=PLC.tagsOf;
 const mustOf=PLC.mustOf;
 const norm=JD.logic.places.norm;   // app/logic/places.ts
-let KRW_PER_JPY=8.4; // 100엔 = 약 840원 (2026-10-28 기준)
-const yen=n=>((PK.pack&&PK.pack.symbol)||'¥')+Math.round(n).toLocaleString('ko-KR');
-const won=n=>'₩'+(Math.round(n/10)*10).toLocaleString('ko-KR');
+const yen=TV.yen;   // app/data/traveler.ts
+const won=TV.won;   // app/data/traveler.ts
 // the fare of a trip, and an airport / station nearby: app/data/check.ts
 const gwNear=x=>JD.check.gwNear(x), fareOf=(a,b,mode)=>JD.check.fareOf(a,b,mode);
 const DEFAULT=[];

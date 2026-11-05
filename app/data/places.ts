@@ -137,3 +137,6 @@ export function addCustom(c: { id: string; name?: string; area: string; cat: str
   if (i >= 0) P[i] = p; else P.push(p);
   PM[p.id] = p; COST[p.id] = [Math.max(0, +(c.cost || 0) || 0), +(c.cost || 0) ? '직접 입력한 금액' : '']; TAGS[p.id] = String(c.tags || '').split(',').map(x => x.trim()).filter(Boolean); ZONE_OF[p.id] = AREA_ZONE[c.area] || 'outer';
 }
+
+/** won per 1 unit of the destination's money (1 when unknown or KRW) */
+export const rate = (): number => { const pk = state.pack; return pk && +pk.rate > 0 ? +pk.rate : 1 };

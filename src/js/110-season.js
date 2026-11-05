@@ -1,8 +1,7 @@
 // ---------- season & time-of-day: what is special on these dates, and when each place is best ----------
 // season facts of this trip and what they mean for places: app/data/season.ts
 const SN=JD.season, BEST_KO=SN.BEST_KO, tripKey=SN.tripKey, seasonOf=SN.seasonOf, sunsetMin=SN.sunsetMin, outOfSeason=SN.outOfSeason, mdTxt=SN.mdTxt, bestTips=SN.bestTips;
-function seasonSummary(){const s=seasonOf(); if(!s) return '';
-  return `\nSeason on these dates: sunrise ~${s.sunrise||'?'}, sunset ~${s.sunset||'?'}. ${s.weather||''} ${(s.notes||[]).join(' ')}\nPlaces have a "best" time of day (morning/day/sunset/evening/night); schedule them in that window. Seasonal places only happen within their date range.`}
+const seasonSummary=TV.seasonSummary;   // app/data/traveler.ts
 async function genSeason(stId,signal){
   if(!sample) return false;
   progStart(stId,'이 시기만의 특징과 행사를 찾는 중이에요 (보통 30초~1분)',['seasonBtn'],'찾는 중…');

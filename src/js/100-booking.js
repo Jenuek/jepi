@@ -2,8 +2,8 @@
 CUR.wish=[]; let hStep=0, hVibe=null, hBusy=false;
 const isWish=id=>TRIP.wish.has(id), toggleWish=id=>TRIP.wish.toggle(id);   // app/data/trip.ts
 const needBooking=()=>CUR.profile.kind!=='day'&&(CUR.profile.bookedFlight===false||CUR.profile.bookedStay===false);
-const ymd=i=>{const d=dateOf(CUR.profile,i);return d?`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`:''};
-const guests=()=>({a:CUR.profile.party.adults||1,k:CUR.profile.party.kids||0});
+const ymd=TV.ymd;   // app/data/traveler.ts
+const guests=TV.guests;   // app/data/traveler.ts
 function hotelLinks(areaName){
   const q=encodeURIComponent(`${areaName}, ${PK.pack.city}`), ci=ymd(0), co=ymd(nightsOf(CUR.profile)), g=guests(), cap=roomCap();
   return [['부킹닷컴',`https://www.booking.com/searchresults.ko.html?ss=${q}&checkin=${ci}&checkout=${co}&group_adults=${g.a}&group_children=${g.k}&no_rooms=1${cap?`&selected_currency=KRW&nflt=${encodeURIComponent(`price=KRW-min-${cap}-1`)}`:''}`],

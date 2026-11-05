@@ -1,6 +1,6 @@
 // ---------- destination finder: for travelers who have not picked a place yet ----------
 let destRecs=null, destAsked=[], destBusy=false;
-const BUDGET_EN={low:'Tight budget.',mid:'Moderate budget.',high:'Comfortable budget, happy to spend for good experiences.'};
+const BUDGET_EN=TV.BUDGET_EN;   // app/data/traveler.ts
 const REACH_EN={domestic:'Domestic only: places inside South Korea.',near:'Short trip abroad: about 3 hours or less by plane from Seoul (Japan, Taiwan, Hong Kong, eastern China and similar).',far:'Anywhere in the world is fine, including long-haul.'};
 // drawn by React: app/screens/OnbFinder.tsx
 function partFinder(p){
