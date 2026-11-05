@@ -25,6 +25,7 @@ import * as marks from './marks';
 import * as season from './season';
 import * as check from './check';
 import * as traveler from './traveler';
+import * as asks from './asks';
 import * as logic from '../logic';
 import * as trips from './trips';
 import { status, syncDocs, syncSoon, syncPush, syncPull, syncNow, connectSync } from './sync';
@@ -69,6 +70,8 @@ export const data = {
   check,
   /** the traveler as the AI is told about them; money text */
   traveler,
+  /** what JEPI asks the AI (helper, season …) and how answers are tidied */
+  asks,
   /** calculations: time text, distances, the day check (app/logic) */
   logic,
   /** 친구와 함께 on the server */

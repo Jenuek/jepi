@@ -633,28 +633,14 @@ function flightSlots(){
 async function resolveWishes(text,stId){
   if(!sample||!text.trim()) return;
   progStart(stId,'목록의 장소를 찾는 중이에요 (보통 30초~1분)',['wishPasteBtn'],'찾는 중…');
-  const areaList=Object.entries(AREAS).map(([k,v])=>`${k}=${v[0]}`).join(', ');
   try{
-    const r=await sample.json(`The traveler pasted places they want to visit in ${PK.pack.city}. Identify each real place in the list (skip lines you cannot identify, and skip anything outside ${PK.pack.city}).
-List:
-${text.slice(0,4000)}
-Area keys: ${areaList}
-Reply with only JSON: {"places":[{"name":"Korean name","local":"name in local language","area":"area key","cat":"food|music|art|walk|shop|night|trip","lat":0.0000,"lng":0.0000,"dur":minutes,"open":"HH:MM-HH:MM or null","closed":[0-6],"cost":typical spend in ${PK.pack.currency},"tags":["short Korean"],"note":"one Korean sentence","cash":false}]}`,{cache:false});
-    let n=0,added=0;const got=[];
-    (Array.isArray(r&&r.places)?r.places:[]).slice(0,40).forEach(x=>{const ex=P.find(p=>norm(p.name)===norm(x&&x.name||''));
-      if(ex){got.push(ex.id);n++;return}
-      const pl=cleanPlace(x);if(pl){PK.pack.places.push(pl);addPackPlace(pl);got.push(pl.id);n++;added++}});
-    TRIP.wish.add(got); savePack(); progStop(stId); renderHelper(); renderTray(); setSt(stId,n?`${n}곳에 ♥를 붙였어요${added?` (새로 찾은 곳 ${added}곳)`:''}.`:'목록에서 장소를 찾지 못했어요.');
+    const {n,added}=await JD.asks.wishesFromList(sample,text); progStop(stId); renderHelper(); renderTray(); setSt(stId,n?`${n}곳에 ♥를 붙였어요${added?` (새로 찾은 곳 ${added}곳)`:''}.`:'목록에서 장소를 찾지 못했어요.');
   }catch(e){setSt(stId,errText(e,'장소를 찾지 못했어요'))}
 }
 async function askVibes(){
   if(!sample||hBusy) return; hBusy=true; const top=areaScores().slice(0,3);
   progStart('st_vibe','동네 분위기를 정리하는 중이에요 (보통 15~30초)',['vibeBtn'],'정리하는 중…');
-  try{const r=await sample.json(`Describe these neighbourhoods of ${PK.pack.city} as places to stay, for this traveler.
-${partyEn(CUR.profile.party)} Pace: ${CUR.profile.pace}. Interests: ${CUR.kws.join(', ')||'(none)'}.
-Areas: ${top.map(a=>`${a.k}=${a.name}`).join(', ')}
-Reply with only JSON: {"areas":[{"key":"area key","vibe":"one Korean sentence on atmosphere and lodging price level","good":"short Korean: who it suits","caution":"short Korean caution or empty"}]}`,{cache:false});
-    hVibe={}; (Array.isArray(r&&r.areas)?r.areas:[]).forEach(a=>{if(AREAS[a.key])hVibe[a.key]=a}); progStop('st_vibe');
+  try{hVibe=await JD.asks.vibes(sample,top); progStop('st_vibe');
   }catch(e){setSt('st_vibe',errText(e,'정리하지 못했어요'))} finally{hBusy=false;renderHelper()}
 }
 // What was pressed inside the 예약 도우미 (HelperBody.tsx tells: its name and value)
@@ -722,29 +708,9 @@ const seasonSummary=TV.seasonSummary;   // app/data/traveler.ts
 async function genSeason(stId,signal){
   if(!sample) return false;
   progStart(stId,'이 시기만의 특징과 행사를 찾는 중이에요 (보통 30초~1분)',['seasonBtn'],'찾는 중…');
-  const s0=ymd(0), s1=ymd(nightsOf(CUR.profile)), areaList=Object.entries(AREAS).map(([k,v])=>`${k}=${v[0]}`).join(', ');
   try{
-    const r=await sample.json(`A trip to ${PK.pack.city}${PK.pack.country?', '+PK.pack.country:''} from ${s0} to ${s1}.
-${profileSummary()}
-What is special about these exact dates? Consider seasonal nature (blossoms, foliage, snow), illuminations, festivals, fireworks, markets, seasonal food, public holidays and closures, rainy season or heat, crowds.
-Area keys: ${areaList}
-Reply with only JSON:
-{"sunrise":"HH:MM","sunset":"HH:MM" (typical local times for these dates),
-"weather":"one Korean sentence: typical weather and what to wear",
-"notes":["2-5 short Korean notes on seasonal conditions for these dates: holidays, closures, crowds, rain, heat"],
-"places":[up to 8 things that genuinely happen or peak during these dates, {"name":"Korean name","local":"local-language name","area":"area key","cat":"food|music|art|walk|shop|night|trip","lat":0.0000,"lng":0.0000,"dur":minutes,"open":"HH:MM-HH:MM or null","closed":[0-6],"cost":typical spend in ${PK.pack.currency},"tags":["short Korean"],"note":"one Korean sentence","season":"short Korean label such as 단풍 절정, 크리스마스 마켓","from":"YYYY-MM-DD or null","to":"YYYY-MM-DD or null","best":"morning|day|sunset|evening|night|any","confidence":"high|medium|low"}]}
-For recurring annual events give their usual dates and use confidence medium or low when this year's dates are not certain. Do not invent events.`,{cache:false,signal});
-    // drop earlier seasonal places that are not in use
-    const keep=new Set([...CUR.placed.map(b=>b.id),...CUR.wish]);
-    PK.pack.places=PK.pack.places.filter(p=>!p.season||keep.has(p.id));
-    for(let i=P.length-1;i>=0;i--){const p=P[i];if(p.season&&!keep.has(p.id)){P.splice(i,1);delete PM[p.id];delete MUST[p.id]}}
-    let n=0; const iso=x=>/^\d{4}-\d{2}-\d{2}$/.test(String(x||''))?x:null;
-    (Array.isArray(r&&r.places)?r.places:[]).slice(0,10).forEach(x=>{const pl=cleanPlace(x);if(!pl||P.some(p=>norm(p.name)===norm(pl.name)))return;
-      pl.season=String(x.season||'시즌').slice(0,20); pl.dates=[iso(x.from),iso(x.to)]; if(!pl.dates[0]&&!pl.dates[1]) delete pl.dates;
-      pl.conf=['high','medium','low'].includes(x.confidence)?x.confidence:'medium'; pl.verify=pl.conf==='high'?'영업시간':'올해 날짜';
-      pl.tags=[...new Set(['시즌',...pl.tags])].slice(0,6); PK.pack.places.push(pl); addPackPlace(pl); n++});
-    PK.pack.season={key:tripKey(),sunrise:parse(r&&r.sunrise)!=null?r.sunrise:'',sunset:parse(r&&r.sunset)!=null?r.sunset:'',weather:String((r&&r.weather)||'').slice(0,160),notes:(Array.isArray(r&&r.notes)?r.notes:[]).map(x=>String(x).slice(0,120)).slice(0,6),n};
-    savePack(); progStop(stId); renderAll(); setSt(stId,`이 시기 정보를 받았어요${n?` · 시즌 장소 ${n}곳 추가`:''}.`); return true;
+    const n=await JD.asks.seasonInfo(sample,signal);   // app/data/asks.ts
+    progStop(stId); renderAll(); setSt(stId,`이 시기 정보를 받았어요${n?` · 시즌 장소 ${n}곳 추가`:''}.`); return true;
   }catch(e){setSt(stId,e&&e.code==='cancelled'?'멈췄어요. "확인할 것" 탭에서 다시 받을 수 있어요.':errText(e,'시즌 정보를 받지 못했어요'));return false}
 }
 // 준비하기 → 이 시기 여행 팁 (drawn by React: Checks.tsx)
@@ -879,12 +845,7 @@ async function askHotels(k){
   progStart(st,`${area} 숙소 후보를 고르는 중이에요 (보통 20~40초)`,['hotelBtn_'+k],'고르는 중…');
   const cap=roomCap();
   try{
-    const r=await sample.json(`Suggest 3 to 5 places to stay in or right next to ${area}, ${PK.pack.city}${PK.pack.country?', '+PK.pack.country:''} for this trip.
-${profileSummary()}
-Guests: ${heads()} (${partyEn(CUR.profile.party)}). Nights: ${nightsOf(CUR.profile)}.${cap?` Room budget: about KRW ${cap} per night or less.`:''}
-Prefer long-established, well-known places that are very likely still operating. Do not invent places; if unsure, give fewer. Mix types when it suits them (hotel, ryokan or local inn, guesthouse, serviced apartment).
-Reply with only JSON: {"stays":[{"name":"Korean name","local":"name in local language or English for search","type":"Korean type label","why":"one Korean sentence: why it fits this traveler","price":"Korean rough nightly price band from past years, e.g. 1박 10~15만원 (예년 기준)","caution":"short Korean caution or empty"}]}`,{cache:false});
-    hotelRecs[k]=(Array.isArray(r&&r.stays)?r.stays:[]).filter(x=>x&&x.name).slice(0,5).map(x=>({name:String(x.name).slice(0,40),local:String(x.local||'').slice(0,60),type:String(x.type||'').slice(0,16),why:String(x.why||'').slice(0,140),price:String(x.price||'').slice(0,40),caution:String(x.caution||'').slice(0,80)}));
+    hotelRecs[k]=await JD.asks.hotels(sample,k,cap);
     progStop(st); renderHelper(); setSt(st,hotelRecs[k].length?'가격과 빈방은 링크에서 꼭 확인하세요.':'후보를 찾지 못했어요.');
   }catch(e){setSt(st,errText(e,'숙소 후보를 받지 못했어요'))} finally{hrBusy=false}
 }
@@ -894,13 +855,10 @@ function hotelInfo(k){const L=hotelRecs[k];if(!L)return null;const ci=ymd(0),co=
     return {name:h.name,type:h.type||'',why:h.why||'',price:`${h.price}${h.caution?' · '+h.caution:''}`,
       links:[['지도',`https://www.google.com/maps/search/?api=1&query=${q}`],['부킹닷컴',`https://www.booking.com/searchresults.ko.html?ss=${q}&checkin=${ci}&checkout=${co}&group_adults=${g.a}&group_children=${g.k}&no_rooms=1`],['예약 검색',`https://www.google.com/search?q=${q}+%EC%98%88%EC%95%BD`]]}})}
 async function askRoutes(){
-  if(!sample||hrBusy) return; hrBusy=true; const gw=AIRPORTS[CUR.profile.out.airport]||{}, M=CUR.profile.mode;
+  if(!sample||hrBusy) return; hrBusy=true;
   progStart('st_route','다니는 노선과 항공사를 정리하는 중이에요 (보통 20~40초)',['routeBtn'],'정리하는 중…');
   try{
-    const r=await sample.json(`A traveler from Seoul, South Korea is going to ${PK.pack.city}${PK.pack.country?', '+PK.pack.country:''} by ${M==='flight'?'plane':M==='train'?'train':'bus'}${gw.name?` (arriving at ${gw.name}${gw.iata?' '+gw.iata:''})`:''}. ${heads()} people, ${nightsOf(CUR.profile)} nights.${budgetParts()?` Transport and lodging budget about KRW ${budgetParts().trip} per person.`:''}
-Describe the usual ways to get there: departure airport or station in Seoul (Incheon/Gimpo or Seoul/Yongsan/Express Bus Terminal), direct or connecting, which carriers usually operate (full-service vs low-cost), typical travel time. Do not invent flight numbers or exact times; describe what generally operates and note that schedules change.
-Reply with only JSON: {"routes":[{"from":"Korean","to":"Korean","type":"직항|경유|기차|버스","carriers":["Korean names"],"lcc":true,"duration":"Korean e.g. 약 2시간","note":"short Korean"}],"tips":["2-4 short Korean tips for choosing and booking, e.g. baggage on low-cost carriers, best booking timing"]}`,{cache:false});
-    routeInfo={key:PK.pack.city+'|'+M,routes:(Array.isArray(r&&r.routes)?r.routes:[]).slice(0,5).map(x=>({from:String(x.from||'').slice(0,20),to:String(x.to||'').slice(0,20),type:String(x.type||'').slice(0,8),carriers:(Array.isArray(x.carriers)?x.carriers:[]).map(c=>String(c).slice(0,16)).slice(0,6),lcc:!!x.lcc,duration:String(x.duration||'').slice(0,20),note:String(x.note||'').slice(0,100)})),tips:(Array.isArray(r&&r.tips)?r.tips:[]).map(t=>String(t).slice(0,120)).slice(0,4)};
+    routeInfo=await JD.asks.routes(sample);
     progStop('st_route'); renderHelper(); setSt('st_route','시간표와 가격은 아래 검색 링크에서 확인하세요.');
   }catch(e){setSt('st_route',errText(e,'노선 정보를 받지 못했어요'))} finally{hrBusy=false}
 }
