@@ -4,9 +4,9 @@ function opText(o){const d=x=>`Day ${(+x)+1}`, nm=id=>PM[id]?PM[id].name:id;
   if(o.op==='add') return `${d(o.day)} ${o.start} ${nm(o.id)} 넣기`;
   if(o.op==='add_custom') return `${d(o.day)} ${o.start} '${o.name}' 새로 만들어 넣기`;
   if(o.op==='add_place') return `장소 목록에 '${o.name}' 추가 (일정에는 안 넣어요)`;
-  if(o.op==='move'){const b=placed.find(x=>x.uid===o.uid);return `${b?nm(b.id):'블록'} → ${o.day!=null?d(o.day)+' ':''}${o.start||''}${o.dur?` (${durTxt(+o.dur)})`:''}로 옮기기`}
-  if(o.op==='remove'){const b=placed.find(x=>x.uid===o.uid);return `${b?`Day ${b.day+1} ${nm(b.id)}`:'블록'} 빼기`}
-  if(o.op==='mark'){const b=placed.find(x=>x.uid===o.uid);const nm2=b?nm(b.id):((DAYS.flatMap(D=>D.fixed).find(f=>f.id===o.uid)||{}).name||'블록');return `${nm2}에 ${MARKS[o.mark][0]} ${MARKS[o.mark][1]} ${o.on===false?'표시 빼기':'표시'}`}
+  if(o.op==='move'){const b=CUR.placed.find(x=>x.uid===o.uid);return `${b?nm(b.id):'블록'} → ${o.day!=null?d(o.day)+' ':''}${o.start||''}${o.dur?` (${durTxt(+o.dur)})`:''}로 옮기기`}
+  if(o.op==='remove'){const b=CUR.placed.find(x=>x.uid===o.uid);return `${b?`Day ${b.day+1} ${nm(b.id)}`:'블록'} 빼기`}
+  if(o.op==='mark'){const b=CUR.placed.find(x=>x.uid===o.uid);const nm2=b?nm(b.id):((DAYS.flatMap(D=>D.fixed).find(f=>f.id===o.uid)||{}).name||'블록');return `${nm2}에 ${MARKS[o.mark][0]} ${MARKS[o.mark][1]} ${o.on===false?'표시 빼기':'표시'}`}
   return '알 수 없는 변경'}
 let chatRev=0;
 // the dock under the schedule is drawn by React (app/screens/Dock.tsx) from dockView; dock({…}) changes some of it and draws again
@@ -37,15 +37,15 @@ function validOp(o){if(!o||typeof o!=='object') return false;const dOk=x=>Number
   if(o.op==='add') return !!PM[o.id]&&dOk(o.day)&&parse(o.start)!=null;
   if(o.op==='add_custom') return !!o.name&&dOk(o.day)&&parse(o.start)!=null;
   if(o.op==='add_place') return !!o.name;
-  if(o.op==='move') return !!placed.find(b=>b.uid===o.uid)&&(o.day==null||dOk(o.day))&&(o.start==null||parse(o.start)!=null);
-  if(o.op==='remove') return !!placed.find(b=>b.uid===o.uid);
-  if(o.op==='mark') return !!MARKS[o.mark]&&(!!placed.find(b=>b.uid===o.uid)||DAYS.some(D=>D.fixed.some(f=>f.id===o.uid)));
+  if(o.op==='move') return !!CUR.placed.find(b=>b.uid===o.uid)&&(o.day==null||dOk(o.day))&&(o.start==null||parse(o.start)!=null);
+  if(o.op==='remove') return !!CUR.placed.find(b=>b.uid===o.uid);
+  if(o.op==='mark') return !!MARKS[o.mark]&&(!!CUR.placed.find(b=>b.uid===o.uid)||DAYS.some(D=>D.fixed.some(f=>f.id===o.uid)));
   return false}
 async function sendChat(text){
   if(!sample||chatBusy||!text) return;
   chat.push({role:'user',text}); chat.push({role:'busy'}); chatBusy=true; renderChat();
   const sched=DAYS.map((D,d)=>`Day index ${d} (${D.iso}, ${WDE[D.wd]}):\n`+analyze(d).items.map(i=>`  ${fmt(i.start)}-${fmt(i.end)} ${i.kind==='fixed'?'[FIXED]':`[uid ${i.uid}]`} ${i.name} @ ${i.area||i.locName}${i.carryAfter?' (suitcase after this)':''}${i.marks&&i.marks.length?' {'+i.marks.map(m=>'traveler '+MARK_EN[m]).join('; ')+'}':''}${i.warns&&i.warns.length?' WARN: '+i.warns.join('; '):''}`).join('\n')).join('\n');
-  const used=new Set(placed.map(b=>b.id));
+  const used=new Set(CUR.placed.map(b=>b.id));
   const cands=P.filter(p=>!used.has(p.id)).map(p=>{const h=p.always?null:p.hours;return [p.id,p.name,p.area,p.cat,p.dur,h?`${fmt(h[0])}-${fmt(h[1])}`:'any',(p.closed||[]).map(w=>WDE[w]).join('/'),tagsOf(p.id).join('/'),p.drop?'luggage-drop':'',mustOf(p.id)?'recommended':'',recOf(p)?`${recOf(p)} traveler recs`:'',isWish(p.id)?'WISHED by traveler':'',p.best&&p.best!=='any'?'best '+p.best:'',p.season?`SEASONAL ${p.season} ${p.dates?(p.dates[0]||'')+'~'+(p.dates[1]||''):''}`:'']});
   const history=chat.filter(m=>m.role==='user'||m.role==='a').slice(-7,-1).map(m=>(m.role==='user'?'User: ':'Assistant: ')+m.text).join('\n');
   const prompt=`You help edit a trip schedule for ${PACK.city} made of time blocks. The user writes in Korean.
@@ -85,23 +85,23 @@ Marks are small to-dos attached to a block without taking time: bag+ leave lugga
   }finally{chatBusy=false;renderChat()}
 }
 function applyChat(i){const m=chat[i]; if(!m||m.state!=='pending') return;
-  undoSnap={i,placed:clone(placed),custom:clone(custom),fmarks:clone(fmarks)};
-  applyOpsCore(m.ops.filter(o=>o.op!=='add_place')); TRIP.save('fmarks',fmarks);
-  TRIP.save('custom',custom); m.state='applied'; save(); renderAll();
+  undoSnap={i,placed:clone(CUR.placed),custom:clone(CUR.custom),fmarks:clone(CUR.fmarks)};
+  applyOpsCore(m.ops.filter(o=>o.op!=='add_place')); TRIP.save('fmarks',CUR.fmarks);
+  TRIP.save('custom',CUR.custom); m.state='applied'; save(); renderAll();
 }
-function undoChat(i){if(!undoSnap||undoSnap.i!==i) return; placed=undoSnap.placed; custom=undoSnap.custom; fmarks=undoSnap.fmarks||fmarks; TRIP.save('fmarks',fmarks); custom.forEach(addCustomToData); TRIP.save('custom',custom); undoSnap=null; chat[i].state='cancelled'; chat[i].text+=' (되돌렸어요)'; save(); renderAll()}
+function undoChat(i){if(!undoSnap||undoSnap.i!==i) return; CUR.placed=undoSnap.placed; CUR.custom=undoSnap.custom; CUR.fmarks=undoSnap.fmarks||CUR.fmarks; TRIP.save('fmarks',CUR.fmarks); CUR.custom.forEach(addCustomToData); TRIP.save('custom',CUR.custom); undoSnap=null; chat[i].state='cancelled'; chat[i].text+=' (되돌렸어요)'; save(); renderAll()}
 function renderNudges(){
-  const off=profile.nudgeOff||{}, C=[];
-  if(profile.kind!=='day'&&!profile.flightSet&&profile.bookedFlight!==false&&!off.flight) C.push(['flight','✈️','교통편 시간을 알려 주세요','첫날 출발과 마지막 날 귀국 시간이 정확해져요.',[['nudgeFlightIn','시간 넣기',1],['nudgeFlightNo','아직 예약 전이에요']]]);
-  if(profile.kind!=='day'&&!profile.staySet&&profile.bookedStay!==false&&!off.stay) C.push(['stay','🏨','숙소를 알려 주세요','체크인·체크아웃과 짐 들고 다니는 시간이 계산돼요.',[['nudgeStayIn','숙소 넣기',1],['nudgeStayNo','아직 예약 전이에요']]]);
-  if(profile.dateUnknown&&!off.date) C.push(['date','📅','여행 날짜를 알려 주세요','지금은 대략 한 달 뒤로 계산하고 있어요.',[['nudgeDate','날짜 넣기',1]]]);
-  if(!kws.length&&!off.taste) C.push(['taste','💡','취향을 알려 주세요','고른 키워드에 맞는 장소부터 추천해요.',[['nudgeTaste','취향 고르기',1]]]);
+  const off=CUR.profile.nudgeOff||{}, C=[];
+  if(CUR.profile.kind!=='day'&&!CUR.profile.flightSet&&CUR.profile.bookedFlight!==false&&!off.flight) C.push(['flight','✈️','교통편 시간을 알려 주세요','첫날 출발과 마지막 날 귀국 시간이 정확해져요.',[['nudgeFlightIn','시간 넣기',1],['nudgeFlightNo','아직 예약 전이에요']]]);
+  if(CUR.profile.kind!=='day'&&!CUR.profile.staySet&&CUR.profile.bookedStay!==false&&!off.stay) C.push(['stay','🏨','숙소를 알려 주세요','체크인·체크아웃과 짐 들고 다니는 시간이 계산돼요.',[['nudgeStayIn','숙소 넣기',1],['nudgeStayNo','아직 예약 전이에요']]]);
+  if(CUR.profile.dateUnknown&&!off.date) C.push(['date','📅','여행 날짜를 알려 주세요','지금은 대략 한 달 뒤로 계산하고 있어요.',[['nudgeDate','날짜 넣기',1]]]);
+  if(!CUR.kws.length&&!off.taste) C.push(['taste','💡','취향을 알려 주세요','고른 키워드에 맞는 장소부터 추천해요.',[['nudgeTaste','취향 고르기',1]]]);
   // drawn by React: app/screens/ChatLog.tsx Nudges
-  window.JEPI_UI.mount('nudges',$('#nudges'),{dir:profile.direction&&(profile.purpose||profile.direction.purpose)?String(profile.purpose||profile.direction.purpose):'',
+  window.JEPI_UI.mount('nudges',$('#nudges'),{dir:CUR.profile.direction&&(CUR.profile.purpose||CUR.profile.direction.purpose)?String(CUR.profile.purpose||CUR.profile.direction.purpose):'',
     rows:C.map(([k,ic,t,d,bs])=>({k,ic,title:d,aria:`${t} 나중에`,label:t.replace(' 알려 주세요','').replace('을','').replace('를',''),
       btns:bs.map(([id,l,pr])=>({id,primary:!!pr,label:pr?l.replace(/ .*/,'')==='시간'?'넣기':l.split(' ')[0]==='숙소'?'넣기':'고르기':'예약 전'}))}))});
 }
-function goMe(h){tab='me';draft=clone(profile);renderMe();renderTabs();setTimeout(()=>{const el=[...document.querySelectorAll('#meBox h3')].find(x=>x.textContent.includes(h));if(el)el.scrollIntoView({block:'start'})},0)}
-function renderMeta(){if(profile.kind==='day'){dock({helperHidden:true});hero({meta:`${PACK.city} · ${(DAYS[0].iso||'').slice(5).replace('-','/')} 하루 코스 · ${profile.meet.time}–${profile.meet.end}`});return}if(profile.dateUnknown){const n=DAYS.length-1;dock({helperHidden:!needBooking()});hero({meta:`${PACK.city} · 날짜 미정 (대략 ${(DAYS[0].iso||'').slice(5).replace('-','/')}부터) · ${n}박 ${n+1}일`});return}dock({helperHidden:!needBooking()});const n=DAYS.length-1;hero({meta:`${PACK.city} · ${(DAYS[0].iso||'').replace(/-/g,'.')} – ${(DAYS[n].iso||'').slice(5).replace('-','.')} · ${n}박 ${n+1}일 · ${apName(profile.out.airport)}`})}
+function goMe(h){tab='me';draft=clone(CUR.profile);renderMe();renderTabs();setTimeout(()=>{const el=[...document.querySelectorAll('#meBox h3')].find(x=>x.textContent.includes(h));if(el)el.scrollIntoView({block:'start'})},0)}
+function renderMeta(){if(CUR.profile.kind==='day'){dock({helperHidden:true});hero({meta:`${PACK.city} · ${(DAYS[0].iso||'').slice(5).replace('-','/')} 하루 코스 · ${CUR.profile.meet.time}–${CUR.profile.meet.end}`});return}if(CUR.profile.dateUnknown){const n=DAYS.length-1;dock({helperHidden:!needBooking()});hero({meta:`${PACK.city} · 날짜 미정 (대략 ${(DAYS[0].iso||'').slice(5).replace('-','/')}부터) · ${n}박 ${n+1}일`});return}dock({helperHidden:!needBooking()});const n=DAYS.length-1;hero({meta:`${PACK.city} · ${(DAYS[0].iso||'').replace(/-/g,'.')} – ${(DAYS[n].iso||'').slice(5).replace('-','.')} · ${n}박 ${n+1}일 · ${apName(CUR.profile.out.airport)}`})}
 
 

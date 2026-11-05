@@ -90,12 +90,12 @@ function renderTray(){
   drawTrayTop();
   const cats=Object.entries(CATS);
   window.JEPI_UI.mount('trayFilters',$('#filters'),{chips:[['all','전체'],['wish','♥'],...(P.some(p=>p.season)?[['season','🗓 시즌']]:[]),...(RS.status!=='off'?[['users','👍']]:[]),['must','★']],cats,cat,rev:++trayRev});
-  const used=new Set(placed.map(b=>b.id));
+  const used=new Set(CUR.placed.map(b=>b.id));
   const inCat=P.filter(p=>!(cat==='all'&&p.drop)&&(cat==='all'||(cat==='wish'?isWish(p.id):cat==='season'?!!p.season:cat==='must'?!!MUST[p.id]:cat==='users'?(recOf(p)>0||p.shared):p.cat===cat))&&(!openOnly||(!closedOn(p,wd)&&!outOfSeason(p,DAYS[day].iso))));
   const list=inCat.filter(p=>!used.has(p.id));
   const nHidden=inCat.length-list.length;
   // drawn by React: app/screens/Tray.tsx
-  const pmode=jp==='P'?{count:wish.filter(id=>PM[id]&&!used.has(id)).length,ai:!!sample}:null;
+  const pmode=jp==='P'?{count:CUR.wish.filter(id=>PM[id]&&!used.has(id)).length,ai:!!sample}:null;
   const show=(empty,groups)=>window.JEPI_UI.mount('trayCards',$('#cards'),{dups:dupInfo(),hidden:nHidden,empty,groups,pmode,rev:++trayRev});
   if(!list.length&&jp==='P'&&!P.length){show(sample?'아직 장소가 없어요. 위의 "AI에게 추천받기"로 후보를 받아 보세요.':'아직 장소가 없어요. 위의 "직접 적어 담기"로 가고 싶은 곳을 적어 보세요.',[]);return}
   if(!list.length){show(P.length?'이 조건에서 남은 후보지가 없어요.':sample&&!PACK.manual?'아직 장소 후보가 없어요. 위에서 AI로 찾아보세요.':'장소 후보가 없어요. 타임라인의 "+ 직접 만들기"로 블록을 만들어 쓰세요.',[]);return}
@@ -143,7 +143,7 @@ function openFill(t){
   const gS=prev?prev.end:(day===0?arrEnd():480), gE=next?next.start:1440, len=Math.max(0,gE-gS);
   const tm=(a,b)=>(travel(a,b)||{min:0}).min;
   const base=next?tm(pLl,next.ll):0;
-  const used=new Set(placed.map(b=>b.id));
+  const used=new Set(CUR.placed.map(b=>b.id));
   const carrying=prev?!!prev.carryAfter:false;
   const rows=P.filter(p=>!used.has(p.id)).map(p=>{
     const tin=tm(pLl,p.ll), tout=next?tm(p.ll,next.ll):0, h=hoursFor(p,wd);
@@ -186,7 +186,7 @@ function renderChecks(){
     season:seasonInfo(),all:STATIC_CHECKS.map(s=>ckInfo(s.id,s.t)),resetArm:!!resetArm,rev:++checksRev});
 }
 let checksRev=0;
-function ckInfo(id,t,sub){return {id,t:String(t),sub,on:!!done[id]}}
+function ckInfo(id,t,sub){return {id,t:String(t),sub,on:!!CUR.done[id]}}
 // the bottom tabs are drawn by React (app/screens/Bars.tsx); tabs({…}) changes some of it and draws again
 let tabsView={shown:'timeline',warn:''};
 function tabs(p){tabsView={...tabsView,...p};window.JEPI_UI.mount('tabs',$('#tabsMount'),tabsView)}
@@ -224,9 +224,9 @@ let aiBoxRev=0;
 function renderPref(){
   const box=$('#prefBox'); if(!box) return;
   const counts=k=>P.filter(p=>tagsOf(p.id).some(t=>norm(t)===norm(k))).length;
-  const known=[...new Set([...GENERIC_KW,...Object.values(TAGS).flat()])].filter(t=>!kws.some(k=>norm(k)===norm(t)));
-  window.JEPI_UI.mount('keywords',box,{kws:kws.map(k=>({k:String(k),n:counts(k)})),known:known.map(String)});
+  const known=[...new Set([...GENERIC_KW,...Object.values(TAGS).flat()])].filter(t=>!CUR.kws.some(k=>norm(k)===norm(t)));
+  window.JEPI_UI.mount('keywords',box,{kws:CUR.kws.map(k=>({k:String(k),n:counts(k)})),known:known.map(String)});
 }
-const saveKw=()=>{TRIP.kws.save(kws);LS.set('jepi.kwAt',Date.now());syncSoon();renderPref();renderTray()};
+const saveKw=()=>{TRIP.kws.save(CUR.kws);LS.set('jepi.kwAt',Date.now());syncSoon();renderPref();renderTray()};
 function renderAll(){touchPlan();renderMeta();renderNudges();renderDays();renderTimeline();renderTray();renderChecks();renderPref();renderTabs();renderBanner();renderAI();renderChat();renderExt();renderLook()}
 

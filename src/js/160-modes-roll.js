@@ -15,7 +15,7 @@ let diceLog=[];
 const isoShift=(iso,n)=>{const d=new Date(iso+'T00:00:00');d.setDate(d.getDate()+n);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
 function diceGaps(d){
   const its=analyze(d).items.filter(i=>!i.stay), out=[]; let cur=d===0?arrEnd():dayStart(d), prev=null;
-  const end=profile.kind==='day'?tmin(profile.meet.end,1200):1380;
+  const end=CUR.profile.kind==='day'?tmin(CUR.profile.meet.end,1200):1380;
   for(const it of its){ if(it.start>=end) break; if(it.start-cur>=45) out.push({s:cur,e:it.start,prev}); if(it.end>cur){cur=it.end;prev=it} }
   if(end-cur>=45) out.push({s:cur,e:end,prev}); return out;
 }
@@ -27,7 +27,7 @@ function moodOk(p,from){const tg=tagsOf(p.id).join(' ')+' '+p.name+' '+(p.note||
     case 'mine':return isWish(p.id);
     default:return true}}
 function diceCands(g){
-  const D=DAYS[day],wd=D.wd,used=new Set(placed.map(b=>b.id)),from=g.prev?g.prev.ll:LOC[D.startLoc].ll;
+  const D=DAYS[day],wd=D.wd,used=new Set(CUR.placed.map(b=>b.id)),from=g.prev?g.prev.ll:LOC[D.startLoc].ll;
   const recent=new Set(diceLog.filter(x=>x.d&&D.iso&&x.d<D.iso&&x.d>=isoShift(D.iso,-5)).map(x=>norm(x.n)));
   let s0=g.s,e0=g.e; if(dice.lunch){const mw=dice.meal==='dinner'?[1050,1260]:[690,840];s0=Math.max(s0,mw[0]);e0=Math.min(e0,mw[1]);if(e0-s0<30)return []}
   const out=[];

@@ -54,7 +54,7 @@ function diceCloseAnim(){
 
 
 // postcard look for each trip in the menu: its own theme colour, cover and D-day
-function pmProfile(p){return p.id===curPlan?profile:((TRIP.plans.get(p.id)||{}).profile||{})}
+function pmProfile(p){return p.id===curPlan?CUR.profile:((TRIP.plans.get(p.id)||{}).profile||{})}
 function pmLook(p){return Object.assign({color:'#2448c9',cover:'city'},pmProfile(p).look||{})}
 function pmPast(p){const pr=pmProfile(p);if(!pr.startDate||pr.dateUnknown)return false;const e=new Date(pr.startDate+'T00:00:00');e.setDate(e.getDate()+(pr.kind==='day'?0:(+pr.nights||0)));return e<new Date(new Date().toDateString())}
 function pmDday(p){const pr=pmProfile(p);if(!pr.startDate||pr.dateUnknown||pmPast(p))return '';const n=Math.round((new Date(pr.startDate+'T00:00:00')-new Date(new Date().toDateString()))/864e5);return n>0?'D-'+n:n===0?'D-DAY':'여행 중'}   // the D-day label (PlanMenu.tsx)

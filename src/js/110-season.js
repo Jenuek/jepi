@@ -1,6 +1,6 @@
 // ---------- season & time-of-day: what is special on these dates, and when each place is best ----------
 const BEST_KO={morning:'오전',day:'낮',sunset:'일몰 무렵',evening:'저녁',night:'밤'};
-const tripKey=()=>`${profile.startDate}|${nightsOf(profile)}`;
+const tripKey=()=>`${CUR.profile.startDate}|${nightsOf(CUR.profile)}`;
 const seasonOf=()=>PACK.season&&PACK.season.key===tripKey()?PACK.season:null;
 const sunsetMin=()=>{const s=seasonOf();return (s&&parse(s.sunset))||null};
 function outOfSeason(p,iso){if(!p.dates||!iso) return false;const [a,b]=p.dates;return (a&&iso<a)||(b&&iso>b)}
@@ -20,7 +20,7 @@ function seasonSummary(){const s=seasonOf(); if(!s) return '';
 async function genSeason(stId,signal){
   if(!sample) return false;
   progStart(stId,'이 시기만의 특징과 행사를 찾는 중이에요 (보통 30초~1분)',['seasonBtn'],'찾는 중…');
-  const s0=ymd(0), s1=ymd(nightsOf(profile)), areaList=Object.entries(AREAS).map(([k,v])=>`${k}=${v[0]}`).join(', ');
+  const s0=ymd(0), s1=ymd(nightsOf(CUR.profile)), areaList=Object.entries(AREAS).map(([k,v])=>`${k}=${v[0]}`).join(', ');
   try{
     const r=await sample.json(`A trip to ${PACK.city}${PACK.country?', '+PACK.country:''} from ${s0} to ${s1}.
 ${profileSummary()}
@@ -33,7 +33,7 @@ Reply with only JSON:
 "places":[up to 8 things that genuinely happen or peak during these dates, {"name":"Korean name","local":"local-language name","area":"area key","cat":"food|music|art|walk|shop|night|trip","lat":0.0000,"lng":0.0000,"dur":minutes,"open":"HH:MM-HH:MM or null","closed":[0-6],"cost":typical spend in ${PACK.currency},"tags":["short Korean"],"note":"one Korean sentence","season":"short Korean label such as 단풍 절정, 크리스마스 마켓","from":"YYYY-MM-DD or null","to":"YYYY-MM-DD or null","best":"morning|day|sunset|evening|night|any","confidence":"high|medium|low"}]}
 For recurring annual events give their usual dates and use confidence medium or low when this year's dates are not certain. Do not invent events.`,{cache:false,signal});
     // drop earlier seasonal places that are not in use
-    const keep=new Set([...placed.map(b=>b.id),...wish]);
+    const keep=new Set([...CUR.placed.map(b=>b.id),...CUR.wish]);
     PACK.places=PACK.places.filter(p=>!p.season||keep.has(p.id));
     for(let i=P.length-1;i>=0;i--){const p=P[i];if(p.season&&!keep.has(p.id)){P.splice(i,1);delete PM[p.id];delete MUST[p.id]}}
     let n=0; const iso=x=>/^\d{4}-\d{2}-\d{2}$/.test(String(x||''))?x:null;

@@ -3,7 +3,7 @@ if(STANDALONE) sample=makeSample();
 hero({}); onbFrame({}); tabs({}); miniBar({}); dock({}); drawTrayTop(); mapTop({}); drawHelperFrame(); drawCoach(); drawBanner();   // the fixed frames (React)
 plans=TRIP.plans.list()||[]; if(!Array.isArray(plans)) plans=[]; curPlan=TRIP.plans.current()||''; if(!curPlan){curPlan='p'+Date.now().toString(36);savePlans()}
 setZoom(store.get('gp.zoom',60),true);
-setJP(store.get('gp.jp',profile.kind==='day'?'P':'J'),true);
+setJP(store.get('gp.jp',CUR.profile.kind==='day'?'P':'J'),true);
 buildDays();
 renderAll();
 applyTheme(); introRun(); syncBoot();

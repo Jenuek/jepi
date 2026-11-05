@@ -4,7 +4,7 @@ function todayIdx(){const t=isoOf(new Date());return DAYS.findIndex(D=>D.iso===t
 // drawn by React: app/screens/Phase.tsx
 function renderPhase(){
   const el=$('#phase'); if(!el) return;
-  const pr=profile, t=isoOf(new Date()), D0=DAYS[0], Dn=DAYS[DAYS.length-1];
+  const pr=CUR.profile, t=isoOf(new Date()), D0=DAYS[0], Dn=DAYS[DAYS.length-1];
   const show=v=>{window.JEPI_UI.mount('phase',el,v);el.hidden=v.s==='none'};
   // AI 꺼짐 now lives on the 더보기 → 설정 row only (tidy day screen)
   if(!D0||!D0.iso||pr.dateUnknown){show({s:'none'});return}

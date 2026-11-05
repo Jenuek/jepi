@@ -88,15 +88,13 @@ export function save<K extends PartName>(part: K, value: TripParts[K]): void {
   emit(part, value);
 }
 
-// The old code tells us how to read its live working copy (it reassigns them, e.g. after opening another plan).
-type Source = { [K in PartName]?: () => TripParts[K] } & { kws?: () => string[] };
-let source: Source = {};
-export function connect(s: Source): void { source = s }
+/** The trip being worked on. The old code works on these directly (CUR.placed …) and may replace a whole part
+ *  (opening another plan); changes go through the functions below where they exist. */
+export const cur = {} as TripParts & { kws: string[] };
 
-/** the current value: the old code's live copy, or the last value saved or loaded */
+/** the current value (or the last value saved or loaded, before the old code has set it) */
 export function get<K extends PartName>(part: K): TripParts[K] | undefined {
-  const f = source[part] as (() => TripParts[K]) | undefined;
-  return f ? f() : latest[part] as TripParts[K] | undefined;
+  return (cur[part] ?? latest[part]) as TripParts[K] | undefined;
 }
 
 /** listen for changes: (part, value). Returns a function that stops listening. */
@@ -107,7 +105,7 @@ export function on(f: Listener): () => void {
 
 // ---- taste keywords (they belong to the person, not to one plan; carried into new plans) ----
 export const kws = {
-  get: (): string[] => (source.kws ? source.kws() : (latest.kws as string[] | undefined) ?? storage.get<string[]>('gp.kw', [])),
+  get: (): string[] => cur.kws ?? (latest.kws as string[] | undefined) ?? storage.get<string[]>('gp.kw', []),
   load: (): string[] | null => storage.get<string[] | null>('gp.kw', null),
   save: (list: string[]): void => { storage.set('gp.kw', list); emit('kws', list) },
 };

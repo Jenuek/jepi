@@ -10,8 +10,8 @@ const PAIRS={bag:{same:true,need:'맡긴 짐을 찾는 일정이 없어요',orph
   order:{same:true,need:'주문한 것을 찾으러 가는 일정이 없어요',orphan:'주문·맡기기 표시가 먼저 있어야 해요',pair:'주문한 것 찾기',dur:15},
   rent:{same:false,need:'반납하는 일정이 없어요',orphan:'빌리기 표시가 먼저 있어야 해요',pair:'반납하기',dur:15},
   ship:{same:false,need:'보낸 짐을 받는 곳이 없어요',orphan:'짐 보내기 표시가 먼저 있어야 해요',pair:'짐 받기',dur:15}};
-let fmarks=null;
-const marksOf=it=>it.kind==='place'?((placed.find(b=>b.uid===it.uid)||{}).mk||[]):((fmarks||{})[it.uid]||[]);
+CUR.fmarks=null;
+const marksOf=it=>it.kind==='place'?((CUR.placed.find(b=>b.uid===it.uid)||{}).mk||[]):((CUR.fmarks||{})[it.uid]||[]);
 const hasMark=(it,m)=>(it.marks||[]).includes(m);
 const implicitBagDrop=it=>it.kind==='place'&&!!it.drop;   // a locker/storage place counts as leaving the bag there
 function markWarnings(){

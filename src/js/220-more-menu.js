@@ -1,7 +1,7 @@
 // ---------- 더보기: trip summary, 준비하기 badge, P-mode short menu ----------
 let moreAll=false, meOpen=null, autoT=0;
 function tripSummary(){
-  const pr=profile, n=nightsOf(pr), D0=DAYS[0]||{}, Dn=DAYS[DAYS.length-1]||{};
+  const pr=CUR.profile, n=nightsOf(pr), D0=DAYS[0]||{}, Dn=DAYS[DAYS.length-1]||{};
   const md=iso=>iso?`${+iso.slice(5,7)}/${+iso.slice(8,10)}`:'';
   const dates=pr.kind==='day'?md(D0.iso):pr.dateUnknown?'날짜 미정':`${md(D0.iso)}(${WD[D0.wd]}) – ${md(Dn.iso)}(${WD[Dn.wd]})`;
   const who=pr.party.type==='solo'?'혼자':pr.party.type==='couple'?'둘이서':`${heads2(pr.party)}명`;
@@ -12,7 +12,7 @@ function warnTotal(){let n=0;for(let d=0;d<DAYS.length;d++)n+=analyze(d).items.r
 // The menu itself is drawn by React: app/screens/MoreMenu.tsx. Here: the numbers it shows.
 function renderMore(){
   const box=$('#moreBox'); if(!box) return;
-  const s=tripSummary(), pr=profile, b=budgetParts&&budgetParts(pr);
+  const s=tripSummary(), pr=CUR.profile, b=budgetParts&&budgetParts(pr);
   const tripChips=pr.kind==='day'?[]:[pr.bookedFlight===false?{text:'교통편 미정',tone:'warn'}:{text:'교통편 예약됨',tone:'ok'},pr.bookedStay===false?{text:'숙소 미정',tone:'warn'}:{text:'숙소 예약됨',tone:'ok'}];
   if(b) tripChips.push({text:`예산 1인 ${Math.round(b.total/10000)}만원`});
   const w=warnTotal(), sp=plans.find(x=>x.id===curPlan&&x.shared);
@@ -44,22 +44,22 @@ function meRows(p){
 // Drawn by React: app/screens/MeRows.tsx. meSetMsg changes only the message (the open form stays as it is).
 let meRev=0, meLast=null;
 function renderMeRows(){
-  if(!draft) draft=clone(profile); fixProfile(draft);
+  if(!draft) draft=clone(CUR.profile); fixProfile(draft);
   const rows=meRows(draft), op=rows.find(r=>r[0]===meOpen);
-  meLast={rows:rows.map(([id,k,v])=>({id,label:k,valueHTML:v})),open:op?meOpen:null,body:op?op[3]():[],msg:autoMsg||'',dayCourse:profile.kind==='day',rev:++meRev};
+  meLast={rows:rows.map(([id,k,v])=>({id,label:k,valueHTML:v})),open:op?meOpen:null,body:op?op[3]():[],msg:autoMsg||'',dayCourse:CUR.profile.kind==='day',rev:++meRev};
   window.JEPI_UI.mount('me',$('#meBox'),meLast);
 }
 function meSetBudgetHint(h){if(!meLast||!$('#meBox'))return;meLast=Object.assign({},meLast,{body:meLast.body.map(x=>x.f==='budget'?Object.assign({},x,{hint:h}):x)});window.JEPI_UI.mount('me',$('#meBox'),meLast)}
 function meSetMsg(m){if(!meLast||!$('#meBox')){return}meLast=Object.assign({},meLast,{msg:m});window.JEPI_UI.mount('me',$('#meBox'),meLast)}
 let autoMsg='';
 function autoSave(){clearTimeout(autoT);autoT=setTimeout(()=>{if(!draft||!$('#onb').hidden)return;
-  const prevDest=profile.dest;commitProfile(draft);if(prevDest!==profile.dest)draft.dest=profile.dest;
+  const prevDest=CUR.profile.dest;commitProfile(draft);if(prevDest!==CUR.profile.dest)draft.dest=CUR.profile.dest;
   autoMsg='✓ 자동 저장됨 · 일정표에 바로 반영돼요';renderAll();meSetMsg(autoMsg)},500)}
 // taste: style rows + keywords + wishes (carried into new plans). The style rows are drawn by React: app/screens/TasteStyle.tsx
 const TASTE_KEYS=['pace','social','breakfast','style'];
 function carryTaste(from,to){TASTE_KEYS.forEach(k=>{if(from&&from[k]!==undefined)to[k]=clone(from[k])})}
 let tasteRev=0;
-function renderTasteStyle(){const el=$('#tasteStyle');if(!el)return;if(!draft)draft=clone(profile);fixProfile(draft);const p=draft;
+function renderTasteStyle(){const el=$('#tasteStyle');if(!el)return;if(!draft)draft=clone(CUR.profile);fixProfile(draft);const p=draft;
   window.JEPI_UI.mount('tasteStyle',el,{purpose:p.purpose??'',pace:p.pace,solo:p.party.type==='solo',social:p.social,breakfast:p.breakfast,
     rows:STYLE_ROWS,style:clone(p.style||{}),open:styleOpen,msg:autoMsg||'',rev:++tasteRev})}
 

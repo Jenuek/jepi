@@ -4,3 +4,5 @@
 const JD=window.JEPI_DATA;
 // The trip's data (profile, blocks, ♥, plans …) is saved only through TRIP: app/data/trip.ts
 const TRIP=JD.trip;
+// the trip being worked on (profile, placed, custom, fmarks, wish, meals, done, kws) lives in app/data/trip.ts: CUR.placed …
+const CUR=TRIP.cur;

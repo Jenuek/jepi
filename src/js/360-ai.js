@@ -4,10 +4,10 @@ async function askAI(){
   const D=DAYS[day], wd=D.wd, gaps=gapsOf(day);
   if(!gaps.length){aiState={day,status:'error',msg:'이 날은 90분 이상 빈 시간이 없어요. 블록을 조금 빼거나 옮겨 보세요.'};renderAI();return}
   const items=analyze(day).items.map(i=>`${fmt(i.start)}-${fmt(i.end)} ${i.name} @ ${i.locName}${i.carryAfter?' [after this the traveler carries a suitcase until a luggage-drop block]':''}${i.marks&&i.marks.length?' {'+i.marks.map(m=>'traveler '+MARK_EN[m]).join('; ')+'}':''}`).join('\n');
-  const used=new Set(placed.map(b=>b.id));
+  const used=new Set(CUR.placed.map(b=>b.id));
   const cands=P.filter(p=>!closedOn(p,wd)&&!outOfSeason(p,D.iso)&&!used.has(p.id)&&p.dur<=Math.max(...gaps.map(g=>g[1]-g[0]))).map(p=>{
     const h=hoursFor(p,wd);return {id:p.id,name:p.name,tags:tagsOf(p.id),mustSee:mustOf(p.id)||undefined,best:p.best&&p.best!=='any'?p.best:undefined,season:p.season?`${p.season}${p.dates?` ${p.dates[0]||''}~${p.dates[1]||''}`:''}`:undefined,travelerRecs:recOf(p)||undefined,wished:isWish(p.id)||undefined,category:p.cat,luggageDrop:!!p.drop,area:p.area,minutes:p.dur,open:h?`${fmt(h[0])}-${fmt(h[1])}`:'always',note:p.note}});
-  const freeMin=gaps.reduce((a,g)=>a+(g[1]-g[0]),0), per={slow:200,normal:140,full:100}[profile.pace]||140, maxPick=Math.max(1,Math.min(6,Math.ceil(freeMin/per)));
+  const freeMin=gaps.reduce((a,g)=>a+(g[1]-g[0]),0), per={slow:200,normal:140,full:100}[CUR.profile.pace]||140, maxPick=Math.max(1,Math.min(6,Math.ceil(freeMin/per)));
   const prompt=`You plan one day of a trip to ${PACK.city}. Pick up to ${maxPick} place blocks to fill the free time.
 
 ${profileSummary()}
@@ -23,7 +23,7 @@ ${JSON.stringify(cands)}
 
 Luggage rule: while the traveler carries a suitcase (see the schedule notes), they cannot enter museums, shops, cafes with seating or live houses. In that time only pick a candidate with luggageDrop true (to leave the suitcase first) or category walk/trip. Never suggest a luggageDrop candidate when the traveler is not carrying a suitcase.
 Places with mustSee are especially recommended, and travelerRecs is how many other travelers recommended a place, and wished means the traveler wants to go there; prefer them when they fit, wished ones most.
-Rules: each pick must sit inside one free gap, leave travel time (about 15-35 min by local transport between areas) before it and after it, stay within opening hours, and not overlap other picks. Prefer places near the neighbouring blocks. ${profile.pace==='slow'?'Keep the day unhurried: fewer picks is fine.':profile.pace==='full'?'The traveler wants a full day: use the free time well, up to the limit.':'Keep a balanced pace with some breathing room.'}
+Rules: each pick must sit inside one free gap, leave travel time (about 15-35 min by local transport between areas) before it and after it, stay within opening hours, and not overlap other picks. Prefer places near the neighbouring blocks. ${CUR.profile.pace==='slow'?'Keep the day unhurried: fewer picks is fine.':CUR.profile.pace==='full'?'The traveler wants a full day: use the free time well, up to the limit.':'Keep a balanced pace with some breathing room.'}
 Reply with only JSON: {"suggestions":[{"id":"nezu","start":"10:30","reason":"one short sentence in Korean explaining why it fits this traveler and this slot"}]}`;
   const ctl=new AbortController();
   aiState={day,status:'loading',ctl}; renderAI(); dock({aiOff:true});

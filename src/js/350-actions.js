@@ -23,7 +23,7 @@ function openSheet(uid,opt){
     travel:ti?segs(`이동: ${ti.fromName}에서 ${ti.real?'':'약 '}${ti.mode} ${ti.min}분${ti.lines?` (${ti.lines}${ti.tf?` · 환승 ${ti.tf}회`:''})`:''}${ti.fare?` · ${yen(ti.fare)}`:''} · `,{t:'안내 시작',tag:'a',href:String(ti.link)}):null,
     marks:!it.stay&&!['f0a','f0b','f0c','f8','f9'].includes(it.uid)?marksInfo(it,opt&&opt.marksOpen):null,
     place:isP?{customId:it.p.custom?String(it.id):null,alts:altsInfo(it)}:null,
-    home:!isP&&uid==='f0a'?{word:MODE_WORD[profile.mode],min:homeMin}:null});
+    home:!isP&&uid==='f0a'?{word:MODE_WORD[CUR.profile.mode],min:homeMin}:null});
   $('#sheet').dataset.uid=uid; $('#sheetBg').hidden=false;
   setTimeout(()=>{const b=$('#sheet button');b&&b.focus()},0);
 }
@@ -36,7 +36,7 @@ function altsFor(it){
   const pLl=prev?prev.ll:LOC[D.startLoc].ll, gS=prev?prev.end:dayStart(day), gE=next?next.start:1440;
   const carrying=prev?!!prev.carryAfter:false;
   const tm=(a,b)=>(travel(a,b)||{min:0}).min;
-  const used=new Set(placed.map(b=>b.id));
+  const used=new Set(CUR.placed.map(b=>b.id));
   const origT=tm(pLl,it.ll)+(next?tm(it.ll,next.ll):0);
   const food=it.p.cat==='food'||(it.p.cat==='night'&&!['shelter','zen'].includes(it.id));
   const out=[];
