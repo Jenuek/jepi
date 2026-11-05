@@ -23,7 +23,6 @@ function rebuildShared(){
     const pl=cleanPlace({name:e.name,local:e.local,cat:e.cat,lat:e.lat,lng:e.lng,dur:e.dur,open:e.open,closed:e.closed,cost:e.cost,tags:e.tags,note:e.note||(e.made?'다른 여행자가 직접 올린 장소예요.':'다른 여행자가 추천한 장소예요.')});
     if(!pl)return; pl.id=id; pl.shared=true; pl.ai=false; pl.userMade=!!e.made; addPackPlace(pl); SHARED_IDS.add(id)});
 }
-const recStatusHTML=()=>esc(REC.statusText(PACK.city||''));
 async function recsFetch(){ if(await REC.fetchCity(PACK.city||'')){rebuildShared();renderTray()} }
 // 👍 on a card or in a block's sheet: counts change right away, then once more when the server has answered
 async function toggleRec(id){

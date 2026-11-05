@@ -76,6 +76,10 @@ export interface AppHost {
   banner(name: string): void;
   /** the dock under the schedule: fold, ai (✨ 빈 시간), fix (경고 해결), helper, custom, send (the typed message) */
   dock(name: string, value?: string): void;
+  /** the 장소 tab's top: group (묶어 보기), open (이 날 문 여는 곳만 changed), more (the typed "AI로 장소 더 찾기") */
+  tray(name: string, value?: string): void;
+  /** the map's top: day / all (which days), me (내 위치) */
+  mapTop(name: string): void;
   /** a backup file was chosen (처음 설정 · 내 계획 · 설정) */
   importFile(f: File | undefined): void;
 }

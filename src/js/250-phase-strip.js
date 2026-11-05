@@ -44,8 +44,6 @@ function renderExt(){renderPhase();renderMore();renderPlanBtn();
 document.addEventListener('click',e=>{
   const t=e.target.closest('button,a,label,input'); if(!t) return;
   if(t.id==='wishGo'){cat='wish';tab='tray';renderTray();renderTabs();return}
-  if(t.dataset.mapday!=null){mapState.all=t.dataset.mapday==='all';document.querySelectorAll('[data-mapday]').forEach(b=>b.setAttribute('aria-pressed',String((b.dataset.mapday==='all')===mapState.all)));drawMap(true);return}
-  if(t.id==='mapMe'){locateMe();return}
 });
 // a card under the map (MapCards in Dice.tsx): the map moves to that stop
 function mapCardAct(i){const {stops}=mapLegs(day);const s=stops[+i];if(s&&mapState.map){mapState.map.setView(s.ll,16)}}

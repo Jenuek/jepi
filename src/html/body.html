@@ -41,14 +41,7 @@
   </section>
   <aside class="panel side" id="panel-side" hidden>
     <div id="side-tray">
-      <h2>장소</h2>
-      <form class="kw-add" id="moreForm" hidden><input id="moreInput" maxlength="60" placeholder="AI로 장소 더 찾기 · 예) 비 오는 날" autocomplete="off"><button class="small-btn primary" type="submit" id="moreBtn">찾기</button></form>
-      <p class="ai-status" id="moreSt" style="margin:0 0 8px"></p>
-      <p class="rec-st" id="recSt" hidden></p>
-      <div class="seg" role="group" aria-label="묶어 보기"><button class="fchip" data-group="zone" aria-pressed="true">동네별</button><button class="fchip" data-group="list" aria-pressed="false">추천순</button><button class="fchip" data-group="pop" aria-pressed="false">👍 많은 순</button></div>
-      <div class="filters" id="filters"></div>
-      <label class="toggle"><input type="checkbox" id="openOnly" checked> 이 날 문 여는 곳만</label>
-      <div class="cards" id="cards"></div>
+      <div id="trayTopMount" style="display:contents"></div>
     </div>
     <div id="side-more" hidden>
       <h2>더보기</h2>
@@ -100,7 +93,7 @@
       <div id="helpBox"></div>
     </div>
     <div id="side-map" hidden>
-      <div class="map-top"><h2 style="margin:0;flex:1">지도</h2><div class="radio" role="group" aria-label="보기"><button type="button" data-mapday="day" aria-pressed="true">이 날</button><button type="button" data-mapday="all" aria-pressed="false">전체</button></div><button class="small-btn" type="button" id="mapMe" aria-pressed="false">내 위치</button></div>
+      <div id="mapTopMount" style="display:contents"></div>
       <div id="mapBox" role="region" aria-label="일정 지도"></div>
       <p id="mapMsg"></p>
       <div id="mapCards"></div>

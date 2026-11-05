@@ -76,11 +76,18 @@ function dayRefs(){
   return refs;
 }
 function nearestRef(p,refs){let best=null;for(const r of refs){if(r.id===p.id)continue;const d=km(p.ll,r.ll);if(!best||d<best.d)best={d,r}}return best}
+// the top of the 장소 tab is drawn by React (app/screens/Tops.tsx); #filters and #cards inside it get their own screens
+function drawTrayTop(){window.JEPI_UI.mount('trayTop',$('#trayTopMount'),{moreHidden:!sample||!!PACK.manual,rec:REC.statusText(PACK.city||''),group})}
+// pressed in the 장소 tab's top
+function trayAct(n,v){
+  if(n==='group'){group=v;renderTray()}
+  else if(n==='open')renderTray();
+  else if(n==='more')openFind({where:'city',into:'list',q:v,autorun:true})
+}
 function renderTray(){
   recsMaybe();
-  const wd=DAYS[day].wd, openOnly=$('#openOnly').checked; $('#moreForm').hidden=!sample||PACK.manual;
-  {const rs=$('#recSt'),h=recStatusHTML();rs.hidden=!h;rs.innerHTML=h}
-  document.querySelectorAll('[data-group]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.group===group)));
+  const wd=DAYS[day].wd, openOnly=$('#openOnly').checked;
+  drawTrayTop();
   const cats=Object.entries(CATS);
   window.JEPI_UI.mount('trayFilters',$('#filters'),{chips:[['all','전체'],['wish','♥'],...(P.some(p=>p.season)?[['season','🗓 시즌']]:[]),...(RS.status!=='off'?[['users','👍']]:[]),['must','★']],cats,cat,rev:++trayRev});
   const used=new Set(placed.map(b=>b.id));

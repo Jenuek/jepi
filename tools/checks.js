@@ -1512,5 +1512,36 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'React tops: 장소 탭 위쪽 (묶어 보기 · 문 여는 곳만 · AI로 더 찾기) and 지도 위쪽 (이 날/전체 · 내 위치)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S, { ls: { 'jepi.keys': { anthropic: 'sk-ant-test-key' } } });
+      await p.route(/api\.anthropic\.com/, r => r.fulfill({ status: 503, body: '{}' }));
+      await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await p.click('.tabs [data-tab="tray"]'); await p.waitForTimeout(300);
+      ok(await vis(p, '#moreForm') && await p.getAttribute('[data-group="zone"]', 'aria-pressed') === 'true', 'with an AI key the "더 찾기" form shows, 동네별 is chosen');
+      const n1 = await p.$$eval('#cards .card', e => e.length);
+      await p.click('[data-group="list"]'); await p.waitForTimeout(250);
+      ok(await p.getAttribute('[data-group="list"]', 'aria-pressed') === 'true' && await p.getAttribute('[data-group="zone"]', 'aria-pressed') === 'false', '추천순 gets chosen');
+      await p.click('#openOnly'); await p.waitForTimeout(250);
+      ok(await p.$$eval('#cards .card', e => e.length) >= n1 && !(await p.isChecked('#openOnly')), '문 여는 곳만 off: nothing is dropped, box stays off after redraw');
+      await p.click('[data-group="pop"]'); await p.waitForTimeout(250);
+      ok(!(await p.isChecked('#openOnly')), 'the box stays off when the list is drawn again');
+      await p.fill('#moreInput', '비 오는 날'); await p.click('#moreBtn'); await p.waitForTimeout(500);
+      ok(await vis(p, '#sheetBg') && (await p.inputValue('#moreInput')) === '', '찾기 opens the finder and clears the box');
+      await p.evaluate(() => document.querySelector('#sheet [data-close]').click()); await p.waitForTimeout(250);
+      await p.ctx.grantPermissions(['geolocation']); await p.ctx.setGeolocation({ latitude: 34.67, longitude: 135.5 });
+      await p.click('.tabs [data-tab="map"]'); await p.waitForTimeout(900);
+      ok(await p.getAttribute('[data-mapday="day"]', 'aria-pressed') === 'true' && await p.getAttribute('#mapMe', 'aria-pressed') === 'false', 'map: 이 날 chosen, 내 위치 off');
+      await p.click('[data-mapday="all"]'); await p.waitForTimeout(400);
+      ok(await p.getAttribute('[data-mapday="all"]', 'aria-pressed') === 'true' && (await p.textContent('#mapMsg')).includes('날짜별 색'), '전체 chosen and the map says so');
+      await p.click('#mapMe'); await p.waitForTimeout(500);
+      ok(await p.getAttribute('#mapMe', 'aria-pressed') === 'true', '내 위치 on');
+      await p.click('#mapMe'); await p.waitForTimeout(300);
+      ok(await p.getAttribute('#mapMe', 'aria-pressed') === 'false', '내 위치 off again');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];

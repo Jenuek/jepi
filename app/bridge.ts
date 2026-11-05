@@ -33,6 +33,7 @@ import { Phase, type PhaseProps } from './screens/Phase';
 import { Notebook, type NotebookProps } from './screens/Notebook';
 import { DayTitleForm, type DayTitleFormProps } from './screens/DayTitleForm';
 import { Dock, type DockProps } from './screens/Dock';
+import { TrayTop, MapTop, type TrayTopProps, type MapTopProps } from './screens/Tops';
 import { HelperFrame, Coach, Banner, type HelperFrameProps, type CoachProps, type BannerProps } from './screens/Frames';
 import { connectHost, type AppHost } from './ui/host';
 import { liveOf, type LiveHandle } from './ui/live';
@@ -80,6 +81,8 @@ export interface Screens {
   coach: CoachProps;
   banner: BannerProps;
   dock: DockProps;
+  trayTop: TrayTopProps;
+  mapTop: MapTopProps;
 }
 
 const SCREENS: { [K in keyof Screens]: ComponentType<Screens[K]> } = {
@@ -124,6 +127,8 @@ const SCREENS: { [K in keyof Screens]: ComponentType<Screens[K]> } = {
   coach: Coach,
   banner: Banner,
   dock: Dock,
+  trayTop: TrayTop,
+  mapTop: MapTop,
 };
 
 export interface JepiUI {
