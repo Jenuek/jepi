@@ -10,16 +10,10 @@ document.addEventListener('click',e=>{
   if(t.dataset.group){group=t.dataset.group;renderTray();return}
   if(t.dataset.jp){setJP(t.dataset.jp);renderAll();return}
   if(t.id==='diceFab'){openDiceTab(mealNow()==='snack'?'do':'eat',null);return}
-  if(t.id==='coachNext'){showCoach(+$('#coach').dataset.i+1);return}
-  if(t.id==='coachSkip'){showCoach(COACH.length);return}
   if(t.id==='coachAgain'){showCoach(0);return}
   if(t.id==='moreHelper'){openHelper(wish.length?1:0);return}
   if(t.id==='fixWarnChip'){fixWarns();return}
   if(t.id==='helperBtn'){openHelper(0);return}
-  if(t.id==='helperPrev'){if(hStep>0){hStep--;renderHelper();$('#helper').scrollTop=0}return}
-  if(t.id==='helperNext'){if(hStep<H_STEPS.length-1){hStep++;renderHelper();$('#helper').scrollTop=0}else closeHelper();return}
-  if(t.id==='helperClose'){closeHelper();return}
-  if(t.id==='bannerCancel'){selected=null;renderAll();return}
   if(t.id==='aiBtn'){openFind({when:'gap',into:'sched'});return}
   // 닫기 in any sheet (#sheet: block, 🎲, 장소 찾기, 직접 만들기)
   if(t.dataset.close&&t.closest('#sheet')){closeSheet();return}
@@ -130,7 +124,7 @@ function nudgeAct(n,v){
 // What was pressed on a place card or in the 장소 tab (Tray.tsx, also ♥ in the helper and 👍 in a block's sheet)
 function placeAct(n,v){
   switch(n){
-  case 'wish': toggleWish(v);if(!$('#helper').hidden)renderHelper();renderTray();renderPView();return;
+  case 'wish': toggleWish(v);if(helperOpen())renderHelper();renderTray();renderPView();return;
   case 'vote': toggleRec(v);return;
   case 'pick': selected=selected===v?null:v; if(selected&&!matchMedia('(min-width:900px)').matches){tab='timeline'} renderAll();return;   // 넣기: then a time slot
   case 'ppick': pPlaceNow(v);return;

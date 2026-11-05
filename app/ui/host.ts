@@ -68,6 +68,12 @@ export interface AppHost {
   more(id: string): void;
   /** a card under the map was tapped (its stop) */
   mapCard(i: number): void;
+  /** the 예약 도우미 frame: prev, next, close */
+  helperFrame(name: string): void;
+  /** the 처음 안내 bubble: next, skip */
+  coach(name: string): void;
+  /** the banner above the schedule while a place is picked: cancel */
+  banner(name: string): void;
   /** a backup file was chosen (처음 설정 · 내 계획 · 설정) */
   importFile(f: File | undefined): void;
 }

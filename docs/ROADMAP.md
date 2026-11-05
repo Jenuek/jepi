@@ -158,6 +158,9 @@
        **예전 HTML로 남겨 둔 것(일부러)**: 날짜 제목 고치기 폼(`389-titles`, 머리글 틀에 붙는 작은 폼), 장소 탭 추천 안내 한 줄(#recSt, 글자만), 머리글 커버 그림(#heroArt, `389a`의 renderLook),
        body.html의 고정 틀(머리글·아래 탭·처음 설정/예약 도우미의 제목과 이전·다음 버튼). 리액트 화면 안을 예전 코드가 직접 고치는 곳은 이제 없어요.
     5. **다음**: 실제 기기 확인(배포 뒤) → 2단계 뒷부분 ②(여행 데이터를 한 곳으로)와 친구 합치기 규칙 → 4단계 앱 포장.
+  - **body.html의 고정 틀 옮기기(5단계 ⑥, 틀마다 커밋)**: 틀 자신도 리액트가 그려요. 틀 속 값(열림·제목·글자)은 예전 코드가 들고 있다가 `mount`로 넘겨요. 비교는 `compare.js`의 `"=#id"`(틀 자신의 속성까지)를 써요.
+    - [x] 예약 도우미 틀(#helper) · 처음 안내(#coach) · 장소 고른 뒤 안내 줄(#banner) (`Frames.tsx`) — 예전과 같음(`tools/compare/frames.js`, 15가지). 버튼은 스스로 처리(`helperFrameAct`·`coachAct`).
+      예전 코드가 `hidden`·글자를 직접 쓰던 곳(`openHelper`·`closeHelper`·`showCoach`·`renderBanner`)은 `helperShow`·`coachView`·`bannerView`로. `check.js`에 `JEPI_ONLY=이름 node tools/check.js`(이름이 들어간 점검만 돌리기) 추가.
   - 참고(예전 계획): 입력 폼 조각들(`030-forms.js`의 fParty·fBudget·fStay·fFlight·fHome·fEvents·dateFields·fStyle…, `140`·`160`·`170`의 fDest·fJP·fQuick·fTalk…)을
     하나씩 리액트로. 처음 설정(`renderOnb`)·이번 여행·취향(renderTasteStyle)이 같이 써요.
     방법: 칸 이름(`data-pf`, `data-radio`)은 그대로, 폼 전체는 다시 그릴 때마다 새로(rev 키) — 예전 코드가 값을 바꾼 뒤 다시 그리는 방식과 같아서 안전해요.

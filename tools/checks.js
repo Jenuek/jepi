@@ -1443,5 +1443,44 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'React frames: 처음 안내 · 예약 도우미 틀 · 장소 고른 뒤 안내 줄 buttons work',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S);
+      await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      ok(!(await vis(p, '#coach')) && !(await vis(p, '#helper')) && !(await vis(p, '#banner')), 'frames start hidden');
+      await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="help"]'); await p.waitForTimeout(250);
+      await p.click('#helpBox button:has-text("처음 안내 다시 보기")'); await p.waitForTimeout(300);
+      ok(await vis(p, '#coach') && (await p.textContent('#coachStep')).startsWith('1 /'), 'guide shows step 1');
+      await p.click('#coachNext'); await p.waitForTimeout(250);
+      ok((await p.textContent('#coachStep')).startsWith('2 /') && await p.getAttribute('#coach', 'data-i') !== '0', 'next goes to step 2');
+      for (let i = 0; i < 8 && (await p.textContent('#coachNext')) !== '시작하기'; i++) { await p.click('#coachNext'); await p.waitForTimeout(120) }
+      ok((await p.textContent('#coachNext')) === '시작하기', 'last step says 시작하기');
+      await p.click('#coachNext'); await p.waitForTimeout(250);
+      ok(!(await vis(p, '#coach')) && await p.evaluate(() => localStorage.getItem('gp.coach') === '1'), 'finishing closes the guide and remembers it');
+      await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="help"]'); await p.waitForTimeout(250);
+      await p.click('#helpBox button:has-text("처음 안내 다시 보기")'); await p.waitForTimeout(250);
+      await p.click('#coachSkip'); await p.waitForTimeout(250);
+      ok(!(await vis(p, '#coach')), '건너뛰기 closes the guide');
+      await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="me"]'); await p.waitForTimeout(250);
+      await p.click('#meHelper'); await p.waitForTimeout(400);
+      ok(await vis(p, '#helper') && (await p.textContent('#helperStep')) === '1 / 4' && await p.$eval('#helperPrev', e => e.disabled), 'helper opens on step 1, 이전 locked');
+      await p.click('#helperNext'); await p.waitForTimeout(250);
+      ok((await p.textContent('#helperStep')) === '2 / 4' && !(await p.$eval('#helperPrev', e => e.disabled)) && (await p.textContent('#helperTitle')) === '숙소 동네 정하기', 'next → step 2');
+      await p.click('#helperNext'); await p.click('#helperNext'); await p.waitForTimeout(250);
+      ok((await p.textContent('#helperNext')) === '일정표로 가기', 'last step: 일정표로 가기');
+      await p.click('#helperPrev'); await p.waitForTimeout(200);
+      ok((await p.textContent('#helperStep')) === '3 / 4' && (await p.textContent('#helperNext')) === '다음', '이전 goes back');
+      await p.click('#helperClose'); await p.waitForTimeout(300);
+      ok(!(await vis(p, '#helper')), '닫기 closes the helper');
+      await p.click('.tabs [data-tab="tray"]'); await p.waitForTimeout(300);
+      await p.click('#cards details.zone summary >> nth=0'); await p.click('#cards details[open] [data-pick] >> nth=0'); await p.waitForTimeout(300);
+      ok(await vis(p, '#banner') && (await p.textContent('#bannerText')).includes('넣을 시간을 탭하세요'), 'banner shows the picked place');
+      await p.click('#bannerCancel'); await p.waitForTimeout(250);
+      ok(!(await vis(p, '#banner')), '취소 hides the banner');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];

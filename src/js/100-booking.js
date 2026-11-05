@@ -81,13 +81,24 @@ function helperAct(n,v,v2){
   case 'toMe': closeHelper();tab='me';draft=clone(profile);renderMe();renderTabs();return;
   }
 }
-function openHelper(step){hStep=step||0;slotPicked=null;$('#meBox').innerHTML='';$('#helper').hidden=false;renderHelper()}
-function closeHelper(){$('#helper').hidden=true;renderAll();maybeCoach();if(tab==='me'){draft=clone(profile);renderMe()}}
+// the frame (drawn by React: app/screens/Frames.tsx) shows what helperView says; the step itself goes into #helperBody
+let helperView={open:false,step:'',title:'',prevOff:false,nextLabel:'다음'};
+function drawHelperFrame(){window.JEPI_UI.mount('helperFrame',$('#helperMount'),helperView)}
+function helperOpen(){return helperView.open}
+function helperShow(on){helperView={...helperView,open:on};drawHelperFrame()}
+// prev / next / close were pressed in the frame
+function helperFrameAct(n){
+  if(n==='prev'){if(hStep>0){hStep--;renderHelper();$('#helper').scrollTop=0}return}
+  if(n==='next'){if(hStep<H_STEPS.length-1){hStep++;renderHelper();$('#helper').scrollTop=0}else closeHelper();return}
+  if(n==='close')closeHelper()
+}
+function openHelper(step){hStep=step||0;slotPicked=null;$('#meBox').innerHTML='';helperShow(true);renderHelper()}
+function closeHelper(){helperShow(false);renderAll();maybeCoach();if(tab==='me'){draft=clone(profile);renderMe()}}
 const H_STEPS=['가고 싶은 곳 고르기','숙소 동네 정하기','교통편 시간대 정하기','예약하고 일정에 넣기'];
 function renderHelper(){
-  const el=$('#helperBody'); if(!el||$('#helper').hidden) return;
-  $('#helperStep').textContent=`${hStep+1} / ${H_STEPS.length}`; $('#helperTitle').textContent=H_STEPS[hStep];
-  $('#helperPrev').disabled=hStep===0; $('#helperNext').textContent=hStep===H_STEPS.length-1?'일정표로 가기':'다음';
+  if(!helperView.open) return;
+  helperView={...helperView,step:`${hStep+1} / ${H_STEPS.length}`,title:H_STEPS[hStep],prevOff:hStep===0,nextLabel:hStep===H_STEPS.length-1?'일정표로 가기':'다음'}; drawHelperFrame();
+  const el=$('#helperBody'); if(!el) return;
   // drawn by React: app/screens/HelperBody.tsx
   let st;
   if(hStep===0){

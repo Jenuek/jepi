@@ -194,9 +194,12 @@ function renderTabs(){setTimeout(fabDodge,0);   // the 🎲 button shows on ever
 }
 function renderBanner(){
   document.body.classList.toggle('placing',!!selected);
-  $('#banner').hidden=!selected;
-  if(selected){const p=PM[selected];$('#bannerText').textContent=`${p.name} (${p.dur}분) · 넣을 시간을 탭하세요`}
+  if(selected){const p=PM[selected];bannerView={open:true,text:`${p.name} (${p.dur}분) · 넣을 시간을 탭하세요`}}else bannerView={...bannerView,open:false};
+  drawBanner();
 }
+// the banner is drawn by React (app/screens/Frames.tsx); it keeps its last text while hidden
+let bannerView={open:false,text:''};
+function drawBanner(){window.JEPI_UI.mount('banner',$('#bannerMount'),bannerView)}
 function renderAI(){
   const box=$('#aiBox'); $('#aiBtn').hidden=!sample;
   if(!aiState||aiState.day!==day){box.hidden=true;return}
