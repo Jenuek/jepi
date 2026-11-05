@@ -1,20 +1,6 @@
 // ---------- season & time-of-day: what is special on these dates, and when each place is best ----------
-const BEST_KO={morning:'오전',day:'낮',sunset:'일몰 무렵',evening:'저녁',night:'밤'};
-const tripKey=()=>`${CUR.profile.startDate}|${nightsOf(CUR.profile)}`;
-const seasonOf=()=>PK.pack.season&&PK.pack.season.key===tripKey()?PK.pack.season:null;
-const sunsetMin=()=>{const s=seasonOf();return (s&&parse(s.sunset))||null};
-function outOfSeason(p,iso){if(!p.dates||!iso) return false;const [a,b]=p.dates;return (a&&iso<a)||(b&&iso>b)}
-const mdTxt=iso=>iso?`${+iso.slice(5,7)}/${+iso.slice(8,10)}`:'';
-function bestTips(p,s,e){
-  const b=p.best; if(!b||b==='any') return [];
-  const ss=sunsetMin()||1050;
-  if(b==='night'&&s<ss) return [`해가 진 뒤(일몰 약 ${fmt(ss)})에 가면 더 좋아요`];
-  if(b==='sunset'&&!(s<=ss-15&&e>=ss)) return [`일몰(약 ${fmt(ss)}) 무렵에 걸치게 가면 좋아요`];
-  if(b==='evening'&&s<ss-60) return ['저녁 시간대에 가야 분위기가 좋아요'];
-  if(b==='morning'&&s>=660) return ['오전에 가야 덜 붐비고 좋아요'];
-  if(b==='day'&&e>ss+15) return [`해가 있을 때(일몰 약 ${fmt(ss)} 전) 가야 좋아요`];
-  return [];
-}
+// season facts of this trip and what they mean for places: app/data/season.ts
+const SN=JD.season, BEST_KO=SN.BEST_KO, tripKey=SN.tripKey, seasonOf=SN.seasonOf, sunsetMin=SN.sunsetMin, outOfSeason=SN.outOfSeason, mdTxt=SN.mdTxt, bestTips=SN.bestTips;
 function seasonSummary(){const s=seasonOf(); if(!s) return '';
   return `\nSeason on these dates: sunrise ~${s.sunrise||'?'}, sunset ~${s.sunset||'?'}. ${s.weather||''} ${(s.notes||[]).join(' ')}\nPlaces have a "best" time of day (morning/day/sunset/evening/night); schedule them in that window. Seasonal places only happen within their date range.`}
 async function genSeason(stId,signal){

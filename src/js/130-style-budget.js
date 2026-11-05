@@ -11,7 +11,7 @@ const STY={rhythm:{early:'Early riser: starts the day early and ends early.',lat
   gender:{female:'The traveler is a woman: consider practical safety such as well-lit, busy areas late at night and women-friendly lodging. Do not stereotype her interests.',male:''}};
 function styleEn(p){const st=(p&&p.style)||{};return Object.entries(STY).map(([k,m])=>m[st[k]]||'').filter(Boolean).join(' ')}
 let styleOpen=false;
-const walkKm=()=>{const w=CUR.profile&&CUR.profile.style&&CUR.profile.style.walk;return w==='lots'?2:w==='less'?0.7:1.3};
+const walkKm=()=>JD.check.walkKm();   // app/data/check.ts
 
 // ---------- optional money budget (per person, in 만원) ----------
 function budgetParts(pr){pr=pr||CUR.profile;const t=(+pr.budgetMan||0)*10000;if(!t)return null;

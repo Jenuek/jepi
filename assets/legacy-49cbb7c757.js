@@ -53,14 +53,8 @@ const norm=JD.logic.places.norm;   // app/logic/places.ts
 let KRW_PER_JPY=8.4; // 100엔 = 약 840원 (2026-10-28 기준)
 const yen=n=>((PK.pack&&PK.pack.symbol)||'¥')+Math.round(n).toLocaleString('ko-KR');
 const won=n=>'₩'+(Math.round(n/10)*10).toLocaleString('ko-KR');
-// IC card fare estimate: walking free, Haneda links ~650 yen, city trains 180–360 yen by distance
-function gwNear(x){for(const k in AIRPORTS){const g=AIRPORTS[k];if(km(x,g.ll)<2)return g}return null}
-function fareOf(a,b,mode){
-  if(mode==='도보'||mode==='차') return 0;
-  const g=gwNear(a)||gwNear(b); if(g&&g.fare!=null&&km(a,b)>3) return g.fare;
-  const f=(PK.pack&&PK.pack.fare)||{base:0,perKm:0,max:0}; let v=f.base+Math.max(0,km(a,b)-4)*f.perKm; if(f.max>0) v=Math.min(f.max,v);
-  return f.base>=50?Math.round(v/10)*10:Math.round(v*10)/10;
-}
+// the fare of a trip, and an airport / station nearby: app/data/check.ts
+const gwNear=x=>JD.check.gwNear(x), fareOf=(a,b,mode)=>JD.check.fareOf(a,b,mode);
 const DEFAULT=[];
 // ---------- profile: trip facts entered by the viewer ----------
 const PROFILE_EXAMPLE={dest:'도쿄',mode:'flight',local:'transit',startDate:'2026-11-07',nights:3,out:{airport:'hnd',dep:'08:15',arr:'10:20',flight:''},back:{airport:'hnd',dep:'19:30',arr:'22:05',flight:''},home:{area:'',min:60,fare:1550,byMin:120},stays:[{name:'시부야 숙소',area:'shibuya',checkin:'15:00',checkout:'11:00',from:0,to:3}],events:[],purpose:'',pace:'slow',social:'some',breakfast:false};
@@ -576,57 +570,10 @@ function recsMaybe(){
   recCity=cityKey(); recAt=Date.now(); recsFetch().catch(()=>{recCity=null});
 }
 // ---------- small to-dos attached to blocks (luggage, waiting lists, pick-ups, rentals, cash, tax refund) ----------
-const MARKS={'bag+':['🧳','짐 맡기기'],'bag-':['🧳','짐 찾기'],'wait+':['🎫','웨이팅 등록'],'wait-':['🎫','웨이팅 입장'],
-  'order+':['🛍','주문·맡기기'],'order-':['🛍','주문한 것 찾기'],'rent+':['🔁','빌리기'],'rent-':['🔁','반납하기'],
-  'ship+':['📦','짐 보내기'],'ship-':['📦','짐 받기'],'cash':['💴','현금 준비'],'tax':['🧾','면세 환급']};
-const MARK_EN={'bag+':'leaves luggage here','bag-':'picks luggage up here','wait+':'joins the waiting list here','wait-':'enters after waiting here',
-  'order+':'orders or drops off an item here','order-':'collects the ordered item here','rent+':'rents something here','rent-':'returns the rental here',
-  'ship+':'ships luggage ahead from here','ship-':'receives shipped luggage here','cash':'gets cash here','tax':'does the tax refund here'};
-const PAIRS={bag:{same:true,need:'맡긴 짐을 찾는 일정이 없어요',orphan:'맡긴 짐이 없는데 찾기 표시가 있어요',pair:'짐 찾기',dur:15},
-  wait:{same:true,sameDay:true,need:'웨이팅 뒤 입장하는 일정이 없어요',orphan:'웨이팅 등록 표시가 먼저 있어야 해요',pair:'웨이팅 입장',dur:60},
-  order:{same:true,need:'주문한 것을 찾으러 가는 일정이 없어요',orphan:'주문·맡기기 표시가 먼저 있어야 해요',pair:'주문한 것 찾기',dur:15},
-  rent:{same:false,need:'반납하는 일정이 없어요',orphan:'빌리기 표시가 먼저 있어야 해요',pair:'반납하기',dur:15},
-  ship:{same:false,need:'보낸 짐을 받는 곳이 없어요',orphan:'짐 보내기 표시가 먼저 있어야 해요',pair:'짐 받기',dur:15}};
+// marks, their pairs and warnings, and the sheet's 할 일 표시 box: app/data/marks.ts
+const MK=JD.marks, MARKS=MK.MARKS, MARK_EN=MK.MARK_EN, PAIRS=MK.PAIRS, marksOf=MK.marksOf, hasMark=MK.hasMark, markWarnings=MK.warnings;
+const openPairOf=it=>MK.openPairOf(it,day), marksInfo=(it,forceOpen)=>MK.info(it,forceOpen,day);
 CUR.fmarks=null;
-const marksOf=it=>it.kind==='place'?((CUR.placed.find(b=>b.uid===it.uid)||{}).mk||[]):((CUR.fmarks||{})[it.uid]||[]);
-const hasMark=(it,m)=>(it.marks||[]).includes(m);
-const implicitBagDrop=it=>it.kind==='place'&&!!it.drop;   // a locker/storage place counts as leaving the bag there
-function markWarnings(){
-  const W=new Map(), add=(d,uid,w)=>{const k=d+':'+uid;(W.get(k)||W.set(k,[]).get(k)).push(w)};
-  const open={bag:[],wait:[],order:[],rent:[],ship:[]}; let cashOk=false; const shops=[]; let tax=false;
-  DY.days.forEach((_,d)=>dayItems(d).forEach(it=>{
-    const mk=it.marks=marksOf(it);
-    if(mk.includes('cash')) cashOk=true;
-    if(mk.includes('tax')) tax=true;
-    if(it.kind==='place'&&it.p.cash&&!cashOk) add(d,it.uid,'현금만 받는 곳일 수 있어요 · 먼저 💴 현금 준비 표시를 붙여 두세요');
-    if(it.kind==='place'&&it.p.cat==='shop') shops.push(it);
-    if(open.bag.length&&it.kind==='fixed'&&(it.uid==='f7'||/^ci|^co/.test(it.uid))) add(d,it.uid,`${open.bag[0].name}에 맡긴 짐을 먼저 찾아야 해요`);
-    for(const T of Object.keys(PAIRS)){
-      const st=mk.includes(T+'+')||(T==='bag'&&implicitBagDrop(it)), en=mk.includes(T+'-');
-      if(en){const o=open[T].shift();
-        if(!o) add(d,it.uid,PAIRS[T].orphan);
-        else{ if(PAIRS[T].same&&km(o.ll,it.ll)>0.4) add(d,it.uid,`${o.name}과 장소가 달라요 · 맡긴 곳으로 가야 해요`);
-              if(PAIRS[T].sameDay&&o.d!==d) add(d,it.uid,'웨이팅은 등록한 날 입장해야 해요'); }}
-      if(st) open[T].push({d,uid:it.uid,ll:it.ll,name:it.name});
-    }
-  }));
-  for(const T of Object.keys(open)) open[T].forEach(o=>add(o.d,o.uid,PAIRS[T].need));
-  return {W,needTax:!!(PK.pack.intl&&shops.length&&!tax)};
-}
-function openPairOf(it){ // which pair types start at this block and are still missing their end
-  const {W}=markWarnings(); const ws=W.get(day+':'+it.uid)||[];
-  return Object.keys(PAIRS).filter(T=>ws.includes(PAIRS[T].need)&&(hasMark(it,T+'+')||(T==='bag'&&implicitBagDrop(it))));
-}
-// 할 일 표시 box in a block's sheet (drawn by React: BlockSheet.tsx)
-function marksInfo(it,forceOpen){
-  const mk=it.marks||[]; const pend=openPairOf(it);
-  const row=(a,b)=>({icon:MARKS[a][0],btns:[a,...(b?[b]:[])].map(m=>({m,label:MARKS[m][1],on:mk.includes(m)}))});
-  const nb=P.filter(p=>p.drop&&km(p.ll,it.ll)<1.2).map(p=>({p,d:km(p.ll,it.ll)})).sort((a,b)=>a.d-b.d).slice(0,2);
-  return {open:!!(mk.length||pend.length||forceOpen),summary:`할 일 표시${mk.length?` · ${mk.map(m=>MARKS[m][0]+' '+MARKS[m][1]).join(', ')}`:''}`,
-    rows:[row('bag+','bag-'),row('wait+','wait-'),row('order+','order-'),row('rent+','rent-'),row('ship+','ship-'),row('cash','tax')],
-    bagHint:nb.length?`근처 짐 보관: ${nb.map(x=>`${x.p.name} (${x.d<0.1?'바로 옆':Math.round(x.d*1000)+'m'})`).join(', ')}`:'',
-    pairs:pend.map(T=>({T,label:`${MARKS[T+'-'][0]} ${PAIRS[T].pair} 블록 만들기`}))};
-}
 const toggleMark=(uid,m)=>TRIP.toggleMark(uid,m);   // app/data/trip.ts
 function makePairBlock(uid,T){
   const it=dayItems(day).find(x=>x.uid===uid); if(!it) return;
@@ -776,22 +723,8 @@ function setSlot(a,d){
 }
 
 // ---------- season & time-of-day: what is special on these dates, and when each place is best ----------
-const BEST_KO={morning:'오전',day:'낮',sunset:'일몰 무렵',evening:'저녁',night:'밤'};
-const tripKey=()=>`${CUR.profile.startDate}|${nightsOf(CUR.profile)}`;
-const seasonOf=()=>PK.pack.season&&PK.pack.season.key===tripKey()?PK.pack.season:null;
-const sunsetMin=()=>{const s=seasonOf();return (s&&parse(s.sunset))||null};
-function outOfSeason(p,iso){if(!p.dates||!iso) return false;const [a,b]=p.dates;return (a&&iso<a)||(b&&iso>b)}
-const mdTxt=iso=>iso?`${+iso.slice(5,7)}/${+iso.slice(8,10)}`:'';
-function bestTips(p,s,e){
-  const b=p.best; if(!b||b==='any') return [];
-  const ss=sunsetMin()||1050;
-  if(b==='night'&&s<ss) return [`해가 진 뒤(일몰 약 ${fmt(ss)})에 가면 더 좋아요`];
-  if(b==='sunset'&&!(s<=ss-15&&e>=ss)) return [`일몰(약 ${fmt(ss)}) 무렵에 걸치게 가면 좋아요`];
-  if(b==='evening'&&s<ss-60) return ['저녁 시간대에 가야 분위기가 좋아요'];
-  if(b==='morning'&&s>=660) return ['오전에 가야 덜 붐비고 좋아요'];
-  if(b==='day'&&e>ss+15) return [`해가 있을 때(일몰 약 ${fmt(ss)} 전) 가야 좋아요`];
-  return [];
-}
+// season facts of this trip and what they mean for places: app/data/season.ts
+const SN=JD.season, BEST_KO=SN.BEST_KO, tripKey=SN.tripKey, seasonOf=SN.seasonOf, sunsetMin=SN.sunsetMin, outOfSeason=SN.outOfSeason, mdTxt=SN.mdTxt, bestTips=SN.bestTips;
 function seasonSummary(){const s=seasonOf(); if(!s) return '';
   return `\nSeason on these dates: sunrise ~${s.sunrise||'?'}, sunset ~${s.sunset||'?'}. ${s.weather||''} ${(s.notes||[]).join(' ')}\nPlaces have a "best" time of day (morning/day/sunset/evening/night); schedule them in that window. Seasonal places only happen within their date range.`}
 async function genSeason(stId,signal){
@@ -877,7 +810,7 @@ const STY={rhythm:{early:'Early riser: starts the day early and ends early.',lat
   gender:{female:'The traveler is a woman: consider practical safety such as well-lit, busy areas late at night and women-friendly lodging. Do not stereotype her interests.',male:''}};
 function styleEn(p){const st=(p&&p.style)||{};return Object.entries(STY).map(([k,m])=>m[st[k]]||'').filter(Boolean).join(' ')}
 let styleOpen=false;
-const walkKm=()=>{const w=CUR.profile&&CUR.profile.style&&CUR.profile.style.walk;return w==='lots'?2:w==='less'?0.7:1.3};
+const walkKm=()=>JD.check.walkKm();   // app/data/check.ts
 
 // ---------- optional money budget (per person, in 만원) ----------
 function budgetParts(pr){pr=pr||CUR.profile;const t=(+pr.budgetMan||0)*10000;if(!t)return null;
@@ -2159,26 +2092,11 @@ const $=s=>document.querySelector(s);
 const fmt=JD.logic.time.fmt, parse=JD.logic.time.parse;
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const km=JD.logic.geo.km;
-function travelEst(a,b){ if(!a||!b) return null;
-  return JD.logic.geo.travelGuess(a,b,{car:!!(CUR.profile&&CUR.profile.local==='car'),transitName:(PK.pack&&PK.pack.transit)||'대중교통',walkKm:walkKm(),gateway:gwNear(a)||gwNear(b)}); }
-function travel(a,b){const e=travelEst(a,b); if(!e) return e;
-  const m=e.mode==='도보'?'walk':e.mode==='차'?'car':'transit'; const r=routeGet(m,a,b);
-  if(!r) return Object.assign({},e,{est:routeProvider(a,b)?true:false,guess:true});
-  return {mode:r.label||e.mode,min:r.min,real:true,lines:r.lines||'',tf:r.tf||0,fare:r.fare,cur:r.cur||'',poly:r.poly}}
-const hoursFor=(p,wd)=>p.always?null:((p.hoursBy&&p.hoursBy[wd])||p.hours);
-const closedOn=(p,wd)=>!!(p.closed&&p.closed.includes(wd));
+// travel between places, opening hours and the day check: app/data/check.ts
+const CK=JD.check, travelEst=CK.travelEst, travel=CK.travel, hoursFor=CK.hoursFor, closedOn=CK.closedOn;
 
 const dayItems=JD.days.dayItems;   // app/data/days.ts: fixed blocks + my blocks of a day
-// the day check (app/logic/schedule.ts): this builds the day's items and says what the check needs to know
-function analyze(d){
-  const items=dayItems(d), wd=DY.days[d].wd, MW=markWarnings().W, L=DY.loc[DY.days[d].startLoc];
-  const trans=JD.logic.schedule.checkDay(items,{firstDay:d===0,start:{ll:L.ll,name:L.name},dayStart:DAY_START,wdName:WD[wd],iso:DY.days[d].iso,
-    kidsInParty:CUR.profile.party.kids>0,currency:PK.pack.currency||'',marksOf,hasMark,markWarnings:uid=>MW.get(d+':'+uid)||[],
-    closed:p=>closedOn(p,wd),outOfSeason:p=>outOfSeason(p,DY.days[d].iso)?`${mdTxt(p.dates[0])||'?'}~${mdTxt(p.dates[1])||'?'}`:null,
-    tips:bestTips,hours:p=>hoursFor(p,wd),travel,fare:fareOf,nav:navLink,fmt});
-  return {items,trans};
-}
-function gapsOf(d){return JD.logic.schedule.gaps(dayItems(d),d===0?arrEnd():480)}
+const analyze=CK.analyze, gapsOf=CK.gapsOf;
 
 // ---------- render ----------
 // The day buttons, the budget and the route line are drawn by React: app/screens/DayTop.tsx

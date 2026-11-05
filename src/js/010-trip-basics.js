@@ -19,12 +19,6 @@ const norm=JD.logic.places.norm;   // app/logic/places.ts
 let KRW_PER_JPY=8.4; // 100엔 = 약 840원 (2026-10-28 기준)
 const yen=n=>((PK.pack&&PK.pack.symbol)||'¥')+Math.round(n).toLocaleString('ko-KR');
 const won=n=>'₩'+(Math.round(n/10)*10).toLocaleString('ko-KR');
-// IC card fare estimate: walking free, Haneda links ~650 yen, city trains 180–360 yen by distance
-function gwNear(x){for(const k in AIRPORTS){const g=AIRPORTS[k];if(km(x,g.ll)<2)return g}return null}
-function fareOf(a,b,mode){
-  if(mode==='도보'||mode==='차') return 0;
-  const g=gwNear(a)||gwNear(b); if(g&&g.fare!=null&&km(a,b)>3) return g.fare;
-  const f=(PK.pack&&PK.pack.fare)||{base:0,perKm:0,max:0}; let v=f.base+Math.max(0,km(a,b)-4)*f.perKm; if(f.max>0) v=Math.min(f.max,v);
-  return f.base>=50?Math.round(v/10)*10:Math.round(v*10)/10;
-}
+// the fare of a trip, and an airport / station nearby: app/data/check.ts
+const gwNear=x=>JD.check.gwNear(x), fareOf=(a,b,mode)=>JD.check.fareOf(a,b,mode);
 const DEFAULT=[];
