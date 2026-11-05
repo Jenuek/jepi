@@ -1,17 +1,17 @@
 // ---------- my plans: several saved plans, account sync, sharing ----------
 // rdb/myId: the plan copies kept inside Claude (when JEPI ran as a Claude page); always empty in the app
 let rdb=null, myId=null;
-let plans=[], curPlan='', planTimer=null, cloudTimer=null, planMsg='', delArm='';
+PL.plans=[]; PL.curPlan=''; let planTimer=null, cloudTimer=null, planMsg='', delArm='';
 const PLAN_KEYS=['profile','pack','placed3','custom','meal2','done','fmarks','wish'];
 function planName(){const pr=CUR.profile;if(pr.kind==='day')return `${PACK.city} 하루 코스`;const n=nightsOf(pr);return `${PACK.city} ${n}박 ${n+1}일`}
 function planData(){return {profile:clone(CUR.profile),pack:PACK,placed:TRIP.slimBlocks(CUR.placed),custom:clone(CUR.custom),fmarks:clone(CUR.fmarks),wish:CUR.wish.slice(),meals:clone(CUR.meals),done:clone(CUR.done)}}
 function planMeta(){const D0=DAYS[0]||{},Dn=DAYS[DAYS.length-1]||{};return {name:'',dates:D0.iso?`${D0.iso.slice(5).replace('-','/')}${DAYS.length>1?'~'+(Dn.iso||'').slice(5).replace('-','/'):''}`:'',blocks:CUR.placed.length,kind:CUR.profile.kind||'trip'}}
-function savePlans(){TRIP.plans.saveList(plans,curPlan);syncSoon()}
+function savePlans(){TRIP.plans.saveList(PL.plans,PL.curPlan);syncSoon()}
 function snapshotCurrent(){
-  if(!curPlan) return; let p=plans.find(x=>x.id===curPlan);
-  if(!p){p={id:curPlan,name:''};plans.unshift(p)}
+  if(!PL.curPlan) return; let p=PL.plans.find(x=>x.id===PL.curPlan);
+  if(!p){p={id:PL.curPlan,name:''};PL.plans.unshift(p)}
   const m=planMeta(); Object.assign(p,{dates:m.dates,blocks:m.blocks,kind:m.kind,updated:Date.now()}); if(!p.custom_name) p.name=planName();
-  TRIP.plans.put(curPlan,planData()); savePlans(); cloudSave(p);
+  TRIP.plans.put(PL.curPlan,planData()); savePlans(); cloudSave(p);
 }
 function touchPlan(){clearTimeout(planTimer);planTimer=setTimeout(()=>{if($('#onb').hidden)snapshotCurrent()},1200)}
 const cloudTimers={};
@@ -21,9 +21,9 @@ async function cloudPull(){
   if(!rdb||!myId) return;
   try{const snap=await rdb.collection(`data/users/${myId}`).get();let ch=false;
     snap.docs.forEach(d=>{if(!d.exists||!d.id.startsWith('plan_'))return;const v=d.data()||{},m=v.meta;if(!m||!m.id||!v.data)return;
-      const loc=plans.find(x=>x.id===m.id);
-      if(!loc||(m.updated||0)>(loc.updated||0)){if(m.id===curPlan&&loc)return;TRIP.plans.put(m.id,v.data);if(loc)Object.assign(loc,m);else plans.push(Object.assign({},m));ch=true}});
-    if(ch){plans.sort((a,b)=>(b.updated||0)-(a.updated||0));savePlans();renderPlans()}
+      const loc=PL.plans.find(x=>x.id===m.id);
+      if(!loc||(m.updated||0)>(loc.updated||0)){if(m.id===PL.curPlan&&loc)return;TRIP.plans.put(m.id,v.data);if(loc)Object.assign(loc,m);else PL.plans.push(Object.assign({},m));ch=true}});
+    if(ch){PL.plans.sort((a,b)=>(b.updated||0)-(a.updated||0));savePlans();renderPlans()}
   }catch(_){}
 }
 function cloudDelete(id){if(!rdb||!myId)return;try{rdb.doc(`data/users/${myId}/plan_${id}`).delete().catch(()=>{})}catch(_){}}
@@ -38,30 +38,30 @@ function applyPlanData(d){
   buildDays(); day=0; save(); renderAll();
 }
 function openPlan(id){
-  if(id===curPlan) return; snapshotCurrent();
+  if(id===PL.curPlan) return; snapshotCurrent();
   const d=TRIP.plans.get(id); if(!d){planMsg='이 계획을 불러오지 못했어요.';renderPlans();return}
-  curPlan=id; savePlans(); applyPlanData(d); if(CUR.profile.kind==='day'&&jp!=='P') setJP('P'); tab='timeline'; renderTabs(); planMsg='';
+  PL.curPlan=id; savePlans(); applyPlanData(d); if(CUR.profile.kind==='day'&&jp!=='P') setJP('P'); tab='timeline'; renderTabs(); planMsg='';
 }
 function newPlan(){
-  const prevP=CUR.profile; snapshotCurrent(); curPlan='p'+Date.now().toString(36); savePlans();
+  const prevP=CUR.profile; snapshotCurrent(); PL.curPlan='p'+Date.now().toString(36); savePlans();
   CUR.custom=[];CUR.placed=[];CUR.fmarks={};CUR.wish=[];CUR.meals={};CUR.done={};
   loadPack(blankPack()); savePack();
   CUR.profile=clone(PROFILE_EXAMPLE); Object.assign(CUR.profile,{stays:[{name:'숙소',area:'center',checkin:'15:00',checkout:'11:00',from:0,to:3}],events:[],dest:'',pace:'normal',social:'some',breakfast:true,purpose:'',party:{type:'solo',adults:1,kids:0},flightSet:false,staySet:false,dateSet:false,nightsSet:false,dateUnknown:false,startDate:isoPlus(30)});
   carryTaste(prevP,CUR.profile); applyPlanData({profile:CUR.profile,pack:blankPack()}); tab='timeline'; renderTabs(); openOnb();
 }
-function dupPlan(id){snapshotCurrent();const d=TRIP.plans.get(id),src=plans.find(x=>x.id===id);if(!d||!src)return;
-  const nid='p'+Date.now().toString(36);TRIP.plans.put(nid,d);const p=Object.assign({},src,{id:nid,name:src.name+' (복사본)',custom_name:true,updated:Date.now()});plans.unshift(p);savePlans();cloudSave(p);planMsg='복사본을 만들었어요.';renderPlans()}
+function dupPlan(id){snapshotCurrent();const d=TRIP.plans.get(id),src=PL.plans.find(x=>x.id===id);if(!d||!src)return;
+  const nid='p'+Date.now().toString(36);TRIP.plans.put(nid,d);const p=Object.assign({},src,{id:nid,name:src.name+' (복사본)',custom_name:true,updated:Date.now()});PL.plans.unshift(p);savePlans();cloudSave(p);planMsg='복사본을 만들었어요.';renderPlans()}
 function delPlan(id){if(delArm!==id){delArm=id;renderPlans();return}delArm='';
-  plans=plans.filter(x=>x.id!==id);TRIP.plans.del(id);clearTimeout(cloudTimers[id]);cloudDelete(id);
-  if(id===curPlan){if(plans[0]){curPlan='';openPlan(plans[0].id)}else{curPlan='';newPlan()}}savePlans();renderPlans()}
-function renamePlan(id,name){const p=plans.find(x=>x.id===id);if(!p||!name)return;p.name=name.slice(0,40);p.custom_name=true;p.updated=Date.now();savePlans();cloudSave(p);renderPlans();renderPlanBtn()}
+  PL.plans=PL.plans.filter(x=>x.id!==id);TRIP.plans.del(id);clearTimeout(cloudTimers[id]);cloudDelete(id);
+  if(id===PL.curPlan){if(PL.plans[0]){PL.curPlan='';openPlan(PL.plans[0].id)}else{PL.curPlan='';newPlan()}}savePlans();renderPlans()}
+function renamePlan(id,name){const p=PL.plans.find(x=>x.id===id);if(!p||!name)return;p.name=name.slice(0,40);p.custom_name=true;p.updated=Date.now();savePlans();cloudSave(p);renderPlans();renderPlanBtn()}
 // sharing
 const CODE_AB='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 async function shareCode(){
   if(STANDALONE) return shareLink();
   if(!rdb||RS.status!=='on'){planMsg='공유 코드는 Claude 안에서, 이 페이지를 편집할 수 있는 권한이 있을 때 만들 수 있어요.';renderPlans();return}
   snapshotCurrent(); const code='JP-'+Array.from({length:5},()=>CODE_AB[Math.floor(Math.random()*CODE_AB.length)]).join('');
-  try{await rdb.doc('shares/'+code).set({name:(plans.find(x=>x.id===curPlan)||{}).name||planName(),by:myId,at:Date.now(),data:planData()});
+  try{await rdb.doc('shares/'+code).set({name:(PL.plans.find(x=>x.id===PL.curPlan)||{}).name||planName(),by:myId,at:Date.now(),data:planData()});
     lastCode=code; planMsg=''; renderPlans();
   }catch(e){planMsg=e&&e.code==='quota_exceeded'?'공유 저장 공간이 가득 찼어요.':'공유 코드를 만들지 못했어요. 잠시 뒤 다시 시도해 주세요.';renderPlans()}
 }
@@ -73,12 +73,12 @@ async function openCode(raw){
   if(!rdb){planMsg='공유받은 계획은 Claude 안에서 열 수 있어요.';renderPlans();return}
   try{const d=await rdb.doc('shares/'+code).get();if(!d.exists){planMsg='이 코드의 계획을 찾지 못했어요.';renderPlans();return}
     const v=d.data()||{}; snapshotCurrent(); const nid='p'+Date.now().toString(36);
-    TRIP.plans.put(nid,v.data||{}); plans.unshift({id:nid,name:String(v.name||'공유받은 계획').slice(0,30)+' (공유받음)',custom_name:true,updated:Date.now()}); savePlans();
-    curPlan=nid; savePlans(); applyPlanData(v.data||{}); snapshotCurrent(); tab='timeline'; renderTabs(); planMsg='';
+    TRIP.plans.put(nid,v.data||{}); PL.plans.unshift({id:nid,name:String(v.name||'공유받은 계획').slice(0,30)+' (공유받음)',custom_name:true,updated:Date.now()}); savePlans();
+    PL.curPlan=nid; savePlans(); applyPlanData(v.data||{}); snapshotCurrent(); tab='timeline'; renderTabs(); planMsg='';
   }catch(e){planMsg='계획을 열지 못했어요. 잠시 뒤 다시 시도해 주세요.';renderPlans()}
 }
 function planText(){
-  const L=[`[JEPI] ${(plans.find(x=>x.id===curPlan)||{}).name||planName()}`];
+  const L=[`[JEPI] ${(PL.plans.find(x=>x.id===PL.curPlan)||{}).name||planName()}`];
   if(CUR.profile.purpose) L.push(`🧭 ${CUR.profile.purpose}`);
   DAYS.forEach((D,d)=>{L.push('',`📅 ${D.title.replace(/^Day \d+ · /,'')||''} ${D.date} (${WD[D.wd]})`.replace('  ',' '));
     analyze(d).items.filter(i=>!i.stay).forEach(i=>L.push(`${fmt(i.start)} ${i.name}${i.kind==='place'&&i.area?` · ${i.area}`:''}`))});
@@ -93,7 +93,7 @@ function importBackup(file,after){
   if(!file) return; const rd=new FileReader();
   rd.onload=()=>{try{const v=JSON.parse(String(rd.result||''));if(v&&v.jepi===2){onbFrame({open:false});if(!importAll(v))throw 0;tab='timeline';renderTabs();if(after)after(true);return}if(!v||!v.data||!v.data.profile)throw 0;
       snapshotCurrent(); const nid='p'+Date.now().toString(36); TRIP.plans.put(nid,v.data);
-      plans.unshift({id:nid,name:String(v.name||'불러온 계획').slice(0,40),custom_name:true,updated:Date.now()}); curPlan=nid; savePlans();
+      PL.plans.unshift({id:nid,name:String(v.name||'불러온 계획').slice(0,40),custom_name:true,updated:Date.now()}); PL.curPlan=nid; savePlans();
       onbFrame({open:false}); applyPlanData(v.data); snapshotCurrent(); tab='timeline'; renderTabs(); planMsg='백업을 불러왔어요.'; if(after) after(true);
     }catch(_){planMsg='JEPI 백업 파일이 아니거나 손상됐어요.';renderPlans();setSt('st_import','JEPI 백업 파일이 아니거나 손상됐어요.');if(after)after(false)}};
   rd.readAsText(file);
@@ -109,7 +109,7 @@ function plansAct(n,v,v2){
   case 'open': openPlan(v);return;
   case 'dup': dupPlan(v);return;
   case 'del': delPlan(v);return;
-  case 'rename': if(plans.some(x=>x.id===v)){planRenaming=v;renderPlans()}return;   // its name box opens (with the cursor in it)
+  case 'rename': if(PL.plans.some(x=>x.id===v)){planRenaming=v;renderPlans()}return;   // its name box opens (with the cursor in it)
   case 'name': planRenaming='';renamePlan(v,String(v2||'').trim());renderPlans();return;
   case 'share': shareCode();return;
   case 'text': showText=!showText;renderPlans();if(showText)copyText(planText());return;
@@ -120,8 +120,8 @@ function plansAct(n,v,v2){
 }
 function renderPlans(){
   const box=$('#plansBox'); if(!box) return;
-  window.JEPI_UI.mount('plans',box,{plans:plans.map(p=>({id:p.id,name:p.name,kind:p.kind,dates:p.dates,blocks:p.blocks,updated:p.updated})),
-    curPlan,delArm,planMsg,renaming:planRenaming,standalone:!!STANDALONE,lastLink:lastLink||'',lastCode:lastCode||'',shareText:showText?planText():null,
+  window.JEPI_UI.mount('plans',box,{plans:PL.plans.map(p=>({id:p.id,name:p.name,kind:p.kind,dates:p.dates,blocks:p.blocks,updated:p.updated})),
+    curPlan:PL.curPlan,delArm,planMsg,renaming:planRenaming,standalone:!!STANDALONE,lastLink:lastLink||'',lastCode:lastCode||'',shareText:showText?planText():null,
     savedInAccount:!!(rdb&&RS.status==='on')});
 }
 

@@ -15,10 +15,10 @@ function renderMore(){
   const s=tripSummary(), pr=CUR.profile, b=budgetParts&&budgetParts(pr);
   const tripChips=pr.kind==='day'?[]:[pr.bookedFlight===false?{text:'교통편 미정',tone:'warn'}:{text:'교통편 예약됨',tone:'ok'},pr.bookedStay===false?{text:'숙소 미정',tone:'warn'}:{text:'숙소 예약됨',tone:'ok'}];
   if(b) tripChips.push({text:`예산 1인 ${Math.round(b.total/10000)}만원`});
-  const w=warnTotal(), sp=plans.find(x=>x.id===curPlan&&x.shared);
+  const w=warnTotal(), sp=PL.plans.find(x=>x.id===PL.curPlan&&x.shared);
   window.JEPI_UI.mount('more',box,{city:s.city,line:s.line,tripChips,warnCount:w,prepLeft:prepLeft(),
-    full:jp!=='P'||moreAll,showToggle:jp==='P',moreAll,plansCount:plans.length,
-    friendsChip:sp?'👥 '+(((TRIPS&&TRIPS.members[curPlan])||[]).length||'공유 중'):null,
+    full:jp!=='P'||moreAll,showToggle:jp==='P',moreAll,plansCount:PL.plans.length,
+    friendsChip:sp?'👥 '+(((TRIPS&&TRIPS.members[PL.curPlan])||[]).length||'공유 중'):null,
     notifyOn:!!(NOTIFY&&NOTIFY.on),aiOff:!!(STANDALONE&&!sample)});
   tabs({warn:w?String(w):''});
 }

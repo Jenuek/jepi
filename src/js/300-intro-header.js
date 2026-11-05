@@ -8,8 +8,8 @@ function introRun(){const el=document.getElementById('intro');if(!el)return;
 // drawn by React: app/screens/PlanMenu.tsx
 let planMenuRev=0;
 function planMenuInfo(){
-  const list=plans.slice().sort((a,b)=>(a.id===curPlan?-1:b.id===curPlan?1:(b.updated||0)-(a.updated||0)));
-  return {rev:++planMenuRev,plans:list.map(p=>({id:String(p.id),cur:p.id===curPlan,past:!!pmPast(p),color:String(pmLook(p).color),coverSVG:pmPast(p)?'':coverSVG(pmLook(p).cover,150,90),
+  const list=PL.plans.slice().sort((a,b)=>(a.id===PL.curPlan?-1:b.id===PL.curPlan?1:(b.updated||0)-(a.updated||0)));
+  return {rev:++planMenuRev,plans:list.map(p=>({id:String(p.id),cur:p.id===PL.curPlan,past:!!pmPast(p),color:String(pmLook(p).color),coverSVG:pmPast(p)?'':coverSVG(pmLook(p).cover,150,90),
     dday:pmDday(p),name:String(p.name||'이름 없는 계획'),sub:`${p.dates||''}${p.blocks?` · 블록 ${p.blocks}개`:''}`}))};
 }
 function planMenu(open){const m=document.getElementById('planMenu'),b=document.getElementById('planBtn');if(!m||!b)return;
@@ -22,7 +22,7 @@ document.addEventListener('click',e=>{
 },true);
 // an item in the plan menu (PlanMenu.tsx tells: open a plan, + 새 계획, 계획 관리·공유)
 function planMenuAct(n,v){planMenu(false);
-  if(n==='open'){if(v!==curPlan){openPlan(v);showToast('계획을 바꿨어요')}return}
+  if(n==='open'){if(v!==PL.curPlan){openPlan(v);showToast('계획을 바꿨어요')}return}
   if(n==='new'){newPlan();return}
   tab='plans';snapshotCurrent();showText=false;renderPlans();renderTabs()}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){const m=document.getElementById('planMenu');if(m&&!m.hidden){planMenu(false);document.getElementById('planBtn').focus()}}});
@@ -54,7 +54,7 @@ function diceCloseAnim(){
 
 
 // postcard look for each trip in the menu: its own theme colour, cover and D-day
-function pmProfile(p){return p.id===curPlan?CUR.profile:((TRIP.plans.get(p.id)||{}).profile||{})}
+function pmProfile(p){return p.id===PL.curPlan?CUR.profile:((TRIP.plans.get(p.id)||{}).profile||{})}
 function pmLook(p){return Object.assign({color:'#2448c9',cover:'city'},pmProfile(p).look||{})}
 function pmPast(p){const pr=pmProfile(p);if(!pr.startDate||pr.dateUnknown)return false;const e=new Date(pr.startDate+'T00:00:00');e.setDate(e.getDate()+(pr.kind==='day'?0:(+pr.nights||0)));return e<new Date(new Date().toDateString())}
 function pmDday(p){const pr=pmProfile(p);if(!pr.startDate||pr.dateUnknown||pmPast(p))return '';const n=Math.round((new Date(pr.startDate+'T00:00:00')-new Date(new Date().toDateString()))/864e5);return n>0?'D-'+n:n===0?'D-DAY':'여행 중'}   // the D-day label (PlanMenu.tsx)

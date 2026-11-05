@@ -11,6 +11,8 @@ const JD=window.JEPI_DATA;
 const TRIP=JD.trip;
 // the trip being worked on (profile, placed, custom, fmarks, wish, meals, done, kws) lives in app/data/trip.ts: CUR.placed …
 const CUR=TRIP.cur;
+// the plan list and which plan is open (app/data/trip.ts): PL.plans, PL.curPlan
+const PL=TRIP.planList;
 // ---------- demo sandbox ----------
 // The sandbox itself (copy aside on entering, put back on leaving or on the next launch) is in app/data/demo.ts
 // and has already run before this script. DEMO.on is true while the demo is open.
@@ -1539,17 +1541,17 @@ function pPlaceNow(id){
 // ---------- my plans: several saved plans, account sync, sharing ----------
 // rdb/myId: the plan copies kept inside Claude (when JEPI ran as a Claude page); always empty in the app
 let rdb=null, myId=null;
-let plans=[], curPlan='', planTimer=null, cloudTimer=null, planMsg='', delArm='';
+PL.plans=[]; PL.curPlan=''; let planTimer=null, cloudTimer=null, planMsg='', delArm='';
 const PLAN_KEYS=['profile','pack','placed3','custom','meal2','done','fmarks','wish'];
 function planName(){const pr=CUR.profile;if(pr.kind==='day')return `${PACK.city} 하루 코스`;const n=nightsOf(pr);return `${PACK.city} ${n}박 ${n+1}일`}
 function planData(){return {profile:clone(CUR.profile),pack:PACK,placed:TRIP.slimBlocks(CUR.placed),custom:clone(CUR.custom),fmarks:clone(CUR.fmarks),wish:CUR.wish.slice(),meals:clone(CUR.meals),done:clone(CUR.done)}}
 function planMeta(){const D0=DAYS[0]||{},Dn=DAYS[DAYS.length-1]||{};return {name:'',dates:D0.iso?`${D0.iso.slice(5).replace('-','/')}${DAYS.length>1?'~'+(Dn.iso||'').slice(5).replace('-','/'):''}`:'',blocks:CUR.placed.length,kind:CUR.profile.kind||'trip'}}
-function savePlans(){TRIP.plans.saveList(plans,curPlan);syncSoon()}
+function savePlans(){TRIP.plans.saveList(PL.plans,PL.curPlan);syncSoon()}
 function snapshotCurrent(){
-  if(!curPlan) return; let p=plans.find(x=>x.id===curPlan);
-  if(!p){p={id:curPlan,name:''};plans.unshift(p)}
+  if(!PL.curPlan) return; let p=PL.plans.find(x=>x.id===PL.curPlan);
+  if(!p){p={id:PL.curPlan,name:''};PL.plans.unshift(p)}
   const m=planMeta(); Object.assign(p,{dates:m.dates,blocks:m.blocks,kind:m.kind,updated:Date.now()}); if(!p.custom_name) p.name=planName();
-  TRIP.plans.put(curPlan,planData()); savePlans(); cloudSave(p);
+  TRIP.plans.put(PL.curPlan,planData()); savePlans(); cloudSave(p);
 }
 function touchPlan(){clearTimeout(planTimer);planTimer=setTimeout(()=>{if($('#onb').hidden)snapshotCurrent()},1200)}
 const cloudTimers={};
@@ -1559,9 +1561,9 @@ async function cloudPull(){
   if(!rdb||!myId) return;
   try{const snap=await rdb.collection(`data/users/${myId}`).get();let ch=false;
     snap.docs.forEach(d=>{if(!d.exists||!d.id.startsWith('plan_'))return;const v=d.data()||{},m=v.meta;if(!m||!m.id||!v.data)return;
-      const loc=plans.find(x=>x.id===m.id);
-      if(!loc||(m.updated||0)>(loc.updated||0)){if(m.id===curPlan&&loc)return;TRIP.plans.put(m.id,v.data);if(loc)Object.assign(loc,m);else plans.push(Object.assign({},m));ch=true}});
-    if(ch){plans.sort((a,b)=>(b.updated||0)-(a.updated||0));savePlans();renderPlans()}
+      const loc=PL.plans.find(x=>x.id===m.id);
+      if(!loc||(m.updated||0)>(loc.updated||0)){if(m.id===PL.curPlan&&loc)return;TRIP.plans.put(m.id,v.data);if(loc)Object.assign(loc,m);else PL.plans.push(Object.assign({},m));ch=true}});
+    if(ch){PL.plans.sort((a,b)=>(b.updated||0)-(a.updated||0));savePlans();renderPlans()}
   }catch(_){}
 }
 function cloudDelete(id){if(!rdb||!myId)return;try{rdb.doc(`data/users/${myId}/plan_${id}`).delete().catch(()=>{})}catch(_){}}
@@ -1576,30 +1578,30 @@ function applyPlanData(d){
   buildDays(); day=0; save(); renderAll();
 }
 function openPlan(id){
-  if(id===curPlan) return; snapshotCurrent();
+  if(id===PL.curPlan) return; snapshotCurrent();
   const d=TRIP.plans.get(id); if(!d){planMsg='이 계획을 불러오지 못했어요.';renderPlans();return}
-  curPlan=id; savePlans(); applyPlanData(d); if(CUR.profile.kind==='day'&&jp!=='P') setJP('P'); tab='timeline'; renderTabs(); planMsg='';
+  PL.curPlan=id; savePlans(); applyPlanData(d); if(CUR.profile.kind==='day'&&jp!=='P') setJP('P'); tab='timeline'; renderTabs(); planMsg='';
 }
 function newPlan(){
-  const prevP=CUR.profile; snapshotCurrent(); curPlan='p'+Date.now().toString(36); savePlans();
+  const prevP=CUR.profile; snapshotCurrent(); PL.curPlan='p'+Date.now().toString(36); savePlans();
   CUR.custom=[];CUR.placed=[];CUR.fmarks={};CUR.wish=[];CUR.meals={};CUR.done={};
   loadPack(blankPack()); savePack();
   CUR.profile=clone(PROFILE_EXAMPLE); Object.assign(CUR.profile,{stays:[{name:'숙소',area:'center',checkin:'15:00',checkout:'11:00',from:0,to:3}],events:[],dest:'',pace:'normal',social:'some',breakfast:true,purpose:'',party:{type:'solo',adults:1,kids:0},flightSet:false,staySet:false,dateSet:false,nightsSet:false,dateUnknown:false,startDate:isoPlus(30)});
   carryTaste(prevP,CUR.profile); applyPlanData({profile:CUR.profile,pack:blankPack()}); tab='timeline'; renderTabs(); openOnb();
 }
-function dupPlan(id){snapshotCurrent();const d=TRIP.plans.get(id),src=plans.find(x=>x.id===id);if(!d||!src)return;
-  const nid='p'+Date.now().toString(36);TRIP.plans.put(nid,d);const p=Object.assign({},src,{id:nid,name:src.name+' (복사본)',custom_name:true,updated:Date.now()});plans.unshift(p);savePlans();cloudSave(p);planMsg='복사본을 만들었어요.';renderPlans()}
+function dupPlan(id){snapshotCurrent();const d=TRIP.plans.get(id),src=PL.plans.find(x=>x.id===id);if(!d||!src)return;
+  const nid='p'+Date.now().toString(36);TRIP.plans.put(nid,d);const p=Object.assign({},src,{id:nid,name:src.name+' (복사본)',custom_name:true,updated:Date.now()});PL.plans.unshift(p);savePlans();cloudSave(p);planMsg='복사본을 만들었어요.';renderPlans()}
 function delPlan(id){if(delArm!==id){delArm=id;renderPlans();return}delArm='';
-  plans=plans.filter(x=>x.id!==id);TRIP.plans.del(id);clearTimeout(cloudTimers[id]);cloudDelete(id);
-  if(id===curPlan){if(plans[0]){curPlan='';openPlan(plans[0].id)}else{curPlan='';newPlan()}}savePlans();renderPlans()}
-function renamePlan(id,name){const p=plans.find(x=>x.id===id);if(!p||!name)return;p.name=name.slice(0,40);p.custom_name=true;p.updated=Date.now();savePlans();cloudSave(p);renderPlans();renderPlanBtn()}
+  PL.plans=PL.plans.filter(x=>x.id!==id);TRIP.plans.del(id);clearTimeout(cloudTimers[id]);cloudDelete(id);
+  if(id===PL.curPlan){if(PL.plans[0]){PL.curPlan='';openPlan(PL.plans[0].id)}else{PL.curPlan='';newPlan()}}savePlans();renderPlans()}
+function renamePlan(id,name){const p=PL.plans.find(x=>x.id===id);if(!p||!name)return;p.name=name.slice(0,40);p.custom_name=true;p.updated=Date.now();savePlans();cloudSave(p);renderPlans();renderPlanBtn()}
 // sharing
 const CODE_AB='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 async function shareCode(){
   if(STANDALONE) return shareLink();
   if(!rdb||RS.status!=='on'){planMsg='공유 코드는 Claude 안에서, 이 페이지를 편집할 수 있는 권한이 있을 때 만들 수 있어요.';renderPlans();return}
   snapshotCurrent(); const code='JP-'+Array.from({length:5},()=>CODE_AB[Math.floor(Math.random()*CODE_AB.length)]).join('');
-  try{await rdb.doc('shares/'+code).set({name:(plans.find(x=>x.id===curPlan)||{}).name||planName(),by:myId,at:Date.now(),data:planData()});
+  try{await rdb.doc('shares/'+code).set({name:(PL.plans.find(x=>x.id===PL.curPlan)||{}).name||planName(),by:myId,at:Date.now(),data:planData()});
     lastCode=code; planMsg=''; renderPlans();
   }catch(e){planMsg=e&&e.code==='quota_exceeded'?'공유 저장 공간이 가득 찼어요.':'공유 코드를 만들지 못했어요. 잠시 뒤 다시 시도해 주세요.';renderPlans()}
 }
@@ -1611,12 +1613,12 @@ async function openCode(raw){
   if(!rdb){planMsg='공유받은 계획은 Claude 안에서 열 수 있어요.';renderPlans();return}
   try{const d=await rdb.doc('shares/'+code).get();if(!d.exists){planMsg='이 코드의 계획을 찾지 못했어요.';renderPlans();return}
     const v=d.data()||{}; snapshotCurrent(); const nid='p'+Date.now().toString(36);
-    TRIP.plans.put(nid,v.data||{}); plans.unshift({id:nid,name:String(v.name||'공유받은 계획').slice(0,30)+' (공유받음)',custom_name:true,updated:Date.now()}); savePlans();
-    curPlan=nid; savePlans(); applyPlanData(v.data||{}); snapshotCurrent(); tab='timeline'; renderTabs(); planMsg='';
+    TRIP.plans.put(nid,v.data||{}); PL.plans.unshift({id:nid,name:String(v.name||'공유받은 계획').slice(0,30)+' (공유받음)',custom_name:true,updated:Date.now()}); savePlans();
+    PL.curPlan=nid; savePlans(); applyPlanData(v.data||{}); snapshotCurrent(); tab='timeline'; renderTabs(); planMsg='';
   }catch(e){planMsg='계획을 열지 못했어요. 잠시 뒤 다시 시도해 주세요.';renderPlans()}
 }
 function planText(){
-  const L=[`[JEPI] ${(plans.find(x=>x.id===curPlan)||{}).name||planName()}`];
+  const L=[`[JEPI] ${(PL.plans.find(x=>x.id===PL.curPlan)||{}).name||planName()}`];
   if(CUR.profile.purpose) L.push(`🧭 ${CUR.profile.purpose}`);
   DAYS.forEach((D,d)=>{L.push('',`📅 ${D.title.replace(/^Day \d+ · /,'')||''} ${D.date} (${WD[D.wd]})`.replace('  ',' '));
     analyze(d).items.filter(i=>!i.stay).forEach(i=>L.push(`${fmt(i.start)} ${i.name}${i.kind==='place'&&i.area?` · ${i.area}`:''}`))});
@@ -1631,7 +1633,7 @@ function importBackup(file,after){
   if(!file) return; const rd=new FileReader();
   rd.onload=()=>{try{const v=JSON.parse(String(rd.result||''));if(v&&v.jepi===2){onbFrame({open:false});if(!importAll(v))throw 0;tab='timeline';renderTabs();if(after)after(true);return}if(!v||!v.data||!v.data.profile)throw 0;
       snapshotCurrent(); const nid='p'+Date.now().toString(36); TRIP.plans.put(nid,v.data);
-      plans.unshift({id:nid,name:String(v.name||'불러온 계획').slice(0,40),custom_name:true,updated:Date.now()}); curPlan=nid; savePlans();
+      PL.plans.unshift({id:nid,name:String(v.name||'불러온 계획').slice(0,40),custom_name:true,updated:Date.now()}); PL.curPlan=nid; savePlans();
       onbFrame({open:false}); applyPlanData(v.data); snapshotCurrent(); tab='timeline'; renderTabs(); planMsg='백업을 불러왔어요.'; if(after) after(true);
     }catch(_){planMsg='JEPI 백업 파일이 아니거나 손상됐어요.';renderPlans();setSt('st_import','JEPI 백업 파일이 아니거나 손상됐어요.');if(after)after(false)}};
   rd.readAsText(file);
@@ -1647,7 +1649,7 @@ function plansAct(n,v,v2){
   case 'open': openPlan(v);return;
   case 'dup': dupPlan(v);return;
   case 'del': delPlan(v);return;
-  case 'rename': if(plans.some(x=>x.id===v)){planRenaming=v;renderPlans()}return;   // its name box opens (with the cursor in it)
+  case 'rename': if(PL.plans.some(x=>x.id===v)){planRenaming=v;renderPlans()}return;   // its name box opens (with the cursor in it)
   case 'name': planRenaming='';renamePlan(v,String(v2||'').trim());renderPlans();return;
   case 'share': shareCode();return;
   case 'text': showText=!showText;renderPlans();if(showText)copyText(planText());return;
@@ -1658,15 +1660,15 @@ function plansAct(n,v,v2){
 }
 function renderPlans(){
   const box=$('#plansBox'); if(!box) return;
-  window.JEPI_UI.mount('plans',box,{plans:plans.map(p=>({id:p.id,name:p.name,kind:p.kind,dates:p.dates,blocks:p.blocks,updated:p.updated})),
-    curPlan,delArm,planMsg,renaming:planRenaming,standalone:!!STANDALONE,lastLink:lastLink||'',lastCode:lastCode||'',shareText:showText?planText():null,
+  window.JEPI_UI.mount('plans',box,{plans:PL.plans.map(p=>({id:p.id,name:p.name,kind:p.kind,dates:p.dates,blocks:p.blocks,updated:p.updated})),
+    curPlan:PL.curPlan,delArm,planMsg,renaming:planRenaming,standalone:!!STANDALONE,lastLink:lastLink||'',lastCode:lastCode||'',shareText:showText?planText():null,
     savedInAccount:!!(rdb&&RS.status==='on')});
 }
 
 // ================= JEPI standalone: AI keys, model router, routes, map, panels =================
 const STANDALONE=!(window.claude&&window.claude.use);
 const LS=JD.storage; // saved data on this device: app/data/storage.ts
-let KEYS=LS.get('jepi.keys',{})||{};
+JD.keys.load(); const KEYS=JD.keys.list;   // app/data/keys.ts (the same object, changed in place)
 const KEY_DEF={
   anthropic:{name:'Claude',sub:'일정 짜기·대화·여행지 준비 (필수)',ph:'sk-ant-...',re:/^sk-ant-/},
   gemini:{name:'Gemini',sub:'가벼운 작업용 (선택 · 넣으면 비용이 줄어요)',ph:'AIza...',re:/^AIza/},
@@ -1675,7 +1677,7 @@ const KEY_DEF={
 };
 const MODELS=Object.assign({heavy:'claude-sonnet-5-5',light:'claude-haiku-5-5',gemini:'gemini-3.6-flash'},LS.get('jepi.models',{})||{});
 let keyMsg={}, keyBad={};
-function saveKeys(quiet){LS.set('jepi.keys',KEYS);if(!quiet){LS.set('jepi.keysAt',Date.now());if(typeof syncSoon==='function')syncSoon()}}
+function saveKeys(quiet){JD.keys.save(quiet);if(!quiet&&typeof syncSoon==='function')syncSoon()}
 const maskKey=k=>k?k.slice(0,6)+'••••••'+k.slice(-4):'';
 function aiErr(code,msg,text){return JD.appError(code,msg,text)}
 // The AI connection (calling Claude / Gemini, retries, switching to the other AI) lives in app/data/ai.ts.
@@ -1818,10 +1820,10 @@ function renderMore(){
   const s=tripSummary(), pr=CUR.profile, b=budgetParts&&budgetParts(pr);
   const tripChips=pr.kind==='day'?[]:[pr.bookedFlight===false?{text:'교통편 미정',tone:'warn'}:{text:'교통편 예약됨',tone:'ok'},pr.bookedStay===false?{text:'숙소 미정',tone:'warn'}:{text:'숙소 예약됨',tone:'ok'}];
   if(b) tripChips.push({text:`예산 1인 ${Math.round(b.total/10000)}만원`});
-  const w=warnTotal(), sp=plans.find(x=>x.id===curPlan&&x.shared);
+  const w=warnTotal(), sp=PL.plans.find(x=>x.id===PL.curPlan&&x.shared);
   window.JEPI_UI.mount('more',box,{city:s.city,line:s.line,tripChips,warnCount:w,prepLeft:prepLeft(),
-    full:jp!=='P'||moreAll,showToggle:jp==='P',moreAll,plansCount:plans.length,
-    friendsChip:sp?'👥 '+(((TRIPS&&TRIPS.members[curPlan])||[]).length||'공유 중'):null,
+    full:jp!=='P'||moreAll,showToggle:jp==='P',moreAll,plansCount:PL.plans.length,
+    friendsChip:sp?'👥 '+(((TRIPS&&TRIPS.members[PL.curPlan])||[]).length||'공유 중'):null,
     notifyOn:!!(NOTIFY&&NOTIFY.on),aiOff:!!(STANDALONE&&!sample)});
   tabs({warn:w?String(w):''});
 }
@@ -1913,17 +1915,17 @@ function renderSettings(){
 }
 function backupAll(){
   snapshotCurrent();
-  const all={jepi:2,at:new Date().toISOString(),cur:curPlan,kw:CUR.kws,plans:plans.map(p=>({meta:p,data:TRIP.plans.get(p.id)})).filter(x=>x.data)};
+  const all={jepi:2,at:new Date().toISOString(),cur:PL.curPlan,kw:CUR.kws,plans:PL.plans.map(p=>({meta:p,data:TRIP.plans.get(p.id)})).filter(x=>x.data)};
   const d=new Date(), nm=`JEPI-백업-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.json`;
   downloadText(nm,JSON.stringify(all));
 }
 function importAll(v){
   if(!v||v.jepi!==2||!Array.isArray(v.plans)) return false;
   snapshotCurrent(); let n=0;
-  v.plans.forEach(x=>{if(!x||!x.meta||!x.data)return;const ex=plans.find(p=>p.id===x.meta.id);TRIP.plans.put(x.meta.id,x.data);if(ex)Object.assign(ex,x.meta);else plans.push(Object.assign({},x.meta));n++});
+  v.plans.forEach(x=>{if(!x||!x.meta||!x.data)return;const ex=PL.plans.find(p=>p.id===x.meta.id);TRIP.plans.put(x.meta.id,x.data);if(ex)Object.assign(ex,x.meta);else PL.plans.push(Object.assign({},x.meta));n++});
   if(Array.isArray(v.kw)&&v.kw.length){CUR.kws=[...new Set([...CUR.kws,...v.kw])];saveKw&&saveKw()}
-  plans.sort((a,b)=>(b.updated||0)-(a.updated||0)); savePlans();
-  const target=plans.find(p=>p.id===v.cur)||plans[0]; if(target&&target.id!==curPlan){curPlan='';openPlan(target.id)}
+  PL.plans.sort((a,b)=>(b.updated||0)-(a.updated||0)); savePlans();
+  const target=PL.plans.find(p=>p.id===v.cur)||PL.plans[0]; if(target&&target.id!==PL.curPlan){PL.curPlan='';openPlan(target.id)}
   planMsg=`계획 ${n}개를 불러왔어요.`; renderPlans(); return true;
 }
 
@@ -1939,7 +1941,7 @@ async function unpackText(t){
 }
 let lastLink='';
 async function shareLink(asNote){
-  snapshotCurrent(); const name=(plans.find(x=>x.id===curPlan)||{}).name||planName();
+  snapshotCurrent(); const name=(PL.plans.find(x=>x.id===PL.curPlan)||{}).name||planName();
   const pd=planData(); if(pd.profile&&pd.profile.home){pd.profile.home=Object.assign({},pd.profile.home,{area:''});delete pd.profile.home.ll}
   if(pd.profile&&pd.profile.look&&pd.profile.look.photo){pd.profile.look=Object.assign({},pd.profile.look,{photo:'',cover:'city'})} // a photo would make the link too long
   const t=await packText(JSON.stringify({n:name,d:pd})); const url=location.origin+location.pathname+'#s='+t+(asNote?'&note=1':'');
@@ -1954,8 +1956,8 @@ async function openShared(){
   const asNote=/[#&]note=1/.test(location.hash||'');
   try{const v=JSON.parse(await unpackText(m[1])); if(!v||!v.d||!v.d.profile) throw 0;
     snapshotCurrent(); const nid='p'+Date.now().toString(36);
-    TRIP.plans.put(nid,v.d); plans.unshift({id:nid,name:String(v.n||'공유받은 계획').slice(0,30)+' (공유받음)',custom_name:true,updated:Date.now()});
-    curPlan=nid; savePlans(); onbFrame({open:false}); applyPlanData(v.d); snapshotCurrent(); tab='timeline'; renderTabs();
+    TRIP.plans.put(nid,v.d); PL.plans.unshift({id:nid,name:String(v.n||'공유받은 계획').slice(0,30)+' (공유받음)',custom_name:true,updated:Date.now()});
+    PL.curPlan=nid; savePlans(); onbFrame({open:false}); applyPlanData(v.d); snapshotCurrent(); tab='timeline'; renderTabs();
     history.replaceState(null,'',location.pathname); showToast('공유받은 계획을 내 계획에 추가했어요.');if(asNote)setTimeout(()=>openNotebook(),400);
   }catch(_){history.replaceState(null,'',location.pathname);showToast('공유 링크가 잘렸거나 손상됐어요.')}
 }
@@ -1991,12 +1993,12 @@ function planCovers(id,t){const d=TRIP.plans.get(id);const p=d&&d.profile;if(!p|
   const s=new Date(p.startDate+'T00:00:00'),e=new Date(s);e.setDate(e.getDate()+(p.kind==='day'?0:(+p.nights||0)));const x=new Date(t+'T00:00:00');return x>=s&&x<=e}
 function startupFocus(){
   const t=isoOf(new Date());
-  if(!(DAYS[0]&&DAYS[0].iso&&todayIdx()>=0)){const p=plans.find(p=>p.id!==curPlan&&planCovers(p.id,t));if(p){openPlan(p.id)}}
+  if(!(DAYS[0]&&DAYS[0].iso&&todayIdx()>=0)){const p=PL.plans.find(p=>p.id!==PL.curPlan&&planCovers(p.id,t));if(p){openPlan(p.id)}}
   const ti=todayIdx(); if(ti>=0){day=ti;renderAll();
     setTimeout(()=>{const H=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hour'))||60;const g=$('#grid');if(!g)return;
       const now=new Date(), nm=now.getHours()*60+now.getMinutes(); const y=g.getBoundingClientRect().top+window.scrollY+Math.max(0,(nm-dayStart(day))/60*H-140);window.scrollTo({top:y})},80)}
 }
-function renderPlanBtn(){const p=plans.find(x=>x.id===curPlan);hero({planName:(p&&p.name)||planName()})}
+function renderPlanBtn(){const p=PL.plans.find(x=>x.id===PL.curPlan);hero({planName:(p&&p.name)||planName()})}
 const inside=sel=>{const a=document.activeElement;return !!(a&&a.closest&&a.closest(sel))};
 function renderExt(){renderPhase();renderMore();renderPlanBtn();
   if(tab==='me'&&$('#onb').hidden&&!inside('#meBox'))renderMeRows();
@@ -2228,8 +2230,8 @@ function saveCourse(){
   carryTaste(CUR.profile,prof); if(CUR.profile&&CUR.profile.party) prof.party=clone(CUR.profile.party);
   const data={profile:prof,pack,placed:places.map((p,i)=>({id:p.id,day:0,start:c[i].start,dur:c[i].dur})),custom:[],fmarks:{},wish:[],meals:{},done:{}};
   snapshotCurrent(); const nid='p'+Date.now().toString(36);
-  TRIP.plans.put(nid,data); plans.unshift({id:nid,name:`${areaName} · ${+today.slice(5,7)}/${+today.slice(8,10)} ${fmt(c[0].start)} 코스`,custom_name:true,updated:Date.now(),kind:'day',dates:today.slice(5).replace('-','/'),blocks:places.length});
-  curPlan=nid; savePlans(); closeSheet(); applyPlanData(data); snapshotCurrent(); day=0; tab='timeline'; renderTabs(); renderAll();
+  TRIP.plans.put(nid,data); PL.plans.unshift({id:nid,name:`${areaName} · ${+today.slice(5,7)}/${+today.slice(8,10)} ${fmt(c[0].start)} 코스`,custom_name:true,updated:Date.now(),kind:'day',dates:today.slice(5).replace('-','/'),blocks:places.length});
+  PL.curPlan=nid; savePlans(); closeSheet(); applyPlanData(data); snapshotCurrent(); day=0; tab='timeline'; renderTabs(); renderAll();
   showToast('내 계획에 저장했어요 · 일정과 지도에서 볼 수 있어요');
 }
 function doCondTxt(){const mood=(DO_MOODS.find(m=>m[0]===doS.mood)||[])[1];return [doS.when==='now'?'지금':`이따 ${doS.at}`,doS.clen==='rest'?'코스: 오늘 끝까지':doS.clen==='half'?'코스: 반나절':'코스: 2~3시간',mood==='상관없음'?'':mood].filter(Boolean).join(' · ')}
@@ -2319,8 +2321,8 @@ function introRun(){const el=document.getElementById('intro');if(!el)return;
 // drawn by React: app/screens/PlanMenu.tsx
 let planMenuRev=0;
 function planMenuInfo(){
-  const list=plans.slice().sort((a,b)=>(a.id===curPlan?-1:b.id===curPlan?1:(b.updated||0)-(a.updated||0)));
-  return {rev:++planMenuRev,plans:list.map(p=>({id:String(p.id),cur:p.id===curPlan,past:!!pmPast(p),color:String(pmLook(p).color),coverSVG:pmPast(p)?'':coverSVG(pmLook(p).cover,150,90),
+  const list=PL.plans.slice().sort((a,b)=>(a.id===PL.curPlan?-1:b.id===PL.curPlan?1:(b.updated||0)-(a.updated||0)));
+  return {rev:++planMenuRev,plans:list.map(p=>({id:String(p.id),cur:p.id===PL.curPlan,past:!!pmPast(p),color:String(pmLook(p).color),coverSVG:pmPast(p)?'':coverSVG(pmLook(p).cover,150,90),
     dday:pmDday(p),name:String(p.name||'이름 없는 계획'),sub:`${p.dates||''}${p.blocks?` · 블록 ${p.blocks}개`:''}`}))};
 }
 function planMenu(open){const m=document.getElementById('planMenu'),b=document.getElementById('planBtn');if(!m||!b)return;
@@ -2333,7 +2335,7 @@ document.addEventListener('click',e=>{
 },true);
 // an item in the plan menu (PlanMenu.tsx tells: open a plan, + 새 계획, 계획 관리·공유)
 function planMenuAct(n,v){planMenu(false);
-  if(n==='open'){if(v!==curPlan){openPlan(v);showToast('계획을 바꿨어요')}return}
+  if(n==='open'){if(v!==PL.curPlan){openPlan(v);showToast('계획을 바꿨어요')}return}
   if(n==='new'){newPlan();return}
   tab='plans';snapshotCurrent();showText=false;renderPlans();renderTabs()}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){const m=document.getElementById('planMenu');if(m&&!m.hidden){planMenu(false);document.getElementById('planBtn').focus()}}});
@@ -2365,7 +2367,7 @@ function diceCloseAnim(){
 
 
 // postcard look for each trip in the menu: its own theme colour, cover and D-day
-function pmProfile(p){return p.id===curPlan?CUR.profile:((TRIP.plans.get(p.id)||{}).profile||{})}
+function pmProfile(p){return p.id===PL.curPlan?CUR.profile:((TRIP.plans.get(p.id)||{}).profile||{})}
 function pmLook(p){return Object.assign({color:'#2448c9',cover:'city'},pmProfile(p).look||{})}
 function pmPast(p){const pr=pmProfile(p);if(!pr.startDate||pr.dateUnknown)return false;const e=new Date(pr.startDate+'T00:00:00');e.setDate(e.getDate()+(pr.kind==='day'?0:(+pr.nights||0)));return e<new Date(new Date().toDateString())}
 function pmDday(p){const pr=pmProfile(p);if(!pr.startDate||pr.dateUnknown||pmPast(p))return '';const n=Math.round((new Date(pr.startDate+'T00:00:00')-new Date(new Date().toDateString()))/864e5);return n>0?'D-'+n:n===0?'D-DAY':'여행 중'}   // the D-day label (PlanMenu.tsx)
@@ -2412,10 +2414,10 @@ function syncPush(){return JD.sync.syncPush()}
 function syncPull(){return JD.sync.syncPull()}
 function syncNow(){return JD.sync.syncNow()}
 JD.sync.connectSync({
-  plans:()=>plans, setPlans(p){plans=p}, curPlan:()=>curPlan,
+  plans:()=>PL.plans, setPlans(p){PL.plans=p}, curPlan:()=>PL.curPlan,
   kws:()=>CUR.kws, setKws(k){CUR.kws=k},
   myPlaces:()=>MYP, setMyPlaces(m){JD.myplaces.setAll(m)},
-  keys:()=>KEYS, setKeys(k){KEYS=k;saveKeys(true)},
+  keys:()=>KEYS, setKeys(k){JD.keys.replace(k);saveKeys(true)},
   setErr(m){ACC.state.err=m},
   async afterPush(){
     if(tab==='settings') renderSettings();
@@ -2878,7 +2880,7 @@ Reply with only JSON: {"suggestions":[{"id":"nezu","start":"10:30","reason":"one
 let wipeArm=false;
 function wipeAll(){
   ['profile','pack','placed3','custom','kw','meal2','done','fmarks','wish','coach','dice','jp'].forEach(k=>JD.storage.del('gp.'+k));
-  plans.forEach(p=>{TRIP.plans.del(p.id);cloudDelete(p.id)}); plans=[]; curPlan='p'+Date.now().toString(36); savePlans();
+  PL.plans.forEach(p=>{TRIP.plans.del(p.id);cloudDelete(p.id)}); PL.plans=[]; PL.curPlan='p'+Date.now().toString(36); savePlans();
   CUR.custom=[]; CUR.placed=[]; CUR.fmarks={}; CUR.wish=[]; CUR.kws=[]; CUR.meals={}; CUR.done={}; chat=[]; undoSnap=null; aiState=null; selected=null; hVibe=null; wipeArm=false;
   loadPack(blankPack()); savePack();
   CUR.profile=clone(PROFILE_EXAMPLE); Object.assign(CUR.profile,{stays:[{name:'숙소',area:'center',checkin:'15:00',checkout:'11:00',from:0,to:3}],events:[],dest:'',pace:'normal',social:'some',breakfast:true,purpose:'',party:{type:'solo',adults:1,kids:0},flightSet:false,staySet:false,dateSet:false,nightsSet:false,dateUnknown:false,startDate:isoPlus(30)}); CUR.profile.stays[0].name='숙소';
@@ -3066,9 +3068,9 @@ function renderWelcome(){
 // after logging in on the first screen: a pending invite, else the newest plan that came with the account, else a new trip
 async function welcomeLoggedIn(){
   if(LS.get('jepi.joinCode','')){closeWelcome();if(!(await joinPending())&&firstRun)openOnb();return}
-  const mine=plans.filter(p=>p.id!==curPlan&&TRIP.plans.get(p.id)).sort((a,b)=>(b.updated||0)-(a.updated||0));
+  const mine=PL.plans.filter(p=>p.id!==PL.curPlan&&TRIP.plans.get(p.id)).sort((a,b)=>(b.updated||0)-(a.updated||0));
   closeWelcome();
-  if(mine.length){curPlan='';openPlan(mine[0].id);startupFocus();showToast(`로그인했어요 · 계획 ${mine.length}개를 가져왔어요`)}
+  if(mine.length){PL.curPlan='';openPlan(mine[0].id);startupFocus();showToast(`로그인했어요 · 계획 ${mine.length}개를 가져왔어요`)}
   else{openOnb();showToast('로그인했어요 · 아직 저장된 여행이 없어서 새로 만들어요')}
 }
 // ---------- demo: enter / leave (the sandbox itself is in app/data/demo.ts) ----------
@@ -3088,7 +3090,7 @@ function renderDemoBar(){
 }
 document.addEventListener('click',e=>{if(e.target.closest('#demoExit'))demoExit()});
 // test hooks (local checks only)
-if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__jepi={demoEnter,navLink,routeProvider,sync:()=>syncNow(),state:()=>({cur:curPlan,plans:plans.map(p=>({id:p.id,shared:p.shared,role:p.role}))}),demoLikeTrip(){const d=demoOsaka();d.pack.demo=false;applyPlanData({profile:d.profile,pack:d.pack,placed:d.placed});onbFrame({open:false});snapshotCurrent();renderAll()}};
+if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__jepi={demoEnter,navLink,routeProvider,sync:()=>syncNow(),state:()=>({cur:PL.curPlan,plans:PL.plans.map(p=>({id:p.id,shared:p.shared,role:p.role}))}),demoLikeTrip(){const d=demoOsaka();d.pack.demo=false;applyPlanData({profile:d.profile,pack:d.pack,placed:d.placed});onbFrame({open:false});snapshotCurrent();renderAll()}};
 // ---------- tidy day screen: one summary line; details open on tap ----------
 // The route strip, today's cost, warnings, free gaps and "tell us more" nudges used to sit above the
 // timeline all at once. Now one line of chips shows the numbers and each chip opens its part.
@@ -3132,27 +3134,27 @@ JD.hours.connectHours({placesOnSchedule:()=>[...new Set(CUR.placed.map(b=>b.id))
 var TRIPS=Object.assign(JD.trips.state,{invite:null,msg:'',busy:false,stopArm:false});
 const saveTripBase=()=>JD.trips.saveBase();
 const myName=()=>LS.get('jepi.myName','')||String((SYNC.sess&&SYNC.sess.email)||SYNC.email||'나').split('@')[0];
-const planOf=id=>plans.find(p=>p.id===id);
-const curShared=()=>{const p=planOf(curPlan);return p&&p.shared?p:null};
+const planOf=id=>PL.plans.find(p=>p.id===id);
+const curShared=()=>{const p=planOf(PL.curPlan);return p&&p.shared?p:null};
 const JS=x=>x===undefined?'∅':JSON.stringify(x);
 // a new version of the open plan: put it in, unless the person is typing or has a sheet open (then the next pull tries again)
 function applyIfOpen(id,data,who){
-  if(id!==curPlan) return true;
+  if(id!==PL.curPlan) return true;
   const ae=document.activeElement, editing=(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))||!$('#sheetBg').hidden||!$('#onb').hidden||selected;
   if(editing) return false;
   const d0=day; applyPlanData(data); day=Math.min(d0,Math.max(0,DAYS.length-1)); renderAll();
   if(who&&who!==myName()) showToast(`${who}님이 일정을 바꿨어요`);
   return true;
 }
-JD.trips.connectTrips({plans:()=>plans,curPlan:()=>curPlan,savePlans:()=>savePlans(),applyIfOpen,myName,snapshotCurrent:()=>snapshotCurrent(),toast:m=>showToast(m),
+JD.trips.connectTrips({plans:()=>PL.plans,curPlan:()=>PL.curPlan,savePlans:()=>savePlans(),applyIfOpen,myName,snapshotCurrent:()=>snapshotCurrent(),toast:m=>showToast(m),
   pulled(listChanged){if(listChanged){renderPlans();renderExt()} if(curShared()) renderAll(); if(tab==='friends') PANELS.friends.render()}});
 const tripPush=id=>JD.trips.push(id), tripsPull=()=>JD.trips.pull(), tripShare=()=>JD.trips.share(), tripInvite=role=>JD.trips.invite(role,location.origin+location.pathname);
 const tripLeave=uid=>JD.trips.leave(uid), tripStop=()=>JD.trips.stop();
-SYNC_AFTER_PUSH.push(async()=>{for(const p of plans.filter(p=>p.shared)) await tripPush(p.id)});
+SYNC_AFTER_PUSH.push(async()=>{for(const p of PL.plans.filter(p=>p.shared)) await tripPush(p.id)});
 SYNC_AFTER_PULL.push(tripsPull);
 async function tripJoin(code){
   const id=await JD.trips.join(code); const p=planOf(id);
-  if(p){curPlan=curPlan===id?'':curPlan;openPlan(id);showToast('여행에 참여했어요')}
+  if(p){PL.curPlan=PL.curPlan===id?'':PL.curPlan;openPlan(id);showToast('여행에 참여했어요')}
   return id;
 }
 // join link: ?join=CODE
@@ -3187,7 +3189,7 @@ async function tripAct(a,uid,typed){
   try{
     if(a==='share'){await tripShare();TRIPS.invite={role:'edit',url:await tripInvite('edit')}}
     if(a==='invite-edit'||a==='invite-view'){const role=a.slice(7);TRIPS.invite={role,url:await tripInvite(role)}}
-    if(a==='send'&&TRIPS.invite){const txt=`${planOf(curPlan).name} 여행을 같이 짜요 · JEPI`;
+    if(a==='send'&&TRIPS.invite){const txt=`${planOf(PL.curPlan).name} 여행을 같이 짜요 · JEPI`;
       if(navigator.share){try{await navigator.share({title:'JEPI 여행 초대',text:txt,url:TRIPS.invite.url})}catch(_){}}
       else{try{await navigator.clipboard.writeText(TRIPS.invite.url);TRIPS.msg='초대 링크를 복사했어요'}catch(_){TRIPS.msg='아래 링크를 길게 눌러 복사해 주세요'}}}
     if(a==='copy'&&TRIPS.invite){try{await navigator.clipboard.writeText(TRIPS.invite.url);TRIPS.msg='초대 링크를 복사했어요'}catch(_){TRIPS.msg='링크를 길게 눌러 복사해 주세요'}}
@@ -3195,7 +3197,7 @@ async function tripAct(a,uid,typed){
     if(a==='kick') await tripLeave(uid);
     if(a==='stop'){if(!TRIPS.stopArm){TRIPS.stopArm=true;TRIPS.busy=false;PANELS.friends.render();return}TRIPS.stopArm=false;await tripStop()}
     if(a==='name'){const v=String(typed||'').trim().slice(0,20);LS.set('jepi.myName',v);
-      if(curShared())await sbTable('jepi_trip_members','PATCH',`?trip_id=eq.${encodeURIComponent(curPlan)}&user_id=eq.${SYNC.sess.user}`,{name:myName()},'return=minimal');TRIPS.msg='이름을 바꿨어요';await tripsPull()}
+      if(curShared())await sbTable('jepi_trip_members','PATCH',`?trip_id=eq.${encodeURIComponent(PL.curPlan)}&user_id=eq.${SYNC.sess.user}`,{name:myName()},'return=minimal');TRIPS.msg='이름을 바꿨어요';await tripsPull()}
   }catch(err){TRIPS.msg='✕ '+err.message}
   TRIPS.busy=false; PANELS.friends.render(); renderMore();
 }
@@ -3205,8 +3207,8 @@ PANELS.friends={render(opts){
   const box=$('#friendsBox'); if(!box) return; const p=curShared();
   if(opts&&opts.opened) TRIPS.stopArm=false; // opening the panel again forgets a first press of 공유 끝내기
   const mode=DEMO.on?'demo':!syncOn()?'login':!p?'intro':'shared';
-  window.JEPI_UI.mount('friends',box,{mode,planName:(planOf(curPlan)||{}).name||'이 여행',busy:!!TRIPS.busy,msg:TRIPS.msg||'',myName:myName(),
-    members:mode==='shared'?(TRIPS.members[curPlan]||[]):[],me:syncOn()?SYNC.sess.user:'',role:p?p.role||'':'',invite:TRIPS.invite||null,stopArm:!!TRIPS.stopArm});
+  window.JEPI_UI.mount('friends',box,{mode,planName:(planOf(PL.curPlan)||{}).name||'이 여행',busy:!!TRIPS.busy,msg:TRIPS.msg||'',myName:myName(),
+    members:mode==='shared'?(TRIPS.members[PL.curPlan]||[]):[],me:syncOn()?SYNC.sess.user:'',role:p?p.role||'':'',invite:TRIPS.invite||null,stopArm:!!TRIPS.stopArm});
 }};
 // ---------- one place-finding screen, many doors ----------
 // Every "find places" button opens this same sheet with its conditions already picked:
@@ -3289,7 +3291,7 @@ const alertable=it=>!it.stay&&(it.kind==='place'||it.kind==='fixed');
 const alertOn=(it,d)=>AL.isOn(alertKey(it,d));
 const tripTZ=()=>JD.logic.alerts.tripTZ(PACK);
 const alertsSoon=ms=>AL.soon(ms);
-AL.connectAlerts({curPlan:()=>curPlan,tz:tripTZ,demo:()=>!!DEMO.on,redraw:()=>{PANELS.notify.render();renderMore();renderAll()},
+AL.connectAlerts({curPlan:()=>PL.curPlan,tz:tripTZ,demo:()=>!!DEMO.on,redraw:()=>{PANELS.notify.render();renderMore();renderAll()},
   days:()=>DAYS.map((D,d)=>({iso:D.iso||'',rows:D.iso?analyze(d).items.filter(alertable).map(it=>({key:alertKey(it,d),name:String(it.name),start:it.start,end:it.end,locName:it.locName||'',travelIn:it.travelIn||null})):[]}))});
 BLOCK_BADGES.push((it,d)=>alertable(it)&&alertOn(it,d)&&NOTIFY.on?{k:'badge',t:'🔔',title:'알림 켜짐'}:null);
 SHEET_EXTRAS.push((it,d)=>{if(!alertable(it)||DEMO.on)return null;const on=alertOn(it,d);
@@ -3434,7 +3436,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)r
 let lookRev=0;
 function openLook(){
   const L=lookOf();
-  window.JEPI_UI.mount('look',$('#sheet'),{name:(plans.find(x=>x.id===curPlan)||{}).name||planName(),tagline:L.tagline||'',style:L.style,color:L.color,cover:L.cover,hand:L.hand,photo:L.photo||'',pop:L.pop,
+  window.JEPI_UI.mount('look',$('#sheet'),{name:(PL.plans.find(x=>x.id===PL.curPlan)||{}).name||planName(),tagline:L.tagline||'',style:L.style,color:L.color,cover:L.cover,hand:L.hand,photo:L.photo||'',pop:L.pop,
     colors:LOOK_COLORS,covers:LOOK_COVERS.map(([k,n])=>({k,name:n,svg:coverSVG(k,64,40)})),hands:LOOK_HANDS,
     days:DAYS.map((D,i)=>({title:((CUR.profile.dayTitles||[])[i])||'',placeholder:String(D.title)})),ai:!!sample,rev:++lookRev});
   $('#sheet').dataset.uid=''; $('#sheetBg').hidden=false;
@@ -3447,7 +3449,7 @@ ${days.join('\n')}
 Reply with only JSON: {"titles":["...", ...]} with exactly ${DAYS.length} items.`;
   const r=await sample.json(prompt,{cache:false}); return Array.isArray(r&&r.titles)?r.titles.slice(0,DAYS.length):[];
 }
-function lookRenamePlan(nm){const p=plans.find(x=>x.id===curPlan);if(p&&nm&&nm!==p.name){p.name=nm;p.custom_name=true;savePlans()}}
+function lookRenamePlan(nm){const p=PL.plans.find(x=>x.id===PL.curPlan);if(p&&nm&&nm!==p.name){p.name=nm;p.custom_name=true;savePlans()}}
 // ---------- handwritten memos: one line per block, one line per day ----------
 // The rules live in app/logic/memo.ts; the memo box in a block's sheet saves itself (app/screens/Extras.tsx MemoBox).
 const memoKey=(it,d)=>JD.logic.memo.blockKey(it.id,d);
@@ -3461,7 +3463,7 @@ SHEET_EXTRAS.push(it=>it&&it.id?{k:'memo',key:memoKey(it,day),value:blockMemoOf(
 // drawn by React: app/screens/Notebook.tsx
 let notebookRev=0;
 function notebookInfo(){
-  const L=lookOf(), name=(plans.find(x=>x.id===curPlan)||{}).name||planName();
+  const L=lookOf(), name=(PL.plans.find(x=>x.id===PL.curPlan)||{}).name||planName();
   const D0=DAYS[0]||{}, Dn=DAYS[DAYS.length-1]||{};
   const photo=L.cover==='photo'&&L.photo;
   const cover={photo:photo?String(L.photo):'',svg:photo?'':coverSVG(L.cover,260,156),city:String((PACK.city||'TRIP').slice(0,8)),date:String(D0.date||'').replace(/\s.*/,''),name:String(name),
@@ -3484,7 +3486,7 @@ function closeNotebook(){const nb=$('#notebook');if(nb)nb.hidden=true;document.b
 // ---------- start-up: runs after every file above has defined its variables ----------
 if(STANDALONE) sample=makeSample();
 hero({}); onbFrame({}); tabs({}); miniBar({}); dock({}); drawTrayTop(); mapTop({}); drawHelperFrame(); drawCoach(); drawBanner();   // the fixed frames (React)
-plans=TRIP.plans.list()||[]; if(!Array.isArray(plans)) plans=[]; curPlan=TRIP.plans.current()||''; if(!curPlan){curPlan='p'+Date.now().toString(36);savePlans()}
+PL.plans=TRIP.plans.list()||[]; if(!Array.isArray(PL.plans)) PL.plans=[]; PL.curPlan=TRIP.plans.current()||''; if(!PL.curPlan){PL.curPlan='p'+Date.now().toString(36);savePlans()}
 setZoom(store.get('gp.zoom',60),true);
 setJP(store.get('gp.jp',CUR.profile.kind==='day'?'P':'J'),true);
 buildDays();

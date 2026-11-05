@@ -10,7 +10,7 @@ const alertable=it=>!it.stay&&(it.kind==='place'||it.kind==='fixed');
 const alertOn=(it,d)=>AL.isOn(alertKey(it,d));
 const tripTZ=()=>JD.logic.alerts.tripTZ(PACK);
 const alertsSoon=ms=>AL.soon(ms);
-AL.connectAlerts({curPlan:()=>curPlan,tz:tripTZ,demo:()=>!!DEMO.on,redraw:()=>{PANELS.notify.render();renderMore();renderAll()},
+AL.connectAlerts({curPlan:()=>PL.curPlan,tz:tripTZ,demo:()=>!!DEMO.on,redraw:()=>{PANELS.notify.render();renderMore();renderAll()},
   days:()=>DAYS.map((D,d)=>({iso:D.iso||'',rows:D.iso?analyze(d).items.filter(alertable).map(it=>({key:alertKey(it,d),name:String(it.name),start:it.start,end:it.end,locName:it.locName||'',travelIn:it.travelIn||null})):[]}))});
 BLOCK_BADGES.push((it,d)=>alertable(it)&&alertOn(it,d)&&NOTIFY.on?{k:'badge',t:'🔔',title:'알림 켜짐'}:null);
 SHEET_EXTRAS.push((it,d)=>{if(!alertable(it)||DEMO.on)return null;const on=alertOn(it,d);

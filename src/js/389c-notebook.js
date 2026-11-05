@@ -4,7 +4,7 @@
 // drawn by React: app/screens/Notebook.tsx
 let notebookRev=0;
 function notebookInfo(){
-  const L=lookOf(), name=(plans.find(x=>x.id===curPlan)||{}).name||planName();
+  const L=lookOf(), name=(PL.plans.find(x=>x.id===PL.curPlan)||{}).name||planName();
   const D0=DAYS[0]||{}, Dn=DAYS[DAYS.length-1]||{};
   const photo=L.cover==='photo'&&L.photo;
   const cover={photo:photo?String(L.photo):'',svg:photo?'':coverSVG(L.cover,260,156),city:String((PACK.city||'TRIP').slice(0,8)),date:String(D0.date||'').replace(/\s.*/,''),name:String(name),

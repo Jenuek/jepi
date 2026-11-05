@@ -17,6 +17,7 @@ import * as routes from './routes';
 import * as account from './account';
 import * as recs from './recs';
 import * as nearby from './nearby';
+import * as keys from './keys';
 import * as logic from '../logic';
 import * as trips from './trips';
 import { status, syncDocs, syncSoon, syncPush, syncPull, syncNow, connectSync } from './sync';
@@ -45,6 +46,8 @@ export const data = {
   recs,
   /** 🎲 places nearby (뭐 먹지 · 뭐 하지) */
   nearby,
+  /** AI·지도 keys on this device */
+  keys,
   /** calculations: time text, distances, the day check (app/logic) */
   logic,
   /** 친구와 함께 on the server */

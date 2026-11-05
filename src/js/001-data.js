@@ -6,3 +6,5 @@ const JD=window.JEPI_DATA;
 const TRIP=JD.trip;
 // the trip being worked on (profile, placed, custom, fmarks, wish, meals, done, kws) lives in app/data/trip.ts: CUR.placed …
 const CUR=TRIP.cur;
+// the plan list and which plan is open (app/data/trip.ts): PL.plans, PL.curPlan
+const PL=TRIP.planList;

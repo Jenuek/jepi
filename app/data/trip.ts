@@ -111,6 +111,8 @@ export const kws = {
 };
 
 // ---- the plan list and each plan's saved copy ----
+/** the plans on this device and which one is open (the old code works on these: PL.plans, PL.curPlan) */
+export const planList = { plans: [] as Array<{ id: string; name?: string } & Record<string, unknown>>, curPlan: '' };
 export const plans = {
   list: <T = unknown>(): T[] | null => storage.get<T[] | null>('gp.plans', null),
   current: (): string => storage.get<string>('gp.cur', ''),

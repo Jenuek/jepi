@@ -57,7 +57,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)r
 let lookRev=0;
 function openLook(){
   const L=lookOf();
-  window.JEPI_UI.mount('look',$('#sheet'),{name:(plans.find(x=>x.id===curPlan)||{}).name||planName(),tagline:L.tagline||'',style:L.style,color:L.color,cover:L.cover,hand:L.hand,photo:L.photo||'',pop:L.pop,
+  window.JEPI_UI.mount('look',$('#sheet'),{name:(PL.plans.find(x=>x.id===PL.curPlan)||{}).name||planName(),tagline:L.tagline||'',style:L.style,color:L.color,cover:L.cover,hand:L.hand,photo:L.photo||'',pop:L.pop,
     colors:LOOK_COLORS,covers:LOOK_COVERS.map(([k,n])=>({k,name:n,svg:coverSVG(k,64,40)})),hands:LOOK_HANDS,
     days:DAYS.map((D,i)=>({title:((CUR.profile.dayTitles||[])[i])||'',placeholder:String(D.title)})),ai:!!sample,rev:++lookRev});
   $('#sheet').dataset.uid=''; $('#sheetBg').hidden=false;
@@ -70,4 +70,4 @@ ${days.join('\n')}
 Reply with only JSON: {"titles":["...", ...]} with exactly ${DAYS.length} items.`;
   const r=await sample.json(prompt,{cache:false}); return Array.isArray(r&&r.titles)?r.titles.slice(0,DAYS.length):[];
 }
-function lookRenamePlan(nm){const p=plans.find(x=>x.id===curPlan);if(p&&nm&&nm!==p.name){p.name=nm;p.custom_name=true;savePlans()}}
+function lookRenamePlan(nm){const p=PL.plans.find(x=>x.id===PL.curPlan);if(p&&nm&&nm!==p.name){p.name=nm;p.custom_name=true;savePlans()}}

@@ -11,9 +11,9 @@ function renderWelcome(){
 // after logging in on the first screen: a pending invite, else the newest plan that came with the account, else a new trip
 async function welcomeLoggedIn(){
   if(LS.get('jepi.joinCode','')){closeWelcome();if(!(await joinPending())&&firstRun)openOnb();return}
-  const mine=plans.filter(p=>p.id!==curPlan&&TRIP.plans.get(p.id)).sort((a,b)=>(b.updated||0)-(a.updated||0));
+  const mine=PL.plans.filter(p=>p.id!==PL.curPlan&&TRIP.plans.get(p.id)).sort((a,b)=>(b.updated||0)-(a.updated||0));
   closeWelcome();
-  if(mine.length){curPlan='';openPlan(mine[0].id);startupFocus();showToast(`로그인했어요 · 계획 ${mine.length}개를 가져왔어요`)}
+  if(mine.length){PL.curPlan='';openPlan(mine[0].id);startupFocus();showToast(`로그인했어요 · 계획 ${mine.length}개를 가져왔어요`)}
   else{openOnb();showToast('로그인했어요 · 아직 저장된 여행이 없어서 새로 만들어요')}
 }
 // ---------- demo: enter / leave (the sandbox itself is in app/data/demo.ts) ----------
@@ -33,4 +33,4 @@ function renderDemoBar(){
 }
 document.addEventListener('click',e=>{if(e.target.closest('#demoExit'))demoExit()});
 // test hooks (local checks only)
-if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__jepi={demoEnter,navLink,routeProvider,sync:()=>syncNow(),state:()=>({cur:curPlan,plans:plans.map(p=>({id:p.id,shared:p.shared,role:p.role}))}),demoLikeTrip(){const d=demoOsaka();d.pack.demo=false;applyPlanData({profile:d.profile,pack:d.pack,placed:d.placed});onbFrame({open:false});snapshotCurrent();renderAll()}};
+if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__jepi={demoEnter,navLink,routeProvider,sync:()=>syncNow(),state:()=>({cur:PL.curPlan,plans:PL.plans.map(p=>({id:p.id,shared:p.shared,role:p.role}))}),demoLikeTrip(){const d=demoOsaka();d.pack.demo=false;applyPlanData({profile:d.profile,pack:d.pack,placed:d.placed});onbFrame({open:false});snapshotCurrent();renderAll()}};
