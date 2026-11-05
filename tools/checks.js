@@ -1226,6 +1226,34 @@ module.exports = [
     }
   },
   {
+    name: 'data: changes as a list (app/data/ops.ts): trying out leaves the trip alone, repair avoids a new overlap, apply then save',
+    async run({ b, S, device, ok, skipCoach }) {
+      const p = await device(b, S);
+      await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await p.waitForTimeout(400); await skipCoach(p);
+      const r = await p.evaluate(() => {
+        const O = window.JEPI_DATA.ops, T = window.JEPI_DATA.trip, L = window.JEPI_DATA.places, out = {};
+        const day0 = T.cur.placed.filter(b => b.day === 0).sort((a, b) => a.start - b.start), first = day0[0];
+        const unused = L.P.find(x => !x.drop && !T.cur.placed.some(b => b.id === x.id) && x.always);
+        const at = Math.floor(first.start / 60) * 60, hh = m => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+        const ops = [{ op: 'add', id: unused.id, day: 0, start: hh(first.start), dur: 60 }];
+        const n0 = T.cur.placed.length, saved0 = localStorage.getItem('gp.placed3'), w0 = O.warnings().size;
+        const sim = O.simulate(ops);
+        out.tryOut = T.cur.placed.length === n0 && localStorage.getItem('gp.placed3') === saved0 && O.state.dry === false;
+        out.simSeesMore = sim.size > w0;
+        const fixed = O.repair(ops);
+        const moved = fixed.ops[0].start !== hh(first.start), before = sim.size - w0;
+        out.repair = before > 0 && (moved ? fixed.warns.length < before : fixed.warns.length === before);
+        O.apply(fixed.ops); T.blocks.saved();
+        out.applied = T.cur.placed.length === n0 + 1 && JSON.parse(localStorage.getItem('gp.placed3')).length === n0 + 1;
+        out.noDupe = (O.apply(fixed.ops), T.cur.placed.length === n0 + 1);
+        return out;
+      });
+      for (const [k, v] of Object.entries(r)) ok(v === true, k);
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
     name: 'data: 친구와 함께 merge rules (app/data/merge.ts) case by case',
     async run({ b, S, device, ok }) {
       const p = await device(b, S);

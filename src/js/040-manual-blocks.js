@@ -1,10 +1,5 @@
 // ---------- blocks the viewer makes by hand ----------
-function addCustomToData(c){
-  const a=AREAS[c.area]||AREAS[firstArea()], i=P.findIndex(x=>x.id===c.id);
-  const p={id:c.id,name:c.name||'직접 만든 블록',cat:CATS[c.cat]?c.cat:'walk',area:a[0],ll:Array.isArray(c.ll)?c.ll:[a[1],a[2]],dur:Math.max(15,+c.dur||60),always:true,drop:!!c.drop,note:c.memo||'직접 만든 블록이에요.',custom:true};
-  if(i>=0) P[i]=p; else P.push(p);
-  PM[p.id]=p; COST[p.id]=[Math.max(0,+c.cost||0),+c.cost?'직접 입력한 금액':'']; TAGS[p.id]=String(c.tags||'').split(',').map(x=>x.trim()).filter(Boolean); ZONE_OF[p.id]=AREA_ZONE[c.area]||'outer';
-}
+const addCustomToData=PLC.addCustom;   // app/data/places.ts
 let customLast=null;
 function openCustom(editId,startAt,opts){
   const c=editId?CUR.custom.find(x=>x.id===editId):{id:'',name:'',area:firstArea(),cat:'walk',dur:60,cost:0,memo:'',drop:false,tags:''}; if(!c) return;

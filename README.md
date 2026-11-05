@@ -108,6 +108,8 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 | 영업시간 확인 (Google Places, 월 900곳 한도) | `app/data/hours.ts`, 모양 바꾸기 `app/logic/hours.ts` (예전 `383-hours.js`는 연결만) |
 | 지도 | `210-map.js` |
 | AI 연결·모델 선택 | 연결(부르기·다시 시도·다른 AI) `app/data/ai.ts`, 이 기기의 키 `app/data/keys.ts`, 키 화면 쪽·모델 `190-keys-ai-router.js`, 실제 호출 `360-ai.js`, 채팅 `050-chat.js` (화면 `app/screens/ChatLog.tsx`), 빈 시간 추천 상자 `app/screens/AiBox.tsx` |
+| 여행지 장소 목록(지역·장소·비용·태그), 여행지 열기, AI 답 확인 | `app/data/places.ts` (도쿄 예시 데이터 `app/data/tokyo.ts`) |
+| 일정 바꾸기 목록(AI 채팅·🎲·P모드·장소 찾기): 적용·미리 해 보기·경고 피하기 | `app/data/ops.ts` |
 | 🎲 뭐 먹지 / 뭐 하지 | 주변 찾기·굴리기·코스 짜기 `app/data/nearby.ts`, 시트 상태·버튼 `280-dice-eat.js`, `290-dice-do.js` |
 | 내 계획 목록, 새 계획 | 화면 `app/screens/PlansScreen.tsx` (리액트), 동작 `180-plans.js` |
 | 로그인·기기 간 동기화·키 암호화 | 로그인 화면 `310-sync.js`, 무엇을 보내고 어떻게 합칠지 `app/data/sync.ts`, 서버와 대화 `app/data/server.ts`, 암호화 `app/data/vault.ts` |

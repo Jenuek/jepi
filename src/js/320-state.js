@@ -16,6 +16,6 @@ const mealOf=d=>CUR.meals[d]!=null?+CUR.meals[d]:(PK.pack.snack||1000);
 let day=0, tab='timeline', cat='all', selected=null, aiState=null, sample=null, group='zone', zoneOpen={}, resetArm=false;
 // changes to the trip happen in app/data/trip.ts (TRIP.blocks / wish / toggleMark …); not while an AI check tries them out on a copy,
 // and blocks first keep the places other travelers shared that they use
-TRIP.connectSaving(part=>{if(DRY)return false;if(part==='placed')keepShared();return true});
+TRIP.connectSaving(part=>{if(OPS.state.dry)return false;if(part==='placed')keepShared();return true});
 const save=()=>TRIP.blocks.saved();   // saved without uids
 

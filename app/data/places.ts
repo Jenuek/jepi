@@ -129,3 +129,11 @@ export function cleanPlace(x: any): Place | null {
     cost: [Math.max(0, +x.cost || 0), String(x.costNote || '').slice(0, 40)], tags: (Array.isArray(x.tags) ? x.tags : []).map((t: any) => String(t).slice(0, 16)).slice(0, 6),
     zone: AREA_ZONE[ak!] || 'outer', must: String(x.must || '').slice(0, 60), cash: x.cash === true, best: ['morning', 'day', 'sunset', 'evening', 'night'].includes(x.best) ? x.best : 'any', ai: true };
 }
+
+/** a place I made (직접 만들기) as a place of the lists */
+export function addCustom(c: { id: string; name?: string; area: string; cat: string; dur: number; cost?: number; memo?: string; tags?: string; drop?: boolean; ll?: LL }): void {
+  const a = AREAS[c.area] || AREAS[firstArea()], i = P.findIndex(x => x.id === c.id);
+  const p: Place = { id: c.id, name: c.name || '직접 만든 블록', cat: CATS[c.cat] ? c.cat : 'walk', area: a[0], ll: Array.isArray(c.ll) ? c.ll : [a[1], a[2]], dur: Math.max(15, +c.dur || 60), always: true, drop: !!c.drop, note: c.memo || '직접 만든 블록이에요.', custom: true };
+  if (i >= 0) P[i] = p; else P.push(p);
+  PM[p.id] = p; COST[p.id] = [Math.max(0, +(c.cost || 0) || 0), +(c.cost || 0) ? '직접 입력한 금액' : '']; TAGS[p.id] = String(c.tags || '').split(',').map(x => x.trim()).filter(Boolean); ZONE_OF[p.id] = AREA_ZONE[c.area] || 'outer';
+}
