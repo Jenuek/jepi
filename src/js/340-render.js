@@ -179,7 +179,7 @@ function renderChecks(){
       if(it.kind==='place'&&it.p.verify) prepRows.push({id:'v-'+it.id,d:i,t:`${it.p.verify} 확인`,s:it.name}); });
   });
   if(markWarnings().needTax) prepRows.push({id:'tax-'+cityKey(),d:DAYS.length-1,t:'쇼핑 일정이 있어요 · 면세 환급을 어디서 할지 🧾 표시를 붙여 두세요',s:'매장 또는 출국 공항'});
-  $('#warnCount').textContent=warnRows.length?String(warnRows.length):''; $('#warnCount2').textContent=warnRows.length?' '+warnRows.length:'';
+  tabs({warn:warnRows.length?String(warnRows.length):''}); $('#warnCount2').textContent=warnRows.length?' '+warnRows.length:'';
   dock({fixHidden:!(warnRows.length&&sample),fixText:`🛠 경고 ${warnRows.length}개 해결`});
   // drawn by React: app/screens/Checks.tsx
   window.JEPI_UI.mount('checks',$('#checks'),{ai:!!sample,warns:warnRows.map(r=>({d:r.d,uid:String(r.uid),t:r.t})),prep:prepRows.map(r=>ckInfo(r.id,r.t,`Day ${r.d+1} · ${r.s}`)),
@@ -187,11 +187,14 @@ function renderChecks(){
 }
 let checksRev=0;
 function ckInfo(id,t,sub){return {id,t:String(t),sub,on:!!done[id]}}
+// the bottom tabs are drawn by React (app/screens/Bars.tsx); tabs({…}) changes some of it and draws again
+let tabsView={shown:'timeline',warn:''};
+function tabs(p){tabsView={...tabsView,...p};window.JEPI_UI.mount('tabs',$('#tabsMount'),tabsView)}
 function renderTabs(){setTimeout(fabDodge,0);   // the 🎲 button shows on every tab (300-intro-header.js fabDodge)
   const wide=matchMedia('(min-width:900px)').matches;
   const grp={check:'more',pref:'more',me:'more',plans:'more',settings:'more'}; Object.keys(PANELS).forEach(k=>grp[k]='more');
   const shown=wide&&tab==='timeline'?'tray':(grp[tab]||tab);
-  document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===shown)));
+  tabs({shown});
   document.body.dataset.tab=grp[tab]||tab;
   $('#panel-timeline').hidden=!wide&&tab!=='timeline';
   $('#panel-side').hidden=!wide&&tab==='timeline';

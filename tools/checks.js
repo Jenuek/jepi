@@ -1543,5 +1543,34 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'React bars: 아래 탭 and 접히는 머리글 줄',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      const pressed = () => p.$$eval('.tabs button', e => e.filter(x => x.getAttribute('aria-pressed') === 'true').map(x => x.dataset.tab).join());
+      ok(await pressed() === 'timeline' && (await p.$$('.tabs button')).length === 4, 'four tabs, 일정 chosen');
+      await p.click('.tabs [data-tab="tray"]'); await p.waitForTimeout(300);
+      ok(await pressed() === 'tray' && await vis(p, '#side-tray'), '장소 opens once (one tap = one switch)');
+      await p.click('.tabs [data-tab="map"]'); await p.waitForTimeout(600);
+      ok(await pressed() === 'map' && await vis(p, '#side-map'), '지도 opens');
+      await p.click('.tabs [data-tab="more"]'); await p.waitForTimeout(300);
+      await p.click('#moreBox [data-tab="plans"]'); await p.waitForTimeout(300);
+      ok(await pressed() === 'more' && await vis(p, '#side-plans'), '더보기 stays chosen inside 내 계획 (the other data-tab buttons still work)');
+      await p.click('#side-plans .back'); await p.waitForTimeout(300);
+      ok(await vis(p, '#moreBox'), '← 더보기 goes back');
+      await p.click('.tabs [data-tab="timeline"]'); await p.waitForTimeout(300);
+      ok(await p.getAttribute('#miniBar', 'aria-hidden') === 'true' && await p.getAttribute('[data-mbday="1"]', 'tabindex') === '-1', 'mini bar is hidden at the top');
+      await p.evaluate(() => window.scrollTo(0, 900)); await p.waitForTimeout(500);
+      ok(await p.getAttribute('#miniBar', 'aria-hidden') === 'false' && await p.getAttribute('[data-mbday="1"]', 'tabindex') === '0' && (await p.textContent('#mbDay')) === '01', 'scrolling folds the header into the mini bar: Day 01');
+      await p.evaluate(() => document.querySelector('[data-mbday="1"]').click()); await p.waitForTimeout(400);
+      ok((await p.textContent('#mbDay')) === '02' && await p.getAttribute('#days [data-day="1"]', 'aria-pressed') === 'true', '› goes to Day 2');
+      await p.evaluate(() => document.querySelector('[data-mbday="-1"]').click()); await p.waitForTimeout(400);
+      ok((await p.textContent('#mbDay')) === '01', '‹ goes back to Day 1');
+      await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(500);
+      ok(await p.getAttribute('#miniBar', 'aria-hidden') === 'true', 'scrolled back up: hidden again');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];

@@ -20,7 +20,7 @@ function renderMore(){
     full:jp!=='P'||moreAll,showToggle:jp==='P',moreAll,plansCount:plans.length,
     friendsChip:sp?'👥 '+(((TRIPS&&TRIPS.members[curPlan])||[]).length||'공유 중'):null,
     notifyOn:!!(NOTIFY&&NOTIFY.on),aiOff:!!(STANDALONE&&!sample)});
-  const wc=$('#warnCount'); if(wc) wc.textContent=w?String(w):'';
+  tabs({warn:w?String(w):''});
 }
 // 이번 여행: one row per topic, opens only that part, saves on change
 function meRows(p){

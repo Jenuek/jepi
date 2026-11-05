@@ -1812,7 +1812,7 @@ function renderMore(){
     full:jp!=='P'||moreAll,showToggle:jp==='P',moreAll,plansCount:plans.length,
     friendsChip:sp?'👥 '+(((TRIPS&&TRIPS.members[curPlan])||[]).length||'공유 중'):null,
     notifyOn:!!(NOTIFY&&NOTIFY.on),aiOff:!!(STANDALONE&&!sample)});
-  const wc=$('#warnCount'); if(wc) wc.textContent=w?String(w):'';
+  tabs({warn:w?String(w):''});
 }
 // 이번 여행: one row per topic, opens only that part, saves on change
 function meRows(p){
@@ -2678,7 +2678,7 @@ function renderChecks(){
       if(it.kind==='place'&&it.p.verify) prepRows.push({id:'v-'+it.id,d:i,t:`${it.p.verify} 확인`,s:it.name}); });
   });
   if(markWarnings().needTax) prepRows.push({id:'tax-'+cityKey(),d:DAYS.length-1,t:'쇼핑 일정이 있어요 · 면세 환급을 어디서 할지 🧾 표시를 붙여 두세요',s:'매장 또는 출국 공항'});
-  $('#warnCount').textContent=warnRows.length?String(warnRows.length):''; $('#warnCount2').textContent=warnRows.length?' '+warnRows.length:'';
+  tabs({warn:warnRows.length?String(warnRows.length):''}); $('#warnCount2').textContent=warnRows.length?' '+warnRows.length:'';
   dock({fixHidden:!(warnRows.length&&sample),fixText:`🛠 경고 ${warnRows.length}개 해결`});
   // drawn by React: app/screens/Checks.tsx
   window.JEPI_UI.mount('checks',$('#checks'),{ai:!!sample,warns:warnRows.map(r=>({d:r.d,uid:String(r.uid),t:r.t})),prep:prepRows.map(r=>ckInfo(r.id,r.t,`Day ${r.d+1} · ${r.s}`)),
@@ -2686,11 +2686,14 @@ function renderChecks(){
 }
 let checksRev=0;
 function ckInfo(id,t,sub){return {id,t:String(t),sub,on:!!done[id]}}
+// the bottom tabs are drawn by React (app/screens/Bars.tsx); tabs({…}) changes some of it and draws again
+let tabsView={shown:'timeline',warn:''};
+function tabs(p){tabsView={...tabsView,...p};window.JEPI_UI.mount('tabs',$('#tabsMount'),tabsView)}
 function renderTabs(){setTimeout(fabDodge,0);   // the 🎲 button shows on every tab (300-intro-header.js fabDodge)
   const wide=matchMedia('(min-width:900px)').matches;
   const grp={check:'more',pref:'more',me:'more',plans:'more',settings:'more'}; Object.keys(PANELS).forEach(k=>grp[k]='more');
   const shown=wide&&tab==='timeline'?'tray':(grp[tab]||tab);
-  document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===shown)));
+  tabs({shown});
   document.body.dataset.tab=grp[tab]||tab;
   $('#panel-timeline').hidden=!wide&&tab!=='timeline';
   $('#panel-side').hidden=!wide&&tab==='timeline';
@@ -2890,9 +2893,11 @@ function showCoach(i){
 }
 const maybeCoach=()=>{if(!store.get('gp.coach',0)&&$('#onb').hidden&&!helperOpen()) setTimeout(()=>showCoach(0),400)};
 // ---------- events ----------
+// open a tab (the bottom tabs, and any button with data-tab: 더보기 rows, back buttons …)
+function goTab(name){tab=name;autoMsg='';if(tab==='me'){draft=clone(profile);meOpen=null;renderMe()}if(tab==='pref'){draft=clone(profile);renderTasteStyle()}if(tab==='plans'){snapshotCurrent();showText=false;renderPlans()}if(tab==='settings'){keyEdit=null;renderSettings()}if(tab==='more')renderMore();if(PANELS[tab])PANELS[tab].render({opened:true});renderTabs();if(tab==='map')openMap();else mapState.on=false;window.scrollTo({top:0});}
 document.addEventListener('click',e=>{
   const t=e.target.closest('button,input,label'); if(!t) return;
-  if(t.dataset.tab){tab=t.dataset.tab;autoMsg='';if(tab==='me'){draft=clone(profile);meOpen=null;renderMe()}if(tab==='pref'){draft=clone(profile);renderTasteStyle()}if(tab==='plans'){snapshotCurrent();showText=false;renderPlans()}if(tab==='settings'){keyEdit=null;renderSettings()}if(tab==='more')renderMore();if(PANELS[tab])PANELS[tab].render({opened:true});renderTabs();if(tab==='map')openMap();else mapState.on=false;window.scrollTo({top:0});return}
+  if(t.dataset.tab){if(!t.closest('.tabs'))goTab(t.dataset.tab);return}
   if(t.id==='onbPrev'){if(onbStep>0){onbStep--;renderOnb()}return}
   if(t.id==='onbSkip'&&placeCtl){placeCtl.abort();return}
   if(t.id==='onbNext'||t.id==='onbSkip'){onbAdvance();return}
@@ -3365,7 +3370,7 @@ function titleEditing(on){
 document.addEventListener('click',e=>{const t=e.target.closest('#dayTitleEdit');if(t&&!$('#dayTitleIn'))titleEditing(true)});
 // what React screens may ask of the old code (app/ui/host.ts)
 window.JEPI_UI.connectHost({renderAll:()=>renderAll(),closeSheet:()=>closeSheet(),reopenSheet:()=>{const u=$('#sheet').dataset.uid;if(u&&u!=='dice'&&!$('#sheetBg').hidden)openSheet(u)},toast:m=>showToast(m),day:()=>day,autoTitle:d=>String((DAYS[d]||{}).title||''),titleEditing,
-  closeNotebook:()=>closeNotebook(),renamePlan:nm=>lookRenamePlan(nm),aiDayTitles:n=>lookAiTitles(n),errText:(e,w)=>errText(e,w),welcomeNew:()=>{closeWelcome();openOnb()},welcomeDemo:()=>demoEnter(),welcomeLoggedIn:()=>welcomeLoggedIn(),dice:(n,v,m)=>diceAct(n,v,m),place:(n,v)=>placeAct(n,v),plans:(n,v,v2)=>plansAct(n,v,v2),helper:(n,v,v2)=>helperAct(n,v,v2),helperFrame:n=>helperFrameAct(n),dock:(n,v)=>dockAct(n,v),tray:(n,v)=>trayAct(n,v),mapTop:n=>mapTopAct(n),coach:n=>coachAct(n),banner:()=>{selected=null;renderAll()},chat:(n,v)=>chatAct(n,v),pview:(n,v)=>pviewAct(n,v),kw:(n,v)=>kwAct(n,v),grid:(n,v)=>gridAct(n,v),block:(n,v,o)=>blockAct(n,v,o),checks:(n,v,o)=>checksAct(n,v,o),aibox:(n,v)=>aiboxAct(n,v),settings:(n,v,v2)=>settingsAct(n,v,v2),form:(n,v,o)=>formAct(n,v,o),sum:(n,v)=>sumAct(n,v),trip:(a,u,t)=>tripAct(a,u,t),want:p=>wantAct(p),find:(n,v,t)=>findAct(n,v,t),planMenu:(n,v)=>planMenuAct(n,v),more:id=>moreAct(id),mapCard:i=>mapCardAct(i),nudge:(n,v)=>nudgeAct(n,v),importFile:f=>importBackup(f,ok=>{if(ok){maybeCoach()}}),shareNotebook:async()=>{await shareLink(true);return planMsg||'링크를 만들었어요'}});
+  closeNotebook:()=>closeNotebook(),renamePlan:nm=>lookRenamePlan(nm),aiDayTitles:n=>lookAiTitles(n),errText:(e,w)=>errText(e,w),welcomeNew:()=>{closeWelcome();openOnb()},welcomeDemo:()=>demoEnter(),welcomeLoggedIn:()=>welcomeLoggedIn(),dice:(n,v,m)=>diceAct(n,v,m),place:(n,v)=>placeAct(n,v),plans:(n,v,v2)=>plansAct(n,v,v2),helper:(n,v,v2)=>helperAct(n,v,v2),helperFrame:n=>helperFrameAct(n),dock:(n,v)=>dockAct(n,v),tray:(n,v)=>trayAct(n,v),tab:n=>goTab(n),miniDay:s=>{const n=day+s;if(n>=0&&n<DAYS.length){day=n;renderAll()}},mapTop:n=>mapTopAct(n),coach:n=>coachAct(n),banner:()=>{selected=null;renderAll()},chat:(n,v)=>chatAct(n,v),pview:(n,v)=>pviewAct(n,v),kw:(n,v)=>kwAct(n,v),grid:(n,v)=>gridAct(n,v),block:(n,v,o)=>blockAct(n,v,o),checks:(n,v,o)=>checksAct(n,v,o),aibox:(n,v)=>aiboxAct(n,v),settings:(n,v,v2)=>settingsAct(n,v,v2),form:(n,v,o)=>formAct(n,v,o),sum:(n,v)=>sumAct(n,v),trip:(a,u,t)=>tripAct(a,u,t),want:p=>wantAct(p),find:(n,v,t)=>findAct(n,v,t),planMenu:(n,v)=>planMenuAct(n,v),more:id=>moreAct(id),mapCard:i=>mapCardAct(i),nudge:(n,v)=>nudgeAct(n,v),importFile:f=>importBackup(f,ok=>{if(ok){maybeCoach()}}),shareNotebook:async()=>{await shareLink(true);return planMsg||'링크를 만들었어요'}});
 // ---------- how a trip looks: theme colour, cover, style, handwriting; folding hero header ----------
 // profile.look = {color, cover:'city'|'sea'|'mountain'|'none'|'photo', photo:dataURL, tagline, style:'color'|'note', hand}
 // Lives in the plan's profile, so it syncs across devices and to friends on a shared trip.
@@ -3396,23 +3401,22 @@ function renderLook(){
   renderDayMemo(); miniUpdate();
 }
 // --- folding header: the hero scrolls away and a one-line bar takes its place ---
+// (drawn by React: app/screens/Bars.tsx, from miniView; mini({…}) changes some of it and draws again)
+let miniView={on:false,day:'',dayHidden:false,title:'',navHidden:false};
+function miniBar(p){miniView={...miniView,...p};window.JEPI_UI.mount('mini',$('#miniMount'),miniView)}
 function miniUpdate(){
   const D=DAYS[day]; if(!D) return; const onDay=document.body.dataset.tab==='timeline'||!document.body.dataset.tab;
-  $('#mbDay').textContent=onDay?String(day+1).padStart(2,'0'):'';
-  $('#mbDay').hidden=!onDay;
-  $('#mbTitle').textContent=onDay?dayTitleOf(day):($('#planName')?$('#planName').textContent:'');
-  document.querySelectorAll('[data-mbday]').forEach(b=>b.hidden=!onDay||DAYS.length<2);
+  miniBar({day:onDay?String(day+1).padStart(2,'0'):'',dayHidden:!onDay,title:onDay?dayTitleOf(day):($('#planName')?$('#planName').textContent:''),navHidden:!onDay||DAYS.length<2});
 }
 function heroWatch(){
   const hero=$('#hero'); if(!hero) return;
   let raf=0;
   const on=()=>{raf=0;const h=hero.offsetHeight||1, y=window.scrollY, t=Math.max(0,Math.min(1,y/Math.max(1,h-64)));
     hero.style.setProperty('--fold',t.toFixed(3));
-    const mini=y>h-64; if(document.body.classList.contains('mini')!==mini){document.body.classList.toggle('mini',mini);$('#miniBar').setAttribute('aria-hidden',String(!mini));document.querySelectorAll('.mb-nav').forEach(b=>b.tabIndex=mini?0:-1)}};
+    const mini=y>h-64; if(document.body.classList.contains('mini')!==mini){document.body.classList.toggle('mini',mini);miniBar({on:mini})}};
   addEventListener('scroll',()=>{if(!raf)raf=requestAnimationFrame(on)},{passive:true}); on();
 }
 document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
-  if(t.dataset.mbday){const n=day+ +t.dataset.mbday;if(n>=0&&n<DAYS.length){day=n;renderAll()}return}
   if(t.id==='lookBtn'){openLook();return}
 });
 // --- 여행 꾸미기 sheet: drawn by React (app/screens/LookSheet.tsx), which keeps its own draft and saves itself ---
@@ -3468,7 +3472,7 @@ function closeNotebook(){const nb=$('#notebook');if(nb)nb.hidden=true;document.b
 
 // ---------- start-up: runs after every file above has defined its variables ----------
 if(STANDALONE) sample=makeSample();
-dock({}); drawTrayTop(); mapTop({}); drawHelperFrame(); drawCoach(); drawBanner();   // the fixed frames (React)
+tabs({}); miniBar({}); dock({}); drawTrayTop(); mapTop({}); drawHelperFrame(); drawCoach(); drawBanner();   // the fixed frames (React)
 plans=TRIP.plans.list()||[]; if(!Array.isArray(plans)) plans=[]; curPlan=TRIP.plans.current()||''; if(!curPlan){curPlan='p'+Date.now().toString(36);savePlans()}
 setZoom(store.get('gp.zoom',60),true);
 setJP(store.get('gp.jp',profile.kind==='day'?'P':'J'),true);

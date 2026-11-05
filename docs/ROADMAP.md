@@ -165,6 +165,8 @@
       예전 코드는 `dock({…})`로 값만 바꿔요(`050-chat.js`의 dockView). 보내기·Enter·자동 높이·접기는 칸이 스스로 처리하고 예전 `380`·`260`의 클릭·제출·키 처리는 지움. 점검 추가.
     - [x] 장소 탭 위쪽(제목·"AI로 장소 더 찾기"·추천 안내 줄 #recSt·묶어 보기·"이 날 문 여는 곳만", `Tops.tsx` TrayTop)과 지도 위쪽(이 날/전체·내 위치, MapTop) — 예전과 같음(`tools/compare/tops.js` 12가지, `tray.js`).
       예전 코드는 `trayAct`·`mapTopAct`로 눌림을 받고 값은 `drawTrayTop`·`mapTop({…})`로 넘겨요(내 위치 켜짐/꺼짐도). 안내 줄은 글자 그대로(`recStatusHTML` 지움). 지도 자체(#mapBox, Leaflet)와 #mapMsg는 그대로 예전 코드. 점검 추가.
+    - [x] 아래 탭(.tabs, 경고 숫자 포함)과 접히는 머리글 줄(#miniBar: 날 번호·제목·‹ ›) (`Bars.tsx`) — 예전과 같음(`tools/compare/bars.js` 20가지: 탭마다·더보기 안쪽·스크롤로 접힘·‹ ›).
+      탭 바꾸기는 `goTab(이름)` 하나로 모아 아래 탭(리액트)과 `data-tab`을 단 다른 버튼들(더보기 줄·뒤로 가기·로그인하러 가기…)이 같이 써요(`380-events.js`). 예전 코드는 `tabs({…})`·`miniBar({…})`로 값만 넘겨요. 점검 추가.
   - 참고(예전 계획): 입력 폼 조각들(`030-forms.js`의 fParty·fBudget·fStay·fFlight·fHome·fEvents·dateFields·fStyle…, `140`·`160`·`170`의 fDest·fJP·fQuick·fTalk…)을
     하나씩 리액트로. 처음 설정(`renderOnb`)·이번 여행·취향(renderTasteStyle)이 같이 써요.
     방법: 칸 이름(`data-pf`, `data-radio`)은 그대로, 폼 전체는 다시 그릴 때마다 새로(rev 키) — 예전 코드가 값을 바꾼 뒤 다시 그리는 방식과 같아서 안전해요.

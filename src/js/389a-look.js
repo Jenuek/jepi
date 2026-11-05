@@ -28,23 +28,22 @@ function renderLook(){
   renderDayMemo(); miniUpdate();
 }
 // --- folding header: the hero scrolls away and a one-line bar takes its place ---
+// (drawn by React: app/screens/Bars.tsx, from miniView; miniBar({…}) changes some of it and draws again)
+let miniView={on:false,day:'',dayHidden:false,title:'',navHidden:false};
+function miniBar(p){miniView={...miniView,...p};window.JEPI_UI.mount('mini',$('#miniMount'),miniView)}
 function miniUpdate(){
   const D=DAYS[day]; if(!D) return; const onDay=document.body.dataset.tab==='timeline'||!document.body.dataset.tab;
-  $('#mbDay').textContent=onDay?String(day+1).padStart(2,'0'):'';
-  $('#mbDay').hidden=!onDay;
-  $('#mbTitle').textContent=onDay?dayTitleOf(day):($('#planName')?$('#planName').textContent:'');
-  document.querySelectorAll('[data-mbday]').forEach(b=>b.hidden=!onDay||DAYS.length<2);
+  miniBar({day:onDay?String(day+1).padStart(2,'0'):'',dayHidden:!onDay,title:onDay?dayTitleOf(day):($('#planName')?$('#planName').textContent:''),navHidden:!onDay||DAYS.length<2});
 }
 function heroWatch(){
   const hero=$('#hero'); if(!hero) return;
   let raf=0;
   const on=()=>{raf=0;const h=hero.offsetHeight||1, y=window.scrollY, t=Math.max(0,Math.min(1,y/Math.max(1,h-64)));
     hero.style.setProperty('--fold',t.toFixed(3));
-    const mini=y>h-64; if(document.body.classList.contains('mini')!==mini){document.body.classList.toggle('mini',mini);$('#miniBar').setAttribute('aria-hidden',String(!mini));document.querySelectorAll('.mb-nav').forEach(b=>b.tabIndex=mini?0:-1)}};
+    const mini=y>h-64; if(document.body.classList.contains('mini')!==mini){document.body.classList.toggle('mini',mini);miniBar({on:mini})}};
   addEventListener('scroll',()=>{if(!raf)raf=requestAnimationFrame(on)},{passive:true}); on();
 }
 document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
-  if(t.dataset.mbday){const n=day+ +t.dataset.mbday;if(n>=0&&n<DAYS.length){day=n;renderAll()}return}
   if(t.id==='lookBtn'){openLook();return}
 });
 // --- 여행 꾸미기 sheet: drawn by React (app/screens/LookSheet.tsx), which keeps its own draft and saves itself ---

@@ -80,6 +80,10 @@ export interface AppHost {
   tray(name: string, value?: string): void;
   /** the map's top: day / all (which days), me (내 위치) */
   mapTop(name: string): void;
+  /** a bottom tab was pressed (timeline, tray, map, more) */
+  tab(name: string): void;
+  /** the folded header's ‹ › (-1 / 1) */
+  miniDay(step: number): void;
   /** a backup file was chosen (처음 설정 · 내 계획 · 설정) */
   importFile(f: File | undefined): void;
 }
