@@ -479,9 +479,20 @@ function opText(o){const d=x=>`Day ${(+x)+1}`, nm=id=>PM[id]?PM[id].name:id;
   if(o.op==='mark'){const b=placed.find(x=>x.uid===o.uid);const nm2=b?nm(b.id):((DAYS.flatMap(D=>D.fixed).find(f=>f.id===o.uid)||{}).name||'블록');return `${nm2}에 ${MARKS[o.mark][0]} ${MARKS[o.mark][1]} ${o.on===false?'표시 빼기':'표시'}`}
   return '알 수 없는 변경'}
 let chatRev=0;
+// the dock under the schedule is drawn by React (app/screens/Dock.tsx) from dockView; dock({…}) changes some of it and draws again
+let dockView={folded:false,foldHidden:true,foldText:'',expanded:undefined,aiHidden:true,aiOff:false,fixHidden:true,fixText:'',helperHidden:true,note:'',inputOff:false,sendOff:false,placeholder:'AI에게 말로 부탁하기'};
+function dock(p){dockView={...dockView,...p};window.JEPI_UI.mount('dock',$('#chatMount'),dockView)}
+// a button / the message was sent in the dock
+function dockAct(n,v){
+  if(n==='fold'){chatFolded=!chatFolded;chatFoldSync()}
+  else if(n==='ai')openFind({when:'gap',into:'sched'});
+  else if(n==='fix')fixWarns();
+  else if(n==='helper')openHelper(0);
+  else if(n==='custom')openCustom(null,null);
+  else if(n==='send'){chatFolded=false;if(v)sendChat(v)}
+}
 function renderChat(){setTimeout(chatFoldSync,0);
-  $('#chatNote').textContent=sample?'':'AI 기능은 더보기 → 설정에서 키를 연결하면 쓸 수 있어요';
-  $('#chatInput').disabled=!sample||chatBusy; $('#chatSend').disabled=!sample||chatBusy;
+  dock({note:sample?'':'AI 기능은 더보기 → 설정에서 키를 연결하면 쓸 수 있어요',inputOff:!sample||chatBusy,sendOff:!sample||chatBusy});
   const start=Math.max(0,chat.length-8);
   // drawn by React: app/screens/ChatLog.tsx
   window.JEPI_UI.mount('chat',$('#chatLog'),{rev:++chatRev,msgs:chat.slice(start).map((m,k)=>{const i=start+k;
@@ -561,7 +572,7 @@ function renderNudges(){
       btns:bs.map(([id,l,pr])=>({id,primary:!!pr,label:pr?l.replace(/ .*/,'')==='시간'?'넣기':l.split(' ')[0]==='숙소'?'넣기':'고르기':'예약 전'}))}))});
 }
 function goMe(h){tab='me';draft=clone(profile);renderMe();renderTabs();setTimeout(()=>{const el=[...document.querySelectorAll('#meBox h3')].find(x=>x.textContent.includes(h));if(el)el.scrollIntoView({block:'start'})},0)}
-function renderMeta(){if(profile.kind==='day'){$('#helperBtn').hidden=true;$('#tripMeta').textContent=`${PACK.city} · ${(DAYS[0].iso||'').slice(5).replace('-','/')} 하루 코스 · ${profile.meet.time}–${profile.meet.end}`;return}if(profile.dateUnknown){const n=DAYS.length-1;$('#helperBtn').hidden=!needBooking();$('#tripMeta').textContent=`${PACK.city} · 날짜 미정 (대략 ${(DAYS[0].iso||'').slice(5).replace('-','/')}부터) · ${n}박 ${n+1}일`;return}$('#helperBtn').hidden=!needBooking();const n=DAYS.length-1;$('#tripMeta').textContent=`${PACK.city} · ${(DAYS[0].iso||'').replace(/-/g,'.')} – ${(DAYS[n].iso||'').slice(5).replace('-','.')} · ${n}박 ${n+1}일 · ${apName(profile.out.airport)}`}
+function renderMeta(){if(profile.kind==='day'){dock({helperHidden:true});$('#tripMeta').textContent=`${PACK.city} · ${(DAYS[0].iso||'').slice(5).replace('-','/')} 하루 코스 · ${profile.meet.time}–${profile.meet.end}`;return}if(profile.dateUnknown){const n=DAYS.length-1;dock({helperHidden:!needBooking()});$('#tripMeta').textContent=`${PACK.city} · 날짜 미정 (대략 ${(DAYS[0].iso||'').slice(5).replace('-','/')}부터) · ${n}박 ${n+1}일`;return}dock({helperHidden:!needBooking()});const n=DAYS.length-1;$('#tripMeta').textContent=`${PACK.city} · ${(DAYS[0].iso||'').replace(/-/g,'.')} – ${(DAYS[n].iso||'').slice(5).replace('-','.')} · ${n}박 ${n+1}일 · ${apName(profile.out.airport)}`}
 
 
 // ---------- destination pack: everything that depends on where the trip goes ----------
@@ -1298,7 +1309,7 @@ function routeInfoView(){const R=routeInfo;if(!R||R.key!==PACK.city+'|'+profile.
 
 // ---------- J / P modes ----------
 let jp='J';
-function setJP(m,quiet){jp=m==='P'?'P':'J';{const ci=document.getElementById('chatInput');if(ci)ci.placeholder=jp==='P'?'뭐 하고 싶어요? 말로 해도 돼요':'AI에게 말로 부탁하기'}document.body.classList.toggle('mode-p',jp==='P');document.querySelectorAll('[data-jp]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.jp===jp)));if(!quiet)store.set('gp.jp',jp)}
+function setJP(m,quiet){jp=m==='P'?'P':'J';dock({placeholder:jp==='P'?'뭐 하고 싶어요? 말로 해도 돼요':'AI에게 말로 부탁하기'});document.body.classList.toggle('mode-p',jp==='P');document.querySelectorAll('[data-jp]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.jp===jp)));if(!quiet)store.set('gp.jp',jp)}
 
 // ---------- one-day course ----------
 // 하루 코스: 여행지 + 언제·어디서 만나요 + 누구와 (drawn by React: TripForms.tsx)
@@ -1996,12 +2007,9 @@ setInterval(()=>{try{const el=document.getElementById('aiSec');if(!el)return;con
 // ---------- AI-found places, chat folding ----------
 const FRESH=new Set();
 let chatFolded=false;
-function chatFoldSync(){const b=document.getElementById('chatFold'),c=document.getElementById('chat');if(!b||!c)return;
-  const n=chat.filter(m=>m.role==='user').length; b.hidden=!chat.length;
-  c.classList.toggle('folded',chatFolded&&chat.length>0); b.setAttribute('aria-expanded',String(!chatFolded));
-  b.textContent=chatFolded?`대화 펼치기 (${n})`:'대화 접기 ▾'}
-document.addEventListener('click',e=>{const t=e.target.closest('#chatFold');if(!t)return;chatFolded=!chatFolded;chatFoldSync()});
-document.addEventListener('submit',e=>{if(e.target&&e.target.id==='chatForm'){chatFolded=false}},true);
+function chatFoldSync(){
+  const n=chat.filter(m=>m.role==='user').length;
+  dock({foldHidden:!chat.length,folded:chatFolded&&chat.length>0,expanded:!chatFolded,foldText:chatFolded?`대화 펼치기 (${n})`:'대화 접기 ▾'})}
 document.addEventListener('focusin',e=>{if(e.target&&e.target.id==='chatInput'&&chatFolded&&chatBusy){chatFolded=false;chatFoldSync()}});
 
 // ---------- chat place suggestions: choose per place ----------
@@ -2660,7 +2668,7 @@ function renderChecks(){
   });
   if(markWarnings().needTax) prepRows.push({id:'tax-'+cityKey(),d:DAYS.length-1,t:'쇼핑 일정이 있어요 · 면세 환급을 어디서 할지 🧾 표시를 붙여 두세요',s:'매장 또는 출국 공항'});
   $('#warnCount').textContent=warnRows.length?String(warnRows.length):''; $('#warnCount2').textContent=warnRows.length?' '+warnRows.length:'';
-  {const fc=$('#fixWarnChip');fc.hidden=!(warnRows.length&&sample);fc.textContent=`🛠 경고 ${warnRows.length}개 해결`}
+  dock({fixHidden:!(warnRows.length&&sample),fixText:`🛠 경고 ${warnRows.length}개 해결`});
   // drawn by React: app/screens/Checks.tsx
   window.JEPI_UI.mount('checks',$('#checks'),{ai:!!sample,warns:warnRows.map(r=>({d:r.d,uid:String(r.uid),t:r.t})),prep:prepRows.map(r=>ckInfo(r.id,r.t,`Day ${r.d+1} · ${r.s}`)),
     season:seasonInfo(),all:STATIC_CHECKS.map(s=>ckInfo(s.id,s.t)),resetArm:!!resetArm,rev:++checksRev});
@@ -2688,7 +2696,7 @@ function renderBanner(){
 let bannerView={open:false,text:''};
 function drawBanner(){window.JEPI_UI.mount('banner',$('#bannerMount'),bannerView)}
 function renderAI(){
-  const box=$('#aiBox'); $('#aiBtn').hidden=!sample;
+  const box=$('#aiBox'); dock({aiHidden:!sample});
   if(!aiState||aiState.day!==day){box.hidden=true;return}
   box.hidden=false;
   // drawn by React: app/screens/AiBox.tsx
@@ -2823,7 +2831,7 @@ Places with mustSee are especially recommended, and travelerRecs is how many oth
 Rules: each pick must sit inside one free gap, leave travel time (about 15-35 min by local transport between areas) before it and after it, stay within opening hours, and not overlap other picks. Prefer places near the neighbouring blocks. ${profile.pace==='slow'?'Keep the day unhurried: fewer picks is fine.':profile.pace==='full'?'The traveler wants a full day: use the free time well, up to the limit.':'Keep a balanced pace with some breathing room.'}
 Reply with only JSON: {"suggestions":[{"id":"nezu","start":"10:30","reason":"one short sentence in Korean explaining why it fits this traveler and this slot"}]}`;
   const ctl=new AbortController();
-  aiState={day,status:'loading',ctl}; renderAI(); $('#aiBtn').disabled=true;
+  aiState={day,status:'loading',ctl}; renderAI(); dock({aiOff:true});
   try{
     const res=await sample.json(prompt,{signal:ctl.signal,cache:false});
     const arr=Array.isArray(res?.suggestions)?res.suggestions:[];
@@ -2838,7 +2846,7 @@ Reply with only JSON: {"suggestions":[{"id":"nezu","start":"10:30","reason":"one
     else if(e&&e.code==='rate_limited'){aiState={day,status:'error',msg:'요청이 많아 잠시 쉬어야 해요. 조금 뒤에 다시 눌러 주세요.'}}
     else if(e&&e.code==='invalid_json'){aiState={day,status:'error',msg:'추천 형식을 읽지 못했어요. 한 번 더 눌러 주세요.'}}
     else {aiState={day,status:'error',msg:(e&&e.message&&e.code!=='upstream_error'||e&&e.code==='upstream_error'&&e.message?e.message+' · ':'연결이 잠시 끊겼어요. ')+'다시 눌러 주세요.'}}
-  }finally{$('#aiBtn').disabled=false; renderAll()}
+  }finally{dock({aiOff:false}); renderAll()}
 }
 
 // ---------- start over: wipe everything this browser keeps for the page ----------
@@ -2874,7 +2882,6 @@ const maybeCoach=()=>{if(!store.get('gp.coach',0)&&$('#onb').hidden&&!helperOpen
 document.addEventListener('click',e=>{
   const t=e.target.closest('button,input,label'); if(!t) return;
   if(t.dataset.tab){tab=t.dataset.tab;autoMsg='';if(tab==='me'){draft=clone(profile);meOpen=null;renderMe()}if(tab==='pref'){draft=clone(profile);renderTasteStyle()}if(tab==='plans'){snapshotCurrent();showText=false;renderPlans()}if(tab==='settings'){keyEdit=null;renderSettings()}if(tab==='more')renderMore();if(PANELS[tab])PANELS[tab].render({opened:true});renderTabs();if(tab==='map')openMap();else mapState.on=false;window.scrollTo({top:0});return}
-  if(t.id==='customBtn'){openCustom(null,null);return}
   if(t.id==='onbPrev'){if(onbStep>0){onbStep--;renderOnb()}return}
   if(t.id==='onbSkip'&&placeCtl){placeCtl.abort();return}
   if(t.id==='onbNext'||t.id==='onbSkip'){onbAdvance();return}
@@ -2884,9 +2891,6 @@ document.addEventListener('click',e=>{
   if(t.id==='diceFab'){openDiceTab(mealNow()==='snack'?'do':'eat',null);return}
   if(t.id==='coachAgain'){showCoach(0);return}
   if(t.id==='moreHelper'){openHelper(wish.length?1:0);return}
-  if(t.id==='fixWarnChip'){fixWarns();return}
-  if(t.id==='helperBtn'){openHelper(0);return}
-  if(t.id==='aiBtn'){openFind({when:'gap',into:'sched'});return}
   // 닫기 in any sheet (#sheet: block, 🎲, 장소 찾기, 직접 만들기)
   if(t.dataset.close&&t.closest('#sheet')){closeSheet();return}
 });
@@ -2897,11 +2901,9 @@ document.addEventListener('change',e=>{
 $('#sheetBg').addEventListener('click',e=>{if(e.target.id==='sheetBg')closeSheet()});
 document.addEventListener('submit',e=>{const f=e.target;
   if(f.id==='customForm'){e.preventDefault();saveCustomForm(f)}
-  else if(f.id==='moreForm'){e.preventDefault();const v=$('#moreInput').value.trim();$('#moreInput').value='';openFind({where:'city',into:'list',q:v,autorun:true})}
-  else if(f.id==='chatForm'){e.preventDefault();const v=$('#chatInput').value.trim();if(v){$('#chatInput').value='';sendChat(v)}}});
+  else if(f.id==='moreForm'){e.preventDefault();const v=$('#moreInput').value.trim();$('#moreInput').value='';openFind({where:'city',into:'list',q:v,autorun:true})}});
 document.addEventListener('input',onPf);
-document.addEventListener('input',e=>{if(e.target&&e.target.id==='chatInput'){const x=e.target;x.style.height='auto';x.style.height=Math.min(120,x.scrollHeight)+'px'}}); document.addEventListener('change',onPf);
-document.addEventListener('keydown',e=>{if(e.target&&e.target.id==='chatInput'&&e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();const f=$('#chatForm');f.requestSubmit?f.requestSubmit():f.dispatchEvent(new Event('submit',{cancelable:true,bubbles:true}))}});
+document.addEventListener('change',onPf);
 // What was pressed in a block's sheet (BlockSheet.tsx; the sheet's block is #sheet's uid). Only changes that move the
 // block redraw the sheet: tapping an input (memo, …) keeps the keyboard.
 function blockAct(n,v,o){
@@ -3354,7 +3356,7 @@ function titleEditing(on){
 document.addEventListener('click',e=>{const t=e.target.closest('#dayTitleEdit');if(t&&!$('#dayTitleIn'))titleEditing(true)});
 // what React screens may ask of the old code (app/ui/host.ts)
 window.JEPI_UI.connectHost({renderAll:()=>renderAll(),closeSheet:()=>closeSheet(),reopenSheet:()=>{const u=$('#sheet').dataset.uid;if(u&&u!=='dice'&&!$('#sheetBg').hidden)openSheet(u)},toast:m=>showToast(m),day:()=>day,autoTitle:d=>String((DAYS[d]||{}).title||''),titleEditing,
-  closeNotebook:()=>closeNotebook(),renamePlan:nm=>lookRenamePlan(nm),aiDayTitles:n=>lookAiTitles(n),errText:(e,w)=>errText(e,w),welcomeNew:()=>{closeWelcome();openOnb()},welcomeDemo:()=>demoEnter(),welcomeLoggedIn:()=>welcomeLoggedIn(),dice:(n,v,m)=>diceAct(n,v,m),place:(n,v)=>placeAct(n,v),plans:(n,v,v2)=>plansAct(n,v,v2),helper:(n,v,v2)=>helperAct(n,v,v2),helperFrame:n=>helperFrameAct(n),coach:n=>coachAct(n),banner:()=>{selected=null;renderAll()},chat:(n,v)=>chatAct(n,v),pview:(n,v)=>pviewAct(n,v),kw:(n,v)=>kwAct(n,v),grid:(n,v)=>gridAct(n,v),block:(n,v,o)=>blockAct(n,v,o),checks:(n,v,o)=>checksAct(n,v,o),aibox:(n,v)=>aiboxAct(n,v),settings:(n,v,v2)=>settingsAct(n,v,v2),form:(n,v,o)=>formAct(n,v,o),sum:(n,v)=>sumAct(n,v),trip:(a,u,t)=>tripAct(a,u,t),want:p=>wantAct(p),find:(n,v,t)=>findAct(n,v,t),planMenu:(n,v)=>planMenuAct(n,v),more:id=>moreAct(id),mapCard:i=>mapCardAct(i),nudge:(n,v)=>nudgeAct(n,v),importFile:f=>importBackup(f,ok=>{if(ok){maybeCoach()}}),shareNotebook:async()=>{await shareLink(true);return planMsg||'링크를 만들었어요'}});
+  closeNotebook:()=>closeNotebook(),renamePlan:nm=>lookRenamePlan(nm),aiDayTitles:n=>lookAiTitles(n),errText:(e,w)=>errText(e,w),welcomeNew:()=>{closeWelcome();openOnb()},welcomeDemo:()=>demoEnter(),welcomeLoggedIn:()=>welcomeLoggedIn(),dice:(n,v,m)=>diceAct(n,v,m),place:(n,v)=>placeAct(n,v),plans:(n,v,v2)=>plansAct(n,v,v2),helper:(n,v,v2)=>helperAct(n,v,v2),helperFrame:n=>helperFrameAct(n),dock:(n,v)=>dockAct(n,v),coach:n=>coachAct(n),banner:()=>{selected=null;renderAll()},chat:(n,v)=>chatAct(n,v),pview:(n,v)=>pviewAct(n,v),kw:(n,v)=>kwAct(n,v),grid:(n,v)=>gridAct(n,v),block:(n,v,o)=>blockAct(n,v,o),checks:(n,v,o)=>checksAct(n,v,o),aibox:(n,v)=>aiboxAct(n,v),settings:(n,v,v2)=>settingsAct(n,v,v2),form:(n,v,o)=>formAct(n,v,o),sum:(n,v)=>sumAct(n,v),trip:(a,u,t)=>tripAct(a,u,t),want:p=>wantAct(p),find:(n,v,t)=>findAct(n,v,t),planMenu:(n,v)=>planMenuAct(n,v),more:id=>moreAct(id),mapCard:i=>mapCardAct(i),nudge:(n,v)=>nudgeAct(n,v),importFile:f=>importBackup(f,ok=>{if(ok){maybeCoach()}}),shareNotebook:async()=>{await shareLink(true);return planMsg||'링크를 만들었어요'}});
 // ---------- how a trip looks: theme colour, cover, style, handwriting; folding hero header ----------
 // profile.look = {color, cover:'city'|'sea'|'mountain'|'none'|'photo', photo:dataURL, tagline, style:'color'|'note', hand}
 // Lives in the plan's profile, so it syncs across devices and to friends on a shared trip.
@@ -3457,7 +3459,7 @@ function closeNotebook(){const nb=$('#notebook');if(nb)nb.hidden=true;document.b
 
 // ---------- start-up: runs after every file above has defined its variables ----------
 if(STANDALONE) sample=makeSample();
-drawHelperFrame(); drawCoach(); drawBanner();   // the fixed frames (React)
+dock({}); drawHelperFrame(); drawCoach(); drawBanner();   // the fixed frames (React)
 plans=TRIP.plans.list()||[]; if(!Array.isArray(plans)) plans=[]; curPlan=TRIP.plans.current()||''; if(!curPlan){curPlan='p'+Date.now().toString(36);savePlans()}
 setZoom(store.get('gp.zoom',60),true);
 setJP(store.get('gp.jp',profile.kind==='day'?'P':'J'),true);

@@ -173,7 +173,7 @@ function renderChecks(){
   });
   if(markWarnings().needTax) prepRows.push({id:'tax-'+cityKey(),d:DAYS.length-1,t:'쇼핑 일정이 있어요 · 면세 환급을 어디서 할지 🧾 표시를 붙여 두세요',s:'매장 또는 출국 공항'});
   $('#warnCount').textContent=warnRows.length?String(warnRows.length):''; $('#warnCount2').textContent=warnRows.length?' '+warnRows.length:'';
-  {const fc=$('#fixWarnChip');fc.hidden=!(warnRows.length&&sample);fc.textContent=`🛠 경고 ${warnRows.length}개 해결`}
+  dock({fixHidden:!(warnRows.length&&sample),fixText:`🛠 경고 ${warnRows.length}개 해결`});
   // drawn by React: app/screens/Checks.tsx
   window.JEPI_UI.mount('checks',$('#checks'),{ai:!!sample,warns:warnRows.map(r=>({d:r.d,uid:String(r.uid),t:r.t})),prep:prepRows.map(r=>ckInfo(r.id,r.t,`Day ${r.d+1} · ${r.s}`)),
     season:seasonInfo(),all:STATIC_CHECKS.map(s=>ckInfo(s.id,s.t)),resetArm:!!resetArm,rev:++checksRev});
@@ -201,7 +201,7 @@ function renderBanner(){
 let bannerView={open:false,text:''};
 function drawBanner(){window.JEPI_UI.mount('banner',$('#bannerMount'),bannerView)}
 function renderAI(){
-  const box=$('#aiBox'); $('#aiBtn').hidden=!sample;
+  const box=$('#aiBox'); dock({aiHidden:!sample});
   if(!aiState||aiState.day!==day){box.hidden=true;return}
   box.hidden=false;
   // drawn by React: app/screens/AiBox.tsx

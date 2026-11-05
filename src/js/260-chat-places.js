@@ -1,12 +1,9 @@
 // ---------- AI-found places, chat folding ----------
 const FRESH=new Set();
 let chatFolded=false;
-function chatFoldSync(){const b=document.getElementById('chatFold'),c=document.getElementById('chat');if(!b||!c)return;
-  const n=chat.filter(m=>m.role==='user').length; b.hidden=!chat.length;
-  c.classList.toggle('folded',chatFolded&&chat.length>0); b.setAttribute('aria-expanded',String(!chatFolded));
-  b.textContent=chatFolded?`대화 펼치기 (${n})`:'대화 접기 ▾'}
-document.addEventListener('click',e=>{const t=e.target.closest('#chatFold');if(!t)return;chatFolded=!chatFolded;chatFoldSync()});
-document.addEventListener('submit',e=>{if(e.target&&e.target.id==='chatForm'){chatFolded=false}},true);
+function chatFoldSync(){
+  const n=chat.filter(m=>m.role==='user').length;
+  dock({foldHidden:!chat.length,folded:chatFolded&&chat.length>0,expanded:!chatFolded,foldText:chatFolded?`대화 펼치기 (${n})`:'대화 접기 ▾'})}
 document.addEventListener('focusin',e=>{if(e.target&&e.target.id==='chatInput'&&chatFolded&&chatBusy){chatFolded=false;chatFoldSync()}});
 
 // ---------- chat place suggestions: choose per place ----------

@@ -1482,5 +1482,35 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'React dock: 일정표 아래 대화 칸 (칩·보내기·접기)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S, { ls: { 'jepi.keys': { anthropic: 'sk-ant-test-key' } } });
+      await p.route(/api\.anthropic\.com/, async r => { await new Promise(x => setTimeout(x, 800)); r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content: [{ type: 'text', text: JSON.stringify({ reply: '알겠어요.', ops: [] }) }] }) }) });
+      await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      ok(await vis(p, '#aiBtn') && await vis(p, '#customBtn') && !(await vis(p, '#chatFold')), 'with an AI key: ✨ and + chips shown, no fold button yet');
+      ok(!(await p.$eval('#chatInput', e => e.disabled)) && (await p.getAttribute('#chatInput', 'placeholder')) === 'AI에게 말로 부탁하기', 'message box is open');
+      await p.click('#customBtn'); await p.waitForTimeout(250);
+      ok(await vis(p, '#sheetBg'), '+ 직접 만들기 opens the sheet'); await p.click('#sheet [data-close]'); await p.waitForTimeout(250);
+      await p.click('#chatInput'); await p.keyboard.type('안녕'); await p.keyboard.press('Shift+Enter'); await p.keyboard.type('하세요');
+      ok((await p.inputValue('#chatInput')) === '안녕\n하세요', 'Shift+Enter makes a new line');
+      await p.keyboard.press('Enter'); await p.waitForTimeout(300);
+      ok((await p.inputValue('#chatInput')) === '' && await p.$eval('#chatInput', e => e.disabled) && await p.$eval('#chatSend', e => e.disabled), 'Enter sends: box cleared and locked while waiting');
+      await p.waitForTimeout(1500);
+      ok(!(await p.$eval('#chatInput', e => e.disabled)) && (await p.textContent('#chatLog')).includes('알겠어요'), 'answer shown, box open again');
+      ok(await vis(p, '#chatFold') && (await p.textContent('#chatFold')) === '대화 접기 ▾' && await p.getAttribute('#chatFold', 'aria-expanded') === 'true', 'fold button appears');
+      await p.click('#chatFold'); await p.waitForTimeout(200);
+      ok(await p.$eval('#chat', e => e.classList.contains('folded')) && (await p.textContent('#chatFold')) === '대화 펼치기 (1)', 'folds the talk');
+      await p.click('#chatFold'); await p.waitForTimeout(200);
+      ok(!(await p.$eval('#chat', e => e.classList.contains('folded'))), 'unfolds again');
+      await p.click('[data-jp="P"]'); await p.waitForTimeout(200);
+      ok((await p.getAttribute('#chatInput', 'placeholder')).startsWith('뭐 하고 싶어요'), 'P모드 changes the hint');
+      await p.click('[data-jp="J"]'); await p.waitForTimeout(200);
+      await p.click('#aiBtn'); await p.waitForTimeout(400);
+      ok(await vis(p, '#sheetBg'), '✨ 빈 시간 채우기 opens the finder');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];

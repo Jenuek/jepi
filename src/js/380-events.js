@@ -2,7 +2,6 @@
 document.addEventListener('click',e=>{
   const t=e.target.closest('button,input,label'); if(!t) return;
   if(t.dataset.tab){tab=t.dataset.tab;autoMsg='';if(tab==='me'){draft=clone(profile);meOpen=null;renderMe()}if(tab==='pref'){draft=clone(profile);renderTasteStyle()}if(tab==='plans'){snapshotCurrent();showText=false;renderPlans()}if(tab==='settings'){keyEdit=null;renderSettings()}if(tab==='more')renderMore();if(PANELS[tab])PANELS[tab].render({opened:true});renderTabs();if(tab==='map')openMap();else mapState.on=false;window.scrollTo({top:0});return}
-  if(t.id==='customBtn'){openCustom(null,null);return}
   if(t.id==='onbPrev'){if(onbStep>0){onbStep--;renderOnb()}return}
   if(t.id==='onbSkip'&&placeCtl){placeCtl.abort();return}
   if(t.id==='onbNext'||t.id==='onbSkip'){onbAdvance();return}
@@ -12,9 +11,6 @@ document.addEventListener('click',e=>{
   if(t.id==='diceFab'){openDiceTab(mealNow()==='snack'?'do':'eat',null);return}
   if(t.id==='coachAgain'){showCoach(0);return}
   if(t.id==='moreHelper'){openHelper(wish.length?1:0);return}
-  if(t.id==='fixWarnChip'){fixWarns();return}
-  if(t.id==='helperBtn'){openHelper(0);return}
-  if(t.id==='aiBtn'){openFind({when:'gap',into:'sched'});return}
   // 닫기 in any sheet (#sheet: block, 🎲, 장소 찾기, 직접 만들기)
   if(t.dataset.close&&t.closest('#sheet')){closeSheet();return}
 });
@@ -25,11 +21,9 @@ document.addEventListener('change',e=>{
 $('#sheetBg').addEventListener('click',e=>{if(e.target.id==='sheetBg')closeSheet()});
 document.addEventListener('submit',e=>{const f=e.target;
   if(f.id==='customForm'){e.preventDefault();saveCustomForm(f)}
-  else if(f.id==='moreForm'){e.preventDefault();const v=$('#moreInput').value.trim();$('#moreInput').value='';openFind({where:'city',into:'list',q:v,autorun:true})}
-  else if(f.id==='chatForm'){e.preventDefault();const v=$('#chatInput').value.trim();if(v){$('#chatInput').value='';sendChat(v)}}});
+  else if(f.id==='moreForm'){e.preventDefault();const v=$('#moreInput').value.trim();$('#moreInput').value='';openFind({where:'city',into:'list',q:v,autorun:true})}});
 document.addEventListener('input',onPf);
-document.addEventListener('input',e=>{if(e.target&&e.target.id==='chatInput'){const x=e.target;x.style.height='auto';x.style.height=Math.min(120,x.scrollHeight)+'px'}}); document.addEventListener('change',onPf);
-document.addEventListener('keydown',e=>{if(e.target&&e.target.id==='chatInput'&&e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();const f=$('#chatForm');f.requestSubmit?f.requestSubmit():f.dispatchEvent(new Event('submit',{cancelable:true,bubbles:true}))}});
+document.addEventListener('change',onPf);
 // What was pressed in a block's sheet (BlockSheet.tsx; the sheet's block is #sheet's uid). Only changes that move the
 // block redraw the sheet: tapping an input (memo, …) keeps the keyboard.
 function blockAct(n,v,o){

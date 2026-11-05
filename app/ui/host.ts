@@ -74,6 +74,8 @@ export interface AppHost {
   coach(name: string): void;
   /** the banner above the schedule while a place is picked: cancel */
   banner(name: string): void;
+  /** the dock under the schedule: fold, ai (✨ 빈 시간), fix (경고 해결), helper, custom, send (the typed message) */
+  dock(name: string, value?: string): void;
   /** a backup file was chosen (처음 설정 · 내 계획 · 설정) */
   importFile(f: File | undefined): void;
 }
