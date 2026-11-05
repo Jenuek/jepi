@@ -695,7 +695,7 @@ function seasonInfo(){
 // ---------- destination finder: for travelers who have not picked a place yet ----------
 let destRecs=null, destAsked=[], destBusy=false;
 const BUDGET_EN=TV.BUDGET_EN;   // app/data/traveler.ts
-const REACH_EN={domestic:'Domestic only: places inside South Korea.',near:'Short trip abroad: about 3 hours or less by plane from Seoul (Japan, Taiwan, Hong Kong, eastern China and similar).',far:'Anywhere in the world is fine, including long-haul.'};
+const REACH_EN=JD.asks.REACH_EN;   // app/data/asks.ts
 // drawn by React: app/screens/OnbFinder.tsx
 function partFinder(p){
   return {f:'finder',ai:!!sample,party:p.party.type,reach:p.reach,budget:p.budget,budgetMan:p.budgetMan||'',nights:nightsOf(p),
@@ -710,15 +710,7 @@ async function recommendDest(mode){
   progStart(stId,mode.ask?`${mode.ask}이(가) 맞는지 살펴보는 중이에요 (보통 15~30초)`:'이 조건에 맞는 여행지를 고르는 중이에요 (보통 20~40초)',['destRecBtn','destMoreBtn','destAskBtn'],'고르는 중…');
   const q=fixProfile(draft);
   try{
-    const r=await sample.json(`${mode.ask?`A traveler starting from Seoul, South Korea is considering "${String(mode.ask).slice(0,60)}". Evaluate only that destination for them (return exactly 1 item, honest about downsides).`:'Recommend 5 travel destinations for a traveler starting from Seoul, South Korea.'}${mode.more&&prev.length?` Do not repeat these: ${prev.join(', ')}.`:''}
-Dates: ${q.dateUnknown?`not fixed yet, roughly from ${q.startDate} (about a month from now)`:`from ${q.startDate}`} for ${nightsOf(q)} nights.
-Who: ${partyEn(q.party)} ${styleEn(q)}
-${BUDGET_EN[q.budget]} ${REACH_EN[q.reach]}${+q.budgetMan>0?`\nMoney budget: about ${q.budgetMan}만원 (KRW ${q.budgetMan*10000}) per person in total, covering transport, lodging and local spending. Only recommend places where this is realistic for the trip length, and give the estimate in budget.`:''}
-Interests: ${CUR.kws.join(', ')||'(none given)'}${want?`\nWhat they want, in their own words: "${want.slice(0,300)}"`:''}
-Judge the season by what this traveler wants: off-season, cold or dark months can be ideal for quiet, solitude, contemplation, aurora or empty landscapes, while festivals and mild weather suit others. Avoid only conditions that would clearly spoil their wishes (typhoons, monsoon floods, closures). Give a varied set (different countries or regions where the reach allows).${q.reach==='far'?' The traveler explicitly asked for far-away places: at least 3 of the 5 must be outside East and Southeast Asia (for example Europe, Oceania, the Americas, the Middle East, Central Asia or Africa). If the trip is short for such a place, still include it and say so in caution, suggesting how many nights would suit it.':' If the trip is short for the travel time, say so in caution.'}
-Reply with only JSON: {"destinations":[{"city":"Korean name of the city or region","country":"Korean country name","why":"one Korean sentence linking it to their interests and companions","season":"one Korean sentence about these dates there","highlights":["3 short Korean highlights"],"flight":"Korean travel time from Seoul, e.g. 비행 약 2시간 or KTX 약 2시간 30분","budget":"Korean rough per-person cost of transport and lodging for this trip length, in 만원","caution":"short Korean caution or empty","fit":"one Korean sentence on how well it matches this traveler"}]}`,{cache:false});
-    const got=(Array.isArray(r&&r.destinations)?r.destinations:[]).filter(d=>d&&d.city).slice(0,5).map(d=>({fit:String(d.fit||'').slice(0,160),asked:!!mode.ask,city:String(d.city).slice(0,30),country:String(d.country||'').slice(0,20),why:String(d.why||'').slice(0,200),season:String(d.season||'').slice(0,200),
-      highlights:(Array.isArray(d.highlights)?d.highlights:[]).map(x=>String(x).slice(0,40)).slice(0,4),flight:String(d.flight||'').slice(0,40),budget:String(d.budget||'').slice(0,40),caution:String(d.caution||'').slice(0,100)}));
+    const got=await JD.asks.destinations(sample,q,mode,prev,want);   // the question and tidying the answer: app/data/asks.ts
     if(mode.ask) destAsked=[...got.slice(0,1),...destAsked.filter(d=>!got.some(g=>g.city===d.city))].slice(0,3);
     else destRecs=mode.more?[...(destRecs||[]),...got.filter(g=>!prev.includes(g.city))].slice(0,15):got;
     progStop(stId); TRIP.kws.save(CUR.kws); rerenderForm();
@@ -769,22 +761,10 @@ async function talkSend(text,opt){
   if(!opt.retry&&!finish){talk.msgs.push({role:'u',text:String(text).slice(0,300)}); talk.n++;}
   talk.lastText=text; talk.failed=null; talk.options=[]; talk.busy=true; rerenderForm(); scrollTalk();
   const force=talk.n>=TALK_MAX||finish;
-  const conv=talk.msgs.filter(m=>!m.err).map(m=>(m.role==='u'?'User: ':'AI: ')+m.text).join('\n');
   const dates=datesReady(draft)?(draft.dateUnknown?`Dates: not fixed (roughly a month from now), ${nightsOf(draft)} nights.`:`Dates: from ${draft.startDate}, ${nightsOf(draft)} nights.`):'Dates and trip length: not decided yet. Do not assume any; ask about timing and length in the practical question if the user has not said.';
-  const prompt=`You are a warm travel companion helping a Korean user who feels vague about traveling find the direction of their trip through a short conversation. Write natural, gentle Korean (해요체): at most two short sentences of acknowledgement, then one question.
-Rules: one question at a time. Move through: why travel now and how they feel → what they hope to feel or gain → alone time or meeting people, quiet or lively → what to avoid → practical limits (when, how long, budget, domestic or abroad) only if still unknown. Do not counsel like a therapist; acknowledge briefly and keep moving toward the trip. If they mention a specific destination, remember it. If they express serious distress or thoughts of self-harm, respond with care and gently suggest talking to someone they trust or a professional line (in Korea, 109), and do not push the trip.
-Known so far: ${partyEn(draft.party)} ${dates}
-Conversation:
-${conv}
-${force?'This is the final turn: write a short warm closing as reply and fill summary (done true).':'Finish (done true with a summary) only once you have enough, usually after 3-5 answers.'}
-Output exactly one JSON object and nothing else, in one of these two shapes.
-While still asking: {"reply":"Korean text","options":["3-4 short Korean answers the user might tap"],"done":false,"summary":null}
-When finishing: {"reply":"Korean text","options":[],"done":true,"summary":{"purpose":"one Korean line in the user's own voice","keywords":["3-5 short Korean keywords"],"pace":"slow","social":"alone","party":"solo","reach":"far","avoid":"short Korean or empty","dest":"a destination they named, or empty","nights":null,"startDate":null,"note":"one warm Korean sentence describing this trip's direction"}}
-In the summary, pace is slow|normal|full, social is alone|some|social, party is solo|couple|friends|family|unknown, reach is domestic|near|far|unknown, nights is a number only if the user said a trip length (else null), startDate is YYYY-MM-DD only if the user gave a specific date (else null).`;
   let r=null;
-  try{ r=await sample.json(prompt,{cache:false}); }
+  try{ r=await JD.asks.talkTurn(sample,draft,talk.msgs,dates,force); }   // the question (and rescuing a broken answer): app/data/asks.ts
   catch(e){
-    if(e&&e.code==='invalid_json'&&e.text){const m=/"reply"\s*:\s*"((?:[^"\\]|\\.)*)"/.exec(e.text);if(m){try{r={reply:JSON.parse('"'+m[1]+'"'),options:[]}}catch(_){}}}
     if(!r){
       talk.busy=false; talk.failed={code:e&&e.code};
       const msg={not_granted:'AI 키가 맞지 않아서 이어 갈 수 없어요. "건너뛰고 직접 고를게요"를 눌러 주세요.',rate_limited:'지금 요청이 많아요. 1분쯤 뒤에 "다시 시도하기"를 눌러 주세요.',refused:'이 내용으로는 이어 가기 어려워요. 표현을 조금 바꿔서 다시 적어 주세요.',session_expired:'로그인이 만료됐어요. 다시 로그인한 뒤 시도해 주세요.'}[e&&e.code]||'답을 정리하다가 끊겼어요. "다시 시도하기"를 눌러 주세요.';

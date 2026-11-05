@@ -54,4 +54,19 @@ module.exports = { name: 'prompts', async run(t) {
   await q.fill('#onb [data-pf="dest"]', '오사카'); await q.click('#onb #genPack'); await q.waitForTimeout(2500);
   await show('destination');
   await q.ctx.close();
+  // 이야기하며 정하기 (첫 답) · 여행지 추천 (취향으로 추천받기)
+  const r2 = t.page = await device(b, S);
+  await r2.route(/api\.anthropic\.com/, r => { let x = ''; try { const j = JSON.parse(r.request().postData() || '{}'); x = (j.messages || []).map(m => typeof m.content === 'string' ? m.content : JSON.stringify(m.content)).join('\n') } catch (_) {} sent.push(x); r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content: [{ type: 'text', text: '{"reply":"좋아요.","options":[],"done":false,"summary":null,"destinations":[]}' }] }) }) });
+  await r2.click('[data-w="new"]'); await r2.waitForTimeout(250);
+  await r2.fill('#onbKey_anthropic', 'sk-ant-test-key'); await r2.click('#onbBody [data-onbkey="anthropic"]'); await r2.waitForTimeout(300);
+  await r2.click('#onbBody [data-pickjp="J"]'); await r2.waitForTimeout(250);
+  await r2.click('#onbBody [data-startmode="talk"]'); await r2.waitForTimeout(300); sent.length = 0;
+  await r2.fill('#talkInput', '그냥 답답해서 벗어나고 싶어요'); await r2.click('#talkSend'); await r2.waitForTimeout(2000); await show('talk');
+  await r2.click('#onbBody [data-startmode="quick"] >> nth=-1').catch(() => {}); await r2.waitForTimeout(300);
+  await r2.click('#onbBody [data-destmode="find"]').catch(() => {}); await r2.waitForTimeout(300);
+  // the dates first (otherwise it asks for them), then 여행지 추천 and 이 곳은 어때요?
+  await r2.selectOption('#onbBody [data-pf="nights"]', '3').catch(() => {}); await r2.fill('#onbBody [data-pf="startDate"]', '2026-12-10').catch(() => {}); await r2.dispatchEvent('#onbBody [data-pf="startDate"]', 'change').catch(() => {}); await r2.waitForTimeout(300);
+  await r2.fill('#destWant', '조용히 걷고 싶어요').catch(() => {}); await r2.click('#destRecBtn').catch(() => {}); await r2.waitForTimeout(2000); await show('recommend');
+  await r2.fill('#destAsk', '아이슬란드').catch(() => {}); await r2.click('#destAskBtn').catch(() => {}); await r2.waitForTimeout(2000); await show('ask');
+  await r2.ctx.close();
 } };

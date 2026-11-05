@@ -11,6 +11,7 @@ import * as ops from './ops';
 import { MARK_EN } from './marks';
 import * as days from './days';
 import { nightsOf } from './days';
+import * as traveler from './traveler';
 import { profileSummary, partyEn, heads, budgetParts, ymd, yen } from './traveler';
 import { fmt, parse } from '../logic/time';
 import { norm, samePlace } from '../logic/places';
@@ -208,4 +209,42 @@ export async function dayTitles(ai: Asker, tripName: string): Promise<string[]> 
 ${days.join('\n')}
 Reply with only JSON: {"titles":["...", ...]} with exactly ${DY.days.length} items.`;
   const r = await ai.json(prompt, { cache: false }); return Array.isArray(r && r.titles) ? r.titles.slice(0, DY.days.length) : [];
+}
+
+
+// ---- 여행지 추천 and 이야기하며 정하기 (it used to be recommendDest / talkSend in src/js 120, 140) ----
+export const REACH_EN: Record<string, string> = {domestic:'Domestic only: places inside South Korea.',near:'Short trip abroad: about 3 hours or less by plane from Seoul (Japan, Taiwan, Hong Kong, eastern China and similar).',far:'Anywhere in the world is fine, including long-haul.'};
+const { styleEn, BUDGET_EN } = traveler;
+/** 여행지 추천: 5 places for this traveler (mode.more: more, not these `prev`; mode.ask: is this one place right for them?) */
+export async function destinations(ai: Asker, q: any, mode: { ask?: string; more?: boolean }, prev: string[], want: string): Promise<any[]> {
+  const r = await ai.json(`${mode.ask?`A traveler starting from Seoul, South Korea is considering "${String(mode.ask).slice(0,60)}". Evaluate only that destination for them (return exactly 1 item, honest about downsides).`:'Recommend 5 travel destinations for a traveler starting from Seoul, South Korea.'}${mode.more&&prev.length?` Do not repeat these: ${prev.join(', ')}.`:''}
+Dates: ${q.dateUnknown?`not fixed yet, roughly from ${q.startDate} (about a month from now)`:`from ${q.startDate}`} for ${nightsOf(q)} nights.
+Who: ${partyEn(q.party)} ${styleEn(q)}
+${BUDGET_EN[q.budget]} ${REACH_EN[q.reach]}${+q.budgetMan>0?`\nMoney budget: about ${q.budgetMan}만원 (KRW ${q.budgetMan*10000}) per person in total, covering transport, lodging and local spending. Only recommend places where this is realistic for the trip length, and give the estimate in budget.`:''}
+Interests: ${CUR.kws.join(', ')||'(none given)'}${want?`\nWhat they want, in their own words: "${want.slice(0,300)}"`:''}
+Judge the season by what this traveler wants: off-season, cold or dark months can be ideal for quiet, solitude, contemplation, aurora or empty landscapes, while festivals and mild weather suit others. Avoid only conditions that would clearly spoil their wishes (typhoons, monsoon floods, closures). Give a varied set (different countries or regions where the reach allows).${q.reach==='far'?' The traveler explicitly asked for far-away places: at least 3 of the 5 must be outside East and Southeast Asia (for example Europe, Oceania, the Americas, the Middle East, Central Asia or Africa). If the trip is short for such a place, still include it and say so in caution, suggesting how many nights would suit it.':' If the trip is short for the travel time, say so in caution.'}
+Reply with only JSON: {"destinations":[{"city":"Korean name of the city or region","country":"Korean country name","why":"one Korean sentence linking it to their interests and companions","season":"one Korean sentence about these dates there","highlights":["3 short Korean highlights"],"flight":"Korean travel time from Seoul, e.g. 비행 약 2시간 or KTX 약 2시간 30분","budget":"Korean rough per-person cost of transport and lodging for this trip length, in 만원","caution":"short Korean caution or empty","fit":"one Korean sentence on how well it matches this traveler"}]}`, { cache: false });
+    const got=(Array.isArray(r&&r.destinations)?r.destinations:[]).filter((d: any)=>d&&d.city).slice(0,5).map((d: any)=>({fit:String(d.fit||'').slice(0,160),asked:!!mode.ask,city:String(d.city).slice(0,30),country:String(d.country||'').slice(0,20),why:String(d.why||'').slice(0,200),season:String(d.season||'').slice(0,200),
+      highlights:(Array.isArray(d.highlights)?d.highlights:[]).map((x: any)=>String(x).slice(0,40)).slice(0,4),flight:String(d.flight||'').slice(0,40),budget:String(d.budget||'').slice(0,40),caution:String(d.caution||'').slice(0,100)}));
+  return got;
+}
+/** 이야기하며 정하기: one turn of the conversation (msgs so far; dates: what is known about the dates; force: this is the last
+ *  turn). A broken answer that still has the reply is rescued; null when there is nothing to show. */
+export async function talkTurn(ai: Asker, draft: any, msgs: { role: string; text: string; err?: boolean }[], dates: string, force: boolean): Promise<any> {
+  const conv = msgs.filter(m => !m.err).map(m => (m.role === 'u' ? 'User: ' : 'AI: ') + m.text).join('\n');
+  const prompt=`You are a warm travel companion helping a Korean user who feels vague about traveling find the direction of their trip through a short conversation. Write natural, gentle Korean (해요체): at most two short sentences of acknowledgement, then one question.
+Rules: one question at a time. Move through: why travel now and how they feel → what they hope to feel or gain → alone time or meeting people, quiet or lively → what to avoid → practical limits (when, how long, budget, domestic or abroad) only if still unknown. Do not counsel like a therapist; acknowledge briefly and keep moving toward the trip. If they mention a specific destination, remember it. If they express serious distress or thoughts of self-harm, respond with care and gently suggest talking to someone they trust or a professional line (in Korea, 109), and do not push the trip.
+Known so far: ${partyEn(draft.party)} ${dates}
+Conversation:
+${conv}
+${force?'This is the final turn: write a short warm closing as reply and fill summary (done true).':'Finish (done true with a summary) only once you have enough, usually after 3-5 answers.'}
+Output exactly one JSON object and nothing else, in one of these two shapes.
+While still asking: {"reply":"Korean text","options":["3-4 short Korean answers the user might tap"],"done":false,"summary":null}
+When finishing: {"reply":"Korean text","options":[],"done":true,"summary":{"purpose":"one Korean line in the user's own voice","keywords":["3-5 short Korean keywords"],"pace":"slow","social":"alone","party":"solo","reach":"far","avoid":"short Korean or empty","dest":"a destination they named, or empty","nights":null,"startDate":null,"note":"one warm Korean sentence describing this trip's direction"}}
+In the summary, pace is slow|normal|full, social is alone|some|social, party is solo|couple|friends|family|unknown, reach is domestic|near|far|unknown, nights is a number only if the user said a trip length (else null), startDate is YYYY-MM-DD only if the user gave a specific date (else null).`;
+  try { return await ai.json(prompt, { cache: false }) }
+  catch (e: any) {
+    if (e && e.code === 'invalid_json' && e.text) { const m = /"reply"\s*:\s*"((?:[^"\\]|\\.)*)"/.exec(e.text); if (m) { try { return { reply: JSON.parse('"' + m[1] + '"'), options: [] } } catch (_) { /* not readable */ } } }
+    throw e;
+  }
 }
