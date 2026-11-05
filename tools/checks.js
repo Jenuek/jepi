@@ -878,6 +878,9 @@ module.exports = [
       await p.click('#sheet [data-close]'); await p.waitForTimeout(200);
       await p.click('.tabs [data-tab="map"]'); await p.waitForTimeout(800);
       ok(await p.$$eval('#mapCards .mcard', e => e.length) > 2 && await p.$$eval('#mapCards .mcard a', e => e.length) > 0, '지도: a card per stop with 안내 시작');
+      { const at = () => p.evaluate(() => { const m = document.querySelector('#mapBox .leaflet-marker-icon, #mapBox .leaflet-interactive'); return m ? (m.style.transform || m.getAttribute('d') || '') : '' });
+        const before = await at(); await p.click('#mapCards .mcard >> nth=2', { position: { x: 8, y: 8 } }); await p.waitForTimeout(500);
+        ok(before !== await at(), '지도: tapping a card moves the map to that stop') }
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }

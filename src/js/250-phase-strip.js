@@ -47,7 +47,8 @@ document.addEventListener('click',e=>{
   if(t.dataset.mapday!=null){mapState.all=t.dataset.mapday==='all';document.querySelectorAll('[data-mapday]').forEach(b=>b.setAttribute('aria-pressed',String((b.dataset.mapday==='all')===mapState.all)));drawMap(true);return}
   if(t.id==='mapMe'){locateMe();return}
 });
-document.addEventListener('click',e=>{const c=e.target.closest('.mcard');if(!c||e.target.closest('a'))return;const {stops}=mapLegs(day);const s=stops[+c.dataset.mapi];if(s&&mapState.map){mapState.map.setView(s.ll,16)}});
+// a card under the map (MapCards in Dice.tsx): the map moves to that stop
+function mapCardAct(i){const {stops}=mapLegs(day);const s=stops[+i];if(s&&mapState.map){mapState.map.setView(s.ll,16)}}
 // autosave for 이번 여행 / 취향 panels
 document.addEventListener('change',e=>{if(e.target.closest&&e.target.closest('#meBox,#tasteStyle')&&!e.target.classList.contains('importFile'))autoSave()});
 // onboarding: connect AI right on the first screen

@@ -66,6 +66,8 @@ export interface AppHost {
   planMenu(name: string, value?: string): void;
   /** 더보기 rows that are not a tab: nbOpen, lookOpen, moreAll */
   more(id: string): void;
+  /** a card under the map was tapped (its stop) */
+  mapCard(i: number): void;
   /** a backup file was chosen (처음 설정 · 내 계획 · 설정) */
   importFile(f: File | undefined): void;
 }

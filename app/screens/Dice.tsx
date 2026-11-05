@@ -163,7 +163,7 @@ export function MapCards({ stops, rev }: MapCardsProps) {
   if (!stops.length) return <p className="hint" key={rev}>이 날은 아직 장소가 없어요.</p>;
   return (
     <Fragment key={rev}>{stops.map((s, i) => (
-      <div className="mcard" data-mapi={i} key={i}>
+      <div className="mcard" data-mapi={i} key={i} onClick={e => { if (!(e.target as HTMLElement).closest('a')) app().mapCard(i) }}>
         {s.leg && <div className="mleg mono">{s.leg}</div>}
         <b>{s.name}</b><small className="mono">{s.time}</small>
         {s.nav && <a className="small-btn" href={s.nav} target="_blank" rel="noopener">안내 시작</a>}
