@@ -82,6 +82,8 @@ export interface AppHost {
   mapTop(name: string): void;
   /** the 처음 설정 frame: prev, next, skip, example (데모 둘러보기) */
   onbFrame(name: string): void;
+  /** the header: look (여행 꾸미기), J / P (mode), plan (open / close the plan menu), title (edit the day's title) */
+  hero(name: string): void;
   /** a bottom tab was pressed (timeline, tray, map, more) */
   tab(name: string): void;
   /** the folded header's ‹ › (-1 / 1) */

@@ -1601,5 +1601,35 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'React header: 계획 이름 · J/P · 계획 메뉴 · 날짜 제목 고치기 · 꾸미기 buttons work',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      ok((await p.textContent('#planName')).length > 0 && (await p.textContent('#tripMeta')).includes('오사카') && (await p.textContent('#heroDay')).startsWith('DAY 01'), 'header shows the plan, the trip line and the day');
+      ok((await p.textContent('#dayTitle')).length > 0 && (await p.textContent('#daySub')).length > 0 && !(await vis(p, '#dayMemo')) && !(await vis(p, '#heroTag')), 'day title and date shown, no memo / tagline yet');
+      await p.click('[data-jp="P"]'); await p.waitForTimeout(300);
+      ok(await p.getAttribute('[data-jp="P"]', 'aria-pressed') === 'true' && await p.getAttribute('[data-jp="J"]', 'aria-pressed') === 'false' && await p.evaluate(() => document.body.classList.contains('mode-p')), 'P모드 chosen');
+      await p.click('[data-jp="J"]'); await p.waitForTimeout(300);
+      ok(await p.getAttribute('[data-jp="J"]', 'aria-pressed') === 'true', 'J모드 chosen again');
+      await p.click('#planBtn'); await p.waitForTimeout(300);
+      ok(await vis(p, '#planMenu') && await p.getAttribute('#planBtn', 'aria-expanded') === 'true', 'plan name opens the menu (one tap opens, not open-and-close)');
+      await p.click('#planBtn'); await p.waitForTimeout(300);
+      ok(!(await vis(p, '#planMenu')) && await p.getAttribute('#planBtn', 'aria-expanded') === 'false', 'tapping it again closes the menu');
+      await p.click('#planBtn'); await p.waitForTimeout(250); await p.keyboard.press('Escape'); await p.waitForTimeout(250);
+      ok(!(await vis(p, '#planMenu')) && await p.evaluate(() => document.activeElement && document.activeElement.id === 'planBtn'), 'Esc closes it and focus goes back to the name');
+      await p.click('#dayTitleEdit'); await p.waitForTimeout(300);
+      ok(await vis(p, '#dayTitleForm') && !(await vis(p, '#dayTitle')) && !(await vis(p, '#dayTitleEdit')), '✎ swaps the title for the form');
+      await p.fill('#dayTitleIn', '천천히 도착'); await p.fill('#dayMemoIn', '비행기에서 푹 자기'); await p.click('#dayTitleForm [type="submit"]'); await p.waitForTimeout(400);
+      ok(!(await vis(p, '#dayTitleForm')) && (await p.textContent('#dayTitle')) === '천천히 도착' && (await p.textContent('#dayMemo')).includes('비행기에서 푹 자기') && await vis(p, '#dayMemo'), 'saved: new title and handwritten memo shown');
+      await p.click('#dayTitleEdit'); await p.waitForTimeout(250); await p.click('#dayTitleCancel'); await p.waitForTimeout(250);
+      ok((await p.textContent('#dayTitle')) === '천천히 도착' && await vis(p, '#dayTitleEdit'), '취소 keeps the title');
+      await p.click('#lookBtn'); await p.waitForTimeout(300);
+      ok(await vis(p, '#sheetBg') && await vis(p, '#lookForm'), '🎨 opens 여행 꾸미기');
+      await p.fill('#lkTag', '둘이서'); await p.click('#lookForm [type="submit"]'); await p.waitForTimeout(400);
+      ok((await p.textContent('#heroTag')) === '둘이서' && await vis(p, '#heroTag'), 'the tagline shows in the header');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];

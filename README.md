@@ -82,6 +82,7 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 | 첫 화면(새 여행·로그인·데모), 데모 시작/끝 | 화면 `app/screens/Welcome.tsx` (리액트), 동작 `381-welcome-demo.js`, 데모 칸막이 `app/data/demo.ts`, 데모 일정 `066-demo-osaka.js` |
 | 일정표 그리기 / 장소 탭 카드·필터 | `340-render.js` / 화면 `app/screens/Tray.tsx` (리액트, 카드에 넣을 값은 `340-render.js`의 `cardInfo`) |
 | 장소 탭 위쪽 / 지도 위쪽 (이 날·전체·내 위치) | 화면 `app/screens/Tops.tsx` (리액트), 값은 `340-render.js`(drawTrayTop·trayAct) / `210-map.js`(mapTop·mapTopAct) |
+| 머리글 (커버·J/P·계획 이름·날짜 제목) | 화면 `app/screens/Hero.tsx` (리액트), 값은 `389a-look.js`의 `hero({…})`, 접히는 움직임은 `heroWatch` |
 | 아래 탭 / 접히는 머리글 줄 | 화면 `app/screens/Bars.tsx` (리액트), 값은 `340-render.js`(tabs·renderTabs, 탭 바꾸기는 `380-events.js`의 `goTab`) / `389a-look.js`(miniBar·heroWatch) |
 | 일정표 아래 대화 칸 (접기·칩·메시지 칸) | 화면 `app/screens/Dock.tsx` (리액트), 값은 `050-chat.js`의 `dock({…})`, 채팅 목록은 `ChatLog.tsx` |
 | 고정 틀 (처음 설정 틀·예약 도우미 틀·처음 안내·장소 고른 뒤 안내 줄) | 화면 `app/screens/Frames.tsx` (리액트), 보여 줄 값은 `030-forms.js`(onbView)·`100-booking.js`(helperView)·`370-reset-guide.js`(coachView)·`340-render.js`(bannerView) |

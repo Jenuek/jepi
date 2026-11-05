@@ -586,7 +586,7 @@ function renderNudges(){
       btns:bs.map(([id,l,pr])=>({id,primary:!!pr,label:pr?l.replace(/ .*/,'')==='시간'?'넣기':l.split(' ')[0]==='숙소'?'넣기':'고르기':'예약 전'}))}))});
 }
 function goMe(h){tab='me';draft=clone(profile);renderMe();renderTabs();setTimeout(()=>{const el=[...document.querySelectorAll('#meBox h3')].find(x=>x.textContent.includes(h));if(el)el.scrollIntoView({block:'start'})},0)}
-function renderMeta(){if(profile.kind==='day'){dock({helperHidden:true});$('#tripMeta').textContent=`${PACK.city} · ${(DAYS[0].iso||'').slice(5).replace('-','/')} 하루 코스 · ${profile.meet.time}–${profile.meet.end}`;return}if(profile.dateUnknown){const n=DAYS.length-1;dock({helperHidden:!needBooking()});$('#tripMeta').textContent=`${PACK.city} · 날짜 미정 (대략 ${(DAYS[0].iso||'').slice(5).replace('-','/')}부터) · ${n}박 ${n+1}일`;return}dock({helperHidden:!needBooking()});const n=DAYS.length-1;$('#tripMeta').textContent=`${PACK.city} · ${(DAYS[0].iso||'').replace(/-/g,'.')} – ${(DAYS[n].iso||'').slice(5).replace('-','.')} · ${n}박 ${n+1}일 · ${apName(profile.out.airport)}`}
+function renderMeta(){if(profile.kind==='day'){dock({helperHidden:true});hero({meta:`${PACK.city} · ${(DAYS[0].iso||'').slice(5).replace('-','/')} 하루 코스 · ${profile.meet.time}–${profile.meet.end}`});return}if(profile.dateUnknown){const n=DAYS.length-1;dock({helperHidden:!needBooking()});hero({meta:`${PACK.city} · 날짜 미정 (대략 ${(DAYS[0].iso||'').slice(5).replace('-','/')}부터) · ${n}박 ${n+1}일`});return}dock({helperHidden:!needBooking()});const n=DAYS.length-1;hero({meta:`${PACK.city} · ${(DAYS[0].iso||'').replace(/-/g,'.')} – ${(DAYS[n].iso||'').slice(5).replace('-','.')} · ${n}박 ${n+1}일 · ${apName(profile.out.airport)}`})}
 
 
 // ---------- destination pack: everything that depends on where the trip goes ----------
@@ -1322,7 +1322,7 @@ function routeInfoView(){const R=routeInfo;if(!R||R.key!==PACK.city+'|'+profile.
 
 // ---------- J / P modes ----------
 let jp='J';
-function setJP(m,quiet){jp=m==='P'?'P':'J';dock({placeholder:jp==='P'?'뭐 하고 싶어요? 말로 해도 돼요':'AI에게 말로 부탁하기'});document.body.classList.toggle('mode-p',jp==='P');document.querySelectorAll('[data-jp]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.jp===jp)));if(!quiet)store.set('gp.jp',jp)}
+function setJP(m,quiet){jp=m==='P'?'P':'J';dock({placeholder:jp==='P'?'뭐 하고 싶어요? 말로 해도 돼요':'AI에게 말로 부탁하기'});document.body.classList.toggle('mode-p',jp==='P');hero({jp});if(!quiet)store.set('gp.jp',jp)}
 
 // ---------- one-day course ----------
 // 하루 코스: 여행지 + 언제·어디서 만나요 + 누구와 (drawn by React: TripForms.tsx)
@@ -1999,7 +1999,7 @@ function startupFocus(){
     setTimeout(()=>{const H=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hour'))||60;const g=$('#grid');if(!g)return;
       const now=new Date(), nm=now.getHours()*60+now.getMinutes(); const y=g.getBoundingClientRect().top+window.scrollY+Math.max(0,(nm-dayStart(day))/60*H-140);window.scrollTo({top:y})},80)}
 }
-function renderPlanBtn(){const b=$('#planBtn');if(!b)return;const p=plans.find(x=>x.id===curPlan);$('#planName').textContent=(p&&p.name)||planName()}
+function renderPlanBtn(){const p=plans.find(x=>x.id===curPlan);hero({planName:(p&&p.name)||planName()})}
 const inside=sel=>{const a=document.activeElement;return !!(a&&a.closest&&a.closest(sel))};
 function renderExt(){renderPhase();renderMore();renderPlanBtn();
   if(tab==='me'&&$('#onb').hidden&&!inside('#meBox'))renderMeRows();
@@ -2327,10 +2327,10 @@ function planMenuInfo(){
     dday:pmDday(p),name:String(p.name||'이름 없는 계획'),sub:`${p.dates||''}${p.blocks?` · 블록 ${p.blocks}개`:''}`}))};
 }
 function planMenu(open){const m=document.getElementById('planMenu'),b=document.getElementById('planBtn');if(!m||!b)return;
-  if(open){snapshotCurrent();window.JEPI_UI.mount('planMenu',m,planMenuInfo());m.style.top=Math.round(b.getBoundingClientRect().bottom+6)+'px';m.hidden=false;b.setAttribute('aria-expanded','true');const f=m.querySelector('.pm-item.cur,.pm-item');if(f)f.focus({preventScroll:true})}
-  else{m.hidden=true;b.setAttribute('aria-expanded','false')}}
+  if(open){snapshotCurrent();window.JEPI_UI.mount('planMenu',m,planMenuInfo());m.style.top=Math.round(b.getBoundingClientRect().bottom+6)+'px';m.hidden=false;hero({planOpen:true});const f=m.querySelector('.pm-item.cur,.pm-item');if(f)f.focus({preventScroll:true})}
+  else{m.hidden=true;hero({planOpen:false})}}
 document.addEventListener('click',e=>{
-  const b=e.target.closest('#planBtn'); if(b){planMenu(document.getElementById('planMenu').hidden);return}
+  if(e.target.closest('#planBtn'))return;   // the button toggles the menu itself (heroAct)
   const m=document.getElementById('planMenu'); if(!m||m.hidden)return;
   if(!e.target.closest('#planMenu'))planMenu(false);   // a tap outside closes it
 },true);
@@ -2521,11 +2521,11 @@ function setZoom(h,quiet){h=h===100?100:60;document.documentElement.style.setPro
 let gridRev=0;
 function renderTimeline(){
   const DAY_START=dayStart(day);
-  const D=DAYS[day]; $('#dayTitle').textContent=dayTitleOf(day);
+  const D=DAYS[day]; hero({title:dayTitleOf(day)});
   const {items,trans}=analyze(day);
   const nPlaced=items.filter(i=>i.kind==='place').length;
   const g=gapsOf(day);
-  {$('#daySub').textContent=`${D.date} (${WD[D.wd]})`;renderDaySum(items,trans,g)}
+  {hero({sub:`${D.date} (${WD[D.wd]})`});renderDaySum(items,trans,g)}
   const H=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hour'))||60;
   const y=m=>(m-DAY_START)/60*H;
   // drawn by React: app/screens/DayGrid.tsx
@@ -2912,7 +2912,6 @@ function goTab(name){tab=name;autoMsg='';if(tab==='me'){draft=clone(profile);meO
 document.addEventListener('click',e=>{
   const t=e.target.closest('button,input,label'); if(!t) return;
   if(t.dataset.tab){if(!t.closest('.tabs'))goTab(t.dataset.tab);return}
-  if(t.dataset.jp){setJP(t.dataset.jp);renderAll();return}
   if(t.id==='diceFab'){openDiceTab(mealNow()==='snack'?'do':'eat',null);return}
   if(t.id==='coachAgain'){showCoach(0);return}
   if(t.id==='moreHelper'){openHelper(wish.length?1:0);return}
@@ -3372,15 +3371,13 @@ if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)&&window.__jepi) Object.a
 // (app/screens/DayTitleForm.tsx, it saves itself); here: the header around it.
 function dayTitleOf(d){return JD.logic.memo.dayTitle(profile,d,(DAYS[d]||{}).title||'')}
 let dayTitleRev=0;
-function dayTitleSlot(){let s=$('#dayTitleSlot');if(!s){s=document.createElement('span');s.id='dayTitleSlot';s.style.display='contents';$('#dayTitle').after(s)}return s}
 function titleEditing(on){
-  $('#dayTitle').hidden=on; $('#dayTitleEdit').hidden=on;
-  window.JEPI_UI.mount('dayTitle',dayTitleSlot(),{open:on,day,title:JD.logic.memo.ownDayTitle(profile,day),auto:String(DAYS[day].title||''),memo:dayMemoOf(day),rev:++dayTitleRev});
+  hero({editing:on,slot:true});
+  window.JEPI_UI.mount('dayTitle',$('#dayTitleSlot'),{open:on,day,title:JD.logic.memo.ownDayTitle(profile,day),auto:String(DAYS[day].title||''),memo:dayMemoOf(day),rev:++dayTitleRev});
 }
-document.addEventListener('click',e=>{const t=e.target.closest('#dayTitleEdit');if(t&&!$('#dayTitleIn'))titleEditing(true)});
 // what React screens may ask of the old code (app/ui/host.ts)
 window.JEPI_UI.connectHost({renderAll:()=>renderAll(),closeSheet:()=>closeSheet(),reopenSheet:()=>{const u=$('#sheet').dataset.uid;if(u&&u!=='dice'&&!$('#sheetBg').hidden)openSheet(u)},toast:m=>showToast(m),day:()=>day,autoTitle:d=>String((DAYS[d]||{}).title||''),titleEditing,
-  closeNotebook:()=>closeNotebook(),renamePlan:nm=>lookRenamePlan(nm),aiDayTitles:n=>lookAiTitles(n),errText:(e,w)=>errText(e,w),welcomeNew:()=>{closeWelcome();openOnb()},welcomeDemo:()=>demoEnter(),welcomeLoggedIn:()=>welcomeLoggedIn(),dice:(n,v,m)=>diceAct(n,v,m),place:(n,v)=>placeAct(n,v),plans:(n,v,v2)=>plansAct(n,v,v2),helper:(n,v,v2)=>helperAct(n,v,v2),helperFrame:n=>helperFrameAct(n),dock:(n,v)=>dockAct(n,v),tray:(n,v)=>trayAct(n,v),tab:n=>goTab(n),onbFrame:n=>onbFrameAct(n),miniDay:s=>{const n=day+s;if(n>=0&&n<DAYS.length){day=n;renderAll()}},mapTop:n=>mapTopAct(n),coach:n=>coachAct(n),banner:()=>{selected=null;renderAll()},chat:(n,v)=>chatAct(n,v),pview:(n,v)=>pviewAct(n,v),kw:(n,v)=>kwAct(n,v),grid:(n,v)=>gridAct(n,v),block:(n,v,o)=>blockAct(n,v,o),checks:(n,v,o)=>checksAct(n,v,o),aibox:(n,v)=>aiboxAct(n,v),settings:(n,v,v2)=>settingsAct(n,v,v2),form:(n,v,o)=>formAct(n,v,o),sum:(n,v)=>sumAct(n,v),trip:(a,u,t)=>tripAct(a,u,t),want:p=>wantAct(p),find:(n,v,t)=>findAct(n,v,t),planMenu:(n,v)=>planMenuAct(n,v),more:id=>moreAct(id),mapCard:i=>mapCardAct(i),nudge:(n,v)=>nudgeAct(n,v),importFile:f=>importBackup(f,ok=>{if(ok){maybeCoach()}}),shareNotebook:async()=>{await shareLink(true);return planMsg||'링크를 만들었어요'}});
+  closeNotebook:()=>closeNotebook(),renamePlan:nm=>lookRenamePlan(nm),aiDayTitles:n=>lookAiTitles(n),errText:(e,w)=>errText(e,w),welcomeNew:()=>{closeWelcome();openOnb()},welcomeDemo:()=>demoEnter(),welcomeLoggedIn:()=>welcomeLoggedIn(),dice:(n,v,m)=>diceAct(n,v,m),place:(n,v)=>placeAct(n,v),plans:(n,v,v2)=>plansAct(n,v,v2),helper:(n,v,v2)=>helperAct(n,v,v2),helperFrame:n=>helperFrameAct(n),dock:(n,v)=>dockAct(n,v),tray:(n,v)=>trayAct(n,v),tab:n=>goTab(n),onbFrame:n=>onbFrameAct(n),hero:n=>heroAct(n),miniDay:s=>{const n=day+s;if(n>=0&&n<DAYS.length){day=n;renderAll()}},mapTop:n=>mapTopAct(n),coach:n=>coachAct(n),banner:()=>{selected=null;renderAll()},chat:(n,v)=>chatAct(n,v),pview:(n,v)=>pviewAct(n,v),kw:(n,v)=>kwAct(n,v),grid:(n,v)=>gridAct(n,v),block:(n,v,o)=>blockAct(n,v,o),checks:(n,v,o)=>checksAct(n,v,o),aibox:(n,v)=>aiboxAct(n,v),settings:(n,v,v2)=>settingsAct(n,v,v2),form:(n,v,o)=>formAct(n,v,o),sum:(n,v)=>sumAct(n,v),trip:(a,u,t)=>tripAct(a,u,t),want:p=>wantAct(p),find:(n,v,t)=>findAct(n,v,t),planMenu:(n,v)=>planMenuAct(n,v),more:id=>moreAct(id),mapCard:i=>mapCardAct(i),nudge:(n,v)=>nudgeAct(n,v),importFile:f=>importBackup(f,ok=>{if(ok){maybeCoach()}}),shareNotebook:async()=>{await shareLink(true);return planMsg||'링크를 만들었어요'}});
 // ---------- how a trip looks: theme colour, cover, style, handwriting; folding hero header ----------
 // profile.look = {color, cover:'city'|'sea'|'mountain'|'none'|'photo', photo:dataURL, tagline, style:'color'|'note', hand}
 // Lives in the plan's profile, so it syncs across devices and to friends on a shared trip.
@@ -3395,19 +3392,27 @@ function coverSVG(kind,w,h){
   if(k==='none'||k==='photo') return '';
   return `<svg viewBox="0 0 200 120" width="${w}" height="${h}" preserveAspectRatio="xMaxYMax meet"><circle cx="150" cy="34" r="20" fill="var(--pop)" fill-opacity=".9"/><path d="M0 120 V84 H16 V64 H34 V90 H50 V52 H62 L68 44 L74 52 V92 H96 V70 H116 V96 H134 V60 H150 V88 H170 V74 H200 V120Z" fill="#000" fill-opacity=".18"/></svg>`;
 }
+// the header is drawn by React (app/screens/Hero.tsx) from heroView; hero({…}) changes some of it and draws again
+let heroView={artHtml:'',artBg:'',artPhoto:false,jp:'J',planName:'',planOpen:false,meta:'',tag:'',day:'',title:'',sub:'',memo:'',editing:false,slot:false};
+function hero(p){heroView={...heroView,...p};window.JEPI_UI.mount('hero',$('#heroMount'),heroView)}
+// pressed in the header
+function heroAct(n){
+  if(n==='look')openLook();
+  else if(n==='J'||n==='P'){setJP(n);renderAll()}
+  else if(n==='plan')planMenu(document.getElementById('planMenu').hidden);
+  else if(n==='title'){if(!$('#dayTitleIn'))titleEditing(true)}
+}
 function renderLook(){
   const L=lookOf(), R=document.documentElement.style, note=L.style==='note';
   R.setProperty('--theme',L.color); R.setProperty('--pop',L.pop);
   R.setProperty('--f-hand',(LOOK_HANDS.find(x=>x[0]===L.hand)||LOOK_HANDS[0])[2]+', cursive');
   document.body.classList.toggle('style-note',note);
-  const art=$('#heroArt'); if(art){
-    const photo=L.cover==='photo'&&L.photo;
-    art.style.backgroundImage=photo?`linear-gradient(rgba(0,0,0,.35),rgba(0,0,0,.45)),url("${L.photo}")`:'';
-    art.classList.toggle('photo',!!photo);
-    art.innerHTML=note?`<div class="stamp"><span>${esc((PACK.city||'TRIP').slice(0,8))}</span><b>${esc(((DAYS[0]||{}).date||'').replace(/\s.*/,''))}</b><span>${esc(String(new Date().getFullYear()))}</span></div>`:photo?'':coverSVG(L.cover,190,120);
-  }
-  const tag=$('#heroTag'); if(tag){tag.textContent=L.tagline||'';tag.hidden=!L.tagline}
-  const hd=$('#heroDay'); if(hd&&DAYS[day]){const D=DAYS[day];hd.textContent=note?`CHAPTER ${day+1} · ${D.date} ${WD[D.wd]}`:`DAY ${String(day+1).padStart(2,'0')} · ${D.date} ${WD[D.wd]}`}
+  {const photo=L.cover==='photo'&&L.photo, p={
+    artBg:photo?`linear-gradient(rgba(0,0,0,.35),rgba(0,0,0,.45)),url("${L.photo}")`:'',artPhoto:!!photo,
+    artHtml:note?`<div class="stamp"><span>${esc((PACK.city||'TRIP').slice(0,8))}</span><b>${esc(((DAYS[0]||{}).date||'').replace(/\s.*/,''))}</b><span>${esc(String(new Date().getFullYear()))}</span></div>`:photo?'':coverSVG(L.cover,190,120),
+    tag:L.tagline||''};
+  if(DAYS[day]){const D=DAYS[day];p.day=note?`CHAPTER ${day+1} · ${D.date} ${WD[D.wd]}`:`DAY ${String(day+1).padStart(2,'0')} · ${D.date} ${WD[D.wd]}`}
+  hero(p)}
   renderDayMemo(); miniUpdate();
 }
 // --- folding header: the hero scrolls away and a one-line bar takes its place ---
@@ -3427,7 +3432,6 @@ function heroWatch(){
   addEventListener('scroll',()=>{if(!raf)raf=requestAnimationFrame(on)},{passive:true}); on();
 }
 document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
-  if(t.id==='lookBtn'){openLook();return}
 });
 // --- 여행 꾸미기 sheet: drawn by React (app/screens/LookSheet.tsx), which keeps its own draft and saves itself ---
 let lookRev=0;
@@ -3452,7 +3456,7 @@ function lookRenamePlan(nm){const p=plans.find(x=>x.id===curPlan);if(p&&nm&&nm!=
 const memoKey=(it,d)=>JD.logic.memo.blockKey(it.id,d);
 const blockMemoOf=(it,d)=>JD.logic.memo.blockMemo(profile,memoKey(it,d));
 const dayMemoOf=d=>JD.logic.memo.dayMemo(profile,d);
-function renderDayMemo(){const e=$('#dayMemo');if(!e)return;const m=dayMemoOf(day);e.textContent=m?`“${m}”`:'';e.hidden=!m}
+function renderDayMemo(){const m=dayMemoOf(day);hero({memo:m?`“${m}”`:''})}
 SHEET_EXTRAS.push(it=>it&&it.id?{k:'memo',key:memoKey(it,day),value:blockMemoOf(it,day)}:null);   // drawn by React: Extras.tsx
 // ---------- 여행 노트 보기: the whole trip as one notebook (cover + a chapter per day) ----------
 // Read-only. "PDF로 저장" uses the browser's print (print CSS in 17-look.css keeps only the notebook).
@@ -3482,7 +3486,7 @@ function closeNotebook(){const nb=$('#notebook');if(nb)nb.hidden=true;document.b
 
 // ---------- start-up: runs after every file above has defined its variables ----------
 if(STANDALONE) sample=makeSample();
-onbFrame({}); tabs({}); miniBar({}); dock({}); drawTrayTop(); mapTop({}); drawHelperFrame(); drawCoach(); drawBanner();   // the fixed frames (React)
+hero({}); onbFrame({}); tabs({}); miniBar({}); dock({}); drawTrayTop(); mapTop({}); drawHelperFrame(); drawCoach(); drawBanner();   // the fixed frames (React)
 plans=TRIP.plans.list()||[]; if(!Array.isArray(plans)) plans=[]; curPlan=TRIP.plans.current()||''; if(!curPlan){curPlan='p'+Date.now().toString(36);savePlans()}
 setZoom(store.get('gp.zoom',60),true);
 setJP(store.get('gp.jp',profile.kind==='day'?'P':'J'),true);

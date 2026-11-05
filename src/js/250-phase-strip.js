@@ -33,7 +33,7 @@ function startupFocus(){
     setTimeout(()=>{const H=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hour'))||60;const g=$('#grid');if(!g)return;
       const now=new Date(), nm=now.getHours()*60+now.getMinutes(); const y=g.getBoundingClientRect().top+window.scrollY+Math.max(0,(nm-dayStart(day))/60*H-140);window.scrollTo({top:y})},80)}
 }
-function renderPlanBtn(){const b=$('#planBtn');if(!b)return;const p=plans.find(x=>x.id===curPlan);$('#planName').textContent=(p&&p.name)||planName()}
+function renderPlanBtn(){const p=plans.find(x=>x.id===curPlan);hero({planName:(p&&p.name)||planName()})}
 const inside=sel=>{const a=document.activeElement;return !!(a&&a.closest&&a.closest(sel))};
 function renderExt(){renderPhase();renderMore();renderPlanBtn();
   if(tab==='me'&&$('#onb').hidden&&!inside('#meBox'))renderMeRows();

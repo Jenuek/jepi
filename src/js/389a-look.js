@@ -12,19 +12,27 @@ function coverSVG(kind,w,h){
   if(k==='none'||k==='photo') return '';
   return `<svg viewBox="0 0 200 120" width="${w}" height="${h}" preserveAspectRatio="xMaxYMax meet"><circle cx="150" cy="34" r="20" fill="var(--pop)" fill-opacity=".9"/><path d="M0 120 V84 H16 V64 H34 V90 H50 V52 H62 L68 44 L74 52 V92 H96 V70 H116 V96 H134 V60 H150 V88 H170 V74 H200 V120Z" fill="#000" fill-opacity=".18"/></svg>`;
 }
+// the header is drawn by React (app/screens/Hero.tsx) from heroView; hero({…}) changes some of it and draws again
+let heroView={artHtml:'',artBg:'',artPhoto:false,jp:'J',planName:'',planOpen:false,meta:'',tag:'',day:'',title:'',sub:'',memo:'',editing:false,slot:false};
+function hero(p){heroView={...heroView,...p};window.JEPI_UI.mount('hero',$('#heroMount'),heroView)}
+// pressed in the header
+function heroAct(n){
+  if(n==='look')openLook();
+  else if(n==='J'||n==='P'){setJP(n);renderAll()}
+  else if(n==='plan')planMenu(document.getElementById('planMenu').hidden);
+  else if(n==='title'){if(!$('#dayTitleIn'))titleEditing(true)}
+}
 function renderLook(){
   const L=lookOf(), R=document.documentElement.style, note=L.style==='note';
   R.setProperty('--theme',L.color); R.setProperty('--pop',L.pop);
   R.setProperty('--f-hand',(LOOK_HANDS.find(x=>x[0]===L.hand)||LOOK_HANDS[0])[2]+', cursive');
   document.body.classList.toggle('style-note',note);
-  const art=$('#heroArt'); if(art){
-    const photo=L.cover==='photo'&&L.photo;
-    art.style.backgroundImage=photo?`linear-gradient(rgba(0,0,0,.35),rgba(0,0,0,.45)),url("${L.photo}")`:'';
-    art.classList.toggle('photo',!!photo);
-    art.innerHTML=note?`<div class="stamp"><span>${esc((PACK.city||'TRIP').slice(0,8))}</span><b>${esc(((DAYS[0]||{}).date||'').replace(/\s.*/,''))}</b><span>${esc(String(new Date().getFullYear()))}</span></div>`:photo?'':coverSVG(L.cover,190,120);
-  }
-  const tag=$('#heroTag'); if(tag){tag.textContent=L.tagline||'';tag.hidden=!L.tagline}
-  const hd=$('#heroDay'); if(hd&&DAYS[day]){const D=DAYS[day];hd.textContent=note?`CHAPTER ${day+1} · ${D.date} ${WD[D.wd]}`:`DAY ${String(day+1).padStart(2,'0')} · ${D.date} ${WD[D.wd]}`}
+  {const photo=L.cover==='photo'&&L.photo, p={
+    artBg:photo?`linear-gradient(rgba(0,0,0,.35),rgba(0,0,0,.45)),url("${L.photo}")`:'',artPhoto:!!photo,
+    artHtml:note?`<div class="stamp"><span>${esc((PACK.city||'TRIP').slice(0,8))}</span><b>${esc(((DAYS[0]||{}).date||'').replace(/\s.*/,''))}</b><span>${esc(String(new Date().getFullYear()))}</span></div>`:photo?'':coverSVG(L.cover,190,120),
+    tag:L.tagline||''};
+  if(DAYS[day]){const D=DAYS[day];p.day=note?`CHAPTER ${day+1} · ${D.date} ${WD[D.wd]}`:`DAY ${String(day+1).padStart(2,'0')} · ${D.date} ${WD[D.wd]}`}
+  hero(p)}
   renderDayMemo(); miniUpdate();
 }
 // --- folding header: the hero scrolls away and a one-line bar takes its place ---
@@ -44,7 +52,6 @@ function heroWatch(){
   addEventListener('scroll',()=>{if(!raf)raf=requestAnimationFrame(on)},{passive:true}); on();
 }
 document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
-  if(t.id==='lookBtn'){openLook();return}
 });
 // --- 여행 꾸미기 sheet: drawn by React (app/screens/LookSheet.tsx), which keeps its own draft and saves itself ---
 let lookRev=0;

@@ -8,11 +8,11 @@ function setZoom(h,quiet){h=h===100?100:60;document.documentElement.style.setPro
 let gridRev=0;
 function renderTimeline(){
   const DAY_START=dayStart(day);
-  const D=DAYS[day]; $('#dayTitle').textContent=dayTitleOf(day);
+  const D=DAYS[day]; hero({title:dayTitleOf(day)});
   const {items,trans}=analyze(day);
   const nPlaced=items.filter(i=>i.kind==='place').length;
   const g=gapsOf(day);
-  {$('#daySub').textContent=`${D.date} (${WD[D.wd]})`;renderDaySum(items,trans,g)}
+  {hero({sub:`${D.date} (${WD[D.wd]})`});renderDaySum(items,trans,g)}
   const H=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hour'))||60;
   const y=m=>(m-DAY_START)/60*H;
   // drawn by React: app/screens/DayGrid.tsx

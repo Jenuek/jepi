@@ -155,8 +155,7 @@
        ~~AI 빈 시간 추천 상자(`AiBox.tsx`)~~ — "○초째" 시계는 live 연결. 예전과 같음(`tools/compare/aibox.js`: 기다림·못 찾음·실패).
     4. ~~채팅(`ChatLog.tsx`, 더 정확하게 줄 포함)~~, ~~첫 화면(`Welcome.tsx`)~~, ~~계획 메뉴(`PlanMenu.tsx`)~~, ~~여행 단계 띠(`Phase.tsx`)~~, ~~여행 노트(`Notebook.tsx`)~~ —
        모두 예전과 같음(`tools/compare/` chat·welcome·planmenu·phase(시계를 여행 날로 옮겨서)·notebook). 점검 298개 통과.
-       **예전 HTML로 남겨 둔 것(일부러)**: 날짜 제목 고치기 폼(`389-titles`, 머리글 틀에 붙는 작은 폼), 장소 탭 추천 안내 한 줄(#recSt, 글자만), 머리글 커버 그림(#heroArt, `389a`의 renderLook),
-       body.html의 고정 틀(머리글·아래 탭·처음 설정/예약 도우미의 제목과 이전·다음 버튼). 리액트 화면 안을 예전 코드가 직접 고치는 곳은 이제 없어요.
+       **예전 HTML로 남겨 뒀던 것**(머리글·아래 탭·장소 탭 위·처음 설정/예약 도우미 틀)은 아래 "body.html의 고정 틀 옮기기"에서 옮겼어요. 리액트 화면 안을 예전 코드가 직접 고치는 곳은 이제 없어요.
     5. **다음**: 실제 기기 확인(배포 뒤) → 2단계 뒷부분 ②(여행 데이터를 한 곳으로)와 친구 합치기 규칙 → 4단계 앱 포장.
   - **body.html의 고정 틀 옮기기(5단계 ⑥, 틀마다 커밋)**: 틀 자신도 리액트가 그려요. 틀 속 값(열림·제목·글자)은 예전 코드가 들고 있다가 `mount`로 넘겨요. 비교는 `compare.js`의 `"=#id"`(틀 자신의 속성까지)를 써요.
     - [x] 예약 도우미 틀(#helper) · 처음 안내(#coach) · 장소 고른 뒤 안내 줄(#banner) (`Frames.tsx`) — 예전과 같음(`tools/compare/frames.js`, 15가지). 버튼은 스스로 처리(`helperFrameAct`·`coachAct`).
@@ -169,6 +168,12 @@
       탭 바꾸기는 `goTab(이름)` 하나로 모아 아래 탭(리액트)과 `data-tab`을 단 다른 버튼들(더보기 줄·뒤로 가기·로그인하러 가기…)이 같이 써요(`380-events.js`). 예전 코드는 `tabs({…})`·`miniBar({…})`로 값만 넘겨요. 점검 추가.
     - [x] 처음 설정의 틀(#onb: 단계·제목·안내·이전/다음/건너뛰기/데모 둘러보기, `Frames.tsx` OnbFrame) — 예전과 같음(`tools/compare/onbframe.js` 12가지: 시작 방법별·준비하는 동안 잠김·"장소 찾는 중…"·기다리지 않고 시작·`onb.js`·`onb-ai.js`).
       예전 코드는 `onbFrame({…})`로 값만 바꿔요(`030-forms.js`의 onbView; 열기/닫기·`setBusy` 잠금·finishOnb의 "장소 찾는 중…"). "준비하는 중…"은 다음 버튼이 live 연결(`useHandle`)로 받아요. 점검 추가.
+    - [x] 머리글(#hero: 커버 그림·꾸미기 버튼·J/P·계획 이름·여행 줄·한 줄 소개·날짜 제목 ✎·날짜·손글씨 메모, `Hero.tsx`) — 21가지 상태 모두 예전과 같음(`tools/compare/hero.js`: 계획 메뉴 열림/닫힘/Esc·제목 고치기 열기/취소/저장/자동·꾸미기 커버·수첩·스크롤 접힘).
+      예전 코드는 `hero({…})`로 값만 바꿔요(`389a-look.js`의 heroView; 제목·날짜 `340`, 여행 줄 `050`, 계획 이름 `250`, 메모 `389b`, J/P `160`, 메뉴 열림 `300`). 버튼은 `heroAct`. 날짜 제목 고치기 폼 자리(#dayTitleSlot)도 이제 리액트가 그려요.
+      접히는 움직임은 예전 코드 그대로: 스크롤 때 `#hero`에 `--fold` 값을 쓰고 `body.mini`를 켜요(리액트가 `style`을 만지지 않아서 안전). `compare.js`는 `…Mount`·`…Slot` 자리를 투명하게 봐요. 점검 추가.
+    - **일부러 남긴 것**: 🎲 둥둥 버튼(#diceFab — 스크롤 때 `rolling`·`cube`의 transform, 열고 닫는 움직임 `tap`을 예전 코드가 직접 써서 옮기면 움직임이 깨질 위험),
+      지도 상자(#mapBox, Leaflet이 안을 그림)와 안내 줄 #mapMsg, 시트 틀(#sheetBg·#sheet — 블록 시트·장소 찾기·DICE·꾸미기가 같이 쓰고 열림/닫힘 움직임 클래스가 얽힘),
+      그 밖의 작은 틀(#errbar·#toast·#planMenu 자리·#welcome 틀·#demoBar·#intro·본문 `<main>`의 패널 틀·#days 같은 비어 있는 자리).
   - 참고(예전 계획): 입력 폼 조각들(`030-forms.js`의 fParty·fBudget·fStay·fFlight·fHome·fEvents·dateFields·fStyle…, `140`·`160`·`170`의 fDest·fJP·fQuick·fTalk…)을
     하나씩 리액트로. 처음 설정(`renderOnb`)·이번 여행·취향(renderTasteStyle)이 같이 써요.
     방법: 칸 이름(`data-pf`, `data-radio`)은 그대로, 폼 전체는 다시 그릴 때마다 새로(rev 키) — 예전 코드가 값을 바꾼 뒤 다시 그리는 방식과 같아서 안전해요.
