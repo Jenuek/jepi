@@ -9,9 +9,20 @@ function opText(o){const d=x=>`Day ${(+x)+1}`, nm=id=>PM[id]?PM[id].name:id;
   if(o.op==='mark'){const b=placed.find(x=>x.uid===o.uid);const nm2=b?nm(b.id):((DAYS.flatMap(D=>D.fixed).find(f=>f.id===o.uid)||{}).name||'블록');return `${nm2}에 ${MARKS[o.mark][0]} ${MARKS[o.mark][1]} ${o.on===false?'표시 빼기':'표시'}`}
   return '알 수 없는 변경'}
 let chatRev=0;
+// the dock under the schedule is drawn by React (app/screens/Dock.tsx) from dockView; dock({…}) changes some of it and draws again
+let dockView={folded:false,foldHidden:true,foldText:'',expanded:undefined,aiHidden:true,aiOff:false,fixHidden:true,fixText:'',helperHidden:true,note:'',inputOff:false,sendOff:false,placeholder:'AI에게 말로 부탁하기'};
+function dock(p){dockView={...dockView,...p};window.JEPI_UI.mount('dock',$('#chatMount'),dockView)}
+// a button / the message was sent in the dock
+function dockAct(n,v){
+  if(n==='fold'){chatFolded=!chatFolded;chatFoldSync()}
+  else if(n==='ai')openFind({when:'gap',into:'sched'});
+  else if(n==='fix')fixWarns();
+  else if(n==='helper')openHelper(0);
+  else if(n==='custom')openCustom(null,null);
+  else if(n==='send'){chatFolded=false;if(v)sendChat(v)}
+}
 function renderChat(){setTimeout(chatFoldSync,0);
-  $('#chatNote').textContent=sample?'':'AI 기능은 더보기 → 설정에서 키를 연결하면 쓸 수 있어요';
-  $('#chatInput').disabled=!sample||chatBusy; $('#chatSend').disabled=!sample||chatBusy;
+  dock({note:sample?'':'AI 기능은 더보기 → 설정에서 키를 연결하면 쓸 수 있어요',inputOff:!sample||chatBusy,sendOff:!sample||chatBusy});
   const start=Math.max(0,chat.length-8);
   // drawn by React: app/screens/ChatLog.tsx
   window.JEPI_UI.mount('chat',$('#chatLog'),{rev:++chatRev,msgs:chat.slice(start).map((m,k)=>{const i=start+k;
@@ -91,6 +102,6 @@ function renderNudges(){
       btns:bs.map(([id,l,pr])=>({id,primary:!!pr,label:pr?l.replace(/ .*/,'')==='시간'?'넣기':l.split(' ')[0]==='숙소'?'넣기':'고르기':'예약 전'}))}))});
 }
 function goMe(h){tab='me';draft=clone(profile);renderMe();renderTabs();setTimeout(()=>{const el=[...document.querySelectorAll('#meBox h3')].find(x=>x.textContent.includes(h));if(el)el.scrollIntoView({block:'start'})},0)}
-function renderMeta(){if(profile.kind==='day'){$('#helperBtn').hidden=true;$('#tripMeta').textContent=`${PACK.city} · ${(DAYS[0].iso||'').slice(5).replace('-','/')} 하루 코스 · ${profile.meet.time}–${profile.meet.end}`;return}if(profile.dateUnknown){const n=DAYS.length-1;$('#helperBtn').hidden=!needBooking();$('#tripMeta').textContent=`${PACK.city} · 날짜 미정 (대략 ${(DAYS[0].iso||'').slice(5).replace('-','/')}부터) · ${n}박 ${n+1}일`;return}$('#helperBtn').hidden=!needBooking();const n=DAYS.length-1;$('#tripMeta').textContent=`${PACK.city} · ${(DAYS[0].iso||'').replace(/-/g,'.')} – ${(DAYS[n].iso||'').slice(5).replace('-','.')} · ${n}박 ${n+1}일 · ${apName(profile.out.airport)}`}
+function renderMeta(){if(profile.kind==='day'){dock({helperHidden:true});hero({meta:`${PACK.city} · ${(DAYS[0].iso||'').slice(5).replace('-','/')} 하루 코스 · ${profile.meet.time}–${profile.meet.end}`});return}if(profile.dateUnknown){const n=DAYS.length-1;dock({helperHidden:!needBooking()});hero({meta:`${PACK.city} · 날짜 미정 (대략 ${(DAYS[0].iso||'').slice(5).replace('-','/')}부터) · ${n}박 ${n+1}일`});return}dock({helperHidden:!needBooking()});const n=DAYS.length-1;hero({meta:`${PACK.city} · ${(DAYS[0].iso||'').replace(/-/g,'.')} – ${(DAYS[n].iso||'').slice(5).replace('-','.')} · ${n}박 ${n+1}일 · ${apName(profile.out.airport)}`})}
 
 

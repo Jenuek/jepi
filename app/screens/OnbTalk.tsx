@@ -2,6 +2,7 @@
 // The old code keeps the conversation and redraws after every answer; "지금 생각 중" and errors are part of what it sends.
 import { Radio, Inp } from './TripForms';
 import { LiveChip, LiveLine } from '../ui/live';
+import { app } from '../ui/host';
 
 export interface TalkPart {
   f: 'talk';
@@ -36,10 +37,10 @@ export function Talk(p: TalkPart) {
           ? <p className="t-q t-wait">잠시 생각을 정리하고 있어요<span className="t-ell" /></p>
           : <>
               <p className="t-q" id="talkQ">{p.last}</p>
-              {p.options.length > 0 && <div className="t-opts">{p.options.map((o, i) => <button key={i} type="button" className="t-opt" data-talkopt={i}>{o}</button>)}</div>}
-              <div className="t-write"><textarea id="talkInput" rows={2} maxLength={300} placeholder="떠오르는 대로 적어 보세요" /><button type="button" className="t-send" id="talkSend" aria-label="보내기">→</button></div>
-              {p.failed && <div className="row"><button type="button" className="small-btn primary" id="talkRetry">다시 시도하기</button></div>}
-              <div className="t-links">{p.n >= 2 && <button type="button" className="t-link" id="talkFinish">이 정도로 정리해 줘</button>}<button type="button" className="t-link" data-startmode="quick">건너뛰고 직접 고를게요</button></div>
+              {p.options.length > 0 && <div className="t-opts">{p.options.map((o, i) => <button key={i} type="button" className="t-opt" data-talkopt={i} onClick={() => app().form('talkopt', String(i))}>{o}</button>)}</div>}
+              <div className="t-write"><textarea id="talkInput" onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); app().form('talkSend', e.currentTarget.value) } }} rows={2} maxLength={300} placeholder="떠오르는 대로 적어 보세요" /><button type="button" className="t-send" id="talkSend" aria-label="보내기" onClick={e => app().form('talkSend', (e.currentTarget.previousElementSibling as HTMLInputElement | null)?.value || '')}>→</button></div>
+              {p.failed && <div className="row"><button type="button" className="small-btn primary" id="talkRetry" onClick={() => app().form('talkRetry')}>다시 시도하기</button></div>}
+              <div className="t-links">{p.n >= 2 && <button type="button" className="t-link" id="talkFinish" onClick={() => app().form('talkFinish')}>이 정도로 정리해 줘</button>}<button type="button" className="t-link" data-startmode="quick" onClick={() => app().form('startmode', 'quick', { inChoose: false })}>건너뛰고 직접 고를게요</button></div>
             </>}
         <LiveLine id="st_talk" />
       </> : <>
@@ -52,7 +53,7 @@ export function Talk(p: TalkPart) {
           <div className="t-field"><span>여행의 속도</span><Radio path="pace" val={d.pace} opts={[['slow', '느긋하게'], ['normal', '보통'], ['full', '꽉 채워서']]} /></div>
           {d.solo && <div className="t-field"><span>사람과의 거리</span><Radio path="social" val={d.social} opts={[['alone', '혼자가 좋아요'], ['some', '가끔은 대화도'], ['social', '많이 만나고 싶어요']]} /></div>}
           <label className="t-field"><span>피하고 싶은 것</span><Inp pf="direction.avoid" val={d.avoid} maxLength={80} placeholder="예: 사람 많은 관광지" /></label>
-          <div className="row"><button type="button" className="small-btn primary" id="talkApply">{d.applyLabel}</button><button type="button" className="t-link" id="talkRedo">다시 이야기하기</button></div>
+          <div className="row"><button type="button" className="small-btn primary" id="talkApply" onClick={() => app().form('talkApply')}>{d.applyLabel}</button><button type="button" className="t-link" id="talkRedo" onClick={() => app().form('talkRedo')}>다시 이야기하기</button></div>
           <p className="hint">대화 내용은 저장하지 않고, 이 방향만 남겨요.</p>
         </div>
       </>}

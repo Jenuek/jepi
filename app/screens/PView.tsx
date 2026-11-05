@@ -4,6 +4,9 @@
 // Page turning is this screen's own state (it stays while the old code redraws; a new day starts on the page with "now" or the next ?).
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode, type PointerEvent as RPointerEvent, type MouseEvent as RMouseEvent } from 'react';
 import { LiveLine } from '../ui/live';
+import { app } from '../ui/host';
+
+const go = (n: string, v?: string) => app().pview(n, v);
 
 export interface PSquare { k: 'start' | 'done' | 'now' | 'place' | 'flag' | 'q' | 'end'; top: string; name: string; uid: string; cat: string; stamp: boolean; flag: boolean; gap: number }
 export interface PDie { k: string; label: string; n: number; on: boolean }
@@ -57,8 +60,8 @@ function Square({ s, j, more }: { s: PSquare; j: number; more: boolean }) {
     {stamp}{road}
   </>;
   const cls = `sq ${s.k}${s.flag ? ' fl' : ''}${s.stamp ? ' stamped' : ''}`;
-  if (s.k === 'q') return <button type="button" className={cls} style={style} data-pgap={s.gap} aria-label={`${s.name} 빈 칸: 굴려서 채우기`}>{body}</button>;
-  if (s.uid) return <button type="button" className={cls} style={style} data-psq={s.uid}>{body}</button>;
+  if (s.k === 'q') return <button type="button" className={cls} style={style} data-pgap={s.gap} onClick={() => go('gap', String(s.gap))} aria-label={`${s.name} 빈 칸: 굴려서 채우기`}>{body}</button>;
+  if (s.uid) return <button type="button" className={cls} style={style} data-psq={s.uid} onClick={() => go('sq', s.uid!)}>{body}</button>;
   return <div className={cls} style={style}>{body}</div>;
 }
 
@@ -105,13 +108,13 @@ function Tray({ dice, canRoll, rollGap }: { dice: PDie[]; canRoll: boolean; roll
       <span className="pstep">① 어떤 주사위를 굴릴까요?</span>
       <div className="pdice" role="radiogroup" aria-label="주사위 고르기">
         {dice.map(d => (
-          <button key={d.k} type="button" role="radio" aria-checked={d.on} className={d.on ? 'pd on' : 'pd'} data-pmood={d.k}>
+          <button key={d.k} type="button" role="radio" aria-checked={d.on} className={d.on ? 'pd on' : 'pd'} data-pmood={d.k} onClick={() => go('mood', d.k)}>
             <Face n={d.n} color={DIE_COLOR[d.k]} /><span>{d.label}</span>
           </button>
         ))}
       </div>
       <span className="pstep">② 굴려요</span>
-      <button type="button" className="proll" data-proll={rollGap} disabled={!canRoll}>
+      <button type="button" className="proll" data-proll={rollGap} onClick={() => go('roll', String(rollGap))} disabled={!canRoll}>
         <Face n={cur.n} color={DIE_COLOR[cur.k]} cls="pdie big" />
         <span><b>{`${cur.label} 주사위 굴리기!`}</b><small>{canRoll ? '다음 ? 칸에 넣을 카드를 뽑아요' : '이 날은 채울 빈 칸이 없어요'}</small></span>
       </button>
@@ -142,7 +145,7 @@ function MyCards({ cards }: { cards: PMyCards }) {
       {cards.count ? (
         <div className={cards.count > 3 ? 'pfan many' : 'pfan'} ref={row} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerLeave={up} onClickCapture={click}>
           {cards.list.map((c, i) => (
-            <button key={c.id} type="button" className="mcard" data-pcard={c.id} style={{ '--cc': catColor(c.cat), '--tilt': `${TILT[i % TILT.length]}deg` } as CSSProperties} aria-label={`${c.name}: 내 카드 주사위로 굴리기`}>
+            <button key={c.id} type="button" className="mcard" data-pcard={c.id} onClick={() => go('card', c.id)} style={{ '--cc': catColor(c.cat), '--tilt': `${TILT[i % TILT.length]}deg` } as CSSProperties} aria-label={`${c.name}: 내 카드 주사위로 굴리기`}>
               <span className="mb"><CatIcon cat={c.cat} size={15} /></span><span className="mn">{c.name}</span>
             </button>
           ))}
@@ -171,7 +174,7 @@ function Draw({ d, dice }: { d: Extract<PViewProps, { mode: 'draw' }>['draw']; d
   return (
     <section className="pdraw" aria-label="카드 뽑기">
       <div className="pdhead">
-        <button type="button" className="pback" data-pclose="" aria-label="판으로 돌아가기">‹</button>
+        <button type="button" className="pback" data-pclose="" onClick={() => go('close')} aria-label="판으로 돌아가기">‹</button>
         <span><b>{d.rolling ? '주사위를 굴리는 중…' : c ? '카드를 뽑았어요!' : '더 나올 카드가 없어요'}</b><small>{`${d.part} ? 칸 · ${d.mood} 주사위`}</small></span>
       </div>
       {d.rolling ? <Spin n={d.n} color={dieColor(dice, d.n)} /> : c ? (
@@ -188,17 +191,17 @@ function Draw({ d, dice }: { d: Extract<PViewProps, { mode: 'draw' }>['draw']; d
             </article>
           </div>
           <div className="pacts">
-            <button type="button" className="pgo" data-pyes="">이 카드로 갈래요</button>
+            <button type="button" className="pgo" data-pyes="" onClick={() => go('yes')}>이 카드로 갈래요</button>
             <div className="row2">
-              <button type="button" data-pnext="">다시 뽑기</button>
-              <button type="button" data-pkeep="" disabled={c.mine}>{c.mine ? '내 카드에 있어요' : '내 카드에 넣기'}</button>
+              <button type="button" data-pnext="" onClick={() => go('next')}>다시 뽑기</button>
+              <button type="button" data-pkeep="" onClick={() => go('keep')} disabled={c.mine}>{c.mine ? '내 카드에 있어요' : '내 카드에 넣기'}</button>
             </div>
           </div>
         </>
       ) : (
         <div className="pempty">
           <p>{d.empty}</p>
-          <div className="row">{d.ai && <button type="button" className="small-btn" data-pai="">AI에게 더 찾아 달라기</button>}<button type="button" className="small-btn" data-pclose="">다른 주사위 고르기</button></div>
+          <div className="row">{d.ai && <button type="button" className="small-btn" data-pai="" onClick={() => go('ai')}>AI에게 더 찾아 달라기</button>}<button type="button" className="small-btn" data-pclose="" onClick={() => go('close')}>다른 주사위 고르기</button></div>
           <LiveLine tag="span" id="st_pai" />
         </div>
       )}
@@ -219,7 +222,7 @@ function Closed({ c }: { c: Extract<PViewProps, { mode: 'closed' }>['closed'] })
           {c.flags.map((f, i) => <div key={i} className="pflag"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" className="flag"><path d="M5 21V4" /><path d="M5 4h12l-3 4 3 4H5" /></svg><span className="mono">{f.t}</span>{f.name}</div>)}
         </section>
       )}
-      <button type="button" className="pahead" data-pahead="" role="switch" aria-checked="false"><span>미리 열어서 계획하기</span><i aria-hidden="true" /></button>
+      <button type="button" className="pahead" data-pahead="" onClick={() => go('ahead')} role="switch" aria-checked="false"><span>미리 열어서 계획하기</span><i aria-hidden="true" /></button>
     </>
   );
 }
@@ -229,7 +232,7 @@ export function PView(props: PViewProps) {
   if (props.mode === 'closed') return <div className="pwrap"><Closed c={props.closed} /><MyCards cards={props.cards} /></div>;
   return (
     <div className="pwrap">
-      {props.ahead && <button type="button" className="pahead on" data-pahead="" role="switch" aria-checked="true"><span>미리 열어 둔 판이에요 · 닫아 두기</span><i aria-hidden="true" /></button>}
+      {props.ahead && <button type="button" className="pahead on" data-pahead="" onClick={() => go('ahead')} role="switch" aria-checked="true"><span>미리 열어 둔 판이에요 · 닫아 두기</span><i aria-hidden="true" /></button>}
       <Board squares={props.squares} day={props.day} qLeft={props.qLeft} />
       <Tray dice={props.dice} canRoll={props.canRoll} rollGap={props.rollGap} />
       <MyCards cards={props.cards} />

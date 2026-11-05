@@ -8,11 +8,11 @@ function setZoom(h,quiet){h=h===100?100:60;document.documentElement.style.setPro
 let gridRev=0;
 function renderTimeline(){
   const DAY_START=dayStart(day);
-  const D=DAYS[day]; $('#dayTitle').textContent=dayTitleOf(day);
+  const D=DAYS[day]; hero({title:dayTitleOf(day)});
   const {items,trans}=analyze(day);
   const nPlaced=items.filter(i=>i.kind==='place').length;
   const g=gapsOf(day);
-  {$('#daySub').textContent=`${D.date} (${WD[D.wd]})`;renderDaySum(items,trans,g)}
+  {hero({sub:`${D.date} (${WD[D.wd]})`});renderDaySum(items,trans,g)}
   const H=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hour'))||60;
   const y=m=>(m-DAY_START)/60*H;
   // drawn by React: app/screens/DayGrid.tsx
@@ -76,13 +76,20 @@ function dayRefs(){
   return refs;
 }
 function nearestRef(p,refs){let best=null;for(const r of refs){if(r.id===p.id)continue;const d=km(p.ll,r.ll);if(!best||d<best.d)best={d,r}}return best}
+// the top of the 장소 tab is drawn by React (app/screens/Tops.tsx); #filters and #cards inside it get their own screens
+function drawTrayTop(){window.JEPI_UI.mount('trayTop',$('#trayTopMount'),{moreHidden:!sample||!!PACK.manual,rec:REC.statusText(PACK.city||''),group})}
+// pressed in the 장소 tab's top
+function trayAct(n,v){
+  if(n==='group'){group=v;renderTray()}
+  else if(n==='open')renderTray();
+  else if(n==='more')openFind({where:'city',into:'list',q:v,autorun:true})
+}
 function renderTray(){
   recsMaybe();
-  const wd=DAYS[day].wd, openOnly=$('#openOnly').checked; $('#moreForm').hidden=!sample||PACK.manual;
-  {const rs=$('#recSt'),h=recStatusHTML();rs.hidden=!h;rs.innerHTML=h}
-  document.querySelectorAll('[data-group]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.group===group)));
+  const wd=DAYS[day].wd, openOnly=$('#openOnly').checked;
+  drawTrayTop();
   const cats=Object.entries(CATS);
-  window.JEPI_UI.mount('trayFilters',$('#filters'),{chips:[['all','전체'],['wish','♥'],...(P.some(p=>p.season)?[['season','🗓 시즌']]:[]),...(recState!=='off'?[['users','👍']]:[]),['must','★']],cats,cat,rev:++trayRev});
+  window.JEPI_UI.mount('trayFilters',$('#filters'),{chips:[['all','전체'],['wish','♥'],...(P.some(p=>p.season)?[['season','🗓 시즌']]:[]),...(RS.status!=='off'?[['users','👍']]:[]),['must','★']],cats,cat,rev:++trayRev});
   const used=new Set(placed.map(b=>b.id));
   const inCat=P.filter(p=>!(cat==='all'&&p.drop)&&(cat==='all'||(cat==='wish'?isWish(p.id):cat==='season'?!!p.season:cat==='must'?!!MUST[p.id]:cat==='users'?(recOf(p)>0||p.shared):p.cat===cat))&&(!openOnly||(!closedOn(p,wd)&&!outOfSeason(p,DAYS[day].iso))));
   const list=inCat.filter(p=>!used.has(p.id));
@@ -126,7 +133,7 @@ function cardInfo(p,wd,used,near){
       p.check?T('tag',`준비: ${p.check}`):null,
       p.gone?T('tag r','폐업했을 수 있어요'):p.hsrc==='google'?T('tag ok','영업시간 확인됨'):p.verify==='영업시간'&&p.ll&&inKR(p.ll)?T('tag','영업시간 추정'):p.verify?T('tag',`확인 필요: ${p.verify}`):null].filter(Boolean);
     return {id:String(p.id),name:String(p.name),sub:`${p.area} · ${p.note}`,cat:String(p.cat),sel:selected===p.id,off:!!(off||oos),dist,wish:!!isWish(p.id),
-      vote:recState!=='off'?{on:!!iRec(p),n:recOf(p),locked:recState==='readonly'&&!recPublic()}:null,extras:extras(CARD_EXTRAS,p),dur:p.dur,key,det};
+      vote:RS.status!=='off'?{on:!!iRec(p),n:recOf(p),locked:false}:null,extras:extras(CARD_EXTRAS,p),dur:p.dur,key,det};
 }
 function openFill(t){
   const D=DAYS[day], wd=D.wd, {items}=analyze(day);
@@ -172,19 +179,22 @@ function renderChecks(){
       if(it.kind==='place'&&it.p.verify) prepRows.push({id:'v-'+it.id,d:i,t:`${it.p.verify} 확인`,s:it.name}); });
   });
   if(markWarnings().needTax) prepRows.push({id:'tax-'+cityKey(),d:DAYS.length-1,t:'쇼핑 일정이 있어요 · 면세 환급을 어디서 할지 🧾 표시를 붙여 두세요',s:'매장 또는 출국 공항'});
-  $('#warnCount').textContent=warnRows.length?String(warnRows.length):''; $('#warnCount2').textContent=warnRows.length?' '+warnRows.length:'';
-  {const fc=$('#fixWarnChip');fc.hidden=!(warnRows.length&&sample);fc.textContent=`🛠 경고 ${warnRows.length}개 해결`}
+  tabs({warn:warnRows.length?String(warnRows.length):''}); $('#warnCount2').textContent=warnRows.length?' '+warnRows.length:'';
+  dock({fixHidden:!(warnRows.length&&sample),fixText:`🛠 경고 ${warnRows.length}개 해결`});
   // drawn by React: app/screens/Checks.tsx
   window.JEPI_UI.mount('checks',$('#checks'),{ai:!!sample,warns:warnRows.map(r=>({d:r.d,uid:String(r.uid),t:r.t})),prep:prepRows.map(r=>ckInfo(r.id,r.t,`Day ${r.d+1} · ${r.s}`)),
     season:seasonInfo(),all:STATIC_CHECKS.map(s=>ckInfo(s.id,s.t)),resetArm:!!resetArm,rev:++checksRev});
 }
 let checksRev=0;
 function ckInfo(id,t,sub){return {id,t:String(t),sub,on:!!done[id]}}
+// the bottom tabs are drawn by React (app/screens/Bars.tsx); tabs({…}) changes some of it and draws again
+let tabsView={shown:'timeline',warn:''};
+function tabs(p){tabsView={...tabsView,...p};window.JEPI_UI.mount('tabs',$('#tabsMount'),tabsView)}
 function renderTabs(){setTimeout(fabDodge,0);   // the 🎲 button shows on every tab (300-intro-header.js fabDodge)
   const wide=matchMedia('(min-width:900px)').matches;
   const grp={check:'more',pref:'more',me:'more',plans:'more',settings:'more'}; Object.keys(PANELS).forEach(k=>grp[k]='more');
   const shown=wide&&tab==='timeline'?'tray':(grp[tab]||tab);
-  document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===shown)));
+  tabs({shown});
   document.body.dataset.tab=grp[tab]||tab;
   $('#panel-timeline').hidden=!wide&&tab!=='timeline';
   $('#panel-side').hidden=!wide&&tab==='timeline';
@@ -194,11 +204,14 @@ function renderTabs(){setTimeout(fabDodge,0);   // the 🎲 button shows on ever
 }
 function renderBanner(){
   document.body.classList.toggle('placing',!!selected);
-  $('#banner').hidden=!selected;
-  if(selected){const p=PM[selected];$('#bannerText').textContent=`${p.name} (${p.dur}분) · 넣을 시간을 탭하세요`}
+  if(selected){const p=PM[selected];bannerView={open:true,text:`${p.name} (${p.dur}분) · 넣을 시간을 탭하세요`}}else bannerView={...bannerView,open:false};
+  drawBanner();
 }
+// the banner is drawn by React (app/screens/Frames.tsx); it keeps its last text while hidden
+let bannerView={open:false,text:''};
+function drawBanner(){window.JEPI_UI.mount('banner',$('#bannerMount'),bannerView)}
 function renderAI(){
-  const box=$('#aiBox'); $('#aiBtn').hidden=!sample;
+  const box=$('#aiBox'); dock({aiHidden:!sample});
   if(!aiState||aiState.day!==day){box.hidden=true;return}
   box.hidden=false;
   // drawn by React: app/screens/AiBox.tsx

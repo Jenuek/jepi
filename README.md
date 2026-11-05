@@ -81,6 +81,11 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 | 여행 데이터 저장 (계획 목록·계획 사본·일정 블록·♥·체크·취향 키워드), 저장 이름과 모양 | `app/data/trip.ts` (예전 코드는 `TRIP`) |
 | 첫 화면(새 여행·로그인·데모), 데모 시작/끝 | 화면 `app/screens/Welcome.tsx` (리액트), 동작 `381-welcome-demo.js`, 데모 칸막이 `app/data/demo.ts`, 데모 일정 `066-demo-osaka.js` |
 | 일정표 그리기 / 장소 탭 카드·필터 | `340-render.js` / 화면 `app/screens/Tray.tsx` (리액트, 카드에 넣을 값은 `340-render.js`의 `cardInfo`) |
+| 장소 탭 위쪽 / 지도 위쪽 (이 날·전체·내 위치) | 화면 `app/screens/Tops.tsx` (리액트), 값은 `340-render.js`(drawTrayTop·trayAct) / `210-map.js`(mapTop·mapTopAct) |
+| 머리글 (커버·J/P·계획 이름·날짜 제목) | 화면 `app/screens/Hero.tsx` (리액트), 값은 `389a-look.js`의 `hero({…})`, 접히는 움직임은 `heroWatch` |
+| 아래 탭 / 접히는 머리글 줄 | 화면 `app/screens/Bars.tsx` (리액트), 값은 `340-render.js`(tabs·renderTabs, 탭 바꾸기는 `380-events.js`의 `goTab`) / `389a-look.js`(miniBar·heroWatch) |
+| 일정표 아래 대화 칸 (접기·칩·메시지 칸) | 화면 `app/screens/Dock.tsx` (리액트), 값은 `050-chat.js`의 `dock({…})`, 채팅 목록은 `ChatLog.tsx` |
+| 고정 틀 (처음 설정 틀·예약 도우미 틀·처음 안내·장소 고른 뒤 안내 줄) | 화면 `app/screens/Frames.tsx` (리액트), 보여 줄 값은 `030-forms.js`(onbView)·`100-booking.js`(helperView)·`370-reset-guide.js`(coachView)·`340-render.js`(bannerView) |
 | 직접 블록 만들기 / 예약 도우미 / 계획 메뉴 / 여행 단계 띠 | `app/screens/CustomSheet.tsx` (`040-manual-blocks.js`, 같은 장소 제안 `388-dedup.js`) / `HelperBody.tsx` (`100-booking.js`·`150-lodging.js`) / `PlanMenu.tsx` (`300-intro-header.js`) / `Phase.tsx` (`250-phase-strip.js`) |
 | 일정표 시트 (블록 누름·빈 시간 누름) / P모드 보드게임판 | 화면 `app/screens/BlockSheet.tsx` / `PView.tsx` (리액트), 값은 `350-actions.js`(openSheet·altsInfo)·`080-todos.js`(marksInfo)·`340-render.js`(openFill) / `170-quick-start-pview.js`, 모양 `src/css/19-pmode.css` |
 | 일정표 본체 (시간 줄·블록·이동·권역 띠·일몰 선) | 화면 `app/screens/DayGrid.tsx` (리액트), 값은 `340-render.js`의 renderTimeline, 끌어다 놓기 `380-events.js` |
@@ -95,19 +100,20 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 | 누를 때 반응(모든 버튼) | `18-press.css` |
 | 손글씨 메모 (일정 블록별·날짜별) | `389b-memo.js` (블록 시트의 메모 칸은 `app/screens/Extras.tsx`) |
 | 여행 노트 보기 (PDF 저장·링크) | 화면 `app/screens/Notebook.tsx` (리액트), 값 `389c-notebook.js` |
-| 👍 모든 여행자의 추천 (서버 `jepi_recs`), 👍 많은 순 | `070-shared-recs.js` |
+| 👍 모든 여행자의 추천 (서버 `jepi_recs`), 👍 많은 순 | `app/data/recs.ts` (불러오기·세기·저장), `070-shared-recs.js` (장소 목록에 넣기) |
 | 블록 누르면 나오는 시트, 옮기기·길이 | `350-actions.js` |
-| 경고 계산(영업시간·이동시간) | `330-helpers.js` (`analyze`) |
-| 이동 시간·경로 (해외 Google, 국내는 거리로 어림 + 카카오맵 연결) | `200-routes.js` |
-| 영업시간 확인 (Google Places, 월 900곳 한도) | `383-hours.js` |
+| 경고 계산(영업시간·이동시간) | 규칙 `app/logic/schedule.ts`, 날짜 항목 만들기 `330-helpers.js` (`analyze`) |
+| 이동 시간·경로 (해외 Google, 국내는 거리로 어림 + 카카오맵 연결) | `app/data/routes.ts`, 링크·한국 판단 `app/logic/geo.ts` (예전 `200-routes.js`는 연결과 다시 그리기만) |
+| 내 장소, 카카오 장소·주소 검색, 지금 위치 | `app/data/myplaces.ts`, `app/data/kakao.ts` (화면 `MyPlacesSection.tsx`) |
+| 영업시간 확인 (Google Places, 월 900곳 한도) | `app/data/hours.ts`, 모양 바꾸기 `app/logic/hours.ts` (예전 `383-hours.js`는 연결만) |
 | 지도 | `210-map.js` |
 | AI 연결·모델 선택 | 연결(부르기·다시 시도·다른 AI) `app/data/ai.ts`, 키·모델 `190-keys-ai-router.js`, 실제 호출 `360-ai.js`, 채팅 `050-chat.js` (화면 `app/screens/ChatLog.tsx`), 빈 시간 추천 상자 `app/screens/AiBox.tsx` |
-| 🎲 뭐 먹지 / 뭐 하지 | `280-dice-eat.js`, `290-dice-do.js` |
+| 🎲 뭐 먹지 / 뭐 하지 | 주변 찾기·굴리기·코스 짜기 `app/data/nearby.ts`, 시트 상태·버튼 `280-dice-eat.js`, `290-dice-do.js` |
 | 내 계획 목록, 새 계획 | 화면 `app/screens/PlansScreen.tsx` (리액트), 동작 `180-plans.js` |
 | 로그인·기기 간 동기화·키 암호화 | 로그인 화면 `310-sync.js`, 무엇을 보내고 어떻게 합칠지 `app/data/sync.ts`, 서버와 대화 `app/data/server.ts`, 암호화 `app/data/vault.ts` |
 | 기기에 저장 (localStorage) | `app/data/storage.ts` (여기로만 읽고 써요) |
 | 친구와 함께 (초대·합치기·가고 싶어요) | 화면 `app/screens/FriendsPanel.tsx` (리액트), 서버 주고받기 `app/data/trips.ts`, 합치기 규칙 `app/data/merge.ts`, 화면 쪽 동작 `384-trips.js` |
-| 알림 (일정별 🔔, 서버로 예약) | 화면 `app/screens/NotifyPanel.tsx` (리액트), 동작 `386-notify.js`, 서버 `supabase/functions/jepi-push` |
+| 알림 (일정별 🔔, 서버로 예약) | 화면 `app/screens/NotifyPanel.tsx` (리액트), 서버·기기·설정 `app/data/alerts.ts`, 언제 알릴지 `app/logic/alerts.ts`, 일정 쪽 연결 `386-notify.js`, 서버 `supabase/functions/jepi-push` |
 | 더보기 메뉴 / 설정 / 사용 안내 | `app/screens/MoreMenu.tsx` (리액트, 숫자는 `220-more-menu.js`) / `app/screens/SettingsScreen.tsx`+`SyncSection`·`MyPlacesSection`·`AiKeysSection` (리액트, 값과 동작은 `230-settings.js`·`310-sync.js`·`270-my-places.js`·`250-phase-strip.js`) / `app/screens/HelpPanel.tsx` (리액트) |
 | 더보기 → 이번 여행 (줄 목록과 입력 폼) | 줄 `app/screens/MeRows.tsx`, 폼 `app/screens/TripForms.tsx` (리액트: 누구와·예약 상태·기간·오가는 길·출발지·숙소·예약한 일정·예산). 폼에 넣을 값은 `030-forms.js`·`130-style-budget.js`의 `part…`, 줄 목록은 `220-more-menu.js`. 여행지·하루 코스 폼도 리액트 |
 | 처음 설정 (#onb 안의 본문) | 화면 `app/screens/OnbBody.tsx`·`OnbTalk.tsx`(이야기하며 정하기, 대화는 `140-direction-chat.js`)·`OnbFinder.tsx`(여행지 추천, AI는 `120-destination-finder.js`) (리액트), 넣을 값 `030-forms.js`의 ONB·`partQuick`·`partJP`, 틀은 `body.html` |

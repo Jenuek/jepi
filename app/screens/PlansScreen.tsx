@@ -1,6 +1,12 @@
 // 더보기 → 내 계획: the saved plans, sharing the open plan, opening a backup or a shared plan
-// (it used to be renderPlans in src/js/180-plans.js). Buttons keep their id / data-plan* names:
-// the old code handles the clicks.
+// (it used to be renderPlans in src/js/180-plans.js). Buttons keep their id / data-plan* names and say what was
+// pressed through app().plans(name, value); the old code keeps the plans.
+import { useRef } from 'react';
+import { app } from '../ui/host';
+import { ImportFile } from './ImportFile';
+
+const go = (n: string, v?: string, v2?: string) => app().plans(n, v, v2);
+
 export interface PlanItem {
   id: string;
   name?: string;
@@ -34,26 +40,28 @@ const savedDay = (t: number) => new Date(t).toLocaleDateString('ko-KR', { month:
 function PlanRow({ p, cur, armed, renaming }: { p: PlanItem; cur: boolean; armed: boolean; renaming: boolean }) {
   const info = (p.kind === 'day' ? '☀️ 하루 코스' : '✈️ 여행') + (p.dates ? ' · ' + p.dates : '') + ` · 블록 ${p.blocks || 0}개`
     + (p.updated ? ' · ' + savedDay(p.updated) + ' 저장' : '');
+  const nm = useRef<HTMLInputElement>(null);
   return (
     <div className={'plan' + (cur ? ' cur' : '')}>
       <div className="pl-top">{renaming
-        ? <><input className="pl-name" maxLength={40} defaultValue={p.name || ''} /><button className="small-btn primary" data-planname={p.id}>저장</button></>
+        ? <><input className="pl-name" maxLength={40} defaultValue={p.name || ''} ref={nm} autoFocus /><button className="small-btn primary" data-planname={p.id} onClick={() => go('name', p.id, nm.current ? nm.current.value : '')}>저장</button></>
         : <><b>{p.name || '이름 없는 계획'}</b>{cur && <span className="tag r">지금 보는 계획</span>}</>}</div>
       <small>{info}</small>
       <div className="row">
-        {!cur && <button className="small-btn primary" data-planopen={p.id}>열기</button>}
-        <button className="small-btn" data-planrename={p.id}>이름 바꾸기</button>
-        <button className="small-btn" data-plandup={p.id}>복제</button>
-        <button className="small-btn danger" data-plandel={p.id}>{armed ? '한 번 더 누르면 삭제' : '삭제'}</button>
+        {!cur && <button className="small-btn primary" data-planopen={p.id} onClick={() => go('open', p.id)}>열기</button>}
+        <button className="small-btn" data-planrename={p.id} onClick={() => go('rename', p.id)}>이름 바꾸기</button>
+        <button className="small-btn" data-plandup={p.id} onClick={() => go('dup', p.id)}>복제</button>
+        <button className="small-btn danger" data-plandel={p.id} onClick={() => go('del', p.id)}>{armed ? '한 번 더 누르면 삭제' : '삭제'}</button>
       </div>
     </div>
   );
 }
 
 export function PlansScreen(p: PlansScreenProps) {
+  const code = useRef<HTMLInputElement>(null);
   return (
     <>
-      <div className="row" style={{ marginBottom: 10 }}><button className="small-btn primary" id="planNew">+ 새 계획</button></div>
+      <div className="row" style={{ marginBottom: 10 }}><button className="small-btn primary" id="planNew" onClick={() => go('new')}>+ 새 계획</button></div>
       {p.planMsg && <p className="ai-status" style={{ margin: '0 0 8px' }}>{p.planMsg}</p>}
       <div className="plan-list">
         {p.plans.length
@@ -63,10 +71,10 @@ export function PlansScreen(p: PlansScreenProps) {
       <div className="fsec" style={{ marginTop: 14 }}>
         <h3>지금 계획 공유하기</h3>
         <div className="row">
-          <button className="small-btn primary" id="planShare">{p.standalone ? '공유 링크 보내기' : '공유 코드 만들기'}</button>
-          <button className="small-btn" id="planText">카톡용 글</button>
-          <button className="small-btn" id="planTxt">글 파일 받기</button>
-          <button className="small-btn" id="planJson">백업 파일 받기</button>
+          <button className="small-btn primary" id="planShare" onClick={() => go('share')}>{p.standalone ? '공유 링크 보내기' : '공유 코드 만들기'}</button>
+          <button className="small-btn" id="planText" onClick={() => go('text')}>카톡용 글</button>
+          <button className="small-btn" id="planTxt" onClick={() => go('txt')}>글 파일 받기</button>
+          <button className="small-btn" id="planJson" onClick={() => go('json')}>백업 파일 받기</button>
         </div>
         {p.standalone && p.lastLink && <>
           <textarea className="share-text" rows={3} readOnly value={p.lastLink} />
@@ -81,15 +89,15 @@ export function PlansScreen(p: PlansScreenProps) {
       <div className="fsec">
         <h3>백업 파일 불러오기</h3>
         <p className="hint">"백업 파일 받기"로 저장한 .json 파일을 고르면 새 계획으로 열려요.</p>
-        <input type="file" accept=".json,application/json" className="importFile" />
+        <ImportFile />
       </div>
       <div className="fsec">
         <h3>공유받은 계획 열기</h3>
         <div className="kw-add">
           {p.standalone
-            ? <input id="codeIn" placeholder="받은 링크 붙여 넣기" autoComplete="off" />
-            : <input id="codeIn" maxLength={10} placeholder="JP-7K2QX" autoComplete="off" />}
-          <button className="small-btn primary" id="codeOpen">열기</button>
+            ? <input id="codeIn" ref={code} placeholder="받은 링크 붙여 넣기" autoComplete="off" />
+            : <input id="codeIn" ref={code} maxLength={10} placeholder="JP-7K2QX" autoComplete="off" />}
+          <button className="small-btn primary" id="codeOpen" onClick={() => go('code', code.current ? code.current.value : '')}>열기</button>
         </div>
       </div>
       <p className="hint">{p.savedInAccount

@@ -134,6 +134,7 @@ async function launch() {
   const srv = serve(); const b = await launch(); const S = fakeServer();
   try {
     for (const t of require(process.env.JEPI_CHECKS || './checks')) {
+      if (process.env.JEPI_ONLY && !t.name.includes(process.env.JEPI_ONLY)) continue;   // JEPI_ONLY=word: run only the checks whose name has it
       console.log('▶ ' + t.name);
       try { await t.run({ b, S, device, ok, vis, skipCoach, openSettings }) }
       catch (e) { ok(false, 'threw: ' + e.message.split('\n')[0]) }

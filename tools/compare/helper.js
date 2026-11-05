@@ -24,5 +24,6 @@ module.exports = { name: 'helper', async run(t) {
   await p.click('#helperBody [data-slot] >> nth=1'); await p.waitForTimeout(300); await grab('s2_slot', '#helperBody');
   await p.click('#routeBtn'); await p.waitForTimeout(1200); await grab('s2_route', '#helperBody');
   await p.click('#helperNext'); await p.waitForTimeout(300); await grab('s3', '#helperBody');
+  await p.click('#helperBody [data-radio="bookedStay"][data-val="false"]'); await p.waitForTimeout(300); await grab('s3_radio', '#helperBody');
   await p.ctx.close();
 } };

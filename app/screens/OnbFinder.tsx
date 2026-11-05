@@ -3,6 +3,7 @@
 import { Radio, Inp, type Opt } from './TripForms';
 import { StyleMore } from './TasteStyle';
 import { LiveButton, LiveChip, LiveLine } from '../ui/live';
+import { app } from '../ui/host';
 
 export interface DestCard { city: string; country: string; why: string; fit: string; season: string; highlights: string[]; flight: string; budget: string; caution: string }
 
@@ -29,7 +30,7 @@ function Card({ d, label, pick, i, id }: { d: DestCard; label: string; pick: 'de
       {d.highlights.length > 0 && <p className="hint">{d.highlights.join(' · ')}</p>}
       <p className="mono hint">{`${d.flight || ''}${d.budget ? ` · ${d.budget}` : ''}`}</p>
       {d.caution && <p className="hint">{`주의: ${d.caution}`}</p>}
-      <div className="row"><button className="small-btn primary" type="button" {...at}>이 여행지로 정하기</button></div>
+      <div className="row"><button className="small-btn primary" type="button" {...at} onClick={() => app().form(pick === 'dest' ? 'pickdest' : 'pickask', String(i))}>이 여행지로 정하기</button></div>
     </div>
   );
 }
@@ -49,17 +50,17 @@ export function DestFinder(p: FinderPart) {
         <span className="hint">끌리는 것 (여러 개)</span><div className="chips">{p.chips.map(x => <LiveChip key={x.k} k={x.k} on={x.on} />)}</div>
         <StyleMore rows={p.styleRows} style={p.style} open={p.styleOpen} />
         <label className="fg" style={{ display: 'block' }}><span className="hint">원하는 여행을 자유롭게 (선택)</span><textarea id="destWant" rows={2} maxLength={300} style={{ marginTop: 4 }} placeholder="예: 혼자 사색하며 걷고 싶어요, 바다 보며 쉬기, 맛집 많은 도시" defaultValue={p.want} /></label>
-        <div className="row">{p.ai && <LiveButton className="small-btn primary" id="destRecBtn">AI로 여행지 추천받기</LiveButton>}<button className="small-btn" type="button" data-destmode="">직접 입력할게요</button><LiveLine tag="span" id="st_dest" /></div>
+        <div className="row">{p.ai && <LiveButton className="small-btn primary" id="destRecBtn" onClick={() => app().form('destRec')}>AI로 여행지 추천받기</LiveButton>}<button className="small-btn" type="button" data-destmode="" onClick={() => app().form('destmode', '')}>직접 입력할게요</button><LiveLine tag="span" id="st_dest" /></div>
         {!p.ai && <p className="hint">여행지 추천은 AI를 연결하면 쓸 수 있어요 (더보기 → 설정).</p>}
       </div>
       {p.recs && <>
         {p.recs.map((d, i) => <Card key={i} d={d} label={`${i + 1}. `} pick="dest" i={i} />)}
-        <div className="row" style={{ marginBottom: 10 }}><LiveButton className="small-btn" id="destMoreBtn">다른 곳 더 보기</LiveButton><LiveLine tag="span" id="st_more" /></div>
+        <div className="row" style={{ marginBottom: 10 }}><LiveButton className="small-btn" id="destMoreBtn" onClick={() => app().form('destMore')}>다른 곳 더 보기</LiveButton><LiveLine tag="span" id="st_more" /></div>
       </>}
       {p.ai && <>
         <div className="fsec">
           <h3>궁금한 곳이 따로 있다면</h3>
-          <div className="kw-add"><input id="destAsk" maxLength={40} placeholder="예: 아이슬란드" autoComplete="off" /><LiveButton className="small-btn primary" id="destAskBtn">나한테 맞는지 보기</LiveButton></div>
+          <div className="kw-add"><input id="destAsk" maxLength={40} placeholder="예: 아이슬란드" autoComplete="off" /><LiveButton className="small-btn primary" id="destAskBtn" onClick={e => app().form('destAsk', (e.currentTarget.previousElementSibling as HTMLInputElement | null)?.value || '')}>나한테 맞는지 보기</LiveButton></div>
           <p className="hint">추천 목록과 별개로, 조건과 취향에 비춰 좋은 점과 아쉬운 점을 알려 줘요.</p>
           <LiveLine id="st_ask" />
         </div>

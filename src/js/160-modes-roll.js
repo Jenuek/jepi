@@ -1,6 +1,6 @@
 // ---------- J / P modes ----------
 let jp='J';
-function setJP(m,quiet){jp=m==='P'?'P':'J';{const ci=document.getElementById('chatInput');if(ci)ci.placeholder=jp==='P'?'뭐 하고 싶어요? 말로 해도 돼요':'AI에게 말로 부탁하기'}document.body.classList.toggle('mode-p',jp==='P');document.querySelectorAll('[data-jp]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.jp===jp)));if(!quiet)store.set('gp.jp',jp)}
+function setJP(m,quiet){jp=m==='P'?'P':'J';dock({placeholder:jp==='P'?'뭐 하고 싶어요? 말로 해도 돼요':'AI에게 말로 부탁하기'});document.body.classList.toggle('mode-p',jp==='P');hero({jp});if(!quiet)store.set('gp.jp',jp)}
 
 // ---------- one-day course ----------
 // 하루 코스: 여행지 + 언제·어디서 만나요 + 누구와 (drawn by React: TripForms.tsx)

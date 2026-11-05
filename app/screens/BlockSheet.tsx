@@ -5,6 +5,9 @@
 import { Fragment, type CSSProperties, type ReactNode } from 'react';
 import { Line, type Seg } from './DayTop';
 import { Extras, type Extra } from './Extras';
+import { app } from '../ui/host';
+
+const go = (n: string, v?: string, o?: { start?: string; dur?: string }) => app().block(n, v, o);
 
 export interface FillRow {
   id: string; cat: string; name: string; random: boolean; star: boolean; kws: string[];
@@ -26,8 +29,8 @@ export function Row({ r, dim }: { r: FillRow; dim?: boolean }) {
         {r.mustNote && <div className="m" style={{ color: 'var(--ink)' }}>{r.mustNote}</div>}
         <div className="m"><Line segs={r.line} /></div>
       </div>
-      {a.k === 'fill' ? <button className="small-btn primary" data-fill={r.id} data-start={a.start}><span className="t">{a.time}</span> 넣기</button>
-        : a.k === 'swap' ? <button className="small-btn primary" data-swap={r.id} data-start={a.start} data-dur={a.dur}>바꾸기</button>
+      {a.k === 'fill' ? <button className="small-btn primary" data-fill={r.id} data-start={a.start} onClick={() => go('fill', r.id, { start: String(a.start) })}><span className="t">{a.time}</span> 넣기</button>
+        : a.k === 'swap' ? <button className="small-btn primary" data-swap={r.id} data-start={a.start} data-dur={a.dur} onClick={() => go('swap', r.id, { start: String(a.start), dur: String(a.dur) })}>바꾸기</button>
         : <span className="m">{a.t}</span>}
     </div>
   );
@@ -49,7 +52,7 @@ export function FillSheet(p: FillSheetProps) {
         {p.fit.length ? p.fit.map(r => <Row key={r.id} r={r} />) : <p className="now-hint">이 빈 시간에 들어가는 장소가 없어요. 앞뒤 블록을 옮겨 보세요.</p>}
         {p.dim.map(r => <Row key={r.id} r={r} dim />)}
       </div>
-      <div className="row"><button className="small-btn primary" data-dicefrom={p.t}>🎲 굴리기</button><button className="small-btn" data-totray="1">다른 장소 고르기</button><button className="small-btn" data-newcustom={p.t}>직접 만들기</button><button className="small-btn" data-close="1">닫기</button></div>
+      <div className="row"><button className="small-btn primary" data-dicefrom={p.t} onClick={() => go('dicefrom', String(p.t))}>🎲 굴리기</button><button className="small-btn" data-totray="1" onClick={() => go('totray')}>다른 장소 고르기</button><button className="small-btn" data-newcustom={p.t} onClick={() => go('newcustom', String(p.t))}>직접 만들기</button><button className="small-btn" data-close="1">닫기</button></div>
     </Fragment>
   );
 }
@@ -115,11 +118,11 @@ function Marks({ m }: { m: MarksBox }) {
       <p className="hint">시간을 따로 잡지 않고 이 블록에 붙는 일이에요. 짝이 있는 일은 끝내는 표시가 없으면 경고해요.</p>
       {m.rows.map((r, i) => (
         <Fragment key={i}>
-          <div className="mk-row"><span>{r.icon}</span>{r.btns.map(b => <button key={b.m} className="small-btn" data-mark={b.m} aria-pressed={b.on}>{b.label}</button>)}</div>
+          <div className="mk-row"><span>{r.icon}</span>{r.btns.map(b => <button key={b.m} className="small-btn" data-mark={b.m} aria-pressed={b.on} onClick={() => go('mark', b.m)}>{b.label}</button>)}</div>
           {i === 0 && m.bagHint && <p className="hint" style={{ margin: '0 0 6px 28px' }}>{m.bagHint}</p>}
         </Fragment>
       ))}
-      {m.pairs.map(x => <div className="row" key={x.T}><button className="small-btn primary" data-pairblock={x.T}>{x.label}</button></div>)}
+      {m.pairs.map(x => <div className="row" key={x.T}><button className="small-btn primary" data-pairblock={x.T} onClick={() => go('pairblock', String(x.T))}>{x.label}</button></div>)}
     </details>
   );
 }
@@ -131,7 +134,7 @@ export function BlockSheet(p: BlockSheetProps) {
       <div className="when">{p.when}</div>
       {p.note && <p>{p.note}</p>}
       {p.mapLink && <p><a href={p.mapLink} target="_blank" rel="noopener">지도에서 위치·영업시간 확인</a></p>}
-      {p.vote && <div className="row"><button className="vote" data-vote={p.vote.id} aria-pressed={p.vote.on} disabled={p.vote.locked}>{`👍 추천 ${p.vote.n}`}</button><span className="hint">{p.vote.on ? '추천했어요. 다시 누르면 취소돼요.' : '좋았던 곳이면 다른 여행자에게 추천해 주세요.'}</span></div>}
+      {p.vote && <div className="row"><button className="vote" data-vote={p.vote.id} aria-pressed={p.vote.on} disabled={p.vote.locked} onClick={() => app().place('vote', p.vote!.id)}>{`👍 추천 ${p.vote.n}`}</button><span className="hint">{p.vote.on ? '추천했어요. 다시 누르면 취소돼요.' : '좋았던 곳이면 다른 여행자에게 추천해 주세요.'}</span></div>}
       {p.hours && <p className="mono" style={{ color: 'var(--muted)', fontSize: '12px' }}>{p.hours}</p>}
       {p.cost && <p><Line segs={p.cost} /></p>}
       {p.krw && <p>예상 비용 <b className="mono">{p.krw}</b> · 원화 기준</p>}
@@ -143,14 +146,14 @@ export function BlockSheet(p: BlockSheetProps) {
       {p.travel && <p><Line segs={p.travel} /></p>}
       {p.marks && <Marks m={p.marks} />}
       {p.place ? <>
-        <div className="row"><span className="lbl">시간</span><button className="small-btn" data-mv="-30">30분 앞으로</button><button className="small-btn" data-mv="30">30분 뒤로</button></div>
-        <div className="row"><span className="lbl">길이</span><button className="small-btn" data-du="-30">30분 줄이기</button><button className="small-btn" data-du="30">30분 늘리기</button></div>
-        <div className="row"><button className="small-btn danger" data-del="1">일정에서 빼기</button>{p.place.customId && <button className="small-btn" data-editcustom={p.place.customId}>블록 정보 수정</button>}<button className="small-btn primary" data-close="1">완료</button></div>
+        <div className="row"><span className="lbl">시간</span><button className="small-btn" data-mv="-30" onClick={() => go('mv', '-30')}>30분 앞으로</button><button className="small-btn" data-mv="30" onClick={() => go('mv', '30')}>30분 뒤로</button></div>
+        <div className="row"><span className="lbl">길이</span><button className="small-btn" data-du="-30" onClick={() => go('du', '-30')}>30분 줄이기</button><button className="small-btn" data-du="30" onClick={() => go('du', '30')}>30분 늘리기</button></div>
+        <div className="row"><button className="small-btn danger" data-del="1" onClick={() => go('del')}>일정에서 빼기</button>{p.place.customId && <button className="small-btn" data-editcustom={p.place.customId} onClick={() => go('editcustom', p.place!.customId!)}>블록 정보 수정</button>}<button className="small-btn primary" data-close="1">완료</button></div>
         <AltList a={p.place.alts} />
       </> : <>
         {p.home && <>
           <div className="row"><span className="lbl" style={{ width: 'auto' }}>{`집 → ${p.home.word} `}<b className="mono">{`${p.home.min}분`}</b></span></div>
-          <div className="row"><button className="small-btn" data-home="-10">10분 줄이기</button><button className="small-btn" data-home="10">10분 늘리기</button></div>
+          <div className="row"><button className="small-btn" data-home="-10" onClick={() => go('home', '-10')}>10분 줄이기</button><button className="small-btn" data-home="10" onClick={() => go('home', '10')}>10분 늘리기</button></div>
         </>}
         <div className="row"><button className="small-btn primary" data-close="1">닫기</button></div>
       </>}

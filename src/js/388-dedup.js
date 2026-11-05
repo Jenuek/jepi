@@ -1,19 +1,8 @@
 // ---------- same place twice: catch it when adding, offer to merge what is already doubled ----------
 // "Same place" = within 100 m and a similar name (one contains the other, or most letter pairs match).
 // Nothing is merged automatically: a branch of the same chain can sit next door.
-function nameSim(a,b){
-  const x=norm(a).replace(/[^\p{L}\p{N}]/gu,''), y=norm(b).replace(/[^\p{L}\p{N}]/gu,'');
-  if(!x||!y) return 0; if(x===y) return 1; if(x.includes(y)||y.includes(x)) return .9;
-  const bi=s=>{const m=new Map();for(let i=0;i<s.length-1;i++){const g=s.slice(i,i+2);m.set(g,(m.get(g)||0)+1)}return m};
-  const A=bi(x),B=bi(y); let hit=0; A.forEach((n,g)=>{hit+=Math.min(n,B.get(g)||0)});
-  return 2*hit/Math.max(1,(x.length-1)+(y.length-1));
-}
-function samePlace(p,q){
-  if(!p||!q||p.id===q.id) return false;
-  if(p.gid&&q.gid) return p.gid===q.gid;
-  const near=p.ll&&q.ll&&!p.custom&&!q.custom?km(p.ll,q.ll)<0.1:true; // hand-made blocks sit at the area centre: judge by name only
-  return near&&(nameSim(p.name,q.name)>=.6||(p.local&&q.local&&nameSim(p.local,q.local)>=.6));
-}
+// the rules live in app/logic/places.ts
+const nameSim=JD.logic.places.nameSim, samePlace=JD.logic.places.samePlace;
 const dupOf=pl=>P.find(p=>!p.shared&&samePlace(p,pl))||null;
 
 // --- already doubled: suggest merging at the top of the 장소 tab ---
@@ -38,7 +27,7 @@ function mergePlaces(aId,bId){
   if(isWish(b.id)&&!isWish(a.id)) toggleWish(a.id); if(isWish(b.id)) toggleWish(b.id);
   if(b.note&&b.note!==a.note&&!/직접 만든 블록이에요/.test(b.note)) a.note=[a.note,b.note].filter(Boolean).join(' · ').slice(0,300);
   if(b.by&&!a.by) a.by=b.by;
-  if(b.custom){custom=custom.filter(c=>c.id!==b.id);TRIP.save('custom',custom)}
+  if(b.custom)TRIP.customs.remove(b.id);
   const k=PACK.places.findIndex(x=>x.id===b.id); if(k>=0) PACK.places.splice(k,1);
   const ka=PACK.places.find(x=>x.id===a.id); if(ka){ka.note=a.note;if(a.by)ka.by=a.by}
   savePack();
@@ -46,11 +35,9 @@ function mergePlaces(aId,bId){
   save(); renderAll(); showToast(`"${a.name}" 하나로 묶었어요`);
 }
 document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
-  if(t.dataset.dupmerge){const [a,b]=t.dataset.dupmerge.split('~');mergePlaces(a,b);return}
-  if(t.dataset.dupno){const [a,b]=t.dataset.dupno.split('~');const no=store.get('gp.dupNo',[])||[];no.push(dupNoKey(a,b));store.set('gp.dupNo',no.slice(-200));renderTray();return}
   if(t.dataset.dupuse){ // typing a name in "직접 만들기" found a place that is already there → schedule that one instead
     const p=PM[t.dataset.dupuse]; if(!p) return; const st=$('#cfStart')?parse($('#cfStart').value):null;
-    placed.push({uid:'u'+(uidN++),id:p.id,day,start:Math.max(dayStart(day),Math.min(1410,st??600)),dur:p.dur});save();closeSheet();renderAll();showToast(`이미 있는 "${p.name}"을(를) 일정에 넣었어요`);return}
+    TRIP.blocks.add({id:p.id,day,start:Math.max(dayStart(day),Math.min(1410,st??600)),dur:p.dur});closeSheet();renderAll();showToast(`이미 있는 "${p.name}"을(를) 일정에 넣었어요`);return}
 });
 // --- while typing a new place's name: show places that are already there ---
 document.addEventListener('input',e=>{

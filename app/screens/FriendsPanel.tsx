@@ -1,5 +1,6 @@
 // 더보기 → 친구와 함께 (it used to be PANELS.friends in src/js/384-trips.js).
-// Buttons keep their data-trip / data-tab names: the old code does the work (server, invites).
+// Buttons keep their data-trip / data-tab names; data-trip buttons tell the old code through app().trip (server, invites).
+import { app } from '../ui/host';
 export interface Member {
   user_id: string;
   name?: string;
@@ -36,7 +37,7 @@ function NameRow({ myName }: { myName: string }) {
       <label className="fg" style={{ display: 'block' }}>
         <span className="hint">친구에게 보일 내 이름</span>
         {/* key: a new saved name (from another device) refreshes the box; typing is kept otherwise */}
-        <div className="kin"><input id="myNameIn" maxLength={20} defaultValue={myName} key={myName} /><button className="small-btn" data-trip="name">저장</button></div>
+        <div className="kin"><input id="myNameIn" maxLength={20} defaultValue={myName} key={myName} /><button className="small-btn" data-trip="name" onClick={e => app().trip('name', '', (e.currentTarget.previousElementSibling as HTMLInputElement | null)?.value || '')}>저장</button></div>
       </label>
     </div>
   );
@@ -65,7 +66,7 @@ export function FriendsPanel(p: FriendsPanelProps) {
             <li>장소마다 👍 가고 싶어요를 눌러 의견을 모아요.</li>
             <li>AI·지도 키와 취향, 내 장소는 공유되지 않아요.</li>
           </ul>
-          <div className="row"><button className="small-btn primary" data-trip="share" disabled={p.busy}>{p.busy ? '준비 중…' : '이 여행에 친구 초대하기'}</button></div>
+          <div className="row"><button className="small-btn primary" data-trip="share" onClick={() => app().trip('share')} disabled={p.busy}>{p.busy ? '준비 중…' : '이 여행에 친구 초대하기'}</button></div>
           <Msg msg={p.msg} />
         </div>
         <NameRow myName={p.myName} />
@@ -80,7 +81,7 @@ export function FriendsPanel(p: FriendsPanelProps) {
         {mem.length ? mem.map(m => (
           <div className="mrow static" key={m.user_id}>
             <span className="mt"><b>{(m.name || '친구') + (m.user_id === p.me ? ' (나)' : '')}</b><small>{ROLE_TXT[m.role] || ''}</small></span>
-            {owner && m.user_id !== p.me && <button className="small-btn" data-trip="kick" data-uid={m.user_id}>내보내기</button>}
+            {owner && m.user_id !== p.me && <button className="small-btn" data-trip="kick" data-uid={m.user_id} onClick={() => app().trip('kick', m.user_id)}>내보내기</button>}
           </div>
         )) : <p className="hint pad">멤버를 불러오는 중…</p>}
       </div>
@@ -88,13 +89,13 @@ export function FriendsPanel(p: FriendsPanelProps) {
         <div className="mgroup pad">
           <h3 className="taste-h">친구 초대</h3>
           <div className="row">
-            <button className="small-btn primary" data-trip="invite-edit">같이 고칠 친구 초대</button>
-            <button className="small-btn" data-trip="invite-view">보기만 할 친구 초대</button>
+            <button className="small-btn primary" data-trip="invite-edit" onClick={() => app().trip('invite-edit')}>같이 고칠 친구 초대</button>
+            <button className="small-btn" data-trip="invite-view" onClick={() => app().trip('invite-view')}>보기만 할 친구 초대</button>
           </div>
           {p.invite && <>
             <p className="hint">{(p.invite.role === 'edit' ? '같이 고칠 수 있는' : '보기만 하는') + ' 초대 링크예요 · 14일 동안 쓸 수 있어요'}</p>
             <input className="share-text" readOnly value={p.invite.url} />
-            <div className="row"><button className="small-btn primary" data-trip="send">보내기</button><button className="small-btn" data-trip="copy">복사</button></div>
+            <div className="row"><button className="small-btn primary" data-trip="send" onClick={() => app().trip('send')}>보내기</button><button className="small-btn" data-trip="copy" onClick={() => app().trip('copy')}>복사</button></div>
           </>}
           <Msg msg={p.msg} />
         </div>
@@ -105,8 +106,8 @@ export function FriendsPanel(p: FriendsPanelProps) {
       <div className="mgroup pad">
         <div className="row">
           {owner
-            ? <button className="small-btn danger" data-trip="stop">{p.stopArm ? '한 번 더 누르면 공유를 끝내요' : '공유 끝내기'}</button>
-            : <button className="small-btn danger" data-trip="leave">이 여행에서 나가기</button>}
+            ? <button className="small-btn danger" data-trip="stop" onClick={() => app().trip('stop')}>{p.stopArm ? '한 번 더 누르면 공유를 끝내요' : '공유 끝내기'}</button>
+            : <button className="small-btn danger" data-trip="leave" onClick={() => app().trip('leave')}>이 여행에서 나가기</button>}
         </div>
       </div>
     </>

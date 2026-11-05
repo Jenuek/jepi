@@ -1,8 +1,10 @@
 // 🎲 DICE sheet (#sheet): 뭐 하지? / 뭐 먹지? It used to be renderEat (280-dice-eat.js), renderDoNear (290-dice-do.js)
 // and renderDiceDo (160-modes-roll.js). The old code keeps the rolls and works out every piece; this draws the pieces
 // in the same order and redraws fresh (rev). "AI가 새로 찾아서 굴리기" and its status line are Live (app/ui/live.tsx).
+// Every button says what was pressed through app().dice(name, value) — the old code keeps the state and redraws.
 // The 장소 찾기 sheet and the block sheet use the same #sheet (bridge.ts starts over when they swap).
-import { Fragment, type CSSProperties } from 'react';
+import { Fragment, useEffect, useRef, type CSSProperties } from 'react';
+import { app } from '../ui/host';
 import { LiveButton, LiveLine } from '../ui/live';
 
 type Opt = [value: string | number, label: string];
@@ -34,7 +36,7 @@ export interface DiceProps {
   head: string | null;
   tabs: null | 'do' | 'eat';
   bases: { attr: string; v: string; on: boolean; label: string; small: string }[] | null;
-  picker: null | { hits: { name: string; addr: string }[]; recent: string[] };
+  picker: null | { /** put the cursor in the box (right after 🗺 동네 was chosen) */ focus?: boolean; hits: { name: string; addr: string }[]; recent: string[] };
   /** lines shown right away (plan view) */
   rows: DiceRow[];
   cond: null | { open: boolean; txt: string; rows: DiceRow[] };
@@ -46,20 +48,22 @@ export interface DiceProps {
   rev: number;
 }
 
+const go = (name: string, value = '', more?: Record<string, string>) => app().dice(name, value, more);
+
 const PillRow = ({ p }: { p: Pills }) => (
-  <div className="radio">{p.opts.map(([v, l]) => <button key={String(v)} type="button" {...{ ['data-' + p.attr]: String(v) }} aria-pressed={String(p.cur) === String(v)}>{l}</button>)}</div>
+  <div className="radio">{p.opts.map(([v, l]) => <button key={String(v)} type="button" {...{ ['data-' + p.attr]: String(v) }} aria-pressed={String(p.cur) === String(v)} onClick={() => go(p.attr, String(v))}>{l}</button>)}</div>
 );
 
 function Row({ x }: { x: DiceRow }) {
   switch (x.r) {
     case 'hint': return <span className="hint">{x.t}</span>;
     case 'pills': return <PillRow p={x.p} />;
-    case 'setPlaces': return <button type="button" className="linkbtn" id="eatSetPlaces">🏠 집·🏢 회사 등록해 두기</button>;
+    case 'setPlaces': return <button type="button" className="linkbtn" id="eatSetPlaces" onClick={() => go('eatSetPlaces')}>🏠 집·🏢 회사 등록해 두기</button>;
     case 'when': return (
       <div className="radio">
-        <button type="button" data-dowhen="now" aria-pressed={!x.later}>지금</button>
-        <button type="button" data-dowhen="later" aria-pressed={x.later}>이따</button>
-        {x.later && <input type="time" id="doAt" defaultValue={x.at} aria-label="시작 시간" />}
+        <button type="button" data-dowhen="now" aria-pressed={!x.later} onClick={() => go('dowhen', 'now')}>지금</button>
+        <button type="button" data-dowhen="later" aria-pressed={x.later} onClick={() => go('dowhen', 'later')}>이따</button>
+        {x.later && <input type="time" id="doAt" defaultValue={x.at} aria-label="시작 시간" onChange={e => go('doAt', e.currentTarget.value)} />}
       </div>
     );
   }
@@ -83,7 +87,7 @@ function Stage({ s }: { s: DiceStage }) {
       <ol className="course">{s.items.map((x, i) => (
         <li key={i}><span className="mono ct">{x.t}</span><div className="cm"><b>{x.title}</b><small>{x.sub}</small></div>
           <a className="small-btn" href={x.url} target="_blank" rel="noopener" aria-label={`${x.name} 지도`}>지도</a>
-          <button className="small-btn" type="button" data-doreroll={i} aria-label="이 칸 다시 굴리기">🎲</button></li>
+          <button className="small-btn" type="button" data-doreroll={i} aria-label="이 칸 다시 굴리기" onClick={() => go('doreroll', String(i))}>🎲</button></li>
       ))}</ol>
       <small className="hint">{s.src}</small>
     </>;
@@ -94,7 +98,27 @@ function Act({ x }: { x: DiceAct }) {
   if (x.a === 'status') return <span className="ai-status">{x.t}</span>;
   if (x.a === 'link') return <a className={x.cls} href={x.href} target="_blank" rel="noopener">{x.label}</a>;
   const data = Object.fromEntries(Object.entries(x.data || {}).map(([k, v]) => ['data-' + k, v]));
-  return <button type="button" className={x.cls} id={x.id} {...data} disabled={x.disabled}>{x.label}</button>;
+  // named by its id, or by its first data-… (data-eatroll="again" → 'eatroll', 'again')
+  const [name, value] = x.id ? [x.id, ''] : Object.entries(x.data || {})[0] || ['', ''];
+  return <button type="button" className={x.cls} id={x.id} {...data} disabled={x.disabled} onClick={() => go(name, value, x.data)}>{x.label}</button>;
+}
+
+/** 🗺 동네: type a name, 찾기 (or Enter) */
+function AreaPick({ pk }: { pk: NonNullable<DiceProps['picker']> }) {
+  const q = useRef<HTMLInputElement>(null);
+  useEffect(() => { if (pk.focus) setTimeout(() => q.current?.focus(), 50) }, []);
+  const find = () => go('doAreaFind', q.current ? q.current.value : '');
+  return (
+    <div className="area-pick">
+      <div className="kin"><input id="doAreaQ" ref={q} placeholder="동네·역 이름 (예: 강남역, 성수동, 해운대)" autoComplete="off" enterKeyHint="search" onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); find() } }} /><button className="small-btn primary" type="button" id="doAreaFind" onClick={find}>찾기</button></div>
+      {pk.hits.length > 0 && (
+        <div className="myp-hits">{pk.hits.map((h, i) => (
+          <button key={i} className="mrow" type="button" data-doareapick={i} onClick={() => go('doareapick', String(i))}><span className="mt"><b>{h.name}</b><small>{h.addr}</small></span></button>
+        ))}</div>
+      )}
+      {pk.recent.length > 0 && <><span className="hint">최근</span><PillRow p={{ attr: 'doarecent', cur: '', opts: pk.recent.map((n, i) => [i, n]) }} /></>}
+    </div>
+  );
 }
 
 export function Dice(p: DiceProps) {
@@ -102,30 +126,20 @@ export function Dice(p: DiceProps) {
     <div className={p.eat ? 'dice eat' : 'dice'} key={p.rev}>
       {p.tabs && (
         <div className="dice-tabs" role="tablist">
-          <button type="button" role="tab" data-dicetab="do" aria-selected={p.tabs !== 'eat'}>🎲 뭐 하지?</button>
-          <button type="button" role="tab" data-dicetab="eat" aria-selected={p.tabs === 'eat'}>🍚 뭐 먹지?</button>
+          <button type="button" role="tab" data-dicetab="do" aria-selected={p.tabs !== 'eat'} onClick={() => go('dicetab', 'do')}>🎲 뭐 하지?</button>
+          <button type="button" role="tab" data-dicetab="eat" aria-selected={p.tabs === 'eat'} onClick={() => go('dicetab', 'eat')}>🍚 뭐 먹지?</button>
         </div>
       )}
       {p.bases && (
         <div className="eat-bases">{p.bases.map(b => (
-          <button key={b.v} type="button" className="eat-base" {...{ ['data-' + b.attr]: b.v }} aria-pressed={b.on}>{b.label}<small>{b.small}</small></button>
+          <button key={b.v} type="button" className="eat-base" {...{ ['data-' + b.attr]: b.v }} aria-pressed={b.on} onClick={() => go(b.attr, b.v)}>{b.label}<small>{b.small}</small></button>
         ))}</div>
       )}
-      {p.picker && (
-        <div className="area-pick">
-          <div className="kin"><input id="doAreaQ" placeholder="동네·역 이름 (예: 강남역, 성수동, 해운대)" autoComplete="off" enterKeyHint="search" /><button className="small-btn primary" type="button" id="doAreaFind">찾기</button></div>
-          {p.picker.hits.length > 0 && (
-            <div className="myp-hits">{p.picker.hits.map((h, i) => (
-              <button key={i} className="mrow" type="button" data-doareapick={i}><span className="mt"><b>{h.name}</b><small>{h.addr}</small></span></button>
-            ))}</div>
-          )}
-          {p.picker.recent.length > 0 && <><span className="hint">최근</span><PillRow p={{ attr: 'doarecent', cur: '', opts: p.picker.recent.map((n, i) => [i, n]) }} /></>}
-        </div>
-      )}
+      {p.picker && <AreaPick pk={p.picker} />}
       {p.head != null && <h3>🎲 DICE <span className="hint">{`· ${p.head} 빈 시간에서 굴려요`}</span></h3>}
       <Rows rows={p.rows} />
       {p.cond && (
-        <details className="cond" open={p.cond.open}>
+        <details className="cond" open={p.cond.open} onToggle={e => go('cond', e.currentTarget.open ? '1' : '')}>
           <summary><span>{p.cond.txt}</span><span className="cond-e">조건 바꾸기</span></summary>
           <Rows rows={p.cond.rows} />
         </details>
@@ -133,7 +147,7 @@ export function Dice(p: DiceProps) {
       <div className="dice-stage"><Stage s={p.stage} /></div>
       {p.msg && <p className="hint" style={{ color: 'var(--warn)' }}>{p.msg}</p>}
       <div className="row dice-acts">{p.acts.map((x, i) => <Act key={i} x={x} />)}</div>
-      {p.ai && <div className="row"><LiveButton className={p.ai.primary ? 'small-btn primary' : 'small-btn'} id="diceAI">🔎 AI가 새로 찾아서 굴리기</LiveButton><LiveLine tag="span" id="st_dice" /></div>}
+      {p.ai && <div className="row"><LiveButton className={p.ai.primary ? 'small-btn primary' : 'small-btn'} id="diceAI" onClick={() => go('diceAI')}>🔎 AI가 새로 찾아서 굴리기</LiveButton><LiveLine tag="span" id="st_dice" /></div>}
       {p.foot && <p className="hint">{p.foot}</p>}
       <div className="row"><button type="button" className="small-btn" data-close="1">닫기</button></div>
     </div>
@@ -149,7 +163,7 @@ export function MapCards({ stops, rev }: MapCardsProps) {
   if (!stops.length) return <p className="hint" key={rev}>이 날은 아직 장소가 없어요.</p>;
   return (
     <Fragment key={rev}>{stops.map((s, i) => (
-      <div className="mcard" data-mapi={i} key={i}>
+      <div className="mcard" data-mapi={i} key={i} onClick={e => { if (!(e.target as HTMLElement).closest('a')) app().mapCard(i) }}>
         {s.leg && <div className="mleg mono">{s.leg}</div>}
         <b>{s.name}</b><small className="mono">{s.time}</small>
         {s.nav && <a className="small-btn" href={s.nav} target="_blank" rel="noopener">안내 시작</a>}

@@ -22,5 +22,10 @@ module.exports = { name: 'chat', async run(t) {
   await p.fill('#chatInput', '카페 추천해 줘'); await p.click('#chatSend'); await p.waitForTimeout(2500); await grab('places', '#chatLog');
   await p.click('#chatLog [data-cp$=":1:list"]'); await p.waitForTimeout(300); await grab('listed', '#chatLog');
   await p.click('#chatLog [data-cp$=":0:skip"]'); await p.waitForTimeout(300); await grab('skipped', '#chatLog');
+  if (await p.$('#chatLog [data-cp$=":0:sched"]')) { await p.click('#chatLog [data-cp$=":0:sched"]'); await p.waitForTimeout(300); await grab('sched', '#chatLog') }
+  await p.$eval('#nudges .nb button:not(.x)', x => x.click()); await p.waitForTimeout(400);   // (clicked in the page: the chat banner may sit over it)
+  await grab('nudge_go', '#tasteStyle');
+  await p.click('.tabs [data-tab="timeline"]'); await p.waitForTimeout(300);
+  await p.$eval('#nudges [data-nudgeoff]', x => x.click()); await p.waitForTimeout(300); await grab('nudge_off', '#nudges');
   await p.ctx.close();
 } };

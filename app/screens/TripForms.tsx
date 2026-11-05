@@ -7,6 +7,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { LiveButton, LiveLine } from '../ui/live';
 import { DestFinder, type FinderPart } from './OnbFinder';
+import { app } from '../ui/host';
 
 export type Opt = [value: string | number | boolean, label: string];
 
@@ -42,14 +43,14 @@ function PasteBox({ p }: { p: Paste }) {
   if (!p.ai) return <p className="hint">더보기 → 설정에서 AI를 연결하면 예약 내용을 붙여 넣어 자동으로 채울 수 있어요.</p>;
   return <>
     <label className="fg" style={{ display: 'block' }}><span className="hint">{`${p.hint} 예약번호·결제 정보는 지우고 넣어도 돼요.`}</span><textarea id={'paste_' + p.kind} rows={3} style={{ marginTop: 4 }} /></label>
-    <div className="row"><button className="small-btn primary" type="button" data-aifill={p.kind}>AI로 채우기</button><LiveLine tag="span" id={'st_' + p.kind} text={p.msg} /></div>
+    <div className="row"><button className="small-btn primary" type="button" data-aifill={p.kind} onClick={() => app().form('aifill', p.kind)}>AI로 채우기</button><LiveLine tag="span" id={'st_' + p.kind} text={p.msg} /></div>
   </>;
 }
 
-export function Radio({ path, val, opts }: { path: string; val: unknown; opts: Opt[] }) {
+export function Radio({ path, val, opts, onPick }: { path: string; val: unknown; opts: Opt[]; /** instead of the forms' own handling (app().form('radio')) */ onPick?: (v: string) => void }) {
   return (
     <div className="radio">
-      {opts.map(([v, l]) => <button key={String(v)} type="button" data-radio={path} data-val={String(v)} aria-pressed={String(val) === String(v)}>{l}</button>)}
+      {opts.map(([v, l]) => <button key={String(v)} type="button" data-radio={path} data-val={String(v)} aria-pressed={String(val) === String(v)} onClick={() => onPick ? onPick(String(v)) : app().form('radio', path, { val: String(v) })}>{l}</button>)}
     </div>
   );
 }
@@ -148,8 +149,8 @@ function HomeBox(p: Extract<FormPart, { f: 'homeBox' }>) {
         ? <>
             <p className="hint">{`🏠 ${p.addr || '집'}${p.using ? ' · 출발지로 쓰는 중' : ''}`}</p>
             <div className="row">
-              {!p.using && <button className="small-btn primary" type="button" id="homeUse">🏠 집에서 출발</button>}
-              {p.kakao.map(([k, l]) => <button key={String(k)} className="small-btn" type="button" data-homeair={String(k)}>{`집→${l} 시간 계산`}</button>)}
+              {!p.using && <button className="small-btn primary" type="button" id="homeUse" onClick={() => app().form('homeUse')}>🏠 집에서 출발</button>}
+              {p.kakao.map(([k, l]) => <button key={String(k)} className="small-btn" type="button" data-homeair={String(k)} onClick={() => app().form('homeair', String(k))}>{`집→${l} 시간 계산`}</button>)}
             </div>
           </>
         : <p className="hint">더보기 → 설정 → 내 장소에서 집을 등록하면 출발지와 공항까지 시간을 자동으로 채울 수 있어요.</p>}
@@ -185,7 +186,7 @@ function Stay(p: Extract<FormPart, { f: 'stay' }>) {
   const first: Opt[] = p.nights.map((l, k) => [k, l]), last: Opt[] = p.nights.map((l, k) => [k + 1, l]);
   return (
     <>
-      {p.helper && <div className="row"><button className="small-btn primary" type="button" id="meHelper2">예약 도우미로 동네·숙소 찾기</button></div>}
+      {p.helper && <div className="row"><button className="small-btn primary" type="button" id="meHelper2" onClick={() => app().form('meHelper')}>예약 도우미로 동네·숙소 찾기</button></div>}
       <Fsec>
         <h3>숙소</h3>
         <p className="hint">숙소가 바뀌면 숙소를 추가해서 밤을 나눠 주세요. 위치는 가장 가까운 동네를 고르면 돼요.</p>
@@ -199,10 +200,10 @@ function Stay(p: Extract<FormPart, { f: 'stay' }>) {
               <label>첫 밤<Sel pf={`stays.${i}.from`} val={s.from} opts={first} num /></label>
               <label>마지막 밤<Sel pf={`stays.${i}.to`} val={s.to} opts={last} num /></label>
             </div>
-            {p.stays.length > 1 && <div className="row"><button className="small-btn danger" type="button" data-delstay={i}>이 숙소 빼기</button></div>}
+            {p.stays.length > 1 && <div className="row"><button className="small-btn danger" type="button" data-delstay={i} onClick={() => app().form('delstay', String(i))}>이 숙소 빼기</button></div>}
           </div>
         ))}
-        <div className="row"><button className="small-btn" type="button" data-addstay="1">+ 숙소 추가</button></div>
+        <div className="row"><button className="small-btn" type="button" data-addstay="1" onClick={() => app().form('addstay')}>+ 숙소 추가</button></div>
         <PasteBox p={p.paste} />
       </Fsec>
     </>
@@ -224,10 +225,10 @@ function Events(p: Extract<FormPart, { f: 'events' }>) {
             <label>끝<Inp pf={`events.${i}.end`} val={e.end} type="time" /></label>
             <label>동네<Sel pf={`events.${i}.area`} val={e.area} opts={p.areas} /></label>
           </div>
-          <div className="row"><button className="small-btn danger" type="button" data-delev={i}>빼기</button></div>
+          <div className="row"><button className="small-btn danger" type="button" data-delev={i} onClick={() => app().form('delev', String(i))}>빼기</button></div>
         </div>
       ))}
-      <div className="row"><button className="small-btn" type="button" data-addev="1">+ 예약한 일정 추가</button></div>
+      <div className="row"><button className="small-btn" type="button" data-addev="1" onClick={() => app().form('addev')}>+ 예약한 일정 추가</button></div>
     </Fsec>
   );
 }
@@ -251,8 +252,8 @@ function Dest(p: Extract<FormPart, { f: 'dest' }>) {
     <Fsec>
       <h3>여행지</h3>
       <label className="fg" style={{ display: 'block' }}><span className="hint">도시나 지역 이름 (국내, 해외 모두 돼요)</span><Inp pf="dest" val={p.dest} maxLength={40} placeholder="예: 오사카, 제주, 파리, 방콕" style={{ marginTop: 4 }} /></label>
-      <div className="row"><button className="small-btn" type="button" data-destmode="find">아직 못 정했어요 · 취향으로 추천받기</button></div>
-      <div className="row">{p.ai && <LiveButton className="small-btn primary" id="genPack">AI로 여행지 준비하기</LiveButton>}<LiveLine tag="span" id="st_pack" text={p.ready} /></div>
+      <div className="row"><button className="small-btn" type="button" data-destmode="find" onClick={() => app().form('destmode', 'find')}>아직 못 정했어요 · 취향으로 추천받기</button></div>
+      <div className="row">{p.ai && <LiveButton className="small-btn primary" id="genPack" onClick={() => app().form('genPack')}>AI로 여행지 준비하기</LiveButton>}<LiveLine tag="span" id="st_pack" text={p.ready} /></div>
       {p.ai
         ? <p className="hint">AI가 동네, 공항·역, 화폐, 교통비를 정리해요. 여행지를 바꾸면 넣어 둔 블록은 지워져요.</p>
         : <p className="hint">새 여행지 정보는 AI를 연결해야 준비할 수 있어요 (더보기 → 설정). 지금은 장소 없이 블록을 직접 만들어 쓰거나, "예시로 둘러보기"로 도쿄 예시를 볼 수 있어요.</p>}

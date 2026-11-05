@@ -2,6 +2,7 @@
 // They used to be renderDays / renderDaySum / renderRoute / renderBudget (340-render.js, 382-tidy.js). The boxes themselves
 // stay in body.html; the old code still opens/closes them (hidden, the panel's sum-… class) and works out every number.
 import { Fragment } from 'react';
+import { app } from '../ui/host';
 
 /** a line of text with bold/colored parts and links. The old code merges neighbouring text, so each string is one text piece. */
 export type Seg = string | { t: string; tag: 'b' | 'span'; cls?: string; color?: string } | { t: string; tag: 'a'; href: string };
@@ -13,14 +14,14 @@ export const Line = ({ segs }: { segs: Seg[] }) => <>{segs.map((s, i) => typeof 
 
 export interface DaysProps { days: { date: string; label: string; on: boolean }[] }
 export function DayButtons({ days }: DaysProps) {
-  return <>{days.map((d, i) => <button key={i} className="day-btn" data-day={i} aria-pressed={d.on}><b>{d.date}</b><span>{d.label}</span></button>)}</>;
+  return <>{days.map((d, i) => <button key={i} className="day-btn" data-day={i} aria-pressed={d.on} onClick={() => app().grid('day', String(i))}><b>{d.date}</b><span>{d.label}</span></button>)}</>;
 }
 
 export interface DaySumProps {
   chips: { k: string; t: string; warn: boolean; open: boolean }[];
 }
 export function DaySum({ chips }: DaySumProps) {
-  return <>{chips.map(c => <button key={c.k} type="button" className={c.warn ? 'sum-chip warn' : 'sum-chip'} data-sum={c.k} aria-expanded={c.open}>{c.t}</button>)}</>;
+  return <>{chips.map(c => <button key={c.k} type="button" className={c.warn ? 'sum-chip warn' : 'sum-chip'} data-sum={c.k} aria-expanded={c.open} onClick={() => app().sum('chip', c.k)}>{c.t}</button>)}</>;
 }
 
 export interface SumBodyProps {
@@ -29,8 +30,8 @@ export interface SumBodyProps {
 }
 export function SumBody({ warns, gaps }: SumBodyProps) {
   return <>
-    {warns.map(w => <button key={w.uid} type="button" className="sum-row warn" data-sumuid={w.uid}><b className="mono">{w.time}</b>{` ${w.name}`}<span>{w.warn}</span></button>)}
-    {gaps.map((g, i) => <div key={i} className="sum-row"><b className="mono">{g.range}</b> 비어 있어요{g.find && <button type="button" className="small-btn" data-findgap={g.find}>채울 곳 찾기</button>}</div>)}
+    {warns.map(w => <button key={w.uid} type="button" className="sum-row warn" data-sumuid={w.uid} onClick={() => app().sum('uid', w.uid)}><b className="mono">{w.time}</b>{` ${w.name}`}<span>{w.warn}</span></button>)}
+    {gaps.map((g, i) => <div key={i} className="sum-row"><b className="mono">{g.range}</b> 비어 있어요{g.find && <button type="button" className="small-btn" data-findgap={g.find} onClick={() => app().find('gap', g.find!)}>채울 곳 찾기</button>}</div>)}
   </>;
 }
 
@@ -61,7 +62,7 @@ export function Budget(p: BudgetProps) {
     <div className="bud-grid">
       <div><span>입장·식사·활동</span><b className="mono">{p.act}</b></div>
       <div><span>현지 교통</span><b className="mono">{p.tr}</b></div>
-      <div><span>간식·기타</span><b className="mono">{p.meal}</b><span className="adj"><button className="small-btn" data-meal={String(-p.step)} aria-label="간식비 줄이기">−</button><button className="small-btn" data-meal={String(p.step)} aria-label="간식비 늘리기">+</button></span></div>
+      <div><span>간식·기타</span><b className="mono">{p.meal}</b><span className="adj"><button className="small-btn" data-meal={String(-p.step)} aria-label="간식비 줄이기" onClick={() => app().grid('meal', String(-p.step))}>−</button><button className="small-btn" data-meal={String(p.step)} aria-label="간식비 늘리기" onClick={() => app().grid('meal', String(p.step))}>+</button></span></div>
       {p.home && <div><span>집 오가는 교통</span><b className="mono">{p.home}</b></div>}
     </div>
     {p.bar && <>

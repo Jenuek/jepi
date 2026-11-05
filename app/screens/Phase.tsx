@@ -1,5 +1,6 @@
 // 여행 단계 띠 (#phase, above the 일정표): 여행 전 D-day·남은 준비 / 여행 중 지금·다음 일정·안내 시작 / 여행 뒤 새 계획.
 // It used to be renderPhase in src/js/250-phase-strip.js; the old code still shows/hides #phase.
+import { app } from '../ui/host';
 export type PhaseProps =
   | { s: 'none' }
   | { s: 'now'; cur: null | { name: string; end: string }; next: null | { time: string; name: string; travel: string; nav: string }; todayDay: number | null }
@@ -21,6 +22,6 @@ export function Phase(p: PhaseProps) {
         {p.next.nav && <a className="small-btn primary" href={p.next.nav} target="_blank" rel="noopener">안내 시작</a>}
       </> : <span>오늘 일정은 여기까지예요. 푹 쉬세요!</span>}
     </div>
-    {p.todayDay != null && <button className="ph-chip" data-day={p.todayDay}>{`오늘(Day ${p.todayDay + 1}) 보기`}</button>}
+    {p.todayDay != null && <button className="ph-chip" data-day={p.todayDay} onClick={() => app().grid('day', String(p.todayDay))}>{`오늘(Day ${p.todayDay + 1}) 보기`}</button>}
   </>;
 }

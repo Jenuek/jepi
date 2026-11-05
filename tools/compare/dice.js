@@ -6,6 +6,7 @@ module.exports = { name: 'dice', async run(t) {
   await p.evaluate(() => { let s = 7; Math.random = () => ((s = s * 16807 % 2147483647) / 2147483647) });
   const tap = async (sel, w = 300) => { await p.click('#sheet ' + sel); await p.waitForTimeout(w) };
   await p.click('#diceFab'); await p.waitForTimeout(400); await grab('open', '#sheet');
+  if (!(await p.$('#sheet [data-dobase]'))) await tap('[data-dicetab="do"]');   // at meal times it opens on 뭐 먹지
   await tap('[data-dobase="plan"]'); await grab('do_plan', '#sheet');
   await tap('#diceGo', 900); await grab('do_rolled', '#sheet');
   await tap('#diceAgain', 900); await grab('do_again', '#sheet');

@@ -18,7 +18,7 @@ README의 "무엇이 어디 있나" 표가 파일 지도예요.
 - **지금은 리액트(React + TypeScript)로 옮기는 중이에요.** 계획·진행 상황은 `docs/ROADMAP.md`의 "리액트로 옮기기"에 있어요. 옮기는 동안 새 기능은 만들지 않아요(작은 버그 수정은 괜찮아요).
 - 새 코드(리액트): `app/`. 화면은 `app/screens/*.tsx`에 만들고 `app/bridge.ts`의 `SCREENS`에 등록해요. 예전 코드는 `window.JEPI_UI.mount('이름', 요소, props)`로 그 화면을 그려요. 화면 속 id·class 이름은 바꾸지 않아요(자동 점검이 그 이름으로 확인해요). **예전 코드가 리액트 화면 안의 요소를 직접 고치면 안 돼요**(`textContent=`, `disabled=`, `innerHTML=` 등) — "한 번 눌렀음"·"작업 중"·"이름 고치는 중" 같은 건 상태값으로 만들어 props로 넘겨요. 옮기기 전에 그 화면을 건드리는 클릭 처리(`380-events.js` 포함)를 꼭 찾아봐요.
 - 데이터(`app/data/`): 기기 저장(`storage.ts`), 서버 연결(`server.ts`), 키 암호화(`vault.ts`), 동기화 엔진(`sync.ts`), 데모 칸막이(`demo.ts`), 데이터 모양(`types.ts`). 예전 코드는 `JD`(= `window.JEPI_DATA`)로 써요. **localStorage는 `storage.ts`로만** 읽고 써요. 여행 데이터(계획·블록·♥·체크·취향 등)는 그 위의 `trip.ts`(예전 코드는 `TRIP`)로만 저장해요. 키 암호화 설정(`vault.ts`)은 바꾸면 저장된 키를 못 열어요 — 절대 바꾸지 않아요.
-- 예전 코드: `src/js/NNN-*.js`는 **이름 순서대로 하나의 스크립트 범위**로 합쳐져요. 같은 `const/let` 이름을 두 파일에 만들면 빌드가 멈춰요. 연결점은 `007-panels.js`(PANELS, BLOCK_BADGES·CARD_EXTRAS·SHEET_EXTRAS — HTML 대신 조각 값, SYNC_AFTER_PUSH/PULL). 앱 시작 시 실행할 코드는 `390-boot.js`.
+- 예전 코드: `src/js/NNN-*.js`는 **이름 순서대로 하나의 스크립트 범위**로 합쳐져요. 같은 `const/let`·`function` 이름을 두 파일에 만들면 빌드가 멈춰요. 연결점은 `007-panels.js`(PANELS, BLOCK_BADGES·CARD_EXTRAS·SHEET_EXTRAS — HTML 대신 조각 값, SYNC_AFTER_PUSH/PULL). 앱 시작 시 실행할 코드는 `390-boot.js`.
 - 스타일은 `src/css/NN-*.css`, 화면 뼈대는 `src/html/body.html`.
 - `index.html`과 `assets/`는 **빌드 결과물**이에요. 직접 고치지 말고 `npm run build`로 다시 만들어요(`vite.config.mjs` + `tools/legacy.mjs`가 조립해요).
 - 디자인 언어: 여행마다 테마 색(`--theme`), 접히는 헤더(여행 제목은 명조, 날짜 제목은 굵은 고딕), 아래 고정 탭, 스타일 2종(컬러 블록 / 여행 수첩), 손글씨 메모. 새 화면도 이 언어를 따라요.

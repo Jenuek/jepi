@@ -42,8 +42,8 @@ function checkNames(files) {
       const prev = seen.get(n);
       if (prev && prev[0] !== f) {
         const where = `${path.basename(prev[0])} and ${path.basename(f)}`;
-        if (k === 'var' || prev[1] === 'var') throw new Error(`build stopped: "${n}" is defined in both ${where}`);
-        notes.push(`note: function "${n}" is in both ${where}; the later one wins`);
+        // a function with the same name in two files silently replaces the first one (that broke 이름 바꾸기 once): stop
+        throw new Error(`build stopped: "${n}" is defined in both ${where}`);
       }
       seen.set(n, [f, k]);
     }

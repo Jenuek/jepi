@@ -31,6 +31,13 @@ import { Welcome, type WelcomeProps } from './screens/Welcome';
 import { PlanMenu, type PlanMenuProps } from './screens/PlanMenu';
 import { Phase, type PhaseProps } from './screens/Phase';
 import { Notebook, type NotebookProps } from './screens/Notebook';
+import { DayTitleForm, type DayTitleFormProps } from './screens/DayTitleForm';
+import { Dock, type DockProps } from './screens/Dock';
+import { TrayTop, MapTop, type TrayTopProps, type MapTopProps } from './screens/Tops';
+import { Tabs, MiniBar, type TabsProps, type MiniBarProps } from './screens/Bars';
+import { Hero, type HeroProps } from './screens/Hero';
+import { HelperFrame, Coach, Banner, OnbFrame, type HelperFrameProps, type CoachProps, type BannerProps, type OnbFrameProps } from './screens/Frames';
+import { connectHost, type AppHost } from './ui/host';
 import { liveOf, type LiveHandle } from './ui/live';
 
 // Every screen React owns, with the props the old code must pass.
@@ -71,6 +78,17 @@ export interface Screens {
   planMenu: PlanMenuProps;
   phase: PhaseProps;
   notebook: NotebookProps;
+  dayTitle: DayTitleFormProps;
+  helperFrame: HelperFrameProps;
+  coach: CoachProps;
+  banner: BannerProps;
+  dock: DockProps;
+  trayTop: TrayTopProps;
+  mapTop: MapTopProps;
+  tabs: TabsProps;
+  mini: MiniBarProps;
+  onbFrame: OnbFrameProps;
+  hero: HeroProps;
 }
 
 const SCREENS: { [K in keyof Screens]: ComponentType<Screens[K]> } = {
@@ -110,12 +128,25 @@ const SCREENS: { [K in keyof Screens]: ComponentType<Screens[K]> } = {
   planMenu: PlanMenu,
   phase: Phase,
   notebook: Notebook,
+  dayTitle: DayTitleForm,
+  helperFrame: HelperFrame,
+  coach: Coach,
+  banner: Banner,
+  dock: Dock,
+  trayTop: TrayTop,
+  mapTop: MapTop,
+  tabs: Tabs,
+  mini: MiniBar,
+  onbFrame: OnbFrame,
+  hero: Hero,
 };
 
 export interface JepiUI {
   mount<K extends keyof Screens>(name: K, el: Element, props: Screens[K]): void;
   /** a status line / button React drew (app/ui/live.tsx), or null */
   live(el: Element | null): LiveHandle | null;
+  /** the old code tells React screens how to redraw / close the sheet / show a message (app/ui/host.ts) */
+  connectHost(h: AppHost): void;
 }
 
 declare global {
@@ -130,6 +161,7 @@ const roots = new WeakMap<Element, { root: Root; host: HTMLElement; name: string
 export function installBridge(): void {
   window.JEPI_UI = {
     live: liveOf,
+    connectHost,
     mount(name, el, props) {
       let cur = roots.get(el);
       if (!cur || cur.host.parentNode !== el || cur.name !== name) {

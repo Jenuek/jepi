@@ -1,6 +1,8 @@
 // 장소 찾기 sheet (it used to be renderFind in src/js/385-find.js). Opens in #sheet, which the block sheet
-// uses too. Buttons keep their data-find / data-findr / id names: the old code asks the AI and places results.
+// uses too. Buttons keep their data-find / data-findr / id names and tell the old code through app().find, which
+// asks the AI and places results.
 // #findSt is the status line the old code writes into while searching; it starts empty on every full redraw (rev).
+import { app } from '../ui/host';
 export interface FindRow {
   id: string;
   name: string;
@@ -34,7 +36,7 @@ export interface FindSheetProps {
 }
 
 function Seg({ k, v, cur, label }: { k: string; v: string; cur: string; label: string }) {
-  return <button type="button" className="fchip" data-find={`${k}:${v}`} aria-pressed={cur === v}>{label}</button>;
+  return <button type="button" className="fchip" data-find={`${k}:${v}`} aria-pressed={cur === v} onClick={() => app().find('chip', `${k}:${v}`, (document.getElementById('findQ') as HTMLInputElement | null)?.value ?? null)}>{label}</button>;
 }
 
 function Row({ r, into, slot, mine }: { r: FindRow; into: string; slot: string; mine?: boolean }) {
@@ -43,9 +45,9 @@ function Row({ r, into, slot, mine }: { r: FindRow; into: string; slot: string; 
       <div className="cp-t"><b>{r.name}</b>{r.meta && <small>{r.meta}</small>}{r.note && <p>{r.note}</p>}</div>
       {r.c ? <span className="cp-st">{r.txt}</span> : (
         <div className="cp-b">
-          <button className={'small-btn' + (into === 'sched' ? ' primary' : '')} type="button" data-findr={`${r.id}:sched`}>{'일정에 넣기 ' + slot}</button>
-          <button className={'small-btn' + (into === 'list' ? ' primary' : '')} type="button" data-findr={`${r.id}:list`}>{mine ? '♥ 내 카드에 담기' : '장소에만'}</button>
-          <button className="small-btn" type="button" data-findr={`${r.id}:skip`}>안 함</button>
+          <button className={'small-btn' + (into === 'sched' ? ' primary' : '')} type="button" data-findr={`${r.id}:sched`} onClick={() => app().find('r', `${r.id}:sched`)}>{'일정에 넣기 ' + slot}</button>
+          <button className={'small-btn' + (into === 'list' ? ' primary' : '')} type="button" data-findr={`${r.id}:list`} onClick={() => app().find('r', `${r.id}:list`)}>{mine ? '♥ 내 카드에 담기' : '장소에만'}</button>
+          <button className="small-btn" type="button" data-findr={`${r.id}:skip`} onClick={() => app().find('r', `${r.id}:skip`)}>안 함</button>
         </div>
       )}
     </div>
@@ -58,14 +60,14 @@ export function FindSheet(p: FindSheetProps) {
     <>
       <h3>장소 찾기</h3>
       <div className="when">{`Day ${p.dayNo} · ${p.date}`}</div>
-      <form id="findForm" className="find-form" key={p.rev}>
+      <form id="findForm" className="find-form" key={p.rev} onSubmit={e => { e.preventDefault(); app().find('submit', '', (e.currentTarget.querySelector('#findQ') as HTMLInputElement | null)?.value || '') }}>
         <div className="find-g"><span className="hint">어디</span>
           <div className="seg">
             <Seg k="where" v="near" cur={p.where} label="오늘 일정 근처" />
             <Seg k="where" v="area" cur={p.where} label="동네 고르기" />
             <Seg k="where" v="city" cur={p.where} label={`${p.city} 전체`} />
           </div>
-          {p.where === 'area' && <select id="findArea" aria-label="동네" defaultValue={p.area}>{p.areas.map(a => <option key={a.k} value={a.k}>{a.label}</option>)}</select>}
+          {p.where === 'area' && <select id="findArea" aria-label="동네" defaultValue={p.area} onChange={e => app().find('area', e.currentTarget.value)}>{p.areas.map(a => <option key={a.k} value={a.k}>{a.label}</option>)}</select>}
         </div>
         <div className="find-g"><span className="hint">언제</span>
           <div className="seg">
@@ -73,7 +75,7 @@ export function FindSheet(p: FindSheetProps) {
             <Seg k="when" v="any" cur={p.when} label="아무 때나" />
           </div>
           {p.when === 'gap' && p.gaps.length > 1
-            ? <select id="findGap" aria-label="빈 시간" defaultValue={p.gap ? p.gaps.find(g => g.v.split('-')[0] === p.gap!.v.split('-')[0])?.v : undefined}>{p.gaps.map(g => <option key={g.v} value={g.v}>{g.label}</option>)}</select>
+            ? <select id="findGap" aria-label="빈 시간" onChange={e => app().find('gapsel', e.currentTarget.value)} defaultValue={p.gap ? p.gaps.find(g => g.v.split('-')[0] === p.gap!.v.split('-')[0])?.v : undefined}>{p.gaps.map(g => <option key={g.v} value={g.v}>{g.label}</option>)}</select>
             : p.when === 'gap' && p.gap ? <span className="hint mono">{p.gap.label}</span> : null}
         </div>
         <div className="find-g"><span className="hint">넣을 곳</span>

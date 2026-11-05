@@ -1,4 +1,6 @@
 // ---------- my plans: several saved plans, account sync, sharing ----------
+// rdb/myId: the plan copies kept inside Claude (when JEPI ran as a Claude page); always empty in the app
+let rdb=null, myId=null;
 let plans=[], curPlan='', planTimer=null, cloudTimer=null, planMsg='', delArm='';
 const PLAN_KEYS=['profile','pack','placed3','custom','meal2','done','fmarks','wish'];
 function planName(){const pr=profile;if(pr.kind==='day')return `${PACK.city} 하루 코스`;const n=nightsOf(pr);return `${PACK.city} ${n}박 ${n+1}일`}
@@ -13,7 +15,7 @@ function snapshotCurrent(){
 }
 function touchPlan(){clearTimeout(planTimer);planTimer=setTimeout(()=>{if($('#onb').hidden)snapshotCurrent()},1200)}
 const cloudTimers={};
-function cloudSave(p){if(!rdb||!myId||recState!=='on')return;clearTimeout(cloudTimers[p.id]);cloudTimers[p.id]=setTimeout(()=>{
+function cloudSave(p){if(!rdb||!myId||RS.status!=='on')return;clearTimeout(cloudTimers[p.id]);cloudTimers[p.id]=setTimeout(()=>{
   try{rdb.doc(`data/users/${myId}/plan_${p.id}`).set({meta:{id:p.id,name:p.name,custom_name:!!p.custom_name,dates:p.dates||'',blocks:p.blocks||0,kind:p.kind||'trip',updated:p.updated||Date.now()},data:TRIP.plans.get(p.id)}).catch(()=>{})}catch(_){}},3000)}
 async function cloudPull(){
   if(!rdb||!myId) return;
@@ -29,7 +31,7 @@ function applyPlanData(d){
   d=d||{}; loadPack(packFrom(d.pack)||blankPack());
   custom=Array.isArray(d.custom)?d.custom:[]; custom.forEach(addCustomToData);
   profile=d.profile&&typeof d.profile==='object'?d.profile:clone(PROFILE_EXAMPLE); fixProfile(profile);
-  placed=(Array.isArray(d.placed)?d.placed:[]).filter(b=>PM[b.id]).map(b=>({uid:'u'+(uidN++),id:b.id,day:b.day,start:b.start,dur:b.dur||PM[b.id].dur,mk:Array.isArray(b.mk)?b.mk.filter(m=>MARKS[m]):undefined}));
+  placed=(Array.isArray(d.placed)?d.placed:[]).filter(b=>PM[b.id]).map(b=>({uid:TRIP.uids.next(),id:b.id,day:b.day,start:b.start,dur:b.dur||PM[b.id].dur,mk:Array.isArray(b.mk)?b.mk.filter(m=>MARKS[m]):undefined}));
   fmarks=d.fmarks&&typeof d.fmarks==='object'?d.fmarks:{}; wish=Array.isArray(d.wish)?d.wish:[]; meals=d.meals&&typeof d.meals==='object'?d.meals:{}; done=d.done&&typeof d.done==='object'?d.done:{};
   TRIP.save('profile',profile); savePack(); TRIP.save('custom',custom); TRIP.save('fmarks',fmarks); TRIP.save('wish',wish); TRIP.save('meals',meals); TRIP.save('done',done);
   chat=[]; undoSnap=null; aiState=null; selected=null; pSt.draw=null; hVibe=null; hotelRecs={}; routeInfo=null; destRecs=null; destAsked=[];
@@ -57,7 +59,7 @@ function renamePlan(id,name){const p=plans.find(x=>x.id===id);if(!p||!name)retur
 const CODE_AB='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 async function shareCode(){
   if(STANDALONE) return shareLink();
-  if(!rdb||recState!=='on'){planMsg='공유 코드는 Claude 안에서, 이 페이지를 편집할 수 있는 권한이 있을 때 만들 수 있어요.';renderPlans();return}
+  if(!rdb||RS.status!=='on'){planMsg='공유 코드는 Claude 안에서, 이 페이지를 편집할 수 있는 권한이 있을 때 만들 수 있어요.';renderPlans();return}
   snapshotCurrent(); const code='JP-'+Array.from({length:5},()=>CODE_AB[Math.floor(Math.random()*CODE_AB.length)]).join('');
   try{await rdb.doc('shares/'+code).set({name:(plans.find(x=>x.id===curPlan)||{}).name||planName(),by:myId,at:Date.now(),data:planData()});
     lastCode=code; planMsg=''; renderPlans();
@@ -89,10 +91,10 @@ async function downloadText(name,text){
 // restore a backup file (.json made by "백업 파일 받기")
 function importBackup(file,after){
   if(!file) return; const rd=new FileReader();
-  rd.onload=()=>{try{const v=JSON.parse(String(rd.result||''));if(v&&v.jepi===2){$('#onb').hidden=true;if(!importAll(v))throw 0;tab='timeline';renderTabs();if(after)after(true);return}if(!v||!v.data||!v.data.profile)throw 0;
+  rd.onload=()=>{try{const v=JSON.parse(String(rd.result||''));if(v&&v.jepi===2){onbFrame({open:false});if(!importAll(v))throw 0;tab='timeline';renderTabs();if(after)after(true);return}if(!v||!v.data||!v.data.profile)throw 0;
       snapshotCurrent(); const nid='p'+Date.now().toString(36); TRIP.plans.put(nid,v.data);
       plans.unshift({id:nid,name:String(v.name||'불러온 계획').slice(0,40),custom_name:true,updated:Date.now()}); curPlan=nid; savePlans();
-      $('#onb').hidden=true; applyPlanData(v.data); snapshotCurrent(); tab='timeline'; renderTabs(); planMsg='백업을 불러왔어요.'; if(after) after(true);
+      onbFrame({open:false}); applyPlanData(v.data); snapshotCurrent(); tab='timeline'; renderTabs(); planMsg='백업을 불러왔어요.'; if(after) after(true);
     }catch(_){planMsg='JEPI 백업 파일이 아니거나 손상됐어요.';renderPlans();setSt('st_import','JEPI 백업 파일이 아니거나 손상됐어요.');if(after)after(false)}};
   rd.readAsText(file);
 }
@@ -100,10 +102,26 @@ async function copyText(text){try{await navigator.clipboard.writeText(text);plan
 let showText=false;
 // The screen itself is drawn by React: app/screens/PlansScreen.tsx
 let planRenaming=''; // the plan whose name box is open
+// What was pressed in 내 계획 (PlansScreen.tsx tells: its name and value — a plan id, a typed name or code)
+function plansAct(n,v,v2){
+  switch(n){
+  case 'new': newPlan();return;
+  case 'open': openPlan(v);return;
+  case 'dup': dupPlan(v);return;
+  case 'del': delPlan(v);return;
+  case 'rename': if(plans.some(x=>x.id===v)){planRenaming=v;renderPlans()}return;   // its name box opens (with the cursor in it)
+  case 'name': planRenaming='';renamePlan(v,String(v2||'').trim());renderPlans();return;
+  case 'share': shareCode();return;
+  case 'text': showText=!showText;renderPlans();if(showText)copyText(planText());return;
+  case 'txt': downloadText(`${planName()}.txt`,planText());return;
+  case 'json': snapshotCurrent();downloadText(`JEPI-${planName()}.json`,JSON.stringify({jepi:1,name:planName(),data:planData()}));return;
+  case 'code': openCode(v);return;
+  }
+}
 function renderPlans(){
   const box=$('#plansBox'); if(!box) return;
   window.JEPI_UI.mount('plans',box,{plans:plans.map(p=>({id:p.id,name:p.name,kind:p.kind,dates:p.dates,blocks:p.blocks,updated:p.updated})),
     curPlan,delArm,planMsg,renaming:planRenaming,standalone:!!STANDALONE,lastLink:lastLink||'',lastCode:lastCode||'',shareText:showText?planText():null,
-    savedInAccount:!!(rdb&&recState==='on')});
+    savedInAccount:!!(rdb&&RS.status==='on')});
 }
 

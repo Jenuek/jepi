@@ -1,7 +1,6 @@
 // ---------- booking helper: wish list → where to stay → flight times → search links ----------
 let wish=[], hStep=0, hVibe=null, hBusy=false;
-const isWish=id=>wish.includes(id);
-function toggleWish(id){const i=wish.indexOf(id);if(i>=0)wish.splice(i,1);else wish.push(id);TRIP.save('wish',wish)}
+const isWish=id=>TRIP.wish.has(id), toggleWish=id=>TRIP.wish.toggle(id);   // app/data/trip.ts
 const needBooking=()=>profile.kind!=='day'&&(profile.bookedFlight===false||profile.bookedStay===false);
 const ymd=i=>{const d=dateOf(profile,i);return d?`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`:''};
 const guests=()=>({a:profile.party.adults||1,k:profile.party.kids||0});
@@ -51,11 +50,11 @@ List:
 ${text.slice(0,4000)}
 Area keys: ${areaList}
 Reply with only JSON: {"places":[{"name":"Korean name","local":"name in local language","area":"area key","cat":"food|music|art|walk|shop|night|trip","lat":0.0000,"lng":0.0000,"dur":minutes,"open":"HH:MM-HH:MM or null","closed":[0-6],"cost":typical spend in ${PACK.currency},"tags":["short Korean"],"note":"one Korean sentence","cash":false}]}`,{cache:false});
-    let n=0,added=0;
+    let n=0,added=0;const got=[];
     (Array.isArray(r&&r.places)?r.places:[]).slice(0,40).forEach(x=>{const ex=P.find(p=>norm(p.name)===norm(x&&x.name||''));
-      if(ex){if(!isWish(ex.id))wish.push(ex.id);n++;return}
-      const pl=cleanPlace(x);if(pl){PACK.places.push(pl);addPackPlace(pl);wish.push(pl.id);n++;added++}});
-    TRIP.save('wish',wish); savePack(); progStop(stId); renderHelper(); renderTray(); setSt(stId,n?`${n}곳에 ♥를 붙였어요${added?` (새로 찾은 곳 ${added}곳)`:''}.`:'목록에서 장소를 찾지 못했어요.');
+      if(ex){got.push(ex.id);n++;return}
+      const pl=cleanPlace(x);if(pl){PACK.places.push(pl);addPackPlace(pl);got.push(pl.id);n++;added++}});
+    TRIP.wish.add(got); savePack(); progStop(stId); renderHelper(); renderTray(); setSt(stId,n?`${n}곳에 ♥를 붙였어요${added?` (새로 찾은 곳 ${added}곳)`:''}.`:'목록에서 장소를 찾지 못했어요.');
   }catch(e){setSt(stId,errText(e,'장소를 찾지 못했어요'))}
 }
 async function askVibes(){
@@ -68,13 +67,37 @@ Reply with only JSON: {"areas":[{"key":"area key","vibe":"one Korean sentence on
     hVibe={}; (Array.isArray(r&&r.areas)?r.areas:[]).forEach(a=>{if(AREAS[a.key])hVibe[a.key]=a}); progStop('st_vibe');
   }catch(e){setSt('st_vibe',errText(e,'정리하지 못했어요'))} finally{hBusy=false;renderHelper()}
 }
-function openHelper(step){hStep=step||0;slotPicked=null;$('#meBox').innerHTML='';$('#helper').hidden=false;renderHelper()}
-function closeHelper(){$('#helper').hidden=true;renderAll();maybeCoach();if(tab==='me'){draft=clone(profile);renderMe()}}
+// What was pressed inside the 예약 도우미 (HelperBody.tsx tells: its name and value)
+function helperAct(n,v,v2){
+  switch(n){
+  case 'paste': resolveWishes(v||'','st_wish');return;   // ① the pasted list of names
+  case 'vibe': askVibes();return;
+  case 'hotels': askHotels(v);return;
+  case 'route': askRoutes();return;
+  case 'setarea': {const k=v;profile.stayPicked=k;profile.stays.forEach((st,i)=>{if(i===0||profile.bookedStay===false){st.area=k;if(profile.bookedStay===false)st.name=`숙소 (미정 · ${AREAS[k][0]})`}});TRIP.save('profile',profile);buildDays();renderHelper();return}
+  case 'slot': {const [a,d]=String(v).split(',').map(Number);setSlot(a,d);return}
+  case 'radio': profile[v]=v2==='true';TRIP.save('profile',profile);renderHelper();return;   // ④ 예약 상태
+  case 'toMe': closeHelper();tab='me';draft=clone(profile);renderMe();renderTabs();return;
+  }
+}
+// the frame (drawn by React: app/screens/Frames.tsx) shows what helperView says; the step itself goes into #helperBody
+let helperView={open:false,step:'',title:'',prevOff:false,nextLabel:'다음'};
+function drawHelperFrame(){window.JEPI_UI.mount('helperFrame',$('#helperMount'),helperView)}
+function helperOpen(){return helperView.open}
+function helperShow(on){helperView={...helperView,open:on};drawHelperFrame()}
+// prev / next / close were pressed in the frame
+function helperFrameAct(n){
+  if(n==='prev'){if(hStep>0){hStep--;renderHelper();$('#helper').scrollTop=0}return}
+  if(n==='next'){if(hStep<H_STEPS.length-1){hStep++;renderHelper();$('#helper').scrollTop=0}else closeHelper();return}
+  if(n==='close')closeHelper()
+}
+function openHelper(step){hStep=step||0;slotPicked=null;$('#meBox').innerHTML='';helperShow(true);renderHelper()}
+function closeHelper(){helperShow(false);renderAll();maybeCoach();if(tab==='me'){draft=clone(profile);renderMe()}}
 const H_STEPS=['가고 싶은 곳 고르기','숙소 동네 정하기','교통편 시간대 정하기','예약하고 일정에 넣기'];
 function renderHelper(){
-  const el=$('#helperBody'); if(!el||$('#helper').hidden) return;
-  $('#helperStep').textContent=`${hStep+1} / ${H_STEPS.length}`; $('#helperTitle').textContent=H_STEPS[hStep];
-  $('#helperPrev').disabled=hStep===0; $('#helperNext').textContent=hStep===H_STEPS.length-1?'일정표로 가기':'다음';
+  if(!helperView.open) return;
+  helperView={...helperView,step:`${hStep+1} / ${H_STEPS.length}`,title:H_STEPS[hStep],prevOff:hStep===0,nextLabel:hStep===H_STEPS.length-1?'일정표로 가기':'다음'}; drawHelperFrame();
+  const el=$('#helperBody'); if(!el) return;
   // drawn by React: app/screens/HelperBody.tsx
   let st;
   if(hStep===0){

@@ -10,7 +10,6 @@ function travel(a,b){const e=travelEst(a,b); if(!e) return e;
   const m=e.mode==='도보'?'walk':e.mode==='차'?'car':'transit'; const r=routeGet(m,a,b);
   if(!r) return Object.assign({},e,{est:routeProvider(a,b)?true:false,guess:true});
   return {mode:r.label||e.mode,min:r.min,real:true,lines:r.lines||'',tf:r.tf||0,fare:r.fare,cur:r.cur||'',poly:r.poly}}
-const mapsLink=(a,b,mode)=>`https://www.google.com/maps/dir/?api=1&origin=${a[0]},${a[1]}&destination=${b[0]},${b[1]}&travelmode=${mode==='도보'?'walking':mode==='차'?'driving':'transit'}`;
 const hoursFor=(p,wd)=>p.always?null:((p.hoursBy&&p.hoursBy[wd])||p.hours);
 const closedOn=(p,wd)=>!!(p.closed&&p.closed.includes(wd));
 

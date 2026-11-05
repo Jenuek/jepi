@@ -1,4 +1,11 @@
 // ---------- map (Leaflet + CARTO light tiles, loaded only when opened) ----------
+// the top of the map panel (이 날/전체, 내 위치) is drawn by React (app/screens/Tops.tsx)
+let mapTopView={all:false,me:false};
+function mapTop(p){mapTopView={...mapTopView,...p};window.JEPI_UI.mount('mapTop',$('#mapTopMount'),mapTopView)}
+function mapTopAct(n){
+  if(n==='me')locateMe();
+  else{mapState.all=n==='all';mapTop({all:mapState.all});drawMap(true)}
+}
 const mapState={on:false,map:null,layer:null,all:false,me:null,meMarker:null,watch:null,loading:null};
 function loadLeaflet(){
   if(window.L) return Promise.resolve();
@@ -61,10 +68,10 @@ function renderMapCards(){
     return {leg:t?`${t.real?'':'≈ '}${t.mode} ${t.min}분${t.lines?` · ${t.lines}`:''}${t.tf?` · 환승 ${t.tf}`:''}`:'',name:String(s.name),time:`${fmt(s.start)}–${fmt(s.end)}`,nav:prev?navLink(prev.ll,s.ll,t?t.mode:'도보',s.name):''}})});}
 function locateMe(){
   if(!navigator.geolocation){$('#mapMsg').textContent='이 기기에서는 위치를 쓸 수 없어요.';return}
-  if(mapState.watch!=null){navigator.geolocation.clearWatch(mapState.watch);mapState.watch=null;if(mapState.meMarker){mapState.meMarker.remove();mapState.meMarker=null}mapState.me=null;$('#mapMe').setAttribute('aria-pressed','false');return}
-  $('#mapMe').setAttribute('aria-pressed','true');
+  if(mapState.watch!=null){navigator.geolocation.clearWatch(mapState.watch);mapState.watch=null;if(mapState.meMarker){mapState.meMarker.remove();mapState.meMarker=null}mapState.me=null;mapTop({me:false});return}
+  mapTop({me:true});
   mapState.watch=navigator.geolocation.watchPosition(p=>{mapState.me=[p.coords.latitude,p.coords.longitude];
     if(!mapState.meMarker)mapState.meMarker=L.circleMarker(mapState.me,{radius:8,color:'#fff',weight:3,fillColor:'#1a73e8',fillOpacity:1}).addTo(mapState.map);else mapState.meMarker.setLatLng(mapState.me);
-    if(!locateMe.did){locateMe.did=true;mapState.map.setView(mapState.me,15)}},()=>{$('#mapMsg').textContent='위치 권한이 꺼져 있어요. 브라우저 설정에서 허용해 주세요.';$('#mapMe').setAttribute('aria-pressed','false');mapState.watch=null},{enableHighAccuracy:true,maximumAge:15000});
+    if(!locateMe.did){locateMe.did=true;mapState.map.setView(mapState.me,15)}},()=>{$('#mapMsg').textContent='위치 권한이 꺼져 있어요. 브라우저 설정에서 허용해 주세요.';mapTop({me:false});mapState.watch=null},{enableHighAccuracy:true,maximumAge:15000});
 }
 

@@ -1,24 +1,12 @@
 // ---------- day titles the traveler can rename ----------
-// profile.dayTitles[d] overrides the automatic "Day 1 · 도착" title. Empty = back to automatic.
-// Stored in the plan's profile, so it syncs to other devices and to friends on a shared trip.
-function dayTitleOf(d){const t=((profile&&profile.dayTitles)||[])[d];return t&&String(t).trim()?String(t):(DAYS[d]||{}).title||''}
-function editDayTitle(){
-  const h=$('#dayTitle'); if(!h||$('#dayTitleIn')) return;
-  const cur=((profile.dayTitles||[])[day])||'';
-  h.hidden=true; $('#dayTitleEdit').hidden=true;
-  const f=document.createElement('form'); f.id='dayTitleForm'; f.className='dt-form';
-  f.innerHTML=`<input id="dayTitleIn" maxlength="40" value="${esc(cur)}" placeholder="${esc(DAYS[day].title)}" aria-label="Day ${day+1} 제목"><input id="dayMemoIn" class="hand" maxlength="60" value="${esc(dayMemoOf(day))}" placeholder="한 줄 메모 (손글씨로 보여요)" aria-label="Day ${day+1} 메모"><button class="small-btn primary" type="submit">저장</button><button class="small-btn" type="button" id="dayTitleCancel">취소</button>`;
-  h.after(f); const i=$('#dayTitleIn'); i.focus(); i.select();
+// profile.dayTitles[d] overrides the automatic "Day 1 · 도착" title (rules: app/logic/memo.ts). The ✎ form is React
+// (app/screens/DayTitleForm.tsx, it saves itself); here: the header around it.
+function dayTitleOf(d){return JD.logic.memo.dayTitle(profile,d,(DAYS[d]||{}).title||'')}
+let dayTitleRev=0;
+function titleEditing(on){
+  hero({editing:on,slot:true});
+  window.JEPI_UI.mount('dayTitle',$('#dayTitleSlot'),{open:on,day,title:JD.logic.memo.ownDayTitle(profile,day),auto:String(DAYS[day].title||''),memo:dayMemoOf(day),rev:++dayTitleRev});
 }
-function closeDayTitle(save){
-  const f=$('#dayTitleForm'); if(!f) return;
-  if(save){const v=$('#dayTitleIn').value.trim().slice(0,40); const a=(profile.dayTitles||[]).slice(); a[day]=v; while(a.length&&!a[a.length-1])a.pop();
-    profile.dayTitles=a; setDayMemo(day,$('#dayMemoIn').value); TRIP.save('profile',profile)}
-  f.remove(); $('#dayTitle').hidden=false; $('#dayTitleEdit').hidden=false; renderAll();
-  if(save) showToast($('#dayTitle').textContent?'제목을 바꿨어요':'자동 제목으로 돌아갔어요');
-}
-document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
-  if(t.id==='dayTitleEdit'){editDayTitle();return}
-  if(t.id==='dayTitleCancel'){closeDayTitle(false);return}
-});
-document.addEventListener('submit',e=>{if(e.target.id!=='dayTitleForm')return;e.preventDefault();closeDayTitle(true)});
+// what React screens may ask of the old code (app/ui/host.ts)
+window.JEPI_UI.connectHost({renderAll:()=>renderAll(),closeSheet:()=>closeSheet(),reopenSheet:()=>{const u=$('#sheet').dataset.uid;if(u&&u!=='dice'&&!$('#sheetBg').hidden)openSheet(u)},toast:m=>showToast(m),day:()=>day,autoTitle:d=>String((DAYS[d]||{}).title||''),titleEditing,
+  closeNotebook:()=>closeNotebook(),renamePlan:nm=>lookRenamePlan(nm),aiDayTitles:n=>lookAiTitles(n),errText:(e,w)=>errText(e,w),welcomeNew:()=>{closeWelcome();openOnb()},welcomeDemo:()=>demoEnter(),welcomeLoggedIn:()=>welcomeLoggedIn(),dice:(n,v,m)=>diceAct(n,v,m),place:(n,v)=>placeAct(n,v),plans:(n,v,v2)=>plansAct(n,v,v2),helper:(n,v,v2)=>helperAct(n,v,v2),helperFrame:n=>helperFrameAct(n),dock:(n,v)=>dockAct(n,v),tray:(n,v)=>trayAct(n,v),tab:n=>goTab(n),onbFrame:n=>onbFrameAct(n),hero:n=>heroAct(n),miniDay:s=>{const n=day+s;if(n>=0&&n<DAYS.length){day=n;renderAll()}},mapTop:n=>mapTopAct(n),coach:n=>coachAct(n),banner:()=>{selected=null;renderAll()},chat:(n,v)=>chatAct(n,v),pview:(n,v)=>pviewAct(n,v),kw:(n,v)=>kwAct(n,v),grid:(n,v)=>gridAct(n,v),block:(n,v,o)=>blockAct(n,v,o),checks:(n,v,o)=>checksAct(n,v,o),aibox:(n,v)=>aiboxAct(n,v),settings:(n,v,v2)=>settingsAct(n,v,v2),form:(n,v,o)=>formAct(n,v,o),sum:(n,v)=>sumAct(n,v),trip:(a,u,t)=>tripAct(a,u,t),want:p=>wantAct(p),find:(n,v,t)=>findAct(n,v,t),planMenu:(n,v)=>planMenuAct(n,v),more:id=>moreAct(id),mapCard:i=>mapCardAct(i),nudge:(n,v)=>nudgeAct(n,v),importFile:f=>importBackup(f,ok=>{if(ok){maybeCoach()}}),shareNotebook:async()=>{await shareLink(true);return planMsg||'링크를 만들었어요'}});

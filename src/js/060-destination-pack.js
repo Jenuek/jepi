@@ -29,7 +29,7 @@ function loadPack(pk){
   KRW_PER_JPY=+pk.rate>0?+pk.rate:1;
   if(!(pk.snack>0)) pk.snack=pk.currency==='KRW'?15000:nice(15000/KRW_PER_JPY);
   if(!(pk.step>0)) pk.step=nice(pk.snack/2);
-  if(recState!=='off'){SHARED_IDS.clear();rebuildShared()}
+  if(RS.status!=='off'){SHARED_IDS.clear();rebuildShared()}
 }
 const savePack=()=>store.set('gp.pack',PACK);
 function packFrom(v){
@@ -137,7 +137,7 @@ Reply with only JSON: {"places":[{"name":"Korean name","local":"name in local la
     savePack(); setSt(stId,added?`새 장소 ${added}곳을 찾았어요. 장소 탭 맨 위 "✨ 방금 찾은 곳"에 모아 뒀어요.`:'이미 있는 곳과 겹쳐서 새로 추가할 장소가 없었어요. 찾는 말을 바꿔 보세요 (예: 현지인 맛집, 조용한 카페).'); return added;
   }catch(e){setSt(stId,e&&e.code==='cancelled'?'멈췄어요. 장소 블록 탭에서 언제든 다시 찾을 수 있어요.':errText(e,'장소를 찾지 못했어요'));return 0}
 }
-function setBusy(b){['onbNext','onbPrev','onbSkip','onbExample','genPack','meSave'].forEach(id=>{const e=document.getElementById(id);if(!e)return;const v=b||(id==='onbPrev'&&onbStep===0),L=window.JEPI_UI.live(e);if(L)L.disabled(v);else e.disabled=v})}
+function setBusy(b){onbFrame({nextOff:b,prevOff:b||onbStep===0,skipOff:b,exampleOff:b});['genPack','meSave'].forEach(id=>{const e=document.getElementById(id);if(!e)return;const v=b,L=window.JEPI_UI.live(e);if(L)L.disabled(v);else e.disabled=v})}
 async function onbAdvance(){
   if(onbBusy) return;
   if(onbStep===0){

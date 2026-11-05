@@ -33,7 +33,7 @@ function startupFocus(){
     setTimeout(()=>{const H=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hour'))||60;const g=$('#grid');if(!g)return;
       const now=new Date(), nm=now.getHours()*60+now.getMinutes(); const y=g.getBoundingClientRect().top+window.scrollY+Math.max(0,(nm-dayStart(day))/60*H-140);window.scrollTo({top:y})},80)}
 }
-function renderPlanBtn(){const b=$('#planBtn');if(!b)return;const p=plans.find(x=>x.id===curPlan);$('#planName').textContent=(p&&p.name)||planName()}
+function renderPlanBtn(){const p=plans.find(x=>x.id===curPlan);hero({planName:(p&&p.name)||planName()})}
 const inside=sel=>{const a=document.activeElement;return !!(a&&a.closest&&a.closest(sel))};
 function renderExt(){renderPhase();renderMore();renderPlanBtn();
   if(tab==='me'&&$('#onb').hidden&&!inside('#meBox'))renderMeRows();
@@ -43,32 +43,12 @@ function renderExt(){renderPhase();renderMore();renderPlanBtn();
 // events for the new panels (registered before the main handler; returns early only for its own controls)
 document.addEventListener('click',e=>{
   const t=e.target.closest('button,a,label,input'); if(!t) return;
-  if(t.dataset.meopen){meOpen=meOpen===t.dataset.meopen?null:t.dataset.meopen;autoMsg='';pasteMsg={};renderMeRows();return}
-  if(t.id==='meHelper2'){openHelper(0);return}
-  if(t.id==='moreAll'){moreAll=!moreAll;renderMore();return}
   if(t.id==='wishGo'){cat='wish';tab='tray';renderTray();renderTabs();return}
-  if(t.dataset.themeSet){themePref=t.dataset.themeSet;LS.set('jepi.theme',themePref);applyTheme();renderSettings();if(mapState.on)drawMap();return}
-  if(t.dataset.keyedit){keyEdit=t.dataset.keyedit;keyShow=false;keyMsg[keyEdit]='';renderSettings();setTimeout(()=>{const i=$('#keyIn');if(i)i.focus()},30);return}
-  if(t.id==='keyCancel'){keyEdit=null;renderSettings();return}
-  if(t.id==='keyShow'){const i=$('#keyIn'),v=i?i.value:'';keyShow=!keyShow;renderSettings();const j=$('#keyIn');if(j){j.value=v;j.focus()}return}
-  if(t.dataset.keysave){const k=t.dataset.keysave,v=(($('#keyIn')||{}).value||'').trim().replace(/\s+/g,'');
-    if(!v){keyMsg[k]='키를 붙여 넣어 주세요.';renderSettings();return}
-    if(KEY_DEF[k].re&&!KEY_DEF[k].re.test(v)){keyMsg[k]=`${KEY_DEF[k].name} 키 형식이 아닌 것 같아요. 그래도 저장했으니 "확인"을 눌러 보세요.`}
-    else keyMsg[k]='';
-    KEYS[k]=v;keyEdit=null;keysChanged();testKey(k);return}
-  if(t.dataset.keydel){delete KEYS[t.dataset.keydel];keyMsg[t.dataset.keydel]='삭제했어요.';keysChanged();return}
-  if(t.dataset.keytest){testKey(t.dataset.keytest);return}
-  if(t.id==='mSave'){MODELS.heavy=($('#mHeavy').value||'').trim()||'claude-sonnet-5-5';MODELS.light=($('#mLight').value||'').trim()||'claude-haiku-5-5';MODELS.gemini=($('#mGem').value||'').trim()||'gemini-3.6-flash';LS.set('jepi.models',{heavy:MODELS.heavy,light:MODELS.light,gemini:MODELS.gemini});keysChanged();return}
-  if(t.id==='backupAll'){backupAll();return}
-  if(t.dataset.mapday!=null){mapState.all=t.dataset.mapday==='all';document.querySelectorAll('[data-mapday]').forEach(b=>b.setAttribute('aria-pressed',String((b.dataset.mapday==='all')===mapState.all)));drawMap(true);return}
-  if(t.id==='mapMe'){locateMe();return}
-  if(t.dataset.onbkey){const k=t.dataset.onbkey,i=document.getElementById('onbKey_'+k),v=(i&&i.value||'').trim().replace(/\s+/g,'');if(!v)return;KEYS[k]=v;keysChanged();return}
 });
-document.addEventListener('click',e=>{const c=e.target.closest('.mcard');if(!c||e.target.closest('a'))return;const {stops}=mapLegs(day);const s=stops[+c.dataset.mapi];if(s&&mapState.map){mapState.map.setView(s.ll,16)}});
+// a card under the map (MapCards in Dice.tsx): the map moves to that stop
+function mapCardAct(i){const {stops}=mapLegs(day);const s=stops[+i];if(s&&mapState.map){mapState.map.setView(s.ll,16)}}
 // autosave for 이번 여행 / 취향 panels
 document.addEventListener('change',e=>{if(e.target.closest&&e.target.closest('#meBox,#tasteStyle')&&!e.target.classList.contains('importFile'))autoSave()});
-document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t||!t.closest('#meBox,#tasteStyle'))return;
-  if(t.dataset.radio!=null||t.dataset.addstay!=null||t.dataset.delstay!=null||t.dataset.addev!=null||t.dataset.delev!=null||t.dataset.styletoggle!=null)setTimeout(autoSave,0)});
 // onboarding: connect AI right on the first screen
 
 

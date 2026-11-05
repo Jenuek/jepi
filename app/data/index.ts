@@ -9,6 +9,14 @@ import { b64e, b64d, vaultMake, vaultKey, vaultSeal, vaultOpen } from './vault';
 import * as trip from './trip';
 import * as merge from './merge';
 import * as ai from './ai';
+import * as alerts from './alerts';
+import * as hours from './hours';
+import * as kakao from './kakao';
+import * as myplaces from './myplaces';
+import * as routes from './routes';
+import * as account from './account';
+import * as recs from './recs';
+import * as nearby from './nearby';
 import * as logic from '../logic';
 import * as trips from './trips';
 import { status, syncDocs, syncSoon, syncPush, syncPull, syncNow, connectSync } from './sync';
@@ -21,6 +29,22 @@ export const data = {
   merge,
   /** the AI connection (Claude / Gemini) */
   ai,
+  /** 알림 (push reminders) */
+  alerts,
+  /** 영업시간 from Google Places */
+  hours,
+  /** Kakao places / addresses, and this device's location */
+  kakao,
+  /** 내 장소 (집·회사·…) */
+  myplaces,
+  /** real routes (Google, abroad) */
+  routes,
+  /** log in / sign up / password reset / logout */
+  account,
+  /** 👍 여행자 추천 */
+  recs,
+  /** 🎲 places nearby (뭐 먹지 · 뭐 하지) */
+  nearby,
   /** calculations: time text, distances, the day check (app/logic) */
   logic,
   /** 친구와 함께 on the server */

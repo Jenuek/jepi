@@ -26,7 +26,7 @@ Places with mustSee are especially recommended, and travelerRecs is how many oth
 Rules: each pick must sit inside one free gap, leave travel time (about 15-35 min by local transport between areas) before it and after it, stay within opening hours, and not overlap other picks. Prefer places near the neighbouring blocks. ${profile.pace==='slow'?'Keep the day unhurried: fewer picks is fine.':profile.pace==='full'?'The traveler wants a full day: use the free time well, up to the limit.':'Keep a balanced pace with some breathing room.'}
 Reply with only JSON: {"suggestions":[{"id":"nezu","start":"10:30","reason":"one short sentence in Korean explaining why it fits this traveler and this slot"}]}`;
   const ctl=new AbortController();
-  aiState={day,status:'loading',ctl}; renderAI(); $('#aiBtn').disabled=true;
+  aiState={day,status:'loading',ctl}; renderAI(); dock({aiOff:true});
   try{
     const res=await sample.json(prompt,{signal:ctl.signal,cache:false});
     const arr=Array.isArray(res?.suggestions)?res.suggestions:[];
@@ -41,6 +41,6 @@ Reply with only JSON: {"suggestions":[{"id":"nezu","start":"10:30","reason":"one
     else if(e&&e.code==='rate_limited'){aiState={day,status:'error',msg:'요청이 많아 잠시 쉬어야 해요. 조금 뒤에 다시 눌러 주세요.'}}
     else if(e&&e.code==='invalid_json'){aiState={day,status:'error',msg:'추천 형식을 읽지 못했어요. 한 번 더 눌러 주세요.'}}
     else {aiState={day,status:'error',msg:(e&&e.message&&e.code!=='upstream_error'||e&&e.code==='upstream_error'&&e.message?e.message+' · ':'연결이 잠시 끊겼어요. ')+'다시 눌러 주세요.'}}
-  }finally{$('#aiBtn').disabled=false; renderAll()}
+  }finally{dock({aiOff:false}); renderAll()}
 }
 

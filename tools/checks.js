@@ -187,6 +187,29 @@ module.exports = [
     }
   },
   {
+    name: '👍 여행자 추천 after logging in: on, counted, saved on the server, off',
+    async run({ b, S, device, ok, skipCoach, openSettings }) {
+      const e = (n) => ({ k: '오사카|' + n.replace(/\s+/g, '').toLowerCase(), city: '오사카', name: n, cat: 'trip', lat: 34.66, lng: 135.43, dur: 60 });
+      S.recs = [['U_a', '덴포잔 대관람차'], ['U_b', '덴포잔 대관람차']].map(([u, n]) => ({ user_id: u, k: e(n).k, city: '오사카', entry: e(n) }));
+      S.users['rec@x.com'] = 'pass123';
+      const p = await device(b, S);
+      await p.click('[data-w="new"]'); await p.waitForTimeout(200);
+      await p.evaluate(() => window.__jepi.demoLikeTrip()); await p.waitForTimeout(500); await skipCoach(p);
+      await openSettings(p); await p.fill('#sbEmail', 'rec@x.com'); await p.fill('#sbPw', 'pass123'); await p.click('#sbGo'); await p.waitForTimeout(2000);
+      await p.click('.tabs [data-tab="tray"]'); await p.waitForTimeout(400);
+      ok((await p.textContent('#recSt')).includes('모여 있어요'), 'logged in: the line says how many are recommended · ' + (await p.textContent('#recSt')));
+      const card = p.locator('#cards .card').filter({ hasNotText: '덴포잔' }).first(), nm = await card.locator('.nm').textContent();
+      await card.locator('[data-vote]').click(); await p.waitForTimeout(500);
+      const on = p.locator('#cards .card', { hasText: nm }).first().locator('[data-vote]');
+      ok((await on.getAttribute('aria-pressed')) === 'true' && (await on.textContent()) === '👍 1', '👍 on and counted · ' + nm);
+      ok(S.recs.length === 3 && S.recs.some(r => r.entry && r.entry.name === nm), 'saved on the server');
+      await on.click(); await p.waitForTimeout(500);
+      ok(S.recs.length === 2, 'off again: taken off the server');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
     name: 'trip look: hero folds, 여행 꾸미기, handwritten memos, 여행 노트',
     async run({ b, S, device, ok, vis, skipCoach }) {
       const p = await device(b, S);
@@ -386,6 +409,11 @@ module.exports = [
       await p.fill('#plansBox .pl-name', '우리 오사카'); await p.click('#plansBox [data-planname]'); await p.waitForTimeout(250);
       ok((await p.textContent('#plansBox .plan.cur .pl-top b')) === '우리 오사카' && !(await vis(p, '#plansBox .pl-name')), 'new name saved and shown');
       ok((await p.textContent('#planName')).includes('우리 오사카'), 'the header shows the new name too');
+      const [dl] = await Promise.all([p.waitForEvent('download'), p.click('#planJson')]);
+      const file = await dl.path(); ok(!!file && JSON.parse(require('fs').readFileSync(file, 'utf8')).jepi === 1, '백업 파일 받기 gives the backup file');
+      await p.setInputFiles('#plansBox .importFile', file); await p.waitForTimeout(800);
+      await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="plans"]'); await p.waitForTimeout(250);
+      ok(await count() === 2, 'loading that file back opens it as a new plan');
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
@@ -786,6 +814,44 @@ module.exports = [
     }
   },
   {
+    name: '🎲 nearby (pretend Kakao map, location set): 뭐 하지 one place and a course, 뭐 먹지 a place to eat, 이걸로 remembers it',
+    async run({ b, S, device, ok, skipCoach }) {
+      const p = await device(b, S);
+      await p.ctx.grantPermissions(['geolocation']); await p.ctx.setGeolocation({ latitude: 37.544, longitude: 127.056 });
+      await p.route(/dapi\.kakao\.com/, r => { const u = new URL(r.request().url()), w = u.searchParams.get('query') || u.searchParams.get('category_group_code'), x = +u.searchParams.get('x'), y = +u.searchParams.get('y');
+        r.fulfill({ contentType: 'application/json', body: JSON.stringify({ meta: { is_end: true }, documents: [0, 1, 2, 3].map(i => ({ id: w + i, place_name: `${w} 가게 ${i}`, category_name: '음식점 > ' + w, distance: String(120 * (i + 1)), road_address_name: '성수이로 ' + i, x: String(x + i * 0.001), y: String(y + i * 0.001) })) }) }) });
+      await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await p.waitForTimeout(400); await skipCoach(p);
+      await p.evaluate(() => localStorage.setItem('jepi.keys', JSON.stringify(Object.assign(JSON.parse(localStorage.getItem('jepi.keys') || '{}'), { kakao: 'KakaoTestKey' }))));
+      await p.clock.setFixedTime(new Date('2027-03-10T15:20:00'));
+      await p.reload(); await p.waitForTimeout(3800); await skipCoach(p).catch(() => {}); await p.emulateMedia({ reducedMotion: 'reduce' });
+      await p.click('#diceFab'); await p.waitForTimeout(400);
+      if (!(await p.$('#sheet [data-dobase]'))) { await p.click('#sheet [data-dicetab="do"]'); await p.waitForTimeout(300) }
+      await p.click('#sheet [data-dobase="near"]'); await p.waitForTimeout(300);
+      await p.click('#sheet [data-dogo="one"] >> nth=0'); await p.waitForTimeout(1200);
+      const one = await p.textContent('#sheet');
+      ok(/가게 \d/.test(one) && one.includes('카카오 지도') && one.includes('지금 위치 기준'), '뭐 하지: one place from the map around me');
+      await p.click('#sheet [data-dogo="course"] >> nth=0'); await p.waitForTimeout(1800);
+      const stops = await p.$$eval('#sheet [data-doreroll]', e => e.length);
+      ok(stops >= 3 && (await p.textContent('#sheet')).includes('지금 위치에서 걸어서'), 'course of ' + stops + ' stops, walking times between them');
+      await p.click('#sheet [data-dobase="area"]'); await p.waitForTimeout(300);
+      ok(await p.evaluate(() => document.activeElement && document.activeElement.id === 'doAreaQ'), '🗺 동네: the cursor is in the name box');
+      await p.keyboard.type('성수동'); await p.keyboard.press('Enter'); await p.waitForTimeout(600);
+      ok((await p.$$('#sheet [data-doareapick]')).length > 0, 'Enter searches the name');
+      await p.click('#sheet [data-doareapick="0"]'); await p.waitForTimeout(300);
+      ok((await p.textContent('#sheet .eat-bases')).includes('가게 0'), 'picking a hit sets the 동네');
+      await p.click('#sheet [data-dicetab="eat"]'); await p.waitForTimeout(300);
+      await p.click('#sheet [data-eatbase="near"]').catch(() => {}); await p.waitForTimeout(200);
+      await p.click('#sheet [data-eatroll="go"]'); await p.waitForTimeout(1200);
+      const eat = await p.textContent('#sheet');
+      ok(/FD6 가게 \d/.test(eat) && eat.includes('걸어서 약'), '뭐 먹지: a restaurant within walking distance');
+      const nm = (eat.match(/FD6 가게 \d/) || [''])[0];
+      await p.click('#eatPick'); await p.waitForTimeout(300);
+      ok((await p.textContent('#sheet')).includes('맛있게 드세요') && await p.evaluate(n => JSON.parse(localStorage.getItem('gp.dice')).some(x => x.n === n), nm), '이걸로! is remembered (left out of the next rolls)');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
     name: 'React screen: 🎲 DICE (roll in a free slot → 이걸로 할래요 puts it in the schedule, 다시 counts down, tabs swap) and 지도 cards',
     async run({ b, S, device, ok, vis, skipCoach }) {
       const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
@@ -793,6 +859,8 @@ module.exports = [
       await p.evaluate(() => { let s = 7; Math.random = () => ((s = s * 16807 % 2147483647) / 2147483647) });   // the same rolls every time
       const blocks = () => p.evaluate(() => JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k => k.endsWith('gp.placed3'))) || '[]').length);
       await p.click('#diceFab'); await p.waitForTimeout(400);
+      // at meal times the button opens 뭐 먹지 first: go to 뭐 하지 for the rest of this check
+      if (!(await vis(p, '#sheet [data-dobase="near"]'))) { await p.click('#sheet [data-dicetab="do"]'); await p.waitForTimeout(300) }
       ok(await vis(p, '#sheet .dice-tabs') && await vis(p, '#sheet [data-dobase="near"]'), 'DICE opens with 뭐 하지/뭐 먹지 tabs');
       await p.click('#sheet [data-dobase="plan"]'); await p.waitForTimeout(300);
       ok((await p.textContent('#sheet h3')).includes('빈 시간에서 굴려요') && await vis(p, '#sheet [data-dicegap]'), 'plan view: free slots to pick');
@@ -810,6 +878,9 @@ module.exports = [
       await p.click('#sheet [data-close]'); await p.waitForTimeout(200);
       await p.click('.tabs [data-tab="map"]'); await p.waitForTimeout(800);
       ok(await p.$$eval('#mapCards .mcard', e => e.length) > 2 && await p.$$eval('#mapCards .mcard a', e => e.length) > 0, '지도: a card per stop with 안내 시작');
+      { const at = () => p.evaluate(() => { const m = document.querySelector('#mapBox .leaflet-marker-icon, #mapBox .leaflet-interactive'); return m ? (m.style.transform || m.getAttribute('d') || '') : '' });
+        const before = await at(); await p.click('#mapCards .mcard >> nth=2', { position: { x: 8, y: 8 } }); await p.waitForTimeout(500);
+        ok(before !== await at(), '지도: tapping a card moves the map to that stop') }
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
@@ -1090,6 +1161,43 @@ module.exports = [
     }
   },
   {
+    name: 'data: changing the trip in one place (app/data/trip.ts): blocks · 할 일 표시 · ♥ · 체크 · 간식비 · 키워드 · not saved during a try-out',
+    async run({ b, S, device, ok, skipCoach }) {
+      const p = await device(b, S);
+      await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await p.waitForTimeout(400); await skipCoach(p);
+      const r = await p.evaluate(() => {
+        const T = window.JEPI_DATA.trip, saved = k => JSON.parse(localStorage.getItem(k) || 'null');
+        const out = {}, n0 = T.get('placed').length, id = T.get('placed')[0].id;
+        const nb = T.blocks.add({ id, day: 0, start: 1200, dur: 60 });
+        out.added = /^u\d+$/.test(nb.uid) && saved('gp.placed3').length === n0 + 1 && !('uid' in saved('gp.placed3')[n0]);
+        T.blocks.change(nb.uid, { start: 1230, dur: 90 });
+        out.changed = saved('gp.placed3')[n0].start === 1230 && saved('gp.placed3')[n0].dur === 90;
+        T.toggleMark(nb.uid, 'bag+'); out.marked = JSON.stringify(saved('gp.placed3')[n0].mk) === '["bag+"]';
+        T.toggleMark(nb.uid, 'bag+'); out.unmarked = !('mk' in saved('gp.placed3')[n0]);
+        T.toggleMark('f0a', 'bag+'); out.fixedMark = JSON.stringify((saved('gp.fmarks') || {}).f0a) === '["bag+"]';
+        T.toggleMark('f0a', 'bag+'); out.fixedOff = !('f0a' in (saved('gp.fmarks') || {}));
+        T.blocks.remove(nb.uid); out.removed = saved('gp.placed3').length === n0;
+        const w = T.wish.toggle(id); out.wish = w === true && saved('gp.wish').includes(id) && T.wish.has(id);
+        T.wish.add([id, id]); out.wishOnce = saved('gp.wish').filter(x => x === id).length === 1;
+        T.wish.toggle(id); out.unwish = !saved('gp.wish').includes(id);
+        T.tick('test-ck', true); out.tick = saved('gp.done')['test-ck'] === true;
+        T.setMeal(0, 2500); out.meal = +saved('gp.meal2')[0] === 2500;
+        const k0 = T.kws.get().length;
+        out.kwAdd = T.keywords.add('골목 산책') === true && T.keywords.add('골목산책') === false && saved('gp.kw').length === k0 + 1;
+        out.kwOff = T.keywords.toggle('골목 산책') === false && saved('gp.kw').length === k0;
+        out.kwMax = T.keywords.add('새 키워드', 0) === false;
+        // an AI check tries changes out on a copy: nothing may be saved meanwhile
+        const before = localStorage.getItem('gp.placed3');
+        T.connectSaving(() => false); T.blocks.add({ id, day: 0, start: 1300, dur: 30 });
+        out.dry = localStorage.getItem('gp.placed3') === before;
+        return out;
+      });
+      for (const [k, v] of Object.entries(r)) ok(v === true, k);
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
     name: 'data: 친구와 함께 merge rules (app/data/merge.ts) case by case',
     async run({ b, S, device, ok }) {
       const p = await device(b, S);
@@ -1187,6 +1295,141 @@ module.exports = [
     }
   },
   {
+    name: 'React handles its own buttons: 손글씨 메모 (typed text survives a sheet redraw, Enter saves) · 날짜 제목 (cancel, back to automatic)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      const memoOf = () => p.evaluate(() => JSON.parse(localStorage.getItem('gp.profile')).memo || {});
+      await p.click('#grid .blk:not(.fixed) >> nth=1'); await p.waitForTimeout(300);
+      await p.fill('#bmIn', '사진 찍기'); await p.click('#sheet [data-mv="30"]'); await p.waitForTimeout(300);
+      ok(await p.inputValue('#bmIn') === '사진 찍기', 'typed memo is still there after the sheet redraws (30분 뒤로)');
+      await p.press('#bmIn', 'Enter'); await p.waitForTimeout(400);
+      ok(!(await vis(p, '#sheetBg')) && Object.values((await memoOf()).b || {}).includes('사진 찍기') && (await p.textContent('#grid')).includes('사진 찍기'), 'Enter saves: the sheet closes, the block shows it, it is saved');
+      const t0 = await p.textContent('#dayTitle');
+      await p.click('#dayTitleEdit'); await p.waitForTimeout(200);
+      ok(await vis(p, '#dayTitleForm') && !(await vis(p, '#dayTitle')) && await p.evaluate(() => document.activeElement && document.activeElement.id === 'dayTitleIn'), '✎ opens the form in place of the title, the box is ready to type');
+      await p.fill('#dayTitleIn', '바꿀까 말까'); await p.click('#dayTitleCancel'); await p.waitForTimeout(300);
+      ok(!(await vis(p, '#dayTitleForm')) && await vis(p, '#dayTitle') && (await p.textContent('#dayTitle')) === t0, '취소: the title comes back unchanged');
+      await p.click('#dayTitleEdit'); await p.fill('#dayTitleIn', '첫날은 천천히'); await p.click('#dayTitleForm [type=submit]'); await p.waitForTimeout(400);
+      ok((await p.textContent('#dayTitle')) === '첫날은 천천히' && (await p.textContent('#toast').catch(() => '')).includes('바꿨어요'), '저장: the new title, 제목을 바꿨어요');
+      await p.click('#dayTitleEdit'); await p.fill('#dayTitleIn', ''); await p.click('#dayTitleForm [type=submit]'); await p.waitForTimeout(400);
+      ok((await p.textContent('#dayTitle')) === t0 && (await p.textContent('#toast').catch(() => '')).includes('자동 제목'), 'empty: back to the automatic title, and it says so');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'logic: 알림 reminders (app/logic/alerts.ts) — time zones, 출발할 때 / 시작할 때, morning summary',
+    async run({ b, S, device, ok }) {
+      const p = await device(b, S);
+      const r = await p.evaluate(() => {
+        const A = window.JEPI_DATA.logic.alerts, fmt = window.JEPI_DATA.logic.time.fmt;
+        const t = A.localToUtc('2027-01-10', 600, 'Asia/Tokyo');           // 10:00 in Tokyo = 01:00 UTC
+        const tz = [new Date(t).toISOString(), A.tripTZ({ country: '일본' }), A.tripTZ({ tz: 'Europe/Paris', country: '일본' }), A.tripTZ({ currency: 'KRW' })].join('|');
+        const rows = [{ key: 'a@0', name: '미술관', start: 600, end: 700, locName: '우에노' }, { key: 'b@0', name: '카페', start: 780, end: 840, travelIn: { min: 20, mode: '전철', fromName: '미술관' } }];
+        const s = { on: true, all: true, lead: 10, depart: true, morning: true };
+        const now = Date.UTC(2027, 0, 1);
+        const L = A.alertList('p1', [{ iso: '2027-01-10', rows }], s, () => true, 'Asia/Tokyo', fmt, now);
+        const only = A.alertList('p1', [{ iso: '2027-01-10', rows }], Object.assign({}, s, { morning: false }), k => k === 'b@0', 'Asia/Tokyo', fmt, now);
+        const atStart = A.alertList('p1', [{ iso: '2027-01-10', rows }], Object.assign({}, s, { depart: false, morning: false }), () => true, 'Asia/Tokyo', fmt, now);
+        const past = A.alertList('p1', [{ iso: '2027-01-10', rows }], s, () => true, 'Asia/Tokyo', fmt, Date.UTC(2027, 0, 11));
+        const hm = x => new Date(x.t + 9 * 3600000).toISOString().slice(11, 16);   // back to Tokyo time
+        return { tz, n: L.length, morning: L[0].title + ' ' + hm(L[0]) + ' ' + L[0].body, depart: L[2].title + ' ' + hm(L[2]), start: hm(atStart[1]) + ' ' + atStart[1].title, only: only.map(x => x.id).join(), past: past.length };
+      });
+      ok(r.tz === '2027-01-10T01:00:00.000Z|Asia/Tokyo|Europe/Paris|Asia/Seoul', 'Tokyo 10:00 → 01:00 UTC, the trip time zone by country / its own / Korea ' + r.tz);
+      ok(r.n === 3 && r.morning === '☀️ 오늘 일정 · Day 1 08:00 10:00 미술관 → 13:00 카페', 'morning summary at 08:00 with the first blocks ' + r.morning);
+      ok(r.depart === '🚶 10분 뒤 출발 · 카페 12:30', '출발할 때: start minus the ride minus 10 min ' + r.depart);
+      ok(r.start === '12:50 ⏰ 10분 뒤 · 카페', '시작할 때: 10 min before the start ' + r.start);
+      ok(r.only === 'p1:b@0', 'only the blocks that are on');
+      ok(r.past === 0, 'nothing that is already past');
+    }
+  },
+  {
+    name: 'logic: 영업시간 from Google (app/logic/hours.ts) and same-place rules (app/logic/places.ts)',
+    async run({ b, S, device, ok }) {
+      const p = await device(b, S);
+      const r = await p.evaluate(() => {
+        const { hours, places } = window.JEPI_DATA.logic;
+        const P = (d, oh, om, ch, cm, cd) => ({ open: { day: d, hour: oh, minute: om }, close: { day: cd ?? d, hour: ch, minute: cm } });
+        const week = hours.fromGoogle({ periods: [1, 2, 3, 4, 5].map(d => P(d, 10, 0, 18, 0)).concat([P(6, 10, 0, 20, 30)]) });   // closed Sunday, Saturday later
+        const late = hours.fromGoogle({ periods: [P(5, 18, 0, 2, 0, 6)] });   // Friday 18:00 → Saturday 02:00
+        const always = hours.fromGoogle({ periods: [{ open: { day: 0, hour: 0 } }] });
+        const pl = { verify: '영업시간', hours: [600, 1200] }; hours.apply(pl, week);
+        const A = { id: 'a', name: '이치란 라멘 도톤보리점', ll: [34.6687, 135.5013] };
+        return { week: JSON.stringify(week), late: JSON.stringify(late.hours), always: !!always.always, applied: pl.hsrc + '|' + (pl.verify === undefined) + '|' + pl.closed.join(),
+          sim: [places.nameSim('이치란 라멘', '이치란라멘 도톤보리점'), places.nameSim('ABC', 'xyz')].map(x => x.toFixed(1)).join(),
+          same: [places.samePlace(A, { id: 'b', name: '이치란 라멘', ll: [34.6688, 135.5014] }), places.samePlace(A, { id: 'c', name: '이치란 라멘', ll: [34.70, 135.50] }), places.samePlace(A, { id: 'd', name: '이치란 라멘', custom: true })].join() };
+      });
+      ok(r.week === '{"hours":[600,1080],"hoursBy":{"6":[600,1230]},"closed":[0]}', 'weekdays 10–18, Saturday till 20:30, closed Sunday ' + r.week);
+      ok(r.late === '[1080,1440]', 'open past midnight counts to the end of the day');
+      ok(r.always === true, 'open all the time');
+      ok(r.applied === 'google|true|0', 'applied: marked as checked by Google, the "확인 필요" goes away');
+      ok(r.sim === '0.9,0.0', 'name likeness: one name inside the other · nothing alike');
+      ok(r.same === 'true,false,true', 'same place: next door with the name · far away is not · hand-made judged by name');
+    }
+  },
+  {
+    name: 'React handles its own buttons: 내 장소 address search (pretend Kakao) → pick → saved and shown',
+    async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
+      const p = await device(b, S);
+      await p.route(/dapi\.kakao\.com/, r => { const u = r.request().url();
+        if (u.includes('address.json')) return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ documents: [{ address_name: '경기 성남시 분당구 판교역로 235', road_address: { address_name: '판교역로 235' }, y: '37.4021', x: '127.1086' }] }) });
+        r.fulfill({ status: 200, contentType: 'application/json', body: '{"documents":[]}' }) });
+      await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await p.evaluate(() => { const k = JSON.parse(localStorage.getItem('jepi.keys') || '{}'); k.kakao = '0123456789abcdef0123456789abcdef'; localStorage.setItem('jepi.keys', JSON.stringify(k)) });
+      await p.reload(); await p.waitForTimeout(1200); await skipCoach(p).catch(() => {});
+      await openSettings(p); await p.click('[data-mypedit="work"]'); await p.waitForTimeout(200);
+      await p.fill('#mypQ', '판교역로 235'); await p.press('#mypQ', 'Enter'); await p.waitForTimeout(500);
+      ok(await p.$$eval('[data-myppick]', e => e.length) === 1 && (await p.textContent('.kmsg')).includes('맞는 곳을 눌러'), 'Enter searches: one result to pick');
+      await p.click('[data-myppick]'); await p.waitForTimeout(300);
+      const saved = await p.evaluate(() => (JSON.parse(localStorage.getItem('jepi.myplaces')) || []).find(x => x.id === 'work'));
+      ok(saved && saved.addr === '판교역로 235' && saved.ll[0] === 37.4021 && (await p.textContent('.kmsg')).includes('저장했어요'), 'picking saves 회사 with the address');
+      await p.click('#mypDone'); await p.waitForTimeout(200);
+      ok((await p.textContent('#settingsBox, #side-settings').catch(() => '')).includes('판교역로 235'), 'the list shows the address');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'routes abroad (app/data/routes.ts): pretend Google answers → real times with line names replace the ≈ guess, saved on the device',
+    async run({ b, S, device, ok, skipCoach }) {
+      const p = await device(b, S); let asked = 0;
+      await p.route(/routes\.googleapis\.com/, r => { asked++; r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ routes: [{ duration: '780s', distanceMeters: 4200,
+        polyline: { encodedPolyline: '_p~iF~ps|U_ulLnnqC_mqNvxq`@' }, legs: [{ steps: [{ transitDetails: { transitLine: { nameShort: '미도스지선', vehicle: { type: 'SUBWAY' } } } }] }], travelAdvisory: { transitFare: { currencyCode: 'JPY', units: '240' } } }] }) }) });
+      await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      ok((await p.textContent('#grid')).includes('≈'), 'before routes arrive: the ≈ guess');
+      await p.evaluate(() => { const k = JSON.parse(localStorage.getItem('jepi.keys') || '{}'); k.gmaps = 'AIzaTestKey'; localStorage.setItem('jepi.keys', JSON.stringify(k)) });
+      await p.reload(); await p.waitForTimeout(4000); await skipCoach(p).catch(() => {});
+      const chips = await p.$$eval('#grid .trn .chip', e => e.map(x => x.textContent));
+      ok(asked > 0 && chips.some(t => t.includes('지하철 13분') && t.includes('미도스지선') && !t.startsWith('≈')), 'real time, line name, no ≈ (' + asked + ' asked) ' + chips.slice(0, 3).join(' / '));
+      ok(await p.evaluate(() => Object.values(JSON.parse(localStorage.getItem('jepi.routes') || '{}')).some(v => v.src === 'google' && v.poly && v.poly.length === 3)), 'saved on the device with the route line');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'React handles its own buttons: 여행 꾸미기 AI로 지어 보기 (pretend AI) and 내 사진 (made small), saved together',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S);
+      await p.route(/api\.anthropic\.com/, r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content: [{ type: 'text', text: JSON.stringify({ titles: ['네온 아래 첫 저녁', '성과 시장 사이', '바다 쪽으로', '안녕, 오사카'] }) }] }) }));
+      await p.click('[data-w="new"]'); await p.waitForTimeout(250);
+      if (await p.$('#onbKey_anthropic')) { await p.fill('#onbKey_anthropic', 'sk-ant-test-key'); await p.click('#onbBody [data-onbkey="anthropic"]'); await p.waitForTimeout(300) }
+      await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await p.click('#lookBtn'); await p.waitForTimeout(300);
+      await p.fill('#lkName', '우리 오사카'); await p.click('#lkAi'); await p.waitForTimeout(1500);
+      ok(await p.inputValue('#sheet [data-lkday="0"]') === '네온 아래 첫 저녁' && (await p.textContent('#lkSt')).includes('고쳐 쓰면') && await p.inputValue('#lkName') === '우리 오사카', 'AI titles fill the day boxes, the typed trip name stays');
+      // a 1×1 PNG as "my photo"
+      const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+      await p.setInputFiles('#lkPhoto', { name: 'me.png', mimeType: 'image/png', buffer: png }); await p.waitForTimeout(600);
+      ok(await p.getAttribute('#sheet .lk-photo', 'aria-pressed') === 'true', '내 사진 is chosen as the cover');
+      await p.click('#lookForm [type="submit"]'); await p.waitForTimeout(400);
+      const pr = await p.evaluate(() => JSON.parse(localStorage.getItem('gp.profile')));
+      ok(pr.look.cover === 'photo' && /^data:image\/jpeg/.test(pr.look.photo) && pr.dayTitles[0] === '네온 아래 첫 저녁' && (await p.textContent('#dayTitle')) === '네온 아래 첫 저녁', 'saved: photo cover (as a small JPEG) and the day titles');
+      ok((await p.textContent('#planName')).includes('우리 오사카'), 'the trip got its new name');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
     name: 'friends: sharing again after a share that stopped half-way (trip on the server, no membership)',
     async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
       const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
@@ -1234,6 +1477,194 @@ module.exports = [
       await p.mouse.move(0, 0); await p.mouse.up();
       ok(before === 'none' && held.f.includes('brightness') && held.s !== 'none', 'held button gets darker and smaller ' + JSON.stringify(held));
       ok(await p.evaluate(() => getComputedStyle(document.documentElement).webkitTapHighlightColor === 'rgba(0, 0, 0, 0)'), 'browser blue tap flash is off');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'React frames: 처음 안내 · 예약 도우미 틀 · 장소 고른 뒤 안내 줄 buttons work',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S);
+      await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      ok(!(await vis(p, '#coach')) && !(await vis(p, '#helper')) && !(await vis(p, '#banner')), 'frames start hidden');
+      await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="help"]'); await p.waitForTimeout(250);
+      await p.click('#helpBox button:has-text("처음 안내 다시 보기")'); await p.waitForTimeout(300);
+      ok(await vis(p, '#coach') && (await p.textContent('#coachStep')).startsWith('1 /'), 'guide shows step 1');
+      await p.click('#coachNext'); await p.waitForTimeout(250);
+      ok((await p.textContent('#coachStep')).startsWith('2 /') && await p.getAttribute('#coach', 'data-i') !== '0', 'next goes to step 2');
+      for (let i = 0; i < 8 && (await p.textContent('#coachNext')) !== '시작하기'; i++) { await p.click('#coachNext'); await p.waitForTimeout(120) }
+      ok((await p.textContent('#coachNext')) === '시작하기', 'last step says 시작하기');
+      await p.click('#coachNext'); await p.waitForTimeout(250);
+      ok(!(await vis(p, '#coach')) && await p.evaluate(() => localStorage.getItem('gp.coach') === '1'), 'finishing closes the guide and remembers it');
+      await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="help"]'); await p.waitForTimeout(250);
+      await p.click('#helpBox button:has-text("처음 안내 다시 보기")'); await p.waitForTimeout(250);
+      await p.click('#coachSkip'); await p.waitForTimeout(250);
+      ok(!(await vis(p, '#coach')), '건너뛰기 closes the guide');
+      await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="me"]'); await p.waitForTimeout(250);
+      await p.click('#meHelper'); await p.waitForTimeout(400);
+      ok(await vis(p, '#helper') && (await p.textContent('#helperStep')) === '1 / 4' && await p.$eval('#helperPrev', e => e.disabled), 'helper opens on step 1, 이전 locked');
+      await p.click('#helperNext'); await p.waitForTimeout(250);
+      ok((await p.textContent('#helperStep')) === '2 / 4' && !(await p.$eval('#helperPrev', e => e.disabled)) && (await p.textContent('#helperTitle')) === '숙소 동네 정하기', 'next → step 2');
+      await p.click('#helperNext'); await p.click('#helperNext'); await p.waitForTimeout(250);
+      ok((await p.textContent('#helperNext')) === '일정표로 가기', 'last step: 일정표로 가기');
+      await p.click('#helperPrev'); await p.waitForTimeout(200);
+      ok((await p.textContent('#helperStep')) === '3 / 4' && (await p.textContent('#helperNext')) === '다음', '이전 goes back');
+      await p.click('#helperClose'); await p.waitForTimeout(300);
+      ok(!(await vis(p, '#helper')), '닫기 closes the helper');
+      await p.click('.tabs [data-tab="tray"]'); await p.waitForTimeout(300);
+      await p.click('#cards details.zone summary >> nth=0'); await p.click('#cards details[open] [data-pick] >> nth=0'); await p.waitForTimeout(300);
+      ok(await vis(p, '#banner') && (await p.textContent('#bannerText')).includes('넣을 시간을 탭하세요'), 'banner shows the picked place');
+      await p.click('#bannerCancel'); await p.waitForTimeout(250);
+      ok(!(await vis(p, '#banner')), '취소 hides the banner');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'React dock: 일정표 아래 대화 칸 (칩·보내기·접기)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S, { ls: { 'jepi.keys': { anthropic: 'sk-ant-test-key' } } });
+      await p.route(/api\.anthropic\.com/, async r => { await new Promise(x => setTimeout(x, 800)); r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content: [{ type: 'text', text: JSON.stringify({ reply: '알겠어요.', ops: [] }) }] }) }) });
+      await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      ok(await vis(p, '#aiBtn') && await vis(p, '#customBtn') && !(await vis(p, '#chatFold')), 'with an AI key: ✨ and + chips shown, no fold button yet');
+      ok(!(await p.$eval('#chatInput', e => e.disabled)) && (await p.getAttribute('#chatInput', 'placeholder')) === 'AI에게 말로 부탁하기', 'message box is open');
+      await p.click('#customBtn'); await p.waitForTimeout(250);
+      ok(await vis(p, '#sheetBg'), '+ 직접 만들기 opens the sheet'); await p.click('#sheet [data-close]'); await p.waitForTimeout(250);
+      await p.click('#chatInput'); await p.keyboard.type('안녕'); await p.keyboard.press('Shift+Enter'); await p.keyboard.type('하세요');
+      ok((await p.inputValue('#chatInput')) === '안녕\n하세요', 'Shift+Enter makes a new line');
+      await p.keyboard.press('Enter'); await p.waitForTimeout(300);
+      ok((await p.inputValue('#chatInput')) === '' && await p.$eval('#chatInput', e => e.disabled) && await p.$eval('#chatSend', e => e.disabled), 'Enter sends: box cleared and locked while waiting');
+      await p.waitForTimeout(1500);
+      ok(!(await p.$eval('#chatInput', e => e.disabled)) && (await p.textContent('#chatLog')).includes('알겠어요'), 'answer shown, box open again');
+      ok(await vis(p, '#chatFold') && (await p.textContent('#chatFold')) === '대화 접기 ▾' && await p.getAttribute('#chatFold', 'aria-expanded') === 'true', 'fold button appears');
+      await p.click('#chatFold'); await p.waitForTimeout(200);
+      ok(await p.$eval('#chat', e => e.classList.contains('folded')) && (await p.textContent('#chatFold')) === '대화 펼치기 (1)', 'folds the talk');
+      await p.click('#chatFold'); await p.waitForTimeout(200);
+      ok(!(await p.$eval('#chat', e => e.classList.contains('folded'))), 'unfolds again');
+      await p.click('[data-jp="P"]'); await p.waitForTimeout(200);
+      ok((await p.getAttribute('#chatInput', 'placeholder')).startsWith('뭐 하고 싶어요'), 'P모드 changes the hint');
+      await p.click('[data-jp="J"]'); await p.waitForTimeout(200);
+      await p.click('#aiBtn'); await p.waitForTimeout(400);
+      ok(await vis(p, '#sheetBg'), '✨ 빈 시간 채우기 opens the finder');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'React tops: 장소 탭 위쪽 (묶어 보기 · 문 여는 곳만 · AI로 더 찾기) and 지도 위쪽 (이 날/전체 · 내 위치)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S, { ls: { 'jepi.keys': { anthropic: 'sk-ant-test-key' } } });
+      await p.route(/api\.anthropic\.com/, r => r.fulfill({ status: 503, body: '{}' }));
+      await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await p.click('.tabs [data-tab="tray"]'); await p.waitForTimeout(300);
+      ok(await vis(p, '#moreForm') && await p.getAttribute('[data-group="zone"]', 'aria-pressed') === 'true', 'with an AI key the "더 찾기" form shows, 동네별 is chosen');
+      const n1 = await p.$$eval('#cards .card', e => e.length);
+      await p.click('[data-group="list"]'); await p.waitForTimeout(250);
+      ok(await p.getAttribute('[data-group="list"]', 'aria-pressed') === 'true' && await p.getAttribute('[data-group="zone"]', 'aria-pressed') === 'false', '추천순 gets chosen');
+      await p.click('#openOnly'); await p.waitForTimeout(250);
+      ok(await p.$$eval('#cards .card', e => e.length) >= n1 && !(await p.isChecked('#openOnly')), '문 여는 곳만 off: nothing is dropped, box stays off after redraw');
+      await p.click('[data-group="pop"]'); await p.waitForTimeout(250);
+      ok(!(await p.isChecked('#openOnly')), 'the box stays off when the list is drawn again');
+      await p.fill('#moreInput', '비 오는 날'); await p.click('#moreBtn'); await p.waitForTimeout(500);
+      ok(await vis(p, '#sheetBg') && (await p.inputValue('#moreInput')) === '', '찾기 opens the finder and clears the box');
+      await p.evaluate(() => document.querySelector('#sheet [data-close]').click()); await p.waitForTimeout(250);
+      await p.ctx.grantPermissions(['geolocation']); await p.ctx.setGeolocation({ latitude: 34.67, longitude: 135.5 });
+      await p.click('.tabs [data-tab="map"]'); await p.waitForTimeout(900);
+      ok(await p.getAttribute('[data-mapday="day"]', 'aria-pressed') === 'true' && await p.getAttribute('#mapMe', 'aria-pressed') === 'false', 'map: 이 날 chosen, 내 위치 off');
+      await p.click('[data-mapday="all"]'); await p.waitForTimeout(400);
+      ok(await p.getAttribute('[data-mapday="all"]', 'aria-pressed') === 'true' && (await p.textContent('#mapMsg')).includes('날짜별 색'), '전체 chosen and the map says so');
+      await p.click('#mapMe'); await p.waitForTimeout(500);
+      ok(await p.getAttribute('#mapMe', 'aria-pressed') === 'true', '내 위치 on');
+      await p.click('#mapMe'); await p.waitForTimeout(300);
+      ok(await p.getAttribute('#mapMe', 'aria-pressed') === 'false', '내 위치 off again');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'React bars: 아래 탭 and 접히는 머리글 줄',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      const pressed = () => p.$$eval('.tabs button', e => e.filter(x => x.getAttribute('aria-pressed') === 'true').map(x => x.dataset.tab).join());
+      ok(await pressed() === 'timeline' && (await p.$$('.tabs button')).length === 4, 'four tabs, 일정 chosen');
+      await p.click('.tabs [data-tab="tray"]'); await p.waitForTimeout(300);
+      ok(await pressed() === 'tray' && await vis(p, '#side-tray'), '장소 opens once (one tap = one switch)');
+      await p.click('.tabs [data-tab="map"]'); await p.waitForTimeout(600);
+      ok(await pressed() === 'map' && await vis(p, '#side-map'), '지도 opens');
+      await p.click('.tabs [data-tab="more"]'); await p.waitForTimeout(300);
+      await p.click('#moreBox [data-tab="plans"]'); await p.waitForTimeout(300);
+      ok(await pressed() === 'more' && await vis(p, '#side-plans'), '더보기 stays chosen inside 내 계획 (the other data-tab buttons still work)');
+      await p.click('#side-plans .back'); await p.waitForTimeout(300);
+      ok(await vis(p, '#moreBox'), '← 더보기 goes back');
+      await p.click('.tabs [data-tab="timeline"]'); await p.waitForTimeout(300);
+      ok(await p.getAttribute('#miniBar', 'aria-hidden') === 'true' && await p.getAttribute('[data-mbday="1"]', 'tabindex') === '-1', 'mini bar is hidden at the top');
+      await p.evaluate(() => window.scrollTo(0, 900)); await p.waitForTimeout(500);
+      ok(await p.getAttribute('#miniBar', 'aria-hidden') === 'false' && await p.getAttribute('[data-mbday="1"]', 'tabindex') === '0' && (await p.textContent('#mbDay')) === '01', 'scrolling folds the header into the mini bar: Day 01');
+      await p.evaluate(() => document.querySelector('[data-mbday="1"]').click()); await p.waitForTimeout(400);
+      ok((await p.textContent('#mbDay')) === '02' && await p.getAttribute('#days [data-day="1"]', 'aria-pressed') === 'true', '› goes to Day 2');
+      await p.evaluate(() => document.querySelector('[data-mbday="-1"]').click()); await p.waitForTimeout(400);
+      ok((await p.textContent('#mbDay')) === '01', '‹ goes back to Day 1');
+      await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(500);
+      ok(await p.getAttribute('#miniBar', 'aria-hidden') === 'true', 'scrolled back up: hidden again');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'React frame: 처음 설정의 틀 (제목 · 다음 · 준비하는 동안 잠김 · 기다리지 않고 시작)',
+    async run({ b, S, device, ok, vis }) {
+      const say = (r, o) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content: [{ type: 'text', text: JSON.stringify(o) }] }) });
+      const p = await device(b, S);
+      await p.route(/api\.anthropic\.com/, async r => { const q = r.request().postData() || '';
+        if (q.includes('not a real travel destination')) { await new Promise(x => setTimeout(x, 1500)); return say(r, { ok: true, city: '도쿄', country: '일본', intl: true, currency: 'JPY', symbol: '¥', rate: 9, transit: '지하철', fare: { base: 180, perKm: 10, max: 0 }, snack: 1500, step: 100,
+          areas: [{ key: 'shinjuku', name: '신주쿠', lat: 35.69, lng: 139.7, zone: 'west' }, { key: 'asakusa', name: '아사쿠사', lat: 35.71, lng: 139.79, zone: 'east' }], zones: { west: '서부', east: '동부' },
+          gateways: [{ key: 'hnd', name: '하네다', kind: 'air', iata: 'HND', lat: 35.55, lng: 139.78, min: 30, fare: 500 }], checks: ['교통카드 챙기기'], arrivalNote: '' }) }
+        await new Promise(x => setTimeout(x, 4000)); r.fulfill({ status: 503, body: '{}' }) });
+      await p.click('[data-w="new"]'); await p.waitForTimeout(250);
+      ok(await vis(p, '#onb') && (await p.textContent('#onbTitle')) === '어떤 여행자예요?' && await p.$eval('#onbPrev', e => e.disabled) && !(await vis(p, '#onbNext')), 'first question: title shown, 이전 locked, 다음 hidden');
+      await p.fill('#onbKey_anthropic', 'sk-ant-test-key'); await p.click('#onbBody [data-onbkey="anthropic"]'); await p.waitForTimeout(300);
+      const tap = async sel => { await p.click('#onbBody ' + sel); await p.waitForTimeout(250) };
+      await tap('[data-pickjp="J"]');
+      ok((await p.textContent('#onbTitle')) === '어떻게 시작할까요?', 'after J: 어떻게 시작할까요?');
+      await tap('[data-startmode="quick"]:not([data-destmode])');
+      ok(await vis(p, '#onbNext') && (await p.textContent('#onbNext')) === '일정표 만들기' && !(await vis(p, '#onbSkip')), '가고 싶은 곳: 일정표 만들기 button, no skip');
+      await p.fill('#onbBody [data-pf="dest"]', '도쿄'); await p.fill('#onbBody [data-pf="startDate"]', '2027-03-01'); await p.selectOption('#onbBody [data-pf="nights"]', { index: 2 }); await p.waitForTimeout(250);
+      await p.click('#onbNext'); await p.waitForTimeout(400);
+      ok((await p.textContent('#onbNext')) === '준비하는 중…' && await p.$eval('#onbNext', e => e.disabled) && await p.$eval('#onbExample', e => e.disabled), 'preparing: 다음 relabelled and locked, 데모 locked');
+      await p.waitForTimeout(2200);
+      ok((await p.textContent('#onbNext')) === '장소 찾는 중…' && await vis(p, '#onbSkip') && (await p.textContent('#onbSkip')) === '기다리지 않고 시작' && !(await p.$eval('#onbSkip', e => e.disabled)), 'finding places: 기다리지 않고 시작 can be pressed');
+      await p.click('#onbSkip'); await p.waitForTimeout(800);
+      ok(!(await vis(p, '#onb')) && (await p.textContent('#tripMeta')).includes('도쿄'), 'skip: the schedule opens');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'React header: 계획 이름 · J/P · 계획 메뉴 · 날짜 제목 고치기 · 꾸미기 buttons work',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      ok((await p.textContent('#planName')).length > 0 && (await p.textContent('#tripMeta')).includes('오사카') && (await p.textContent('#heroDay')).startsWith('DAY 01'), 'header shows the plan, the trip line and the day');
+      ok((await p.textContent('#dayTitle')).length > 0 && (await p.textContent('#daySub')).length > 0 && !(await vis(p, '#dayMemo')) && !(await vis(p, '#heroTag')), 'day title and date shown, no memo / tagline yet');
+      await p.click('[data-jp="P"]'); await p.waitForTimeout(300);
+      ok(await p.getAttribute('[data-jp="P"]', 'aria-pressed') === 'true' && await p.getAttribute('[data-jp="J"]', 'aria-pressed') === 'false' && await p.evaluate(() => document.body.classList.contains('mode-p')), 'P모드 chosen');
+      await p.click('[data-jp="J"]'); await p.waitForTimeout(300);
+      ok(await p.getAttribute('[data-jp="J"]', 'aria-pressed') === 'true', 'J모드 chosen again');
+      await p.click('#planBtn'); await p.waitForTimeout(300);
+      ok(await vis(p, '#planMenu') && await p.getAttribute('#planBtn', 'aria-expanded') === 'true', 'plan name opens the menu (one tap opens, not open-and-close)');
+      await p.click('#planBtn'); await p.waitForTimeout(300);
+      ok(!(await vis(p, '#planMenu')) && await p.getAttribute('#planBtn', 'aria-expanded') === 'false', 'tapping it again closes the menu');
+      await p.click('#planBtn'); await p.waitForTimeout(250); await p.keyboard.press('Escape'); await p.waitForTimeout(250);
+      ok(!(await vis(p, '#planMenu')) && await p.evaluate(() => document.activeElement && document.activeElement.id === 'planBtn'), 'Esc closes it and focus goes back to the name');
+      await p.click('#dayTitleEdit'); await p.waitForTimeout(300);
+      ok(await vis(p, '#dayTitleForm') && !(await vis(p, '#dayTitle')) && !(await vis(p, '#dayTitleEdit')), '✎ swaps the title for the form');
+      await p.fill('#dayTitleIn', '천천히 도착'); await p.fill('#dayMemoIn', '비행기에서 푹 자기'); await p.click('#dayTitleForm [type="submit"]'); await p.waitForTimeout(400);
+      ok(!(await vis(p, '#dayTitleForm')) && (await p.textContent('#dayTitle')) === '천천히 도착' && (await p.textContent('#dayMemo')).includes('비행기에서 푹 자기') && await vis(p, '#dayMemo'), 'saved: new title and handwritten memo shown');
+      await p.click('#dayTitleEdit'); await p.waitForTimeout(250); await p.click('#dayTitleCancel'); await p.waitForTimeout(250);
+      ok((await p.textContent('#dayTitle')) === '천천히 도착' && await vis(p, '#dayTitleEdit'), '취소 keeps the title');
+      await p.click('#lookBtn'); await p.waitForTimeout(300);
+      ok(await vis(p, '#sheetBg') && await vis(p, '#lookForm'), '🎨 opens 여행 꾸미기');
+      await p.fill('#lkTag', '둘이서'); await p.click('#lookForm [type="submit"]'); await p.waitForTimeout(400);
+      ok((await p.textContent('#heroTag')) === '둘이서' && await vis(p, '#heroTag'), 'the tagline shows in the header');
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
