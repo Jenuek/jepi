@@ -19,7 +19,7 @@
   - [x] 뒷부분 ①: 동기화 엔진(무엇을 보내고 받은 걸 어떻게 합칠지)을 `app/data/sync.ts`로 옮김. 예전 코드는 자기 값(계획 목록·취향·내 장소·키)을
     `JD.sync.connectSync`로 넘기고 화면 다시 그리기만 해요. 삭제된 계획·취향·내 장소·다른 비밀번호로 잠긴 키 점검 추가(점검 102개 통과).
   - 2단계 배포함(Jenuek/jepi#2), 사용자가 로그인 유지·다른 기기 전달·데모 확인.
-  - [ ] 뒷부분 ②: 여행 데이터를 들고 있는 곳(`plans`, `profile`, `placed`, `custom`, `kws`, `MYP`, `KEYS` — 예전 코드 30곳 가까이에서 직접 고침)을
+  - [x] 뒷부분 ②: 여행 데이터를 들고 있는 곳(`plans`, `profile`, `placed`, `custom`, `kws`, `MYP`, `KEYS` — 예전 코드 30곳 가까이에서 직접 고침)을
     `app/data/`의 한 곳(가져오기·저장하기·바뀌면 알려 주기)으로 모으기. 한꺼번에 바꾸면 위험해서, 3단계에서 화면을 옮길 때 그 화면이 쓰는 값부터 함께 옮겨요.
     - [x] **①-a 저장을 한 곳으로** (`app/data/trip.ts`, 예전 코드는 `TRIP`): 계획 목록·각 계획 사본·지금 여행의 부분(profile·placed·custom·fmarks·wish·meals·done)·취향 키워드의
       저장 이름과 모양이 이 파일에만 있어요. 예전 코드 71곳이 저장 이름을 직접 쓰던 걸 `TRIP.save/load/plans/kws`로 바꿈, 동기화 엔진도 같은 곳으로.
@@ -33,8 +33,10 @@
       - [x] **사본을 TRIP이 들게**: 지금 여행의 8부분(profile·placed·custom·fmarks·wish·meals·done·kws)이 이제 `app/data/trip.ts`의 `TRIP.cur`에 있어요.
         예전 코드는 `CUR.placed`처럼 그 자리를 직접 봐요(`TRIP.connect`는 없앰). 예전 코드 362곳을 TypeScript의 코드 읽기(같은 이름의 함수 안 값은 건드리지 않음)로
         한 번에 바꿈. 비교 39개 모두 같음(다른 건 시각으로 만든 번호·초 세기뿐), 점검 모두 통과.
-      - [ ] 다음: 여러 부분을 한꺼번에 바꾸는 곳(계획 열기 `applyPlanData`·새 계획·초기화·AI 바꾸기 적용 `applyOpsCore`·되돌리기)을 `TRIP`의 동작으로,
-        그리고 계획 목록(`plans`·`curPlan`)·내 장소(`MYP`)·키(`KEYS`)도 같은 방식으로.
+      - [x] 계획 목록(`PL.plans`·`PL.curPlan` = `TRIP.planList`, 102곳 같은 방식으로 바꿈)과 AI·지도 키(`app/data/keys.ts`, 예전 `KEYS`는 같은 객체)도 데이터 쪽이 들어요.
+        내 장소는 이미 `app/data/myplaces.ts`. 비교 39개 모두 같음(시각으로 만든 번호·영업시간 세기 시간차뿐), 점검 모두 통과.
+      - 여러 부분을 한꺼번에 바꾸는 곳(계획 열기 `applyPlanData`·새 계획·처음부터·AI 바꾸기 적용 `applyOpsCore`·되돌리기)은 이제 `TRIP.cur`에 바로 써요.
+        장소 데이터(`PACK`·`P`·`PM`)와 얽혀 있어서, 그걸 옮기는 4번(계산·AI 처리)에서 같이 `TRIP`의 동작으로 정리해요.
   - [x] 친구와 함께: 합치기 규칙(`app/data/merge.ts`)과 서버 주고받기(`app/data/trips.ts`: 올리기·받기·공유·초대·참여·나가기·끝내기·가고 싶어요)를 옮김.
     예전 `384-trips.js`에는 화면 쪽만(친구 패널, 열린 계획에 넣기 applyIfOpen, 안내). `TRIPS`는 `JD.trips.state`와 같은 객체.
     합치기 규칙을 경우별로 바로 확인하는 점검 추가(다른 날 고침 둘 다 남음·지운 블록·필드별·추가된 장소·♥는 내 것·같은 것 둘 다 고치면 내 것·이름 붙이기).
