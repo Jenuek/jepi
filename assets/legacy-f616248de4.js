@@ -474,7 +474,7 @@ function openCustom(editId,startAt,opts){
 function saveCustomForm(f){
   const editId=f.dataset.edit;
   const c={id:editId||('c'+Date.now().toString(36)),name:$('#cfName').value.trim()||'직접 만든 블록',area:$('#cfArea').value,cat:$('#cfCat').value,dur:+$('#cfDur').value||60,cost:Math.max(0,+$('#cfCost').value||0),memo:$('#cfMemo').value.trim(),tags:$('#cfTags').value.trim(),drop:$('#cfDrop').checked,share:!!($('#cfShare')&&$('#cfShare').checked)};
-  const i=custom.findIndex(x=>x.id===c.id); if(i>=0) custom[i]=c; else custom.push(c); TRIP.save('custom',custom); addCustomToData(c);
+  TRIP.customs.put(c); addCustomToData(c);
   const asCard=f.dataset.card==='1';
   if(asCard){if(!isWish(c.id))toggleWish(c.id);showToast('내 카드에 담았어요')}
   else if(!editId){const st=parse($('#cfStart').value);TRIP.blocks.add({id:c.id,day,start:Math.max(dayStart(day),Math.min(1410,st??600)),dur:c.dur})}
@@ -921,7 +921,7 @@ function makePairBlock(uid,T){
   else start=Math.min(1350,Math.max(it.end+60,1230));
   start=Math.max(dayStart(d),Math.min(1410,Math.round(start/15)*15));
   const c={id:'c'+Date.now().toString(36),name:`${PAIRS[T].pair} · ${it.name.replace(/ \(.*\)$/,'')}`.slice(0,40),area:nearestArea(it.ll)||firstArea(),cat:T==='wait'?'food':'trip',dur:PAIRS[T].dur,cost:0,memo:`${it.name}에서 시작한 일을 마무리해요.`,tags:'',drop:false,ll:it.ll};
-  custom.push(c); TRIP.save('custom',custom); addCustomToData(c);
+  TRIP.customs.put(c); addCustomToData(c);
   TRIP.blocks.add({id:c.id,day:d,start,dur:c.dur,mk:[T+'-']});
   day=d; closeSheet(); renderAll();
 }
@@ -3119,7 +3119,7 @@ function sumAct(n,v){
 // The lookups, the 30-day cache and the monthly cap live in app/data/hours.ts (rules: app/logic/hours.ts). Here: the trip side.
 const HOURS_CAP=JD.hours.CAP, hoursUse=add=>JD.hours.used(add), hoursSweep=()=>JD.hours.sweep();
 JD.hours.connectHours({placesOnSchedule:()=>[...new Set(placed.map(b=>b.id))].map(id=>PM[id]).filter(Boolean),googleKey:()=>KEYS.gmaps||'',keyBad:()=>isBad('gmaps'),
-  demo:()=>!!DEMO.on,inKorea:ll=>inKR(ll),city:()=>PACK.city||'',changed(){savePack();TRIP.save('custom',custom);renderAll();touchPlan()}});
+  demo:()=>!!DEMO.on,inKorea:ll=>inKR(ll),city:()=>PACK.city||'',changed(){savePack();TRIP.customs.saved();renderAll();touchPlan()}});
 // ---------- 친구와 함께: shared trips, invite links, 가고 싶어요 ----------
 // A shared trip keeps its plan in jepi_trips (one row, `rev` goes up by one on every save).
 // Each device remembers the last server version it saw (`base`). When two people change the
@@ -3338,7 +3338,7 @@ function mergePlaces(aId,bId){
   if(isWish(b.id)&&!isWish(a.id)) toggleWish(a.id); if(isWish(b.id)) toggleWish(b.id);
   if(b.note&&b.note!==a.note&&!/직접 만든 블록이에요/.test(b.note)) a.note=[a.note,b.note].filter(Boolean).join(' · ').slice(0,300);
   if(b.by&&!a.by) a.by=b.by;
-  if(b.custom){custom=custom.filter(c=>c.id!==b.id);TRIP.save('custom',custom)}
+  if(b.custom)TRIP.customs.remove(b.id);
   const k=PACK.places.findIndex(x=>x.id===b.id); if(k>=0) PACK.places.splice(k,1);
   const ka=PACK.places.find(x=>x.id===a.id); if(ka){ka.note=a.note;if(a.by)ka.by=a.by}
   savePack();

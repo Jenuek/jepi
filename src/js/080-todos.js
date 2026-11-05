@@ -61,7 +61,7 @@ function makePairBlock(uid,T){
   else start=Math.min(1350,Math.max(it.end+60,1230));
   start=Math.max(dayStart(d),Math.min(1410,Math.round(start/15)*15));
   const c={id:'c'+Date.now().toString(36),name:`${PAIRS[T].pair} · ${it.name.replace(/ \(.*\)$/,'')}`.slice(0,40),area:nearestArea(it.ll)||firstArea(),cat:T==='wait'?'food':'trip',dur:PAIRS[T].dur,cost:0,memo:`${it.name}에서 시작한 일을 마무리해요.`,tags:'',drop:false,ll:it.ll};
-  custom.push(c); TRIP.save('custom',custom); addCustomToData(c);
+  TRIP.customs.put(c); addCustomToData(c);
   TRIP.blocks.add({id:c.id,day:d,start,dur:c.dur,mk:[T+'-']});
   day=d; closeSheet(); renderAll();
 }

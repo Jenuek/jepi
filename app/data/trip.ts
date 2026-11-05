@@ -195,3 +195,14 @@ export const keywords = {
   addAll(ks: string[]): void { const l = kws.get(); ks.forEach(k => { if (k && !l.some(x => same(x, k))) l.push(k) }); commitKws() },
   remove(i: number): void { kws.get().splice(i, 1); commitKws() },
 };
+
+/** places I made (직접 만들기) */
+export const customs = {
+  find: (id: string): CustomPlace | undefined => (get('custom') || []).find(c => c.id === id),
+  /** add it, or replace the one with the same id, and save */
+  put(c: CustomPlace): void { const l = get('custom')!, i = l.findIndex(x => x.id === c.id); if (i >= 0) l[i] = c; else l.push(c); commit('custom') },
+  /** take it out and save */
+  remove(id: string): void { const l = get('custom')!, i = l.findIndex(x => x.id === id); if (i >= 0) { l.splice(i, 1); commit('custom') } },
+  /** save after one was changed in place (영업시간 found …) */
+  saved: (): void => commit('custom'),
+};
