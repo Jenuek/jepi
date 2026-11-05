@@ -3,8 +3,8 @@
 let rdb=null, myId=null;
 PL.plans=[]; PL.curPlan=''; let planTimer=null, cloudTimer=null, planMsg='', delArm='';
 const PLAN_KEYS=['profile','pack','placed3','custom','meal2','done','fmarks','wish'];
-function planName(){const pr=CUR.profile;if(pr.kind==='day')return `${PACK.city} 하루 코스`;const n=nightsOf(pr);return `${PACK.city} ${n}박 ${n+1}일`}
-function planData(){return {profile:clone(CUR.profile),pack:PACK,placed:TRIP.slimBlocks(CUR.placed),custom:clone(CUR.custom),fmarks:clone(CUR.fmarks),wish:CUR.wish.slice(),meals:clone(CUR.meals),done:clone(CUR.done)}}
+function planName(){const pr=CUR.profile;if(pr.kind==='day')return `${PK.pack.city} 하루 코스`;const n=nightsOf(pr);return `${PK.pack.city} ${n}박 ${n+1}일`}
+function planData(){return {profile:clone(CUR.profile),pack:PK.pack,placed:TRIP.slimBlocks(CUR.placed),custom:clone(CUR.custom),fmarks:clone(CUR.fmarks),wish:CUR.wish.slice(),meals:clone(CUR.meals),done:clone(CUR.done)}}
 function planMeta(){const D0=DAYS[0]||{},Dn=DAYS[DAYS.length-1]||{};return {name:'',dates:D0.iso?`${D0.iso.slice(5).replace('-','/')}${DAYS.length>1?'~'+(Dn.iso||'').slice(5).replace('-','/'):''}`:'',blocks:CUR.placed.length,kind:CUR.profile.kind||'trip'}}
 function savePlans(){TRIP.plans.saveList(PL.plans,PL.curPlan);syncSoon()}
 function snapshotCurrent(){

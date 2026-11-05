@@ -5,17 +5,17 @@ const needBooking=()=>CUR.profile.kind!=='day'&&(CUR.profile.bookedFlight===fals
 const ymd=i=>{const d=dateOf(CUR.profile,i);return d?`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`:''};
 const guests=()=>({a:CUR.profile.party.adults||1,k:CUR.profile.party.kids||0});
 function hotelLinks(areaName){
-  const q=encodeURIComponent(`${areaName}, ${PACK.city}`), ci=ymd(0), co=ymd(nightsOf(CUR.profile)), g=guests(), cap=roomCap();
+  const q=encodeURIComponent(`${areaName}, ${PK.pack.city}`), ci=ymd(0), co=ymd(nightsOf(CUR.profile)), g=guests(), cap=roomCap();
   return [['부킹닷컴',`https://www.booking.com/searchresults.ko.html?ss=${q}&checkin=${ci}&checkout=${co}&group_adults=${g.a}&group_children=${g.k}&no_rooms=1${cap?`&selected_currency=KRW&nflt=${encodeURIComponent(`price=KRW-min-${cap}-1`)}`:''}`],
     ['에어비앤비',`https://www.airbnb.co.kr/s/${q}/homes?checkin=${ci}&checkout=${co}&adults=${g.a}&children=${g.k}${cap?`&currency=KRW&price_max=${cap}`:''}`],
     ['아고다',`https://www.agoda.com/ko-kr/search?textToSearch=${q}&checkIn=${ci}&checkOut=${co}&rooms=1&adults=${g.a}&children=${g.k}`],
-    ['구글 지도에서 숙소 보기',`https://www.google.com/maps/search/${encodeURIComponent('숙소 '+areaName+' '+PACK.city)}`]];
+    ['구글 지도에서 숙소 보기',`https://www.google.com/maps/search/${encodeURIComponent('숙소 '+areaName+' '+PK.pack.city)}`]];
 }
 function flightLinks(){
   const g=guests(), gw=AIRPORTS[CUR.profile.out.airport]||{}, M=CUR.profile.mode, out=ymd(0), back=ymd(nightsOf(CUR.profile));
   if(M==='car') return [];
-  if(M==='train'||M==='bus') return [[M==='train'?'코레일':'버스타고',M==='train'?'https://www.letskorail.com/':'https://www.bustago.or.kr/'],['구글에서 교통편 찾기',`https://www.google.com/search?q=${encodeURIComponent(`서울에서 ${PACK.city} ${M==='train'?'기차':'버스'} ${out}`)}`]];
-  const L=[['구글 항공편',`https://www.google.com/travel/flights?hl=ko&q=${encodeURIComponent(`Flights from Seoul to ${gw.iata||PACK.city} on ${out} through ${back} ${g.a} adults${g.k?` ${g.k} children`:''}`)}`]];
+  if(M==='train'||M==='bus') return [[M==='train'?'코레일':'버스타고',M==='train'?'https://www.letskorail.com/':'https://www.bustago.or.kr/'],['구글에서 교통편 찾기',`https://www.google.com/search?q=${encodeURIComponent(`서울에서 ${PK.pack.city} ${M==='train'?'기차':'버스'} ${out}`)}`]];
+  const L=[['구글 항공편',`https://www.google.com/travel/flights?hl=ko&q=${encodeURIComponent(`Flights from Seoul to ${gw.iata||PK.pack.city} on ${out} through ${back} ${g.a} adults${g.k?` ${g.k} children`:''}`)}`]];
   if(gw.iata) L.push(['스카이스캐너',`https://www.skyscanner.co.kr/transport/flights/sela/${gw.iata.toLowerCase()}/${out.slice(2).replace(/-/g,'')}/${back.slice(2).replace(/-/g,'')}/?adultsv2=${g.a}${g.k?`&childrenv2=${Array(g.k).fill(8).join('|')}`:''}`]);
   L.push(['네이버 항공권',`https://flight.naver.com/`]);
   return L;
@@ -29,7 +29,7 @@ function areaScores(){
     return {k,name:AREAS[k][0],avg,air,near,score:avg+air*0.15}}).sort((a,b)=>a.score-b.score);
 }
 function flightSlots(){
-  const intl=!!PACK.intl, M=CUR.profile.mode, gw=AIRPORTS[CUR.profile.out.airport], st=AREAS[(CUR.profile.stays[0]||{}).area]||AREAS[firstArea()];
+  const intl=!!PK.pack.intl, M=CUR.profile.mode, gw=AIRPORTS[CUR.profile.out.airport], st=AREAS[(CUR.profile.stays[0]||{}).area]||AREAS[firstArea()];
   const toCity=gw?((travel(gw.ll,[st[1],st[2]])||{min:30}).min):30;
   const proc=M==='flight'?(intl?60:30):15, lead=M==='flight'?(intl?180:90):20;
   const A=[['아침 도착',540],['낮 도착',780],['저녁 도착',1140]], D=[['아침 출발',600],['낮 출발',900],['저녁 출발',1200]];
@@ -45,22 +45,22 @@ async function resolveWishes(text,stId){
   progStart(stId,'목록의 장소를 찾는 중이에요 (보통 30초~1분)',['wishPasteBtn'],'찾는 중…');
   const areaList=Object.entries(AREAS).map(([k,v])=>`${k}=${v[0]}`).join(', ');
   try{
-    const r=await sample.json(`The traveler pasted places they want to visit in ${PACK.city}. Identify each real place in the list (skip lines you cannot identify, and skip anything outside ${PACK.city}).
+    const r=await sample.json(`The traveler pasted places they want to visit in ${PK.pack.city}. Identify each real place in the list (skip lines you cannot identify, and skip anything outside ${PK.pack.city}).
 List:
 ${text.slice(0,4000)}
 Area keys: ${areaList}
-Reply with only JSON: {"places":[{"name":"Korean name","local":"name in local language","area":"area key","cat":"food|music|art|walk|shop|night|trip","lat":0.0000,"lng":0.0000,"dur":minutes,"open":"HH:MM-HH:MM or null","closed":[0-6],"cost":typical spend in ${PACK.currency},"tags":["short Korean"],"note":"one Korean sentence","cash":false}]}`,{cache:false});
+Reply with only JSON: {"places":[{"name":"Korean name","local":"name in local language","area":"area key","cat":"food|music|art|walk|shop|night|trip","lat":0.0000,"lng":0.0000,"dur":minutes,"open":"HH:MM-HH:MM or null","closed":[0-6],"cost":typical spend in ${PK.pack.currency},"tags":["short Korean"],"note":"one Korean sentence","cash":false}]}`,{cache:false});
     let n=0,added=0;const got=[];
     (Array.isArray(r&&r.places)?r.places:[]).slice(0,40).forEach(x=>{const ex=P.find(p=>norm(p.name)===norm(x&&x.name||''));
       if(ex){got.push(ex.id);n++;return}
-      const pl=cleanPlace(x);if(pl){PACK.places.push(pl);addPackPlace(pl);got.push(pl.id);n++;added++}});
+      const pl=cleanPlace(x);if(pl){PK.pack.places.push(pl);addPackPlace(pl);got.push(pl.id);n++;added++}});
     TRIP.wish.add(got); savePack(); progStop(stId); renderHelper(); renderTray(); setSt(stId,n?`${n}곳에 ♥를 붙였어요${added?` (새로 찾은 곳 ${added}곳)`:''}.`:'목록에서 장소를 찾지 못했어요.');
   }catch(e){setSt(stId,errText(e,'장소를 찾지 못했어요'))}
 }
 async function askVibes(){
   if(!sample||hBusy) return; hBusy=true; const top=areaScores().slice(0,3);
   progStart('st_vibe','동네 분위기를 정리하는 중이에요 (보통 15~30초)',['vibeBtn'],'정리하는 중…');
-  try{const r=await sample.json(`Describe these neighbourhoods of ${PACK.city} as places to stay, for this traveler.
+  try{const r=await sample.json(`Describe these neighbourhoods of ${PK.pack.city} as places to stay, for this traveler.
 ${partyEn(CUR.profile.party)} Pace: ${CUR.profile.pace}. Interests: ${CUR.kws.join(', ')||'(none)'}.
 Areas: ${top.map(a=>`${a.k}=${a.name}`).join(', ')}
 Reply with only JSON: {"areas":[{"key":"area key","vibe":"one Korean sentence on atmosphere and lodging price level","good":"short Korean: who it suits","caution":"short Korean caution or empty"}]}`,{cache:false});
@@ -120,7 +120,7 @@ function renderHelper(){
 }
 let helperRev=0, slotPicked=null;
 function setSlot(a,d){
-  const M=CUR.profile.mode, dur=PACK.intl?150:70;
+  const M=CUR.profile.mode, dur=PK.pack.intl?150:70;
   CUR.profile.out.arr=fmt(a); CUR.profile.out.dep=fmt(Math.max(0,a-dur)); CUR.profile.back.dep=fmt(d); CUR.profile.back.arr=fmt(Math.min(1439,d+dur));
   TRIP.save('profile',CUR.profile); buildDays(); slotPicked=`${a},${d}`; renderHelper();
 }

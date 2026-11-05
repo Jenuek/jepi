@@ -18,7 +18,7 @@ function placeRows(m){
 function cpEnsure(o){if(o._id&&PM[o._id])return o._id;
   const pl=cleanPlace({name:o.name,local:o.local,area:o.area,cat:o.category,lat:o.lat,lng:o.lng,dur:o.dur,open:o.open,closed:o.closed,cost:o.cost,costNote:o.costNote,tags:o.tags,note:o.note});
   if(!pl)return null; const ex=P.find(p=>norm(p.name)===norm(pl.name))||dupOf(pl); if(ex){o._id=ex.id;o._dup=ex.name;return ex.id}
-  PACK.places.push(pl);addPackPlace(pl);FRESH.add(pl.id);savePack();o._id=pl.id;return pl.id}
+  PK.pack.places.push(pl);addPackPlace(pl);FRESH.add(pl.id);savePack();o._id=pl.id;return pl.id}
 // What was pressed in a chat message (ChatLog.tsx tells: its name and value)
 function chatAct(n,v){
   if(n==='stop'){chatCtl&&chatCtl.abort();return}

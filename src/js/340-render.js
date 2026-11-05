@@ -47,11 +47,11 @@ function dayCost(d){
 function renderBudget(){
   const c=dayCost(day); let tY=0,tK=0; DAYS.forEach((_,i)=>{const x=dayCost(i);tY+=x.yen;tK+=x.krw});
   const bp=budgetParts(), dl=bp?bp.daily/(KRW_PER_JPY||1):0, pct=bp&&dl?Math.round(c.yen/dl*100):0;
-  const KRW=PACK.currency==='KRW', h=heads(), one=h>1?' (1인)':'', B=(t,cls)=>({t,tag:'b',cls});
+  const KRW=PK.pack.currency==='KRW', h=heads(), one=h>1?' (1인)':'', B=(t,cls)=>({t,tag:'b',cls});
   window.JEPI_UI.mount('budgetSum',$('#budgetSum'),{segs:segs(`💰 오늘 예상${one} `,B(yen(c.yen)),KRW?'':` · 약 ${won(c.yen*KRW_PER_JPY+c.krw)}`,
     ...(bp?[' · ',{t:`예산의 ${pct}%`,tag:'span',cls:pct>100?'over':''}]:[]))});
   const local=bp?bp.local/(KRW_PER_JPY||1):0;
-  window.JEPI_UI.mount('budget',$('#budget'),{act:yen(c.act),tr:yen(c.tr),meal:yen(c.meal),step:PACK.step,home:c.krw?won(c.krw):'',
+  window.JEPI_UI.mount('budget',$('#budget'),{act:yen(c.act),tr:yen(c.tr),meal:yen(c.meal),step:PK.pack.step,home:c.krw?won(c.krw):'',
     bar:bp?{pct,over:pct>100,line:segs('하루 현지 예산 ',B(yen(dl),'mono'),` 중 ${pct}% 사용`,...(pct>100?[' · ',{t:`${yen(c.yen-dl)} 넘어요`,tag:'span',color:'#c27a00'}]:[]),
       ' · 여행 전체 현지 예산 ',B(yen(local),'mono'),` 중 ${Math.round(tY/local*100)}%`)}:null,
     totalLabel:`오늘 예상${one}`,total:yen(c.yen),totalSub:KRW?'집 오가는 교통 포함 '+won(c.yen+c.krw):'약 '+won(c.yen*KRW_PER_JPY+c.krw),
@@ -77,7 +77,7 @@ function dayRefs(){
 }
 function nearestRef(p,refs){let best=null;for(const r of refs){if(r.id===p.id)continue;const d=km(p.ll,r.ll);if(!best||d<best.d)best={d,r}}return best}
 // the top of the 장소 tab is drawn by React (app/screens/Tops.tsx); #filters and #cards inside it get their own screens
-function drawTrayTop(){window.JEPI_UI.mount('trayTop',$('#trayTopMount'),{moreHidden:!sample||!!PACK.manual,rec:REC.statusText(PACK.city||''),group})}
+function drawTrayTop(){window.JEPI_UI.mount('trayTop',$('#trayTopMount'),{moreHidden:!sample||!!PK.pack.manual,rec:REC.statusText(PK.pack.city||''),group})}
 // pressed in the 장소 tab's top
 function trayAct(n,v){
   if(n==='group'){group=v;renderTray()}
@@ -98,7 +98,7 @@ function renderTray(){
   const pmode=jp==='P'?{count:CUR.wish.filter(id=>PM[id]&&!used.has(id)).length,ai:!!sample}:null;
   const show=(empty,groups)=>window.JEPI_UI.mount('trayCards',$('#cards'),{dups:dupInfo(),hidden:nHidden,empty,groups,pmode,rev:++trayRev});
   if(!list.length&&jp==='P'&&!P.length){show(sample?'아직 장소가 없어요. 위의 "AI에게 추천받기"로 후보를 받아 보세요.':'아직 장소가 없어요. 위의 "직접 적어 담기"로 가고 싶은 곳을 적어 보세요.',[]);return}
-  if(!list.length){show(P.length?'이 조건에서 남은 후보지가 없어요.':sample&&!PACK.manual?'아직 장소 후보가 없어요. 위에서 AI로 찾아보세요.':'장소 후보가 없어요. 타임라인의 "+ 직접 만들기"로 블록을 만들어 쓰세요.',[]);return}
+  if(!list.length){show(P.length?'이 조건에서 남은 후보지가 없어요.':sample&&!PK.pack.manual?'아직 장소 후보가 없어요. 위에서 AI로 찾아보세요.':'장소 후보가 없어요. 타임라인의 "+ 직접 만들기"로 블록을 만들어 쓰세요.',[]);return}
   const refs=dayRefs();
   let rows=list.map(p=>({p,near:nearestRef(p,refs)}));
   const card=x=>cardInfo(x.p,wd,used,x.near);

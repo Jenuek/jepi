@@ -29,7 +29,7 @@ function renderLook(){
   document.body.classList.toggle('style-note',note);
   {const photo=L.cover==='photo'&&L.photo, p={
     artBg:photo?`linear-gradient(rgba(0,0,0,.35),rgba(0,0,0,.45)),url("${L.photo}")`:'',artPhoto:!!photo,
-    artHtml:note?`<div class="stamp"><span>${esc((PACK.city||'TRIP').slice(0,8))}</span><b>${esc(((DAYS[0]||{}).date||'').replace(/\s.*/,''))}</b><span>${esc(String(new Date().getFullYear()))}</span></div>`:photo?'':coverSVG(L.cover,190,120),
+    artHtml:note?`<div class="stamp"><span>${esc((PK.pack.city||'TRIP').slice(0,8))}</span><b>${esc(((DAYS[0]||{}).date||'').replace(/\s.*/,''))}</b><span>${esc(String(new Date().getFullYear()))}</span></div>`:photo?'':coverSVG(L.cover,190,120),
     tag:L.tagline||''};
   if(DAYS[day]){const D=DAYS[day];p.day=note?`CHAPTER ${day+1} · ${D.date} ${WD[D.wd]}`:`DAY ${String(day+1).padStart(2,'0')} · ${D.date} ${WD[D.wd]}`}
   hero(p)}
@@ -65,7 +65,7 @@ function openLook(){
 // the question for AI로 지어 보기 (asked by the sheet through the host)
 async function lookAiTitles(tripName){
   const days=DAYS.map((D,i)=>`Day ${i+1}: `+analyze(i).items.filter(x=>!x.stay).map(x=>x.name).slice(0,8).join(', '));
-  const prompt=`Write a short, evocative Korean title for each day of this trip to ${PACK.city}, like chapter titles of a travel journal (8-18 Korean characters, no emoji, no "Day N"). Trip title: "${tripName}".
+  const prompt=`Write a short, evocative Korean title for each day of this trip to ${PK.pack.city}, like chapter titles of a travel journal (8-18 Korean characters, no emoji, no "Day N"). Trip title: "${tripName}".
 ${days.join('\n')}
 Reply with only JSON: {"titles":["...", ...]} with exactly ${DAYS.length} items.`;
   const r=await sample.json(prompt,{cache:false}); return Array.isArray(r&&r.titles)?r.titles.slice(0,DAYS.length):[];

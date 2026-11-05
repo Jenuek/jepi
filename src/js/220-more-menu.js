@@ -5,7 +5,7 @@ function tripSummary(){
   const md=iso=>iso?`${+iso.slice(5,7)}/${+iso.slice(8,10)}`:'';
   const dates=pr.kind==='day'?md(D0.iso):pr.dateUnknown?'날짜 미정':`${md(D0.iso)}(${WD[D0.wd]}) – ${md(Dn.iso)}(${WD[Dn.wd]})`;
   const who=pr.party.type==='solo'?'혼자':pr.party.type==='couple'?'둘이서':`${heads2(pr.party)}명`;
-  return {city:PACK.city||'여행지 미정',line:pr.kind==='day'?`${dates} · 하루 코스 · ${who}`:`${dates} · ${n}박 · ${who}`};
+  return {city:PK.pack.city||'여행지 미정',line:pr.kind==='day'?`${dates} · 하루 코스 · ${who}`:`${dates} · ${n}박 · ${who}`};
 }
 function prepLeft(){let n=0;document.querySelectorAll('#checks .check-group').forEach(g=>{const h=g.querySelector('h3');if(h&&/예약·준비/.test(h.textContent))n+=g.querySelectorAll('input[data-ck]:not(:checked)').length});return n}
 function warnTotal(){let n=0;for(let d=0;d<DAYS.length;d++)n+=analyze(d).items.reduce((a,it)=>a+it.warns.length,0);return n}
@@ -30,11 +30,11 @@ function meRows(p){
   const b=budgetParts&&budgetParts(p);
   const who=p.party.type==='solo'?'혼자':p.party.type==='couple'?'연인·부부':p.party.type==='family'?`가족 ${heads2(p.party)}명`:`친구 ${heads2(p.party)}명`;
   if(p.kind==='day') return [
-    ['day','코스',`${esc(PACK.city)} · ${esc(md(0))}`,()=>partsDay(p)],
+    ['day','코스',`${esc(PK.pack.city)} · ${esc(md(0))}`,()=>partsDay(p)],
     ['who','누구와',who,()=>[partParty(p)]],
     ['bud','예산',b?`1인 ${Math.round(b.total/10000)}만원`:'정하지 않음',()=>[partBudget(p)]]];
   return [
-    ['when','언제·어디',`${esc(PACK.city||p.dest||'미정')} · ${p.dateUnknown?'날짜 미정':`${esc(md(0))}–${esc(md(n))}`} (${n}박)`,()=>[partDest(p),partTrip(p)]],
+    ['when','언제·어디',`${esc(PK.pack.city||p.dest||'미정')} · ${p.dateUnknown?'날짜 미정':`${esc(md(0))}–${esc(md(n))}`} (${n}박)`,()=>[partDest(p),partTrip(p)]],
     ['who','누구와',who,()=>[partParty(p)]],
     ['way','오가는 길',flightTxt,()=>[partFlight(p),partHomeBox(p),partHome(p)].filter(Boolean)],
     ['stay','숙소',stayTxt,()=>[partStay(p)]],

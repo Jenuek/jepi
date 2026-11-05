@@ -1198,6 +1198,34 @@ module.exports = [
     }
   },
   {
+    name: 'data: destination places (app/data/places.ts): the AI answer checked, a place fitted to the city, lists filled, a very old "tokyo" plan',
+    async run({ b, S, device, ok }) {
+      const p = await device(b, S);
+      const r = await p.evaluate(() => {
+        const L = window.JEPI_DATA.places, out = {};
+        const pk = L.cleanPack({ city: '오사카', currency: 'jpy', rate: 9.1, areas: [{ key: 'Namba!', name: '난바', lat: 34.666, lng: 135.501, zone: 'south' }, { key: 'umeda', name: '우메다', lat: 34.703, lng: 135.497, zone: 'north' }, { key: 'far', name: '먼 곳', lat: 10, lng: 10 }],
+          gateways: [{ key: 'kix', iata: 'kix', name: '간사이 공항', lat: 34.43, lng: 135.23, fare: 1000 }], zones: { South: '미나미' } }, '오사카');
+        out.pack = pk && pk.currency === 'JPY' && pk.areas.length === 2 && pk.areas[0].key === 'namba' && pk.gateways[0].iata === 'KIX' && pk.zones.south === '미나미';
+        out.badPack = L.cleanPack({ city: 'x', areas: [] }, 'x') === null && L.cleanPack(null, 'x') === null;
+        L.loadPack(pk);
+        out.lists = L.state.pack === pk && Object.keys(L.AREAS).join() === 'namba,umeda' && L.AIRPORTS.gw_kix.name === '간사이 공항' && L.firstArea() === 'namba' && pk.snack > 0 && pk.step > 0;
+        const pl = L.cleanPlace({ name: '도톤보리', area: 'namba', lat: 34.6687, lng: 135.5013, cat: 'food', dur: 50, open: '10:00-02:00', tags: ['야경'] });
+        out.place = pl && pl.area === '난바' && pl.dur === 45 && pl.hours[0] === 600 && pl.hours[1] === 1440 && pl.zone === 'south' && pl.cat === 'food';
+        const off = L.cleanPlace({ name: '엉뚱한 곳', area: 'umeda', lat: 0, lng: 0, cat: 'nope' });
+        out.fitted = off && off.ll[0] === 34.703 && off.cat === 'walk' && off.always === true;
+        L.addPackPlace(pl); out.added = L.PM[pl.id] === pl && L.tagsOf(pl.id)[0] === '야경' && L.P.includes(pl);
+        out.tokyo = L.packFrom('tokyo') === L.TOKYO_PACK && L.TOKYO_PACK.places.length > 30 && L.packFrom({ city: 'x' }) === null;
+        return out;
+      });
+      for (const [k, v] of Object.entries(r)) ok(v === true, k);
+      // a plan saved by the very first version as "tokyo" still opens
+      await p.evaluate(() => { localStorage.setItem('gp.pack', '"tokyo"') }); await p.reload(); await p.waitForTimeout(3400);
+      ok(await p.evaluate(() => window.JEPI_DATA.places.state.pack.city === '도쿄' && window.JEPI_DATA.places.P.length > 30), 'old "tokyo" plan opens with the Tokyo places');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
     name: 'data: 친구와 함께 merge rules (app/data/merge.ts) case by case',
     async run({ b, S, device, ok }) {
       const p = await device(b, S);

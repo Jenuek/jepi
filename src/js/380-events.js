@@ -64,7 +64,7 @@ function gridAct(n,v){
   case 'day': day=+v;renderAll();return;
   case 'slot': if(!selected){openFill(+v);return} place(selected,+v); selected=null; renderAll(); return;   // an empty time: fill it, or put the chosen card there
   case 'blk': openSheet(v);return;
-  case 'meal': TRIP.setMeal(day,Math.max(0,Math.min((PACK.snack||1000)*20,mealOf(day)+ +v)));renderBudget();return;
+  case 'meal': TRIP.setMeal(day,Math.max(0,Math.min((PK.pack.snack||1000)*20,mealOf(day)+ +v)));renderBudget();return;
   }
 }
 // 취향 키워드 (TasteKeywords.tsx, and the chips in 처음 설정): toggle returns whether the keyword is on now

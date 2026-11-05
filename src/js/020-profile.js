@@ -19,7 +19,7 @@ const mdOf=(pr,i)=>{const d=dateOf(pr,i);return d?`${d.getMonth()+1}/${d.getDate
 function arrEnd(){return CUR.profile.kind==='day'?tmin((CUR.profile.meet||{}).time,660)+15:tmin(CUR.profile.out.arr,620)+60}
 function fixProfile(pr){
   pr.nights=nightsOf(pr);
-  if(!['flight','train','bus','car'].includes(pr.mode)) pr.mode='flight'; if(!['transit','car'].includes(pr.local)) pr.local=pr.mode==='car'?'car':'transit'; if(pr.dest==null) pr.dest=PACK?PACK.city:'';
+  if(!['flight','train','bus','car'].includes(pr.mode)) pr.mode='flight'; if(!['transit','car'].includes(pr.local)) pr.local=pr.mode==='car'?'car':'transit'; if(pr.dest==null) pr.dest=PK.pack?PK.pack.city:'';
   pr.out=Object.assign({airport:firstGw(),dep:'08:00',arr:'10:30',flight:''},pr.out||{});
   pr.back=Object.assign({airport:firstGw(),dep:'19:00',arr:'21:30',flight:''},pr.back||{});
   if(!AIRPORTS[pr.out.airport]) pr.out.airport=firstGw(); if(!AIRPORTS[pr.back.airport]) pr.back.airport=firstGw();
@@ -48,29 +48,29 @@ function buildDays(){
   if(CUR.profile.kind==='day'){const pr=fixProfile(CUR.profile),m=pr.meet,a=AREAS[m.area]||AREAS[firstArea()],dt=dateOf(pr,0),st=tmin(m.time,660),en=Math.max(st+60,tmin(m.end,1200));homeMin=0;
     LOC={meet:{name:`만나는 곳 (${a[0]})`,ll:[a[1],a[2]]}};LOC_AREA={meet:a[0]};LOC_ZONE={meet:AREA_ZONE[m.area]||'outer'};
     Object.entries(AIRPORTS).forEach(([k,g])=>{LOC[k]={name:g.name,ll:g.ll};LOC_AREA[k]=g.name;LOC_ZONE[k]='air'});
-    DAYS=[{date:mdOf(pr,0),iso:dt?`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`:'',wd:dt?dt.getDay():0,title:`하루 코스 · ${PACK.city}`,startLoc:'meet',
+    DAYS=[{date:mdOf(pr,0),iso:dt?`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`:'',wd:dt?dt.getDay():0,title:`하루 코스 · ${PK.pack.city}`,startLoc:'meet',
       fixed:[{id:'m0',name:'만나기',start:st,end:st+15,loc:'meet',note:'여기서 하루를 시작해요.'},{id:'m1',name:'헤어지기',start:en,end:Math.min(1440,en+15),loc:'meet',note:'오늘 코스 끝!'}]}];
     return}
-  const pr=fixProfile(CUR.profile), n=pr.nights, M=pr.mode, intl=!!PACK.intl, carry=M!=='car'; homeMin=+pr.home.min||60;
+  const pr=fixProfile(CUR.profile), n=pr.nights, M=pr.mode, intl=!!PK.pack.intl, carry=M!=='car'; homeMin=+pr.home.min||60;
   LOC={home:{name:pr.home.area?`출발지 (${pr.home.area})`:'출발지',ll:Array.isArray(pr.home.ll)?pr.home.ll:[37.5665,126.9780]}}; LOC_AREA={home:'출발지'}; LOC_ZONE={home:'air'};
   Object.entries(AIRPORTS).forEach(([k,g])=>{LOC[k]={name:g.name,ll:g.ll};LOC_AREA[k]=g.name;LOC_ZONE[k]='air'});
   pr.stays.forEach((s,i)=>{const a=AREAS[s.area];LOC['stay'+i]={name:s.name||'숙소',ll:[a[1],a[2]]};LOC_AREA['stay'+i]=a[0];LOC_ZONE['stay'+i]=AREA_ZONE[s.area]});
   pr.events.forEach((e,i)=>{const a=AREAS[e.area];LOC['ev'+i]={name:e.name||'예약한 일정',ll:[a[1],a[2]]};LOC_AREA['ev'+i]=a[0];LOC_ZONE['ev'+i]=AREA_ZONE[e.area]});
-  {const a0=AREAS[(pr.stays[0]||{}).area]||AREAS[firstArea()];LOC.arrive={name:`${PACK.city} 도착`,ll:[a0[1],a0[2]]};LOC_AREA.arrive=PACK.city;LOC_ZONE.arrive='air'}
+  {const a0=AREAS[(pr.stays[0]||{}).area]||AREAS[firstArea()];LOC.arrive={name:`${PK.pack.city} 도착`,ll:[a0[1],a0[2]]};LOC_AREA.arrive=PK.pack.city;LOC_ZONE.arrive='air'}
   const stayOf=k=>pr.stays.findIndex(s=>k>=s.from&&k<s.to);
   const days=[];
   for(let d=0;d<=n;d++){
     const dt=dateOf(pr,d), fixed=[], names=[];
     if(d===0){
       const dep=tmin(pr.out.dep,480), arr=tmin(pr.out.arr,630), gw=apName(pr.out.airport), word=MODE_WORD[M];
-      if(M==='car'){GMP_BY=dep;fixed.push({id:'f0c',name:`자동차로 ${PACK.city} 가기`,start:dep,end:Math.max(dep+30,arr),loc:'arrive',skipIn:true,krw:+pr.home.fare||0,note:`${fmt(dep)} 출발 → ${fmt(arr)} 도착 예정. 기름값·통행료는 "내 정보"에서 바꿀 수 있어요.`})}
+      if(M==='car'){GMP_BY=dep;fixed.push({id:'f0c',name:`자동차로 ${PK.pack.city} 가기`,start:dep,end:Math.max(dep+30,arr),loc:'arrive',skipIn:true,krw:+pr.home.fare||0,note:`${fmt(dep)} 출발 → ${fmt(arr)} 도착 예정. 기름값·통행료는 "내 정보"에서 바꿀 수 있어요.`})}
       else{
         const lead=M==='flight'?(+pr.home.byMin||120):20; GMP_BY=Math.max(240,dep-lead);
         fixed.push({id:'f0a',name:`집 출발 → ${word}`,start:GMP_BY-homeMin,end:GMP_BY,loc:'home',krw:+pr.home.fare||0,note:`집에서 ${word}까지 걸리는 시간으로 출발 시간을 계산했어요. 아래 버튼으로 바꿀 수 있어요.`});
         if(M==='flight') fixed.push({id:'f0b',name:intl?'출국 수속':'탑승 수속',start:GMP_BY,end:Math.max(GMP_BY+15,dep-30),loc:'home',note:'항공사 온라인 체크인을 미리 해 두면 짐만 부치면 돼요.'});
         fixed.push({id:'f0c',name:`${pr.out.flight?pr.out.flight+' · ':''}${gw}행`,start:dep,end:Math.max(dep+30,arr),loc:pr.out.airport,skipIn:true,note:`${fmt(dep)} 출발 → ${fmt(arr)} ${gw} 도착`});
         const ad=M==='flight'?(intl?60:30):15;
-        fixed.push({id:'f1',name:`${gw} 도착${M==='flight'&&intl?' · 입국':''}`,start:arr,end:arr+ad,loc:pr.out.airport,bagStart:true,note:M==='flight'&&intl?(PACK.arrivalNote||'입국 심사와 짐 찾기.'):'짐을 챙겨 나와요.'});
+        fixed.push({id:'f1',name:`${gw} 도착${M==='flight'&&intl?' · 입국':''}`,start:arr,end:arr+ad,loc:pr.out.airport,bagStart:true,note:M==='flight'&&intl?(PK.pack.arrivalNote||'입국 심사와 짐 찾기.'):'짐을 챙겨 나와요.'});
       }
     }
     const ps=d>0?stayOf(d-1):-1, cs=d<n?stayOf(d):-1;

@@ -50,7 +50,7 @@ function renderOnb(){const st=ONB[onbStep];
   window.JEPI_UI.mount('onb',$('#onbBody'),{parts:st.f(fixProfile(draft)),rev:++onbRev});$('#onb').scrollTop=0}
 function commitProfile(p){CUR.profile=fixProfile(clone(p));TRIP.save('profile',CUR.profile);TRIP.kws.save(CUR.kws);buildDays();CUR.placed=CUR.placed.filter(b=>b.day<DAYS.length);save();if(day>=DAYS.length)day=0}
 async function finishOnb(){commitProfile(draft);day=0;
-  if(sample&&!PACK.example&&!PACK.manual&&P.length<8){onbBusy=true;setBusy(true);placeCtl=new AbortController();
+  if(sample&&!PK.pack.example&&!PK.pack.manual&&P.length<8){onbBusy=true;setBusy(true);placeCtl=new AbortController();
     onbFrame({nextLabel:'장소 찾는 중…',skipHidden:false,skipOff:false,skipLabel:'기다리지 않고 시작'});
     const st=$('#st_onb'); if(st) st.scrollIntoView({block:'nearest'});
     await morePlaces(24,'st_onb','',placeCtl.signal); if(placeCtl&&!placeCtl.signal.aborted) await genSeason('st_onb',placeCtl.signal); placeCtl=null; onbBusy=false; setBusy(false)}
@@ -121,7 +121,7 @@ async function formAct(n,v,o){
     catch(err){homeMsg=(err&&err.message)||'계산하지 못했어요'}renderMeRows();return}
   }
 }
-function onPf(e){const el=e.target;if(el&&el.dataset&&el.dataset.pk&&e.type==='change'){const v=+el.value;if(v>0){PACK[el.dataset.pk]=v;KRW_PER_JPY=v;savePack();renderBudget()}return}
+function onPf(e){const el=e.target;if(el&&el.dataset&&el.dataset.pk&&e.type==='change'){const v=+el.value;if(v>0){PK.pack[el.dataset.pk]=v;KRW_PER_JPY=v;savePack();renderBudget()}return}
   if(!el||!el.dataset||!el.dataset.pf||!draft) return;let v=el.value;if(el.dataset.type==='num') v=+v;setPath(draft,el.dataset.pf,v);
   if(el.dataset.pf==='startDate'&&el.value){draft.dateSet=true;draft.dateUnknown=false} if(el.dataset.pf==='nights') draft.nightsSet=true;
   if(/^(out|back)\./.test(el.dataset.pf)) draft.flightSet=true; if(/^stays\./.test(el.dataset.pf)) draft.staySet=true;
@@ -133,8 +133,8 @@ async function aiFill(kind){
   pasteMsg[kind]='';progStart('st_'+kind,'예약 내용을 읽는 중이에요 (보통 10~20초)',[],'');
   const areaList=Object.entries(AREAS).map(([k,v])=>`${k}=${v[0]}`).join(', ');
   const prompt=kind==='flight'
-   ?`Extract the round trip (flight, train or bus) between the traveler's home and ${PACK.city} from this booking text. Copy times exactly as printed (local time, 24h HH:MM). For airport/station pick the closest key from: ${Object.entries(AIRPORTS).map(([k,g])=>k+'='+g.name).join(', ')}.\nReply with only JSON: {"startDate":"YYYY-MM-DD or null","endDate":"YYYY-MM-DD or null","mode":"flight|train|bus|null","out":{"airport":"key|null","dep":"HH:MM|null","arr":"HH:MM|null","flight":"string|null"},"back":{"airport":"key|null","dep":"HH:MM|null","arr":"HH:MM|null","flight":"string|null"}}\nText:\n${text.slice(0,6000)}`
-   :`Extract hotel stays in ${PACK.city} from this booking text. For area choose the closest key from: ${areaList}.\nReply with only JSON: {"stays":[{"name":"short hotel name","area":"key","checkin":"HH:MM|null","checkout":"HH:MM|null","checkinDate":"YYYY-MM-DD|null","checkoutDate":"YYYY-MM-DD|null"}]}\nText:\n${text.slice(0,6000)}`;
+   ?`Extract the round trip (flight, train or bus) between the traveler's home and ${PK.pack.city} from this booking text. Copy times exactly as printed (local time, 24h HH:MM). For airport/station pick the closest key from: ${Object.entries(AIRPORTS).map(([k,g])=>k+'='+g.name).join(', ')}.\nReply with only JSON: {"startDate":"YYYY-MM-DD or null","endDate":"YYYY-MM-DD or null","mode":"flight|train|bus|null","out":{"airport":"key|null","dep":"HH:MM|null","arr":"HH:MM|null","flight":"string|null"},"back":{"airport":"key|null","dep":"HH:MM|null","arr":"HH:MM|null","flight":"string|null"}}\nText:\n${text.slice(0,6000)}`
+   :`Extract hotel stays in ${PK.pack.city} from this booking text. For area choose the closest key from: ${areaList}.\nReply with only JSON: {"stays":[{"name":"short hotel name","area":"key","checkin":"HH:MM|null","checkout":"HH:MM|null","checkinDate":"YYYY-MM-DD|null","checkoutDate":"YYYY-MM-DD|null"}]}\nText:\n${text.slice(0,6000)}`;
   try{
     const r=await sample.json(prompt,{modelTier:'quick',cache:false}); progStop('st_'+kind);
     if(kind==='flight'){

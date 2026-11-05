@@ -18,11 +18,11 @@ async function quickStart(){
     if(q.when==='today'){const n=new Date(),now=n.getHours()*60+n.getMinutes();if(now+30>st)st=Math.min(1320,Math.ceil((now+30)/30)*30)}
     draft.kind='day'; draft.meet=Object.assign({},draft.meet||{},{time:fmt(st),end:fmt(Math.max(st+180,sl[3]))});}
   else{draft.kind='trip'; draft.nights=+q.len; draft.bookedFlight=true; draft.bookedStay=true; draft.flightSet=false; draft.staySet=false;}
-  if(norm(dest)!==norm(PACK.city)){
+  if(norm(dest)!==norm(PK.pack.city)){
     if(sample){if(!(await genPack(dest,'quickStart')))return}
     else{CUR.custom=[];TRIP.save('custom',CUR.custom);CUR.placed=[];save();loadPack(manualPack(dest));savePack()}
   }
-  draft.dest=PACK.city; if(draft.kind==='day'&&!AREAS[draft.meet.area]) draft.meet.area=firstArea();
+  draft.dest=PK.pack.city; if(draft.kind==='day'&&!AREAS[draft.meet.area]) draft.meet.area=firstArea();
   await finishOnb();
 }
 
@@ -78,7 +78,7 @@ function renderPView(){
   if(d&&d.day===day){
     const x=d.cand;
     window.JEPI_UI.mount('pview',box,{...base,mode:'draw',draw:{rolling:!!d.rolling,n:(P_DICE.find(v=>v[0]===d.mood)||P_DICE[0])[2],mood:(P_DICE.find(v=>v[0]===d.mood)||P_DICE[0])[1],
-      part:partOfDay(d.g.s),left:d.left,empty:d.mood==='mine'&&!CUR.wish.some(id=>PM[id])?'내 카드가 비어 있어요. 장소 탭에서 ♥ 해 봐요.':'이 주사위로 나올 곳은 다 봤어요.',ai:!!(sample&&!PACK.manual),
+      part:partOfDay(d.g.s),left:d.left,empty:d.mood==='mine'&&!CUR.wish.some(id=>PM[id])?'내 카드가 비어 있어요. 장소 탭에서 ♥ 해 봐요.':'이 주사위로 나올 곳은 다 봤어요.',ai:!!(sample&&!PK.pack.manual),
       card:x?{id:String(x.p.id),cat:String(x.p.cat),catName:String(CATS[x.p.cat]||''),name:String(x.p.name),dist:x.tm?`${x.mode} ${x.tm}분`:'바로 옆',note:String(x.p.note||''),
         when:`${shortFuzzy(x.arr)} 도착${isWish(x.p.id)?' · 내 카드':''}`,mine:isWish(x.p.id)}:null}});
     return;

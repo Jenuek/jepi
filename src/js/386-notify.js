@@ -8,7 +8,7 @@ const pushSupported=AL.pushSupported, isIOS=AL.isIOS, standaloneApp=AL.standalon
 const alertKey=(it,d)=>`${it.kind==='place'?it.id:it.uid}@${d}`;
 const alertable=it=>!it.stay&&(it.kind==='place'||it.kind==='fixed');
 const alertOn=(it,d)=>AL.isOn(alertKey(it,d));
-const tripTZ=()=>JD.logic.alerts.tripTZ(PACK);
+const tripTZ=()=>JD.logic.alerts.tripTZ(PK.pack);
 const alertsSoon=ms=>AL.soon(ms);
 AL.connectAlerts({curPlan:()=>PL.curPlan,tz:tripTZ,demo:()=>!!DEMO.on,redraw:()=>{PANELS.notify.render();renderMore();renderAll()},
   days:()=>DAYS.map((D,d)=>({iso:D.iso||'',rows:D.iso?analyze(d).items.filter(alertable).map(it=>({key:alertKey(it,d),name:String(it.name),start:it.start,end:it.end,locName:it.locName||'',travelIn:it.travelIn||null})):[]}))});

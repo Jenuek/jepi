@@ -12,7 +12,7 @@ let homeMin=60;
 CUR.kws=TRIP.kws.load(); if(!Array.isArray(CUR.kws)) CUR.kws=DEFAULT_KW.slice();
 const matchKw=id=>{const set=new Set(CUR.kws.map(norm));return tagsOf(id).filter(t=>set.has(norm(t)))};
 CUR.meals=TRIP.load('meals',{}); if(!CUR.meals||typeof CUR.meals!=='object') CUR.meals={};
-const mealOf=d=>CUR.meals[d]!=null?+CUR.meals[d]:(PACK.snack||1000);
+const mealOf=d=>CUR.meals[d]!=null?+CUR.meals[d]:(PK.pack.snack||1000);
 let day=0, tab='timeline', cat='all', selected=null, aiState=null, sample=null, group='zone', zoneOpen={}, resetArm=false;
 // changes to the trip happen in app/data/trip.ts (TRIP.blocks / wish / toggleMark …); not while an AI check tries them out on a copy,
 // and blocks first keep the places other travelers shared that they use

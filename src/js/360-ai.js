@@ -8,7 +8,7 @@ async function askAI(){
   const cands=P.filter(p=>!closedOn(p,wd)&&!outOfSeason(p,D.iso)&&!used.has(p.id)&&p.dur<=Math.max(...gaps.map(g=>g[1]-g[0]))).map(p=>{
     const h=hoursFor(p,wd);return {id:p.id,name:p.name,tags:tagsOf(p.id),mustSee:mustOf(p.id)||undefined,best:p.best&&p.best!=='any'?p.best:undefined,season:p.season?`${p.season}${p.dates?` ${p.dates[0]||''}~${p.dates[1]||''}`:''}`:undefined,travelerRecs:recOf(p)||undefined,wished:isWish(p.id)||undefined,category:p.cat,luggageDrop:!!p.drop,area:p.area,minutes:p.dur,open:h?`${fmt(h[0])}-${fmt(h[1])}`:'always',note:p.note}});
   const freeMin=gaps.reduce((a,g)=>a+(g[1]-g[0]),0), per={slow:200,normal:140,full:100}[CUR.profile.pace]||140, maxPick=Math.max(1,Math.min(6,Math.ceil(freeMin/per)));
-  const prompt=`You plan one day of a trip to ${PACK.city}. Pick up to ${maxPick} place blocks to fill the free time.
+  const prompt=`You plan one day of a trip to ${PK.pack.city}. Pick up to ${maxPick} place blocks to fill the free time.
 
 ${profileSummary()}
 

@@ -7,7 +7,7 @@ function notebookInfo(){
   const L=lookOf(), name=(PL.plans.find(x=>x.id===PL.curPlan)||{}).name||planName();
   const D0=DAYS[0]||{}, Dn=DAYS[DAYS.length-1]||{};
   const photo=L.cover==='photo'&&L.photo;
-  const cover={photo:photo?String(L.photo):'',svg:photo?'':coverSVG(L.cover,260,156),city:String((PACK.city||'TRIP').slice(0,8)),date:String(D0.date||'').replace(/\s.*/,''),name:String(name),
+  const cover={photo:photo?String(L.photo):'',svg:photo?'':coverSVG(L.cover,260,156),city:String((PK.pack.city||'TRIP').slice(0,8)),date:String(D0.date||'').replace(/\s.*/,''),name:String(name),
     line:[D0.date&&Dn.date?`${D0.date} — ${Dn.date}`:'',DAYS.length>1?`${DAYS.length-1}박 ${DAYS.length}일`:'하루',L.tagline].filter(Boolean).join(' · ')};
   const days=DAYS.map((D,d)=>{
     const {items,trans}=analyze(d), list=items.filter(i=>!(i.stay&&i!==items[items.length-1]));

@@ -7,7 +7,7 @@ function applyOpsCore(ops){
     if(o.op==='add_custom'){const c={id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),name:String(o.name).slice(0,40),area:AREAS[o.area]?o.area:firstArea(),cat:CATS[o.category]?o.category:'walk',dur:Math.max(15,+o.dur||60),cost:Math.max(0,+o.cost||0),memo:'AI가 만든 블록이에요.',tags:'',drop:false};CUR.custom.push(c);addCustomToData(c);CUR.placed.push({uid:TRIP.uids.next(),id:c.id,day:+o.day,start:Math.max(dayStart(+o.day),Math.min(1410,st)),dur:c.dur})}
     if(o.op==='move'){const b=CUR.placed.find(x=>x.uid===o.uid);if(b){if(o.day!=null)b.day=+o.day;if(st!=null)b.start=Math.max(dayStart(b.day),Math.min(1410,st));if(o.dur)b.dur=Math.max(15,+o.dur)}}
     if(o.op==='remove') CUR.placed=CUR.placed.filter(x=>x.uid!==o.uid);
-    if(o.op==='add_place'&&!DRY){const pl=cleanPlace({name:o.name,local:o.local,area:o.area,cat:o.category,lat:o.lat,lng:o.lng,dur:o.dur,open:o.open,closed:o.closed,cost:o.cost,costNote:o.costNote,tags:o.tags,note:o.note});if(pl&&!P.some(p=>norm(p.name)===norm(pl.name))){PACK.places.push(pl);addPackPlace(pl);FRESH.add(pl.id);savePack()}}
+    if(o.op==='add_place'&&!DRY){const pl=cleanPlace({name:o.name,local:o.local,area:o.area,cat:o.category,lat:o.lat,lng:o.lng,dur:o.dur,open:o.open,closed:o.closed,cost:o.cost,costNote:o.costNote,tags:o.tags,note:o.note});if(pl&&!P.some(p=>norm(p.name)===norm(pl.name))){PK.pack.places.push(pl);addPackPlace(pl);FRESH.add(pl.id);savePack()}}
     if(o.op==='mark'){const b=CUR.placed.find(x=>x.uid===o.uid);const cur=b?(b.mk||[]):(CUR.fmarks[o.uid]||[]);if(cur.includes(o.mark)!==(o.on!==false))toggleMark(o.uid,o.mark)}
   }
 }

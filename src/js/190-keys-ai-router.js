@@ -45,4 +45,4 @@ async function kakaoDiag(){
 }
 function keysChanged(){saveKeys();keyBad={};if(STANDALONE){sample=makeSample()}renderAll();renderSettings();if(!$('#onb').hidden)renderOnb()}
 
-function blankPack(){return Object.assign(manualPack('새 여행'),{areas:[{key:'center',name:'시내',lat:37.5665,lng:126.978,zone:'center'}]})}
+const blankPack=PLC.blankPack;   // app/data/places.ts

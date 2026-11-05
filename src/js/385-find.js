@@ -18,7 +18,7 @@ function renderFind(){findRev++;findMount()}
 function findRowsUpdate(){findMount()}
 function findMount(){
   const F=FIND, gaps=gapsOf(day), gv=g=>({v:`${g[0]}-${g[1]}`,label:`${fmt(g[0])}–${fmt(g[1])}`});
-  window.JEPI_UI.mount('find',$('#sheet'),{dayNo:day+1,date:String(DAYS[day].date),city:String(PACK.city||''),where:F.where,area:F.area||'',
+  window.JEPI_UI.mount('find',$('#sheet'),{dayNo:day+1,date:String(DAYS[day].date),city:String(PK.pack.city||''),where:F.where,area:F.area||'',
     areas:Object.entries(AREAS).map(([k,v])=>({k,label:String(v[0])})),when:F.when,gaps:gaps.map(gv),gap:F.gap?gv(F.gap):null,into:F.into,q:F.q||'',busy:!!F.busy,mine:jp==='P',
     rows:F.res.map(r=>{const p=PM[r.id];if(!p)return null;
       const meta=[p.area,CATS[p.cat]||'',p.hours&&!p.always?`${fmt(p.hours[0])}–${fmt(p.hours[1])}`:''].filter(Boolean).join(' · ');
@@ -45,7 +45,7 @@ async function runFind(){
   renderTray();
 }
 function findDrop(id){ // 안 함: the place was only just found, so take it off the list again
-  const k=PACK.places.findIndex(x=>x.id===id); if(k>=0){PACK.places.splice(k,1);savePack()}
+  const k=PK.pack.places.findIndex(x=>x.id===id); if(k>=0){PK.pack.places.splice(k,1);savePack()}
   const i=P.findIndex(x=>x.id===id); if(i>=0)P.splice(i,1); delete PM[id]; FRESH.delete(id);
 }
 // 장소 찾기 sheet (FindSheet.tsx tells: a choice chip "key:value" with what is typed, a result "id:sched|list|skip",

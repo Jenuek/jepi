@@ -83,7 +83,7 @@ function renderDiceDo(top){
     stage:dice.rolling?dSpin():c?{s:'planCard',cat:c.p.cat,name:c.p.name,line:`${fmt(c.arr)}–${fmt(c.arr+c.dur)} · ${c.p.area}`,note:c.p.note||'',tags:reasons}:{s:'die',face:'⚄'},
     msg:dice.msg||'',acts:c&&!dice.rolling?[dBtn('small-btn primary','이걸로 할래요',{id:'diceFix'}),...(dice.force?[dBtn('small-btn','그래도 넣기',{id:'diceForce'})]:[]),dBtn('small-btn',`다시 굴리기 (${left}번)`,{id:'diceAgain',disabled:!left})]
       :dice.rolling?[]:[dBtn('dice-go','🎲 굴리기',{id:'diceGo'})],
-    ai:sample&&!PACK.manual?{primary:true}:null});
+    ai:sample&&!PK.pack.manual?{primary:true}:null});
 }
 async function diceAI(){
   const mood=(DICE_MOODS.find(m=>m[0]===dice.mood)||[])[1]||'';

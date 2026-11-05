@@ -34,7 +34,7 @@ function markWarnings(){
     }
   }));
   for(const T of Object.keys(open)) open[T].forEach(o=>add(o.d,o.uid,PAIRS[T].need));
-  return {W,needTax:!!(PACK.intl&&shops.length&&!tax)};
+  return {W,needTax:!!(PK.pack.intl&&shops.length&&!tax)};
 }
 function openPairOf(it){ // which pair types start at this block and are still missing their end
   const {W}=markWarnings(); const ws=W.get(day+':'+it.uid)||[];

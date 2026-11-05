@@ -48,7 +48,7 @@ async function sendChat(text){
   const used=new Set(CUR.placed.map(b=>b.id));
   const cands=P.filter(p=>!used.has(p.id)).map(p=>{const h=p.always?null:p.hours;return [p.id,p.name,p.area,p.cat,p.dur,h?`${fmt(h[0])}-${fmt(h[1])}`:'any',(p.closed||[]).map(w=>WDE[w]).join('/'),tagsOf(p.id).join('/'),p.drop?'luggage-drop':'',mustOf(p.id)?'recommended':'',recOf(p)?`${recOf(p)} traveler recs`:'',isWish(p.id)?'WISHED by traveler':'',p.best&&p.best!=='any'?'best '+p.best:'',p.season?`SEASONAL ${p.season} ${p.dates?(p.dates[0]||'')+'~'+(p.dates[1]||''):''}`:'']});
   const history=chat.filter(m=>m.role==='user'||m.role==='a').slice(-7,-1).map(m=>(m.role==='user'?'User: ':'Assistant: ')+m.text).join('\n');
-  const prompt=`You help edit a trip schedule for ${PACK.city} made of time blocks. The user writes in Korean.
+  const prompt=`You help edit a trip schedule for ${PK.pack.city} made of time blocks. The user writes in Korean.
 ${profileSummary()}
 
 Current schedule (FIXED blocks cannot be changed; placed blocks have a uid):
@@ -102,6 +102,6 @@ function renderNudges(){
       btns:bs.map(([id,l,pr])=>({id,primary:!!pr,label:pr?l.replace(/ .*/,'')==='시간'?'넣기':l.split(' ')[0]==='숙소'?'넣기':'고르기':'예약 전'}))}))});
 }
 function goMe(h){tab='me';draft=clone(CUR.profile);renderMe();renderTabs();setTimeout(()=>{const el=[...document.querySelectorAll('#meBox h3')].find(x=>x.textContent.includes(h));if(el)el.scrollIntoView({block:'start'})},0)}
-function renderMeta(){if(CUR.profile.kind==='day'){dock({helperHidden:true});hero({meta:`${PACK.city} · ${(DAYS[0].iso||'').slice(5).replace('-','/')} 하루 코스 · ${CUR.profile.meet.time}–${CUR.profile.meet.end}`});return}if(CUR.profile.dateUnknown){const n=DAYS.length-1;dock({helperHidden:!needBooking()});hero({meta:`${PACK.city} · 날짜 미정 (대략 ${(DAYS[0].iso||'').slice(5).replace('-','/')}부터) · ${n}박 ${n+1}일`});return}dock({helperHidden:!needBooking()});const n=DAYS.length-1;hero({meta:`${PACK.city} · ${(DAYS[0].iso||'').replace(/-/g,'.')} – ${(DAYS[n].iso||'').slice(5).replace('-','.')} · ${n}박 ${n+1}일 · ${apName(CUR.profile.out.airport)}`})}
+function renderMeta(){if(CUR.profile.kind==='day'){dock({helperHidden:true});hero({meta:`${PK.pack.city} · ${(DAYS[0].iso||'').slice(5).replace('-','/')} 하루 코스 · ${CUR.profile.meet.time}–${CUR.profile.meet.end}`});return}if(CUR.profile.dateUnknown){const n=DAYS.length-1;dock({helperHidden:!needBooking()});hero({meta:`${PK.pack.city} · 날짜 미정 (대략 ${(DAYS[0].iso||'').slice(5).replace('-','/')}부터) · ${n}박 ${n+1}일`});return}dock({helperHidden:!needBooking()});const n=DAYS.length-1;hero({meta:`${PK.pack.city} · ${(DAYS[0].iso||'').replace(/-/g,'.')} – ${(DAYS[n].iso||'').slice(5).replace('-','.')} · ${n}박 ${n+1}일 · ${apName(CUR.profile.out.airport)}`})}
 
 
