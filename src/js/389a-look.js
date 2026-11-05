@@ -63,11 +63,5 @@ function openLook(){
   $('#sheet').dataset.uid=''; $('#sheetBg').hidden=false;
 }
 // the question for AI로 지어 보기 (asked by the sheet through the host)
-async function lookAiTitles(tripName){
-  const days=DY.days.map((D,i)=>`Day ${i+1}: `+analyze(i).items.filter(x=>!x.stay).map(x=>x.name).slice(0,8).join(', '));
-  const prompt=`Write a short, evocative Korean title for each day of this trip to ${PK.pack.city}, like chapter titles of a travel journal (8-18 Korean characters, no emoji, no "Day N"). Trip title: "${tripName}".
-${days.join('\n')}
-Reply with only JSON: {"titles":["...", ...]} with exactly ${DY.days.length} items.`;
-  const r=await sample.json(prompt,{cache:false}); return Array.isArray(r&&r.titles)?r.titles.slice(0,DY.days.length):[];
-}
+const lookAiTitles=tripName=>JD.asks.dayTitles(sample,tripName);   // app/data/asks.ts
 function lookRenamePlan(nm){const p=PL.plans.find(x=>x.id===PL.curPlan);if(p&&nm&&nm!==p.name){p.name=nm;p.custom_name=true;savePlans()}}

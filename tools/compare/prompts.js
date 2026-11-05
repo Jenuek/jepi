@@ -28,6 +28,16 @@ module.exports = { name: 'prompts', async run(t) {
   await p.click('#vibeBtn').catch(() => {}); await p.waitForTimeout(2000); await show('vibe');
   await p.click('#helperBody [data-hotels] >> nth=0').catch(() => {}); await p.waitForTimeout(2000); await show('hotels');
   await p.click('#helperNext'); await p.waitForTimeout(300); await p.click('#routeBtn').catch(() => {}); await p.waitForTimeout(2000); await show('routes');
+  // 예약 내용 읽기 (이번 여행 → 가는 길 → AI로 채우기)
+  // (clicked inside the page: the folded header bar may sit over buttons after scrolling)
+  const tap = sel => p.$eval(sel, x => x.click()).catch(() => {});
+  await tap('#helperClose'); await p.waitForTimeout(300); await p.evaluate(() => scrollTo(0, 0));
+  await tap('.tabs [data-tab="more"]'); await p.waitForTimeout(200); await tap('#moreBox [data-tab="me"]'); await p.waitForTimeout(300);
+  await tap('[data-meopen="way"]'); await p.waitForTimeout(300);
+  await p.fill('#paste_flight', 'KE723 인천 08:15 출발 간사이 10:20 도착, 귀국 KE724 19:30 간사이 출발').catch(() => {}); await tap('[data-aifill="flight"]'); await p.waitForTimeout(2000); await show('booking');
+  // 날짜 제목 (여행 꾸미기 → AI로 지어 보기)
+  await p.click('#lookBtn').catch(() => {}); await p.waitForTimeout(300); await p.click('#lkAi').catch(() => {}); await p.waitForTimeout(2000); await show('titles');
+  await p.keyboard.press('Escape'); await p.waitForTimeout(200);
   // 장소 더 찾기 (P모드 장소 탭: AI에게 추천받기)
   await p.click('#helperClose').catch(() => {}); await p.waitForTimeout(200);
   await p.click('[data-jp="P"]'); await p.waitForTimeout(400); await skipCoach(p).catch(() => {});

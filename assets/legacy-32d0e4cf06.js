@@ -205,12 +205,8 @@ async function aiFill(kind){
   const ta=$('#paste_'+kind), st=$('#st_'+kind), text=(ta&&ta.value||'').trim();
   if(!st) return; if(!text){pasteSay(kind,'붙여 넣은 내용이 없어요.');return} if(!sample) return;
   pasteMsg[kind]='';progStart('st_'+kind,'예약 내용을 읽는 중이에요 (보통 10~20초)',[],'');
-  const areaList=Object.entries(AREAS).map(([k,v])=>`${k}=${v[0]}`).join(', ');
-  const prompt=kind==='flight'
-   ?`Extract the round trip (flight, train or bus) between the traveler's home and ${PK.pack.city} from this booking text. Copy times exactly as printed (local time, 24h HH:MM). For airport/station pick the closest key from: ${Object.entries(AIRPORTS).map(([k,g])=>k+'='+g.name).join(', ')}.\nReply with only JSON: {"startDate":"YYYY-MM-DD or null","endDate":"YYYY-MM-DD or null","mode":"flight|train|bus|null","out":{"airport":"key|null","dep":"HH:MM|null","arr":"HH:MM|null","flight":"string|null"},"back":{"airport":"key|null","dep":"HH:MM|null","arr":"HH:MM|null","flight":"string|null"}}\nText:\n${text.slice(0,6000)}`
-   :`Extract hotel stays in ${PK.pack.city} from this booking text. For area choose the closest key from: ${areaList}.\nReply with only JSON: {"stays":[{"name":"short hotel name","area":"key","checkin":"HH:MM|null","checkout":"HH:MM|null","checkinDate":"YYYY-MM-DD|null","checkoutDate":"YYYY-MM-DD|null"}]}\nText:\n${text.slice(0,6000)}`;
   try{
-    const r=await sample.json(prompt,{modelTier:'quick',cache:false}); progStop('st_'+kind);
+    const r=await JD.asks.readBooking(sample,kind,text);   // app/data/asks.ts progStop('st_'+kind);
     if(kind==='flight'){
       if(r.startDate&&!isNaN(new Date(r.startDate))) draft.startDate=r.startDate;
       if(r.startDate&&r.endDate){const n=Math.round((new Date(r.endDate)-new Date(r.startDate))/864e5);if(n>=1&&n<=MAX_N) draft.nights=n}
@@ -1994,7 +1990,7 @@ DY.homeMin=60;
 CUR.kws=TRIP.kws.load(); if(!Array.isArray(CUR.kws)) CUR.kws=DEFAULT_KW.slice();
 const matchKw=id=>{const set=new Set(CUR.kws.map(norm));return tagsOf(id).filter(t=>set.has(norm(t)))};
 CUR.meals=TRIP.load('meals',{}); if(!CUR.meals||typeof CUR.meals!=='object') CUR.meals={};
-const mealOf=d=>CUR.meals[d]!=null?+CUR.meals[d]:(PK.pack.snack||1000);
+const mealOf=JD.check.mealOf;   // app/data/check.ts
 let day=0, tab='timeline', cat='all', selected=null, aiState=null, sample=null, group='zone', zoneOpen={}, resetArm=false;
 // changes to the trip happen in app/data/trip.ts (TRIP.blocks / wish / toggleMark …); not while an AI check tries them out on a copy,
 // and blocks first keep the places other travelers shared that they use
@@ -2054,11 +2050,7 @@ function renderTimeline(){
   renderBudget();
   renderPView();
 }
-function dayCost(d){
-  const {items,trans}=analyze(d);
-  const act=items.reduce((a,i)=>a+(i.yen||0),0), tr=trans.reduce((a,t)=>a+(t.fare||0),0), meal=mealOf(d), krw=items.reduce((a,i)=>a+(i.krw||0),0);
-  return {act,tr,meal,krw,yen:act+tr+meal};
-}
+const dayCost=JD.check.dayCost;   // app/data/check.ts
 function renderBudget(){
   const c=dayCost(day); let tY=0,tK=0; DY.days.forEach((_,i)=>{const x=dayCost(i);tY+=x.yen;tK+=x.krw});
   const bp=budgetParts(), dl=bp?bp.daily/(PLC.rate()||1):0, pct=bp&&dl?Math.round(c.yen/dl*100):0;
@@ -2336,39 +2328,12 @@ function altsInfo(it){
 // ---------- AI ----------
 async function askAI(){
   if(!sample) return;
-  const D=DY.days[day], wd=D.wd, gaps=gapsOf(day);
+  const gaps=gapsOf(day);
   if(!gaps.length){aiState={day,status:'error',msg:'이 날은 90분 이상 빈 시간이 없어요. 블록을 조금 빼거나 옮겨 보세요.'};renderAI();return}
-  const items=analyze(day).items.map(i=>`${fmt(i.start)}-${fmt(i.end)} ${i.name} @ ${i.locName}${i.carryAfter?' [after this the traveler carries a suitcase until a luggage-drop block]':''}${i.marks&&i.marks.length?' {'+i.marks.map(m=>'traveler '+MARK_EN[m]).join('; ')+'}':''}`).join('\n');
-  const used=new Set(CUR.placed.map(b=>b.id));
-  const cands=P.filter(p=>!closedOn(p,wd)&&!outOfSeason(p,D.iso)&&!used.has(p.id)&&p.dur<=Math.max(...gaps.map(g=>g[1]-g[0]))).map(p=>{
-    const h=hoursFor(p,wd);return {id:p.id,name:p.name,tags:tagsOf(p.id),mustSee:mustOf(p.id)||undefined,best:p.best&&p.best!=='any'?p.best:undefined,season:p.season?`${p.season}${p.dates?` ${p.dates[0]||''}~${p.dates[1]||''}`:''}`:undefined,travelerRecs:recOf(p)||undefined,wished:isWish(p.id)||undefined,category:p.cat,luggageDrop:!!p.drop,area:p.area,minutes:p.dur,open:h?`${fmt(h[0])}-${fmt(h[1])}`:'always',note:p.note}});
-  const freeMin=gaps.reduce((a,g)=>a+(g[1]-g[0]),0), per={slow:200,normal:140,full:100}[CUR.profile.pace]||140, maxPick=Math.max(1,Math.min(6,Math.ceil(freeMin/per)));
-  const prompt=`You plan one day of a trip to ${PK.pack.city}. Pick up to ${maxPick} place blocks to fill the free time.
-
-${profileSummary()}
-
-Day: ${D.iso} (${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][wd]}).
-Current schedule (fixed and placed):
-${items}
-
-Free gaps (90+ min): ${gaps.map(g=>fmt(g[0])+'-'+fmt(g[1])).join(', ')}${(()=>{const b=budgetParts();if(!b)return '';const dl=b.daily/(PLC.rate()||1),used=dayCost(day).yen,rem=dl-used;return `\nBudget today per person: ${yen(dl)}; already planned ${yen(used)}. ${rem>0?`Keep new picks within about ${yen(rem)} in total.`:'Already over budget today: prefer free or very cheap places.'}`})()}
-
-Candidates (only choose from these ids; respect opening hours):
-${JSON.stringify(cands)}
-
-Luggage rule: while the traveler carries a suitcase (see the schedule notes), they cannot enter museums, shops, cafes with seating or live houses. In that time only pick a candidate with luggageDrop true (to leave the suitcase first) or category walk/trip. Never suggest a luggageDrop candidate when the traveler is not carrying a suitcase.
-Places with mustSee are especially recommended, and travelerRecs is how many other travelers recommended a place, and wished means the traveler wants to go there; prefer them when they fit, wished ones most.
-Rules: each pick must sit inside one free gap, leave travel time (about 15-35 min by local transport between areas) before it and after it, stay within opening hours, and not overlap other picks. Prefer places near the neighbouring blocks. ${CUR.profile.pace==='slow'?'Keep the day unhurried: fewer picks is fine.':CUR.profile.pace==='full'?'The traveler wants a full day: use the free time well, up to the limit.':'Keep a balanced pace with some breathing room.'}
-Reply with only JSON: {"suggestions":[{"id":"nezu","start":"10:30","reason":"one short sentence in Korean explaining why it fits this traveler and this slot"}]}`;
   const ctl=new AbortController();
   aiState={day,status:'loading',ctl}; renderAI(); dock({aiOff:true});
   try{
-    const res=await sample.json(prompt,{signal:ctl.signal,cache:false});
-    const arr=Array.isArray(res?.suggestions)?res.suggestions:[];
-    const out=arr.map(x=>({id:String(x.id||''),start:parse(x.start),reason:String(x.reason||'')})).filter(x=>PM[x.id]&&x.start!=null&&x.start>=DAY_START&&x.start<1380).slice(0,maxPick);
-    let kept=[], dropped=0;
-    for(const x of out){const ops=[...kept.map(k=>({op:'add',day,id:k.id,start:fmt(k.start),dur:PM[k.id].dur})),{op:'add',day,id:x.id,start:fmt(x.start),dur:PM[x.id].dur}];
-      const r=repairOps(ops); if(!r.warns.length){kept=r.ops.map((o,j)=>Object.assign({},j<kept.length?kept[j]:x,{start:parse(o.start)}))} else dropped++}
+    const {items:kept,dropped}=await JD.asks.fillDay(sample,day,ctl.signal);   // the question and its checks: app/data/asks.ts
     aiState={day,status:'done',items:kept,dropped};
   }catch(e){
     if(e&&e.code==='cancelled'){aiState=null}
@@ -2945,13 +2910,7 @@ function openLook(){
   $('#sheet').dataset.uid=''; $('#sheetBg').hidden=false;
 }
 // the question for AI로 지어 보기 (asked by the sheet through the host)
-async function lookAiTitles(tripName){
-  const days=DY.days.map((D,i)=>`Day ${i+1}: `+analyze(i).items.filter(x=>!x.stay).map(x=>x.name).slice(0,8).join(', '));
-  const prompt=`Write a short, evocative Korean title for each day of this trip to ${PK.pack.city}, like chapter titles of a travel journal (8-18 Korean characters, no emoji, no "Day N"). Trip title: "${tripName}".
-${days.join('\n')}
-Reply with only JSON: {"titles":["...", ...]} with exactly ${DY.days.length} items.`;
-  const r=await sample.json(prompt,{cache:false}); return Array.isArray(r&&r.titles)?r.titles.slice(0,DY.days.length):[];
-}
+const lookAiTitles=tripName=>JD.asks.dayTitles(sample,tripName);   // app/data/asks.ts
 function lookRenamePlan(nm){const p=PL.plans.find(x=>x.id===PL.curPlan);if(p&&nm&&nm!==p.name){p.name=nm;p.custom_name=true;savePlans()}}
 // ---------- handwritten memos: one line per block, one line per day ----------
 // The rules live in app/logic/memo.ts; the memo box in a block's sheet saves itself (app/screens/Extras.tsx MemoBox).

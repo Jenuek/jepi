@@ -131,12 +131,8 @@ async function aiFill(kind){
   const ta=$('#paste_'+kind), st=$('#st_'+kind), text=(ta&&ta.value||'').trim();
   if(!st) return; if(!text){pasteSay(kind,'붙여 넣은 내용이 없어요.');return} if(!sample) return;
   pasteMsg[kind]='';progStart('st_'+kind,'예약 내용을 읽는 중이에요 (보통 10~20초)',[],'');
-  const areaList=Object.entries(AREAS).map(([k,v])=>`${k}=${v[0]}`).join(', ');
-  const prompt=kind==='flight'
-   ?`Extract the round trip (flight, train or bus) between the traveler's home and ${PK.pack.city} from this booking text. Copy times exactly as printed (local time, 24h HH:MM). For airport/station pick the closest key from: ${Object.entries(AIRPORTS).map(([k,g])=>k+'='+g.name).join(', ')}.\nReply with only JSON: {"startDate":"YYYY-MM-DD or null","endDate":"YYYY-MM-DD or null","mode":"flight|train|bus|null","out":{"airport":"key|null","dep":"HH:MM|null","arr":"HH:MM|null","flight":"string|null"},"back":{"airport":"key|null","dep":"HH:MM|null","arr":"HH:MM|null","flight":"string|null"}}\nText:\n${text.slice(0,6000)}`
-   :`Extract hotel stays in ${PK.pack.city} from this booking text. For area choose the closest key from: ${areaList}.\nReply with only JSON: {"stays":[{"name":"short hotel name","area":"key","checkin":"HH:MM|null","checkout":"HH:MM|null","checkinDate":"YYYY-MM-DD|null","checkoutDate":"YYYY-MM-DD|null"}]}\nText:\n${text.slice(0,6000)}`;
   try{
-    const r=await sample.json(prompt,{modelTier:'quick',cache:false}); progStop('st_'+kind);
+    const r=await JD.asks.readBooking(sample,kind,text);   // app/data/asks.ts progStop('st_'+kind);
     if(kind==='flight'){
       if(r.startDate&&!isNaN(new Date(r.startDate))) draft.startDate=r.startDate;
       if(r.startDate&&r.endDate){const n=Math.round((new Date(r.endDate)-new Date(r.startDate))/864e5);if(n>=1&&n<=MAX_N) draft.nights=n}

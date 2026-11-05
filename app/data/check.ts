@@ -54,3 +54,12 @@ export function analyze(d: number) {
 }
 /** a day's free time ([start, end] in minutes) */
 export function gapsOf(d: number): [number, number][] { return gaps(days.dayItems(d), d === 0 ? days.arrEnd() : 480) }
+
+/** 간식·기타 of a day (the destination's daily snack money unless changed) */
+export const mealOf = (d: number): number => { const m = (trip.cur.meals || {}) as Record<string, number>; return m[d] != null ? +m[d] : ((places.state.pack && places.state.pack.snack) || 1000) };
+/** what a day costs per person (local money): places, local transport, snacks; krw: what is paid in won (home trips) */
+export function dayCost(d: number): { act: number; tr: number; meal: number; krw: number; yen: number } {
+  const { items, trans } = analyze(d);
+  const act = items.reduce((a: number, i: any) => a + (i.yen || 0), 0), tr = trans.reduce((a: number, t: any) => a + (t.fare || 0), 0), meal = mealOf(d), krw = items.reduce((a: number, i: any) => a + (i.krw || 0), 0);
+  return { act, tr, meal, krw, yen: act + tr + meal };
+}

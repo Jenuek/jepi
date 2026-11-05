@@ -39,11 +39,7 @@ function renderTimeline(){
   renderBudget();
   renderPView();
 }
-function dayCost(d){
-  const {items,trans}=analyze(d);
-  const act=items.reduce((a,i)=>a+(i.yen||0),0), tr=trans.reduce((a,t)=>a+(t.fare||0),0), meal=mealOf(d), krw=items.reduce((a,i)=>a+(i.krw||0),0);
-  return {act,tr,meal,krw,yen:act+tr+meal};
-}
+const dayCost=JD.check.dayCost;   // app/data/check.ts
 function renderBudget(){
   const c=dayCost(day); let tY=0,tK=0; DY.days.forEach((_,i)=>{const x=dayCost(i);tY+=x.yen;tK+=x.krw});
   const bp=budgetParts(), dl=bp?bp.daily/(PLC.rate()||1):0, pct=bp&&dl?Math.round(c.yen/dl*100):0;
