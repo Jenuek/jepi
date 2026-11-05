@@ -1,14 +1,15 @@
-// What JEPI asks the AI for the 예약 도우미 and the season, and how the answers are tidied into the trip. Each returns
+// What JEPI asks the AI (여행지 준비, 장소 더 찾기, the 예약 도우미, the season …), and how the answers are tidied into the trip. Each returns
 // what the screen needs; the old code only shows "…하는 중" and draws the result. (It used to be resolveWishes / askVibes /
-// askHotels / askRoutes / genSeason in src/js/100-booking.js, 150-lodging.js, 110-season.js.) The question texts are
+// askHotels / askRoutes / genSeason / genPack / morePlaces in src/js 100, 150, 110, 060.) The question texts are
 // compared word for word with the deployed version (tools/compare/prompts.js).
 import * as trip from './trip';
 import * as places from './places';
 import * as season from './season';
+import * as days from './days';
 import { nightsOf } from './days';
 import { profileSummary, partyEn, heads, budgetParts, ymd } from './traveler';
 import { parse } from '../logic/time';
-import { norm } from '../logic/places';
+import { norm, samePlace } from '../logic/places';
 import type { Asker } from './ai';
 
 // loosely shaped trip values, as the question texts read them
@@ -96,4 +97,47 @@ For recurring annual events give their usual dates and use confidence medium or 
   PK.pack.season = { key: season.tripKey(), sunrise: parse(r && r.sunrise) != null ? r.sunrise : '', sunset: parse(r && r.sunset) != null ? r.sunset : '', weather: String((r && r.weather) || '').slice(0, 160), notes: list(r && r.notes).map(x => String(x).slice(0, 120)).slice(0, 6), n };
   places.savePack();
   return n;
+}
+
+
+/** 여행지 준비: the destination's areas, money, gateways and checklist for what the traveler typed (null: not a place) */
+export async function destination(ai: Asker, dest: string, signal?: AbortSignal): Promise<places.Pack | null> {
+  const prompt=`You prepare destination data for a trip-planning app used by Korean travelers. Destination typed by the user: "${dest.slice(0,60)}". Travelers start from South Korea (Seoul area).
+Reply with only JSON:
+{"ok":true (false if this is not a real travel destination),
+"city":"destination name in Korean","country":"country in Korean","intl":true if outside South Korea,
+"currency":"ISO code","symbol":"₩, ¥, $, €, ฿ ...","rate":Korean won per 1 unit of the local currency (approximate, recent),
+"transit":"Korean word for the main local public transport (지하철, 전철, 버스, 트램...)",
+"fare":{"base":typical single public transport ride in local currency,"perKm":extra per km beyond 4 km,"max":fare cap or 0},
+"snack":typical daily budget for snacks and drinks per person in local currency,"step":a round adjustment step for that budget,
+"areas":[8-14 neighbourhoods or districts travellers actually use, {"key":"short ascii","name":"Korean name","lat":0.0000,"lng":0.0000,"zone":"zone key"}],
+"zones":{"zone key":"Korean label"} (3-7 zones that group nearby areas),
+"gateways":[1-4 arrival points: main airports and main rail or bus stations, {"key":"ascii","name":"Korean name","kind":"air|rail|bus","iata":"3-letter IATA code for airports, else empty","lat":0.0000,"lng":0.0000,"min":typical minutes to the centre by public transport,"fare":typical one-way fare to the centre in local currency}],
+"checks":[4-7 short Korean pre-trip checklist items specific to this destination: entry rules or apps, payment, plugs, tax refund, local customs],
+"arrivalNote":"one short Korean sentence about arrival procedures, or empty"}
+Coordinates must be accurate WGS84 to 4 decimals.`;
+  const r = await ai.json(prompt, { cache: false, signal });
+  return places.cleanPack(r, dest);
+}
+
+/** 장소 더 찾기: n more places for this traveler (focus: what they asked for); new ones join the destination.
+ *  Returns the ids added (places already there, by name or as the same place, are skipped). */
+export async function morePlaces(ai: Asker, n: number, focus: string, signal?: AbortSignal): Promise<string[]> {
+  const { P } = places, DY = days.state;
+  const areaList = areaKeys();
+  const prompt=`Suggest ${n} real, currently operating places in ${PK.pack.city}${PK.pack.country?', '+PK.pack.country:''} for this traveler.
+${profileSummary()}
+Trip dates: ${(DY.days[0]||{}).iso||''} to ${(DY.days[DY.days.length-1]||{}).iso||''}.
+${focus?`The traveler asks specifically for: "${String(focus).slice(0,120)}". All suggestions should fit this.`:`Spread them across these categories: food (meals and cafes that suit who is traveling), music, art, walk, shop, night, and include 2 luggage-storage options near the main station or centre (category "trip", drop true). ${CUR.kws.length?'Favour places matching the interest keywords.':'No interests were given: pick well-loved, varied places most visitors enjoy, so the traveler can discover what they like.'} Consider the trip dates: include seasonal highlights (blossoms, foliage, illuminations, festivals, seasonal food) only when they genuinely happen then.`}
+Who is traveling matters most for the choice of places.
+Area keys: ${areaList}
+Do not repeat these: ${P.map(p=>p.name).slice(0,150).join(', ')||'(none)'}
+Reply with only JSON: {"places":[{"name":"Korean name","local":"name in local language for map search","area":"area key","cat":"food|music|art|walk|shop|night|trip","lat":0.0000,"lng":0.0000,"dur":typical minutes,"open":"HH:MM-HH:MM or null if always open (24:00 for midnight)","closed":[weekday numbers, 0=Sunday],"cost":typical spend per person in ${PK.pack.currency},"costNote":"short Korean","tags":["2-5 short Korean keywords; reuse the traveler's keywords when they apply"],"note":"one Korean sentence: what it is and why go","must":"short Korean reason if it is a highlight for this traveler, else empty","drop":false,"cash":true only if the place mostly accepts cash only,"best":"morning|day|sunset|evening|night|any: when this place is best visited","check":"short Korean note if a booking or ticket is needed, else empty"}]}`;
+  const r = await ai.json(prompt, { cache: false, signal }); const added: string[] = [];
+  list(r && r.places).slice(0, n + 5).forEach(x => {
+    const pl = places.cleanPlace(x);
+    if (pl && !P.some(p => norm(p.name) === norm(pl.name) || (p.local && pl.local && norm(p.local) === norm(pl.local))) && !P.find(p => !p.shared && samePlace(p, pl))) { PK.pack.places.push(pl); places.addPackPlace(pl); added.push(pl.id) }
+  });
+  places.savePack();
+  return added;
 }
