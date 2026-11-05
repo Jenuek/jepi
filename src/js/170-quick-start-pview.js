@@ -36,7 +36,7 @@ const P_DICE=[['any','아무거나',1],['hungry','배고파',2],['calm','차분�
 let pSt={mood:'any',draw:null}, pviewRev=0, pSpinT=0;
 const pAheadOn=()=>!!store.get('gp.pAhead',false);
 // where "now" is on this day: past day → everything done, today → the clock, future → nothing yet
-function pClock(){const dIso=DAYS[day]&&DAYS[day].iso, t=isoOf(new Date());
+function pClock(){const dIso=DY.days[day]&&DY.days[day].iso, t=isoOf(new Date());
   if(!dIso) return {past:false,today:false,future:false,nm:-1};
   return {past:dIso<t,today:dIso===t,future:dIso>t,nm:dIso===t?nowMin():-1};
 }
@@ -46,7 +46,7 @@ function pGaps(){const c=pClock(); if(c.past) return [];
 }
 function pSquares(){
   const c=pClock(), items=analyze(day).items.filter(i=>!i.stay), gaps=pGaps(), out=[];
-  const start=LOC[DAYS[day].startLoc], firstT=items.length?items[0].start:dayStart(day);
+  const start=DY.loc[DY.days[day].startLoc], firstT=items.length?items[0].start:dayStart(day);
   // day 1 begins with its fixed trip from home, so it needs no start square
   if(day>0) out.push({k:'start',t:-1,top:'출발',name:start?String(start.name):'',stamp:c.past||(c.today&&c.nm>=firstT)});
   const seq=[];
@@ -57,7 +57,7 @@ function pSquares(){
   gaps.forEach((g,gi)=>seq.push({k:'q',t:g.s,top:'?',name:partOfDay(g.s),gap:gi}));
   if(c.today&&!seq.some(s=>s.k==='now')) seq.push({k:'now',t:c.nm,top:'지금 '+fmt(c.nm).replace(/^0/,''),name:''});
   seq.sort((a,b)=>a.t-b.t||(a.k==='now'?-1:b.k==='now'?1:0)).forEach(s=>out.push(s));
-  const next=DAYS[day+1]&&LOC[DAYS[day+1].startLoc];
+  const next=DY.days[day+1]&&DY.loc[DY.days[day+1].startLoc];
   out.push({k:'end',t:1e4,top:'하루 끝',name:next?String(next.name):'집으로',stamp:c.past});
   return out.map(({t,...s})=>({name:'',uid:'',cat:'',stamp:false,flag:false,gap:-1,...s}));
 }
@@ -69,9 +69,9 @@ function renderPView(){
   const on=jp==='P'; box.hidden=!on; $('.grid-wrap').hidden=on; if(!on) return;
   const c=pClock(), cards=pMyCards(), base={day,dice:pDiceProps(),cards,rev:++pviewRev};
   if(c.future&&!pAheadOn()&&!DEMO.on){
-    const until=Math.round((new Date(DAYS[day].iso+'T00:00:00')-new Date(isoOf(new Date())+'T00:00:00'))/864e5);
+    const until=Math.round((new Date(DY.days[day].iso+'T00:00:00')-new Date(isoOf(new Date())+'T00:00:00'))/864e5);
     const flags=analyze(day).items.filter(i=>i.kind==='fixed').map(i=>({t:fmt(i.start),name:String(i.name)}));
-    window.JEPI_UI.mount('pview',box,{...base,mode:'closed',closed:{until,date:mdTxt(DAYS[day].iso)||'',started:!!(DAYS[0].iso&&DAYS[0].iso<=isoOf(new Date())),flags}});
+    window.JEPI_UI.mount('pview',box,{...base,mode:'closed',closed:{until,date:mdTxt(DY.days[day].iso)||'',started:!!(DY.days[0].iso&&DY.days[0].iso<=isoOf(new Date())),flags}});
     return;
   }
   const d=pSt.draw;
@@ -107,7 +107,7 @@ function pRollDo(gi,auto){
 function learnFrom(p){const t=tagsOf(p.id)[0];if(t)TRIP.keywords.add(t,12)}
 function pYes(){const d=pSt.draw; if(!d||!d.cand) return; const c=d.cand; learnFrom(c.p);
   const r=repairOps([{op:'add',day,id:c.p.id,start:fmt(c.arr),dur:c.dur}]); applyOpsCore(r.ops); save();
-  diceLog.push({n:c.p.name,d:DAYS[day].iso}); diceLog=diceLog.slice(-60); store.set('gp.dice',diceLog); pSt.draw=null; renderAll();}
+  diceLog.push({n:c.p.name,d:DY.days[day].iso}); diceLog=diceLog.slice(-60); store.set('gp.dice',diceLog); pSt.draw=null; renderAll();}
 function pKeep(){const d=pSt.draw; if(!d||!d.cand) return; if(!isWish(d.cand.p.id)) toggleWish(d.cand.p.id); showToast('내 카드에 넣었어요'); pRollDo(d.gi)}
 function pClose(){clearTimeout(pSpinT); pSt.draw=null; renderPView()}
 function pMood(k){if(P_DICE.some(v=>v[0]===k)){pSt.mood=k;renderPView()}}
@@ -122,5 +122,5 @@ function pPlaceNow(id){
   dice.mood=m0; dice.lunch=l0;
   if(!hit){showToast('이 날 빈 칸에는 맞지 않아요. 내 카드로 담아 두세요.');return}
   const r=repairOps([{op:'add',day,id,start:fmt(hit.arr),dur:hit.dur}]); applyOpsCore(r.ops); save();
-  showToast(`${DAYS[day].date||'이 날'} ${shortFuzzy(hit.arr)}에 넣었어요`); renderAll();
+  showToast(`${DY.days[day].date||'이 날'} ${shortFuzzy(hit.arr)}에 넣었어요`); renderAll();
 }

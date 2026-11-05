@@ -8,3 +8,5 @@ const TRIP=JD.trip;
 const CUR=TRIP.cur;
 // the plan list and which plan is open (app/data/trip.ts): PL.plans, PL.curPlan
 const PL=TRIP.planList;
+// the trip's days and the places they start from (app/data/days.ts): DY.days, DY.loc, DY.locArea, DY.locZone, DY.gmpBy, DY.homeMin
+const DY=JD.days.state;

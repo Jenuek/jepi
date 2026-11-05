@@ -18,7 +18,7 @@ function renderFind(){findRev++;findMount()}
 function findRowsUpdate(){findMount()}
 function findMount(){
   const F=FIND, gaps=gapsOf(day), gv=g=>({v:`${g[0]}-${g[1]}`,label:`${fmt(g[0])}–${fmt(g[1])}`});
-  window.JEPI_UI.mount('find',$('#sheet'),{dayNo:day+1,date:String(DAYS[day].date),city:String(PK.pack.city||''),where:F.where,area:F.area||'',
+  window.JEPI_UI.mount('find',$('#sheet'),{dayNo:day+1,date:String(DY.days[day].date),city:String(PK.pack.city||''),where:F.where,area:F.area||'',
     areas:Object.entries(AREAS).map(([k,v])=>({k,label:String(v[0])})),when:F.when,gaps:gaps.map(gv),gap:F.gap?gv(F.gap):null,into:F.into,q:F.q||'',busy:!!F.busy,mine:jp==='P',
     rows:F.res.map(r=>{const p=PM[r.id];if(!p)return null;
       const meta=[p.area,CATS[p.cat]||'',p.hours&&!p.always?`${fmt(p.hours[0])}–${fmt(p.hours[1])}`:''].filter(Boolean).join(' · ');
@@ -29,7 +29,7 @@ function findFocus(){
   if(F.q) parts.push(F.q);
   if(F.where==='near'){const a=findAreaOfDay();if(a)parts.push(`near ${a} (where the traveler is on Day ${day+1})`)}
   else if(F.where==='area'&&AREAS[F.area]) parts.push(`only in the ${AREAS[F.area][0]} area`);
-  if(F.when==='gap'&&F.gap) parts.push(`to visit on ${DAYS[day].iso||'Day '+(day+1)} between ${fmt(F.gap[0])} and ${fmt(F.gap[1])}; must be open then and fit within that time`);
+  if(F.when==='gap'&&F.gap) parts.push(`to visit on ${DY.days[day].iso||'Day '+(day+1)} between ${fmt(F.gap[0])} and ${fmt(F.gap[1])}; must be open then and fit within that time`);
   return parts.join('; ');
 }
 async function runFind(){

@@ -20,6 +20,7 @@ import * as nearby from './nearby';
 import * as keys from './keys';
 import * as places from './places';
 import * as ops from './ops';
+import * as days from './days';
 import * as logic from '../logic';
 import * as trips from './trips';
 import { status, syncDocs, syncSoon, syncPush, syncPull, syncNow, connectSync } from './sync';
@@ -54,6 +55,8 @@ export const data = {
   places,
   /** changes to the schedule as a list: apply, try out, avoid new warnings */
   ops,
+  /** the trip's days and fixed blocks (from 여행 정보) */
+  days,
   /** calculations: time text, distances, the day check (app/logic) */
   logic,
   /** 친구와 함께 on the server */

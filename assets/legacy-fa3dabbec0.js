@@ -13,6 +13,8 @@ const TRIP=JD.trip;
 const CUR=TRIP.cur;
 // the plan list and which plan is open (app/data/trip.ts): PL.plans, PL.curPlan
 const PL=TRIP.planList;
+// the trip's days and the places they start from (app/data/days.ts): DY.days, DY.loc, DY.locArea, DY.locZone, DY.gmpBy, DY.homeMin
+const DY=JD.days.state;
 // ---------- demo sandbox ----------
 // The sandbox itself (copy aside on entering, put back on leaving or on the next launch) is in app/data/demo.ts
 // and has already run before this script. DEMO.on is true while the demo is open.
@@ -32,17 +34,17 @@ const BLOCK_BADGES=[], CARD_EXTRAS=[], SHEET_EXTRAS=[];
 const extras=(list,...a)=>list.flatMap(f=>{try{const r=f(...a);return r?[].concat(r):[]}catch(_){return []}});
 const WD=['일','월','화','수','목','금','토'];
 const DAY_START=7*60, DAY_END=24*60;
-let LOC={};
+DY.loc={};
 // the destination's lists (app/data/places.ts — the same objects, filled again when a destination opens; tokyo.ts until then)
 const PLC=JD.places, PK=PLC.state;
 const AIRPORTS=PLC.AIRPORTS, AREAS=PLC.AREAS, AREA_ZONE=PLC.AREA_ZONE, CATS=PLC.CATS, ZONES=PLC.ZONES, ZONE_OF=PLC.ZONE_OF,
   P=PLC.P, PM=PLC.PM, COST=PLC.COST, TAGS=PLC.TAGS, MUST=PLC.MUST, STATIC_CHECKS=PLC.STATIC_CHECKS;
-let LOC_AREA={};
-let LOC_ZONE={};
-const dayStart=d=>d===0?((typeof CUR.profile!=='undefined'&&CUR.profile&&CUR.profile.kind==='day')?Math.max(360,tmin(CUR.profile.meet.time,660)-60):240):((typeof CUR.profile!=='undefined'&&CUR.profile&&CUR.profile.style&&CUR.profile.style.rhythm==='late')?600:420);
-let GMP_BY=360; // when to be at the home airport, from the profile
+DY.locArea={};
+DY.locZone={};
+const dayStart=JD.days.dayStart;   // app/data/days.ts
+DY.gmpBy=360; // when to be at the home airport, from the profile
 const durTxt=JD.logic.time.durTxt;   // app/logic/time.ts
-let DAYS=[];
+DY.days=[];
 const costOf=PLC.costOf;
 const DEFAULT_KW=[];
 const tagsOf=PLC.tagsOf;
@@ -70,92 +72,13 @@ function partyEn(q){q=q||CUR.profile.party||{type:'solo'};
   if(q.type==='friends') return `A group of ${q.adults} friends: favour places that seat a group, shared food, activities and lively spots; avoid tiny counter-only bars.`;
   if(q.type==='family') return `A family: ${q.adults} adult(s)${q.kids?` and ${q.kids} child(ren)`:''}. ${q.kids?'Favour kid-friendly places, parks and hands-on spots, avoid bars and late nights, keep transfers short and leave rest breaks.':'Favour comfortable, easy-going places for all ages.'}`;
   return 'Traveling alone: include solo-friendly places (counter seats, single portions) and places where it is easy to be on one\'s own.'}
-const tmin=(s,d)=>{const v=parse(s);return v==null?d:v};
+const tmin=JD.days.tmin;
 const apName=k=>(AIRPORTS[k]||AIRPORTS[firstGw()]).name;
-const MODE_WORD={flight:'공항',train:'역',bus:'터미널',car:'도착 지점'};
+const MODE_WORD=JD.days.MODE_WORD;
 const WDE=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-const MAX_N=30;
-function nightsOf(pr){return pr&&pr.kind==='day'?0:Math.max(1,Math.min(MAX_N,+pr.nights||1))}
-function dateOf(pr,i){const d=new Date((pr.startDate||'2026-11-07')+'T00:00:00');if(isNaN(d))return null;d.setDate(d.getDate()+i);return d}
-const mdOf=(pr,i)=>{const d=dateOf(pr,i);return d?`${d.getMonth()+1}/${d.getDate()}`:`Day ${i+1}`};
-function arrEnd(){return CUR.profile.kind==='day'?tmin((CUR.profile.meet||{}).time,660)+15:tmin(CUR.profile.out.arr,620)+60}
-function fixProfile(pr){
-  pr.nights=nightsOf(pr);
-  if(!['flight','train','bus','car'].includes(pr.mode)) pr.mode='flight'; if(!['transit','car'].includes(pr.local)) pr.local=pr.mode==='car'?'car':'transit'; if(pr.dest==null) pr.dest=PK.pack?PK.pack.city:'';
-  pr.out=Object.assign({airport:firstGw(),dep:'08:00',arr:'10:30',flight:''},pr.out||{});
-  pr.back=Object.assign({airport:firstGw(),dep:'19:00',arr:'21:30',flight:''},pr.back||{});
-  if(!AIRPORTS[pr.out.airport]) pr.out.airport=firstGw(); if(!AIRPORTS[pr.back.airport]) pr.back.airport=firstGw();
-  pr.home=Object.assign({area:'',min:60,fare:1550,byMin:120},pr.home||{});
-  if(!Array.isArray(pr.stays)||!pr.stays.length) pr.stays=[{name:'숙소',area:firstArea(),checkin:'15:00',checkout:'11:00',from:0,to:pr.nights}];
-  pr.stays.forEach(s=>{s.from=Math.max(0,Math.min(pr.nights-1,+s.from||0));s.to=Math.max(s.from+1,Math.min(pr.nights,+s.to||pr.nights));if(!AREAS[s.area])s.area=firstArea()});
-  if(!Array.isArray(pr.events)) pr.events=[];
-  pr.events.forEach(e=>{e.day=Math.max(0,Math.min(pr.nights,+e.day||0));if(!AREAS[e.area])e.area=firstArea()});
-  {const v={};STYLE_ROWS.forEach(([k,,o])=>{const x=(pr.style||{})[k];if(o.some(([a])=>a===x))v[k]=x});pr.style=v}
-  if(pr.direction&&typeof pr.direction!=='object') delete pr.direction; if(pr.direction) pr.direction={purpose:String(pr.direction.purpose||'').slice(0,80),avoid:String(pr.direction.avoid||'').slice(0,80),note:String(pr.direction.note||'').slice(0,160)};
-  if(!['low','mid','high'].includes(pr.budget)) pr.budget='mid'; if(!['domestic','near','far'].includes(pr.reach)) pr.reach='near';
-  if(pr.kind!=='day') pr.kind='trip'; pr.meet=Object.assign({time:'11:00',end:'20:00',area:''},pr.meet||{}); if(!AREAS[pr.meet.area]) pr.meet.area=firstArea();
-  if(pr.dateSet===undefined) pr.dateSet=true; if(pr.nightsSet===undefined) pr.nightsSet=true;
-  if(pr.flightSet===undefined) pr.flightSet=true; if(pr.staySet===undefined) pr.staySet=true;
-  if(pr.bookedFlight!==false) pr.bookedFlight=true; if(pr.bookedStay!==false) pr.bookedStay=true;
-  pr.party=Object.assign({type:'solo',adults:1,kids:0},pr.party||{});
-  if(!['solo','couple','friends','family'].includes(pr.party.type)) pr.party.type='solo';
-  pr.party.adults=Math.max(1,Math.min(20,Math.round(+pr.party.adults)||1)); pr.party.kids=Math.max(0,Math.min(10,Math.round(+pr.party.kids)||0));
-  if(pr.party.type==='solo'){pr.party.adults=1;pr.party.kids=0} if(pr.party.type==='couple'){pr.party.adults=2;pr.party.kids=0} if(pr.party.type==='friends'){pr.party.adults=Math.max(2,pr.party.adults);pr.party.kids=0}
-  if(!['slow','normal','full'].includes(pr.pace)) pr.pace='normal';
-  if(!['alone','some','social'].includes(pr.social)) pr.social='some';
-  pr.breakfast=pr.breakfast===true;
-  return pr;
-}
-function buildDays(){
-  if(CUR.profile.kind==='day'){const pr=fixProfile(CUR.profile),m=pr.meet,a=AREAS[m.area]||AREAS[firstArea()],dt=dateOf(pr,0),st=tmin(m.time,660),en=Math.max(st+60,tmin(m.end,1200));homeMin=0;
-    LOC={meet:{name:`만나는 곳 (${a[0]})`,ll:[a[1],a[2]]}};LOC_AREA={meet:a[0]};LOC_ZONE={meet:AREA_ZONE[m.area]||'outer'};
-    Object.entries(AIRPORTS).forEach(([k,g])=>{LOC[k]={name:g.name,ll:g.ll};LOC_AREA[k]=g.name;LOC_ZONE[k]='air'});
-    DAYS=[{date:mdOf(pr,0),iso:dt?`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`:'',wd:dt?dt.getDay():0,title:`하루 코스 · ${PK.pack.city}`,startLoc:'meet',
-      fixed:[{id:'m0',name:'만나기',start:st,end:st+15,loc:'meet',note:'여기서 하루를 시작해요.'},{id:'m1',name:'헤어지기',start:en,end:Math.min(1440,en+15),loc:'meet',note:'오늘 코스 끝!'}]}];
-    return}
-  const pr=fixProfile(CUR.profile), n=pr.nights, M=pr.mode, intl=!!PK.pack.intl, carry=M!=='car'; homeMin=+pr.home.min||60;
-  LOC={home:{name:pr.home.area?`출발지 (${pr.home.area})`:'출발지',ll:Array.isArray(pr.home.ll)?pr.home.ll:[37.5665,126.9780]}}; LOC_AREA={home:'출발지'}; LOC_ZONE={home:'air'};
-  Object.entries(AIRPORTS).forEach(([k,g])=>{LOC[k]={name:g.name,ll:g.ll};LOC_AREA[k]=g.name;LOC_ZONE[k]='air'});
-  pr.stays.forEach((s,i)=>{const a=AREAS[s.area];LOC['stay'+i]={name:s.name||'숙소',ll:[a[1],a[2]]};LOC_AREA['stay'+i]=a[0];LOC_ZONE['stay'+i]=AREA_ZONE[s.area]});
-  pr.events.forEach((e,i)=>{const a=AREAS[e.area];LOC['ev'+i]={name:e.name||'예약한 일정',ll:[a[1],a[2]]};LOC_AREA['ev'+i]=a[0];LOC_ZONE['ev'+i]=AREA_ZONE[e.area]});
-  {const a0=AREAS[(pr.stays[0]||{}).area]||AREAS[firstArea()];LOC.arrive={name:`${PK.pack.city} 도착`,ll:[a0[1],a0[2]]};LOC_AREA.arrive=PK.pack.city;LOC_ZONE.arrive='air'}
-  const stayOf=k=>pr.stays.findIndex(s=>k>=s.from&&k<s.to);
-  const days=[];
-  for(let d=0;d<=n;d++){
-    const dt=dateOf(pr,d), fixed=[], names=[];
-    if(d===0){
-      const dep=tmin(pr.out.dep,480), arr=tmin(pr.out.arr,630), gw=apName(pr.out.airport), word=MODE_WORD[M];
-      if(M==='car'){GMP_BY=dep;fixed.push({id:'f0c',name:`자동차로 ${PK.pack.city} 가기`,start:dep,end:Math.max(dep+30,arr),loc:'arrive',skipIn:true,krw:+pr.home.fare||0,note:`${fmt(dep)} 출발 → ${fmt(arr)} 도착 예정. 기름값·통행료는 "내 정보"에서 바꿀 수 있어요.`})}
-      else{
-        const lead=M==='flight'?(+pr.home.byMin||120):20; GMP_BY=Math.max(240,dep-lead);
-        fixed.push({id:'f0a',name:`집 출발 → ${word}`,start:GMP_BY-homeMin,end:GMP_BY,loc:'home',krw:+pr.home.fare||0,note:`집에서 ${word}까지 걸리는 시간으로 출발 시간을 계산했어요. 아래 버튼으로 바꿀 수 있어요.`});
-        if(M==='flight') fixed.push({id:'f0b',name:intl?'출국 수속':'탑승 수속',start:GMP_BY,end:Math.max(GMP_BY+15,dep-30),loc:'home',note:'항공사 온라인 체크인을 미리 해 두면 짐만 부치면 돼요.'});
-        fixed.push({id:'f0c',name:`${pr.out.flight?pr.out.flight+' · ':''}${gw}행`,start:dep,end:Math.max(dep+30,arr),loc:pr.out.airport,skipIn:true,note:`${fmt(dep)} 출발 → ${fmt(arr)} ${gw} 도착`});
-        const ad=M==='flight'?(intl?60:30):15;
-        fixed.push({id:'f1',name:`${gw} 도착${M==='flight'&&intl?' · 입국':''}`,start:arr,end:arr+ad,loc:pr.out.airport,bagStart:true,note:M==='flight'&&intl?(PK.pack.arrivalNote||'입국 심사와 짐 찾기.'):'짐을 챙겨 나와요.'});
-      }
-    }
-    const ps=d>0?stayOf(d-1):-1, cs=d<n?stayOf(d):-1;
-    if(ps>=0&&ps!==cs){const s=pr.stays[ps],co=tmin(s.checkout,660);fixed.push({id:'co'+d,name:`${s.name||'숙소'} 체크아웃 (${fmt(co)}까지)`,start:co-30,end:co,loc:'stay'+ps,bagStart:carry,note:carry?'체크아웃 뒤에도 짐을 맡길 수 있는지 숙소에 물어보세요. 안 되면 역 짐 보관함을 쓰세요.':'짐은 차에 실어 두면 돼요.'})}
-    if(cs>=0&&cs!==ps){const s=pr.stays[cs],ci=tmin(s.checkin,900);fixed.push({id:'ci'+d,name:`${s.name||'숙소'} 체크인 (${fmt(ci)}부터)`,start:ci,end:ci+30,loc:'stay'+cs,drop:true,note:'체크인 전에 짐을 먼저 맡길 수 있는지 숙소에 물어보세요.'});if(d>0)names.push('숙소 이동')}
-    pr.events.forEach((e,i)=>{if(+e.day!==d)return;const st=tmin(e.start,1080),en=Math.max(st+30,tmin(e.end,st+120));fixed.push({id:'ev'+i,name:e.name||'예약한 일정',start:st,end:en,loc:'ev'+i,note:'미리 예약한 일정이에요.'});names.push(e.name||'예약한 일정')});
-    if(cs>=0) fixed.push({id:'st'+d,name:`${pr.stays[cs].name||'숙소'} 숙박`,start:1380,end:1440,loc:'stay'+cs,note:''});
-    if(d===n){
-      const dep=tmin(pr.back.dep,1140), arr=tmin(pr.back.arr,1290), gw=apName(pr.back.airport);
-      if(M==='car') fixed.push({id:'f8',name:'자동차로 집으로',start:dep,end:arr>dep?arr:1440,loc:'home',skipIn:true,krw:+pr.home.fare||0,note:`${fmt(dep)} 출발 → ${fmt(arr)} 도착 예정`});
-      else{
-        const lead=M==='flight'?(intl?180:90):20;
-        fixed.push({id:'f7',name:M==='flight'?`${gw} ${intl?'출국':'탑승'} 수속`:`${gw} 도착 · 탑승 대기`,start:dep-lead,end:dep,loc:pr.back.airport,drop:true,note:M==='flight'?(intl?'출발 3시간 전 도착 기준이에요. 면세 환급은 짐을 부치기 전에 하세요.':'출발 1시간 30분 전 도착 기준이에요.'):'출발 20분 전 도착 기준이에요.'});
-        fixed.push({id:'f8',name:`${pr.back.flight?pr.back.flight+' · ':''}${M==='flight'?'돌아가는 비행기':M==='train'?'돌아가는 기차':'돌아가는 버스'}`,start:dep,end:arr>dep?arr:1440,loc:'home',skipIn:true,note:`${fmt(dep)} 출발 → ${fmt(arr)} 도착`});
-        if(arr>dep&&arr<1380) fixed.push({id:'f9',name:'도착 · 집으로',start:arr,end:Math.min(1440,arr+(M==='flight'?40:10)+homeMin),loc:'home',krw:+pr.home.fare||0,note:'도착해서 집까지 가는 시간이에요.'});
-      }
-    }
-    days.push({date:mdOf(pr,d),iso:dt?`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`:'',wd:dt?dt.getDay():0,
-      title:`Day ${d+1}${d===0?' · 도착':d===n?' · 돌아가는 날':''}${names.length?' · '+names.join(', '):''}`,
-      startLoc:d===0?(M==='car'?'arrive':pr.out.airport):(ps>=0?'stay'+ps:(M==='car'?'arrive':pr.out.airport)),fixed});
-  }
-  DAYS=days;
-}
+const MAX_N=JD.days.MAX_N;
+// dates, tidying 여행 정보 and making the days with their fixed blocks: app/data/days.ts (the days themselves: DY.days …)
+const nightsOf=JD.days.nightsOf, dateOf=JD.days.dateOf, mdOf=JD.days.mdOf, arrEnd=JD.days.arrEnd, fixProfile=JD.days.fixProfile, buildDays=JD.days.buildDays;
 function profileSummary(){
   const pace={slow:'Unhurried: one main thing per day, the rest relaxed.',normal:'Balanced pace.',full:'Wants a full schedule.'}[CUR.profile.pace]||'';
   const social=CUR.profile.party.type!=='solo'?'':({alone:'Prefers time alone.',some:'Mostly alone with a few chances to meet people.',social:'Wants many chances to meet people.'}[CUR.profile.social]||'');
@@ -212,7 +135,7 @@ function renderOnb(){const st=ONB[onbStep];
     sub:!draft.jpPicked?'고르는 쪽에 맞춰 화면과 시작 방법이 달라져요.':md==='pq'?'네 가지만 누르면 바로 굴릴 수 있어요.':!md?'편한 방법을 골라 주세요. 언제든 바꿀 수 있어요.':md==='talk'?'정답은 없어요. 떠오르는 대로 답하면 방향을 정리해 드릴게요.':md==='day'?'동네와 시간만 정하면 하루 코스를 바로 짤 수 있어요.':st.s,
     prevOff:onbStep===0,prevHidden:ONB.length===1,nextLabel:onbStep===ONB.length-1?'일정표 만들기':'다음',skipHidden:onbStep===ONB.length-1,nextHidden:!draft.jpPicked||!md||['talk','pq','day'].includes(md)});
   window.JEPI_UI.mount('onb',$('#onbBody'),{parts:st.f(fixProfile(draft)),rev:++onbRev});$('#onb').scrollTop=0}
-function commitProfile(p){CUR.profile=fixProfile(clone(p));TRIP.save('profile',CUR.profile);TRIP.kws.save(CUR.kws);buildDays();CUR.placed=CUR.placed.filter(b=>b.day<DAYS.length);save();if(day>=DAYS.length)day=0}
+function commitProfile(p){CUR.profile=fixProfile(clone(p));TRIP.save('profile',CUR.profile);TRIP.kws.save(CUR.kws);buildDays();CUR.placed=CUR.placed.filter(b=>b.day<DY.days.length);save();if(day>=DY.days.length)day=0}
 async function finishOnb(){commitProfile(draft);day=0;
   if(sample&&!PK.pack.example&&!PK.pack.manual&&P.length<8){onbBusy=true;setBusy(true);placeCtl=new AbortController();
     onbFrame({nextLabel:'장소 찾는 중…',skipHidden:false,skipOff:false,skipLabel:'기다리지 않고 시작'});
@@ -323,7 +246,7 @@ function openCustom(editId,startAt,opts){
   const c=editId?CUR.custom.find(x=>x.id===editId):{id:'',name:'',area:firstArea(),cat:'walk',dur:60,cost:0,memo:'',drop:false,tags:''}; if(!c) return;
   const st=startAt!=null?startAt:Math.max(dayStart(day),600);
   // drawn by React: app/screens/CustomSheet.tsx (the same props again with dup while a new name is typed: 388-dedup.js)
-  customLast={edit:editId||'',dayLabel:`Day ${day+1} (${DAYS[day].date})`,name:c.name||'',area:c.area,cat:c.cat,dur:c.dur,cost:c.cost??'',memo:c.memo||'',tags:c.tags||'',drop:!!c.drop,
+  customLast={edit:editId||'',dayLabel:`Day ${day+1} (${DY.days[day].date})`,name:c.name||'',area:c.area,cat:c.cat,dur:c.dur,cost:c.cost??'',memo:c.memo||'',tags:c.tags||'',drop:!!c.drop,
     share:RS.status==='on'&&!PK.pack.manual?!!c.share:null,start:fmt(st),areas:optsOf(AREAS),cats:Object.entries(CATS),durs:[15,30,45,60,90,120,150,180,240].map(m=>[m,durTxt(m)]),
     currency:String(PK.pack.currency),dup:null,card:!!(opts&&opts.card),rev:++sheetRev};
   window.JEPI_UI.mount('custom',$('#sheet'),customLast);
@@ -348,7 +271,7 @@ function opText(o){const d=x=>`Day ${(+x)+1}`, nm=id=>PM[id]?PM[id].name:id;
   if(o.op==='add_place') return `장소 목록에 '${o.name}' 추가 (일정에는 안 넣어요)`;
   if(o.op==='move'){const b=CUR.placed.find(x=>x.uid===o.uid);return `${b?nm(b.id):'블록'} → ${o.day!=null?d(o.day)+' ':''}${o.start||''}${o.dur?` (${durTxt(+o.dur)})`:''}로 옮기기`}
   if(o.op==='remove'){const b=CUR.placed.find(x=>x.uid===o.uid);return `${b?`Day ${b.day+1} ${nm(b.id)}`:'블록'} 빼기`}
-  if(o.op==='mark'){const b=CUR.placed.find(x=>x.uid===o.uid);const nm2=b?nm(b.id):((DAYS.flatMap(D=>D.fixed).find(f=>f.id===o.uid)||{}).name||'블록');return `${nm2}에 ${MARKS[o.mark][0]} ${MARKS[o.mark][1]} ${o.on===false?'표시 빼기':'표시'}`}
+  if(o.op==='mark'){const b=CUR.placed.find(x=>x.uid===o.uid);const nm2=b?nm(b.id):((DY.days.flatMap(D=>D.fixed).find(f=>f.id===o.uid)||{}).name||'블록');return `${nm2}에 ${MARKS[o.mark][0]} ${MARKS[o.mark][1]} ${o.on===false?'표시 빼기':'표시'}`}
   return '알 수 없는 변경'}
 let chatRev=0;
 // the dock under the schedule is drawn by React (app/screens/Dock.tsx) from dockView; dock({…}) changes some of it and draws again
@@ -375,18 +298,18 @@ function renderChat(){setTimeout(chatFoldSync,0);
       check:ops.length&&m.checked&&m.state==='pending'?{warns:(m.warns||[]).map(String)}:null,state:String(m.state||''),undo:!!(undoSnap&&undoSnap.i===i)}})});
   const lg=$('#chatLog'); lg.scrollTop=lg.scrollHeight;
 }
-function validOp(o){if(!o||typeof o!=='object') return false;const dOk=x=>Number.isInteger(+x)&&+x>=0&&+x<DAYS.length;
+function validOp(o){if(!o||typeof o!=='object') return false;const dOk=x=>Number.isInteger(+x)&&+x>=0&&+x<DY.days.length;
   if(o.op==='add') return !!PM[o.id]&&dOk(o.day)&&parse(o.start)!=null;
   if(o.op==='add_custom') return !!o.name&&dOk(o.day)&&parse(o.start)!=null;
   if(o.op==='add_place') return !!o.name;
   if(o.op==='move') return !!CUR.placed.find(b=>b.uid===o.uid)&&(o.day==null||dOk(o.day))&&(o.start==null||parse(o.start)!=null);
   if(o.op==='remove') return !!CUR.placed.find(b=>b.uid===o.uid);
-  if(o.op==='mark') return !!MARKS[o.mark]&&(!!CUR.placed.find(b=>b.uid===o.uid)||DAYS.some(D=>D.fixed.some(f=>f.id===o.uid)));
+  if(o.op==='mark') return !!MARKS[o.mark]&&(!!CUR.placed.find(b=>b.uid===o.uid)||DY.days.some(D=>D.fixed.some(f=>f.id===o.uid)));
   return false}
 async function sendChat(text){
   if(!sample||chatBusy||!text) return;
   chat.push({role:'user',text}); chat.push({role:'busy'}); chatBusy=true; renderChat();
-  const sched=DAYS.map((D,d)=>`Day index ${d} (${D.iso}, ${WDE[D.wd]}):\n`+analyze(d).items.map(i=>`  ${fmt(i.start)}-${fmt(i.end)} ${i.kind==='fixed'?'[FIXED]':`[uid ${i.uid}]`} ${i.name} @ ${i.area||i.locName}${i.carryAfter?' (suitcase after this)':''}${i.marks&&i.marks.length?' {'+i.marks.map(m=>'traveler '+MARK_EN[m]).join('; ')+'}':''}${i.warns&&i.warns.length?' WARN: '+i.warns.join('; '):''}`).join('\n')).join('\n');
+  const sched=DY.days.map((D,d)=>`Day index ${d} (${D.iso}, ${WDE[D.wd]}):\n`+analyze(d).items.map(i=>`  ${fmt(i.start)}-${fmt(i.end)} ${i.kind==='fixed'?'[FIXED]':`[uid ${i.uid}]`} ${i.name} @ ${i.area||i.locName}${i.carryAfter?' (suitcase after this)':''}${i.marks&&i.marks.length?' {'+i.marks.map(m=>'traveler '+MARK_EN[m]).join('; ')+'}':''}${i.warns&&i.warns.length?' WARN: '+i.warns.join('; '):''}`).join('\n')).join('\n');
   const used=new Set(CUR.placed.map(b=>b.id));
   const cands=P.filter(p=>!used.has(p.id)).map(p=>{const h=p.always?null:p.hours;return [p.id,p.name,p.area,p.cat,p.dur,h?`${fmt(h[0])}-${fmt(h[1])}`:'any',(p.closed||[]).map(w=>WDE[w]).join('/'),tagsOf(p.id).join('/'),p.drop?'luggage-drop':'',mustOf(p.id)?'recommended':'',recOf(p)?`${recOf(p)} traveler recs`:'',isWish(p.id)?'WISHED by traveler':'',p.best&&p.best!=='any'?'best '+p.best:'',p.season?`SEASONAL ${p.season} ${p.dates?(p.dates[0]||'')+'~'+(p.dates[1]||''):''}`:'']});
   const history=chat.filter(m=>m.role==='user'||m.role==='a').slice(-7,-1).map(m=>(m.role==='user'?'User: ':'Assistant: ')+m.text).join('\n');
@@ -444,7 +367,7 @@ function renderNudges(){
       btns:bs.map(([id,l,pr])=>({id,primary:!!pr,label:pr?l.replace(/ .*/,'')==='시간'?'넣기':l.split(' ')[0]==='숙소'?'넣기':'고르기':'예약 전'}))}))});
 }
 function goMe(h){tab='me';draft=clone(CUR.profile);renderMe();renderTabs();setTimeout(()=>{const el=[...document.querySelectorAll('#meBox h3')].find(x=>x.textContent.includes(h));if(el)el.scrollIntoView({block:'start'})},0)}
-function renderMeta(){if(CUR.profile.kind==='day'){dock({helperHidden:true});hero({meta:`${PK.pack.city} · ${(DAYS[0].iso||'').slice(5).replace('-','/')} 하루 코스 · ${CUR.profile.meet.time}–${CUR.profile.meet.end}`});return}if(CUR.profile.dateUnknown){const n=DAYS.length-1;dock({helperHidden:!needBooking()});hero({meta:`${PK.pack.city} · 날짜 미정 (대략 ${(DAYS[0].iso||'').slice(5).replace('-','/')}부터) · ${n}박 ${n+1}일`});return}dock({helperHidden:!needBooking()});const n=DAYS.length-1;hero({meta:`${PK.pack.city} · ${(DAYS[0].iso||'').replace(/-/g,'.')} – ${(DAYS[n].iso||'').slice(5).replace('-','.')} · ${n}박 ${n+1}일 · ${apName(CUR.profile.out.airport)}`})}
+function renderMeta(){if(CUR.profile.kind==='day'){dock({helperHidden:true});hero({meta:`${PK.pack.city} · ${(DY.days[0].iso||'').slice(5).replace('-','/')} 하루 코스 · ${CUR.profile.meet.time}–${CUR.profile.meet.end}`});return}if(CUR.profile.dateUnknown){const n=DY.days.length-1;dock({helperHidden:!needBooking()});hero({meta:`${PK.pack.city} · 날짜 미정 (대략 ${(DY.days[0].iso||'').slice(5).replace('-','/')}부터) · ${n}박 ${n+1}일`});return}dock({helperHidden:!needBooking()});const n=DY.days.length-1;hero({meta:`${PK.pack.city} · ${(DY.days[0].iso||'').replace(/-/g,'.')} – ${(DY.days[n].iso||'').slice(5).replace('-','.')} · ${n}박 ${n+1}일 · ${apName(CUR.profile.out.airport)}`})}
 
 
 // ---------- destination pack: everything that depends on where the trip goes ----------
@@ -510,7 +433,7 @@ async function morePlaces(n,stId,focus,signal){
   const areaList=Object.entries(AREAS).map(([k,v])=>`${k}=${v[0]}`).join(', ');
   const prompt=`Suggest ${n} real, currently operating places in ${PK.pack.city}${PK.pack.country?', '+PK.pack.country:''} for this traveler.
 ${profileSummary()}
-Trip dates: ${(DAYS[0]||{}).iso||''} to ${(DAYS[DAYS.length-1]||{}).iso||''}.
+Trip dates: ${(DY.days[0]||{}).iso||''} to ${(DY.days[DY.days.length-1]||{}).iso||''}.
 ${focus?`The traveler asks specifically for: "${String(focus).slice(0,120)}". All suggestions should fit this.`:`Spread them across these categories: food (meals and cafes that suit who is traveling), music, art, walk, shop, night, and include 2 luggage-storage options near the main station or centre (category "trip", drop true). ${CUR.kws.length?'Favour places matching the interest keywords.':'No interests were given: pick well-loved, varied places most visitors enjoy, so the traveler can discover what they like.'} Consider the trip dates: include seasonal highlights (blossoms, foliage, illuminations, festivals, seasonal food) only when they genuinely happen then.`}
 Who is traveling matters most for the choice of places.
 Area keys: ${areaList}
@@ -671,7 +594,7 @@ const implicitBagDrop=it=>it.kind==='place'&&!!it.drop;   // a locker/storage pl
 function markWarnings(){
   const W=new Map(), add=(d,uid,w)=>{const k=d+':'+uid;(W.get(k)||W.set(k,[]).get(k)).push(w)};
   const open={bag:[],wait:[],order:[],rent:[],ship:[]}; let cashOk=false; const shops=[]; let tax=false;
-  DAYS.forEach((_,d)=>dayItems(d).forEach(it=>{
+  DY.days.forEach((_,d)=>dayItems(d).forEach(it=>{
     const mk=it.marks=marksOf(it);
     if(mk.includes('cash')) cashOk=true;
     if(mk.includes('tax')) tax=true;
@@ -723,7 +646,7 @@ function makePairBlock(uid,T){
 // ---------- check AI changes before showing them: simulate, nudge times, report what is left ----------
 // The changes themselves (apply, try out on a copy, nudge times) live in app/data/ops.ts; it asks here for the day's warnings.
 const OPS=JD.ops;
-OPS.connectOps({dayStart:d=>dayStart(d),days:()=>DAYS.length,items:d=>analyze(d).items,fresh:id=>FRESH.add(id)});
+OPS.connectOps({dayStart:d=>dayStart(d),days:()=>DY.days.length,items:d=>analyze(d).items,fresh:id=>FRESH.add(id)});
 const applyOpsCore=OPS.apply, warnSet=OPS.warnings, simulateOps=OPS.simulate, repairOps=OPS.repair;
 // ---------- booking helper: wish list → where to stay → flight times → search links ----------
 CUR.wish=[]; let hStep=0, hVibe=null, hBusy=false;
@@ -942,16 +865,7 @@ Reply with only JSON: {"destinations":[{"city":"Korean name of the city or regio
 }
 
 // ---------- optional travel style (every item defaults to "doesn't matter") ----------
-const STYLE_ROWS=[
-  ['rhythm','하루 리듬',[['early','아침형'],['late','늦게 시작해서 밤까지']]],
-  ['walk','걷기',[['lots','많이 걸어도 좋아요'],['less','덜 걷고 싶어요']]],
-  ['fame','장소 성향',[['famous','유명한 곳 위주'],['hidden','현지인 숨은 곳']]],
-  ['crowd','붐비는 곳',[['ok','괜찮아요'],['avoid','피하고 싶어요']]],
-  ['food','음식',[['familiar','익숙한 맛'],['adventurous','현지 음식 도전']]],
-  ['comfort','편안함',[['comfort','편한 게 최고'],['experience','고생해도 특별한 경험']]],
-  ['exp','여행 경험',[['new','적은 편'],['pro','많은 편']]],
-  ['lang','외국어',[['low','자신 없어요'],['mid','기본 영어'],['high','잘해요']]],
-  ['gender','성별',[['female','여성'],['male','남성']]]];
+const STYLE_ROWS=JD.days.STYLE_ROWS;   // app/data/days.ts
 const STY={rhythm:{early:'Early riser: starts the day early and ends early.',late:'Late starter: begins around 10:00 and enjoys evenings and nights.'},
   walk:{lots:'Happy to walk a lot.',less:'Wants to walk as little as possible: prefer short transfers, direct transit or taxis.'},
   fame:{famous:'Prefers famous must-see landmarks.',hidden:'Prefers lesser-known places locals go to over tourist hotspots.'},
@@ -1108,7 +1022,7 @@ function moodOk(p,from){const tg=tagsOf(p.id).join(' ')+' '+p.name+' '+(p.note||
     case 'mine':return isWish(p.id);
     default:return true}}
 function diceCands(g){
-  const D=DAYS[day],wd=D.wd,used=new Set(CUR.placed.map(b=>b.id)),from=g.prev?g.prev.ll:LOC[D.startLoc].ll;
+  const D=DY.days[day],wd=D.wd,used=new Set(CUR.placed.map(b=>b.id)),from=g.prev?g.prev.ll:DY.loc[D.startLoc].ll;
   const recent=new Set(diceLog.filter(x=>x.d&&D.iso&&x.d<D.iso&&x.d>=isoShift(D.iso,-5)).map(x=>norm(x.n)));
   let s0=g.s,e0=g.e; if(dice.lunch){const mw=dice.meal==='dinner'?[1050,1260]:[690,840];s0=Math.max(s0,mw[0]);e0=Math.min(e0,mw[1]);if(e0-s0<30)return []}
   const out=[];
@@ -1152,12 +1066,12 @@ function diceFix(force){
   const c=dice.pick; if(!c) return;
   const ops=[{op:'add',day,id:c.p.id,start:fmt(c.arr),dur:c.dur}], r=force?{ops:dice.force||ops,warns:[]}:repairOps(ops);
   if(r.warns.length){dice.force=r.ops;dice.msg='넣으면 경고가 생겨요: '+r.warns[0];renderDice();return}
-  applyOpsCore(r.ops); save(); learnFrom(c.p); diceLog.push({n:c.p.name,d:DAYS[day].iso}); diceLog=diceLog.slice(-60); store.set('gp.dice',diceLog);
+  applyOpsCore(r.ops); save(); learnFrom(c.p); diceLog.push({n:c.p.name,d:DY.days[day].iso}); diceLog=diceLog.slice(-60); store.set('gp.dice',diceLog);
   closeSheet(); renderAll();
 }
 function renderDiceDo(top){
   if($('#sheet').dataset.uid!=='dice') return;
-  const D=DAYS[day], gs=diceGaps(day), c=dice.pick, left=Math.max(0,3-dice.rolls);
+  const D=DY.days[day], gs=diceGaps(day), c=dice.pick, left=Math.max(0,3-dice.rolls);
   const reasons=c?[isWish(c.p.id)?'♥ 가고 싶은 곳':'',...matchKw(c.p.id).slice(0,2).map(k=>'#'+k),c.p.season?'🗓 '+c.p.season:'',recOf(c.p)?`👍 ${recOf(c.p)}`:'',c.tm?`${c.mode} ${c.tm}분`:'바로 옆'].filter(Boolean):[];
   diceMount({...top,head:D.date||'',rows:[...(gs.length?[dHint('언제'),dPills('dicegap',dice.gapI,gs.map((g,i)=>[i,`${fmt(g.s)}–${fmt(g.e)}`]))]:[]),
       ...(dice.lunch?[]:[dHint('지금 기분'),dPills('dicemood',dice.mood,DICE_MOODS.map(([k,l])=>[k,l]))])],
@@ -1210,7 +1124,7 @@ const P_DICE=[['any','아무거나',1],['hungry','배고파',2],['calm','차분�
 let pSt={mood:'any',draw:null}, pviewRev=0, pSpinT=0;
 const pAheadOn=()=>!!store.get('gp.pAhead',false);
 // where "now" is on this day: past day → everything done, today → the clock, future → nothing yet
-function pClock(){const dIso=DAYS[day]&&DAYS[day].iso, t=isoOf(new Date());
+function pClock(){const dIso=DY.days[day]&&DY.days[day].iso, t=isoOf(new Date());
   if(!dIso) return {past:false,today:false,future:false,nm:-1};
   return {past:dIso<t,today:dIso===t,future:dIso>t,nm:dIso===t?nowMin():-1};
 }
@@ -1220,7 +1134,7 @@ function pGaps(){const c=pClock(); if(c.past) return [];
 }
 function pSquares(){
   const c=pClock(), items=analyze(day).items.filter(i=>!i.stay), gaps=pGaps(), out=[];
-  const start=LOC[DAYS[day].startLoc], firstT=items.length?items[0].start:dayStart(day);
+  const start=DY.loc[DY.days[day].startLoc], firstT=items.length?items[0].start:dayStart(day);
   // day 1 begins with its fixed trip from home, so it needs no start square
   if(day>0) out.push({k:'start',t:-1,top:'출발',name:start?String(start.name):'',stamp:c.past||(c.today&&c.nm>=firstT)});
   const seq=[];
@@ -1231,7 +1145,7 @@ function pSquares(){
   gaps.forEach((g,gi)=>seq.push({k:'q',t:g.s,top:'?',name:partOfDay(g.s),gap:gi}));
   if(c.today&&!seq.some(s=>s.k==='now')) seq.push({k:'now',t:c.nm,top:'지금 '+fmt(c.nm).replace(/^0/,''),name:''});
   seq.sort((a,b)=>a.t-b.t||(a.k==='now'?-1:b.k==='now'?1:0)).forEach(s=>out.push(s));
-  const next=DAYS[day+1]&&LOC[DAYS[day+1].startLoc];
+  const next=DY.days[day+1]&&DY.loc[DY.days[day+1].startLoc];
   out.push({k:'end',t:1e4,top:'하루 끝',name:next?String(next.name):'집으로',stamp:c.past});
   return out.map(({t,...s})=>({name:'',uid:'',cat:'',stamp:false,flag:false,gap:-1,...s}));
 }
@@ -1243,9 +1157,9 @@ function renderPView(){
   const on=jp==='P'; box.hidden=!on; $('.grid-wrap').hidden=on; if(!on) return;
   const c=pClock(), cards=pMyCards(), base={day,dice:pDiceProps(),cards,rev:++pviewRev};
   if(c.future&&!pAheadOn()&&!DEMO.on){
-    const until=Math.round((new Date(DAYS[day].iso+'T00:00:00')-new Date(isoOf(new Date())+'T00:00:00'))/864e5);
+    const until=Math.round((new Date(DY.days[day].iso+'T00:00:00')-new Date(isoOf(new Date())+'T00:00:00'))/864e5);
     const flags=analyze(day).items.filter(i=>i.kind==='fixed').map(i=>({t:fmt(i.start),name:String(i.name)}));
-    window.JEPI_UI.mount('pview',box,{...base,mode:'closed',closed:{until,date:mdTxt(DAYS[day].iso)||'',started:!!(DAYS[0].iso&&DAYS[0].iso<=isoOf(new Date())),flags}});
+    window.JEPI_UI.mount('pview',box,{...base,mode:'closed',closed:{until,date:mdTxt(DY.days[day].iso)||'',started:!!(DY.days[0].iso&&DY.days[0].iso<=isoOf(new Date())),flags}});
     return;
   }
   const d=pSt.draw;
@@ -1281,7 +1195,7 @@ function pRollDo(gi,auto){
 function learnFrom(p){const t=tagsOf(p.id)[0];if(t)TRIP.keywords.add(t,12)}
 function pYes(){const d=pSt.draw; if(!d||!d.cand) return; const c=d.cand; learnFrom(c.p);
   const r=repairOps([{op:'add',day,id:c.p.id,start:fmt(c.arr),dur:c.dur}]); applyOpsCore(r.ops); save();
-  diceLog.push({n:c.p.name,d:DAYS[day].iso}); diceLog=diceLog.slice(-60); store.set('gp.dice',diceLog); pSt.draw=null; renderAll();}
+  diceLog.push({n:c.p.name,d:DY.days[day].iso}); diceLog=diceLog.slice(-60); store.set('gp.dice',diceLog); pSt.draw=null; renderAll();}
 function pKeep(){const d=pSt.draw; if(!d||!d.cand) return; if(!isWish(d.cand.p.id)) toggleWish(d.cand.p.id); showToast('내 카드에 넣었어요'); pRollDo(d.gi)}
 function pClose(){clearTimeout(pSpinT); pSt.draw=null; renderPView()}
 function pMood(k){if(P_DICE.some(v=>v[0]===k)){pSt.mood=k;renderPView()}}
@@ -1296,7 +1210,7 @@ function pPlaceNow(id){
   dice.mood=m0; dice.lunch=l0;
   if(!hit){showToast('이 날 빈 칸에는 맞지 않아요. 내 카드로 담아 두세요.');return}
   const r=repairOps([{op:'add',day,id,start:fmt(hit.arr),dur:hit.dur}]); applyOpsCore(r.ops); save();
-  showToast(`${DAYS[day].date||'이 날'} ${shortFuzzy(hit.arr)}에 넣었어요`); renderAll();
+  showToast(`${DY.days[day].date||'이 날'} ${shortFuzzy(hit.arr)}에 넣었어요`); renderAll();
 }
 // ---------- my plans: several saved plans, account sync, sharing ----------
 // rdb/myId: the plan copies kept inside Claude (when JEPI ran as a Claude page); always empty in the app
@@ -1305,7 +1219,7 @@ PL.plans=[]; PL.curPlan=''; let planTimer=null, cloudTimer=null, planMsg='', del
 const PLAN_KEYS=['profile','pack','placed3','custom','meal2','done','fmarks','wish'];
 function planName(){const pr=CUR.profile;if(pr.kind==='day')return `${PK.pack.city} 하루 코스`;const n=nightsOf(pr);return `${PK.pack.city} ${n}박 ${n+1}일`}
 function planData(){return {profile:clone(CUR.profile),pack:PK.pack,placed:TRIP.slimBlocks(CUR.placed),custom:clone(CUR.custom),fmarks:clone(CUR.fmarks),wish:CUR.wish.slice(),meals:clone(CUR.meals),done:clone(CUR.done)}}
-function planMeta(){const D0=DAYS[0]||{},Dn=DAYS[DAYS.length-1]||{};return {name:'',dates:D0.iso?`${D0.iso.slice(5).replace('-','/')}${DAYS.length>1?'~'+(Dn.iso||'').slice(5).replace('-','/'):''}`:'',blocks:CUR.placed.length,kind:CUR.profile.kind||'trip'}}
+function planMeta(){const D0=DY.days[0]||{},Dn=DY.days[DY.days.length-1]||{};return {name:'',dates:D0.iso?`${D0.iso.slice(5).replace('-','/')}${DY.days.length>1?'~'+(Dn.iso||'').slice(5).replace('-','/'):''}`:'',blocks:CUR.placed.length,kind:CUR.profile.kind||'trip'}}
 function savePlans(){TRIP.plans.saveList(PL.plans,PL.curPlan);syncSoon()}
 function snapshotCurrent(){
   if(!PL.curPlan) return; let p=PL.plans.find(x=>x.id===PL.curPlan);
@@ -1380,7 +1294,7 @@ async function openCode(raw){
 function planText(){
   const L=[`[JEPI] ${(PL.plans.find(x=>x.id===PL.curPlan)||{}).name||planName()}`];
   if(CUR.profile.purpose) L.push(`🧭 ${CUR.profile.purpose}`);
-  DAYS.forEach((D,d)=>{L.push('',`📅 ${D.title.replace(/^Day \d+ · /,'')||''} ${D.date} (${WD[D.wd]})`.replace('  ',' '));
+  DY.days.forEach((D,d)=>{L.push('',`📅 ${D.title.replace(/^Day \d+ · /,'')||''} ${D.date} (${WD[D.wd]})`.replace('  ',' '));
     analyze(d).items.filter(i=>!i.stay).forEach(i=>L.push(`${fmt(i.start)} ${i.name}${i.kind==='place'&&i.area?` · ${i.area}`:''}`))});
   L.push('','JEPI로 만든 일정이에요.'); return L.join('\n');
 }
@@ -1525,7 +1439,7 @@ function mapLegs(d){
 function drawMap(fit){
   if(!mapState.map||!mapState.on) return;
   const lg=mapState.layer; lg.clearLayers(); const bounds=[];
-  const days=mapState.all?DAYS.map((_,i)=>i):[day];
+  const days=mapState.all?DY.days.map((_,i)=>i):[day];
   days.forEach(d=>{
     const col=mapState.all?DAY_COLORS[d%DAY_COLORS.length]:getComputedStyle(document.body).getPropertyValue('--accent').trim()||'#27306b';
     const {stops,legs}=mapLegs(d);
@@ -1566,14 +1480,14 @@ function locateMe(){
 // ---------- 더보기: trip summary, 준비하기 badge, P-mode short menu ----------
 let moreAll=false, meOpen=null, autoT=0;
 function tripSummary(){
-  const pr=CUR.profile, n=nightsOf(pr), D0=DAYS[0]||{}, Dn=DAYS[DAYS.length-1]||{};
+  const pr=CUR.profile, n=nightsOf(pr), D0=DY.days[0]||{}, Dn=DY.days[DY.days.length-1]||{};
   const md=iso=>iso?`${+iso.slice(5,7)}/${+iso.slice(8,10)}`:'';
   const dates=pr.kind==='day'?md(D0.iso):pr.dateUnknown?'날짜 미정':`${md(D0.iso)}(${WD[D0.wd]}) – ${md(Dn.iso)}(${WD[Dn.wd]})`;
   const who=pr.party.type==='solo'?'혼자':pr.party.type==='couple'?'둘이서':`${heads2(pr.party)}명`;
   return {city:PK.pack.city||'여행지 미정',line:pr.kind==='day'?`${dates} · 하루 코스 · ${who}`:`${dates} · ${n}박 · ${who}`};
 }
 function prepLeft(){let n=0;document.querySelectorAll('#checks .check-group').forEach(g=>{const h=g.querySelector('h3');if(h&&/예약·준비/.test(h.textContent))n+=g.querySelectorAll('input[data-ck]:not(:checked)').length});return n}
-function warnTotal(){let n=0;for(let d=0;d<DAYS.length;d++)n+=analyze(d).items.reduce((a,it)=>a+it.warns.length,0);return n}
+function warnTotal(){let n=0;for(let d=0;d<DY.days.length;d++)n+=analyze(d).items.reduce((a,it)=>a+it.warns.length,0);return n}
 // The menu itself is drawn by React: app/screens/MoreMenu.tsx. Here: the numbers it shows.
 function renderMore(){
   const box=$('#moreBox'); if(!box) return;
@@ -1725,11 +1639,11 @@ function showToast(m){const b=document.getElementById('toast');if(!b)return;b.te
 
 // ---------- phase strip: before / during / after the trip ----------
 const isoOf=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-function todayIdx(){const t=isoOf(new Date());return DAYS.findIndex(D=>D.iso===t)}
+function todayIdx(){const t=isoOf(new Date());return DY.days.findIndex(D=>D.iso===t)}
 // drawn by React: app/screens/Phase.tsx
 function renderPhase(){
   const el=$('#phase'); if(!el) return;
-  const pr=CUR.profile, t=isoOf(new Date()), D0=DAYS[0], Dn=DAYS[DAYS.length-1];
+  const pr=CUR.profile, t=isoOf(new Date()), D0=DY.days[0], Dn=DY.days[DY.days.length-1];
   const show=v=>{window.JEPI_UI.mount('phase',el,v);el.hidden=v.s==='none'};
   // AI 꺼짐 now lives on the 더보기 → 설정 row only (tidy day screen)
   if(!D0||!D0.iso||pr.dateUnknown){show({s:'none'});return}
@@ -1753,7 +1667,7 @@ function planCovers(id,t){const d=TRIP.plans.get(id);const p=d&&d.profile;if(!p|
   const s=new Date(p.startDate+'T00:00:00'),e=new Date(s);e.setDate(e.getDate()+(p.kind==='day'?0:(+p.nights||0)));const x=new Date(t+'T00:00:00');return x>=s&&x<=e}
 function startupFocus(){
   const t=isoOf(new Date());
-  if(!(DAYS[0]&&DAYS[0].iso&&todayIdx()>=0)){const p=PL.plans.find(p=>p.id!==PL.curPlan&&planCovers(p.id,t));if(p){openPlan(p.id)}}
+  if(!(DY.days[0]&&DY.days[0].iso&&todayIdx()>=0)){const p=PL.plans.find(p=>p.id!==PL.curPlan&&planCovers(p.id,t));if(p){openPlan(p.id)}}
   const ti=todayIdx(); if(ti>=0){day=ti;renderAll();
     setTimeout(()=>{const H=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hour'))||60;const g=$('#grid');if(!g)return;
       const now=new Date(), nm=now.getHours()*60+now.getMinutes(); const y=g.getBoundingClientRect().top+window.scrollY+Math.max(0,(nm-dayStart(day))/60*H-140);window.scrollTo({top:y})},80)}
@@ -1790,7 +1704,7 @@ function chatFoldSync(){
 document.addEventListener('focusin',e=>{if(e.target&&e.target.id==='chatInput'&&chatFolded&&chatBusy){chatFolded=false;chatFoldSync()}});
 
 // ---------- chat place suggestions: choose per place ----------
-function cpSlot(o){const d=+o.day,st=parse(o.start);return Number.isInteger(d)&&d>=0&&d<DAYS.length&&st!=null?{d,st}:null}
+function cpSlot(o){const d=+o.day,st=parse(o.start);return Number.isInteger(d)&&d>=0&&d<DY.days.length&&st!=null?{d,st}:null}
 // place suggestions in a chat message (drawn by React: ChatLog.tsx)
 function placeRows(m){
   return (m.ops||[]).map((o,k)=>{if(o.op!=='add_place')return null;const sl=cpSlot(o);
@@ -1840,7 +1754,7 @@ let eat=Object.assign({walk:10,mood:'any'},LS.get('jepi.eat',{}),{base:null,org:
 const saveEat=()=>LS.set('jepi.eat',{walk:eat.walk,mood:eat.mood});
 const nowMin=()=>{const n=new Date();return n.getHours()*60+n.getMinutes()};
 const mealNow=()=>{const m=nowMin();return m>=630&&m<930?'lunch':m>=990&&m<1290?'dinner':'snack'};
-const planUsable=()=>DAYS.length&&PK.pack&&PK.pack.city&&PK.pack.city!=='새 여행';
+const planUsable=()=>DY.days.length&&PK.pack&&PK.pack.city&&PK.pack.city!=='새 여행';
 function eatDefaults(){
   const ti=todayIdx(); eat.base=ti>=0&&planUsable()?'plan':'near';
   if(eat.base==='plan') day=ti;
@@ -1889,7 +1803,7 @@ async function eatRoll(again){
 }
 function renderEat(){
   if($('#sheet').dataset.uid!=='dice') return;
-  const meal=eat.base==='plan'?eat.meal:mealNow(), mt=MEAL_TXT[meal]||'점심', D=DAYS[day]||{};
+  const meal=eat.base==='plan'?eat.meal:mealNow(), mt=MEAL_TXT[meal]||'점심', D=DY.days[day]||{};
   const orgs=[['gps','지금 위치'],...MYP.filter(x=>x.ll).map(x=>[x.id,x.name])];
   const nearLbl=eat.org==='gps'?'지금 위치':(mypOf(eat.org)||{}).name||'지금 위치';
   let stage, acts;
@@ -1934,7 +1848,7 @@ Object.assign(doS,LS.get('jepi.do',{}),{base:null,pick:null,course:null,busy:fal
 const saveDo=()=>LS.set('jepi.do',{mood:doS.mood,clen:doS.clen,area:doS.area,at:doS.at});
 let RECENT_AREAS=LS.get('jepi.areas',[])||[];
 function doDefaults(fromSlot){
-  const t=isoOf(new Date()), last=DAYS.length?DAYS[DAYS.length-1].iso:'';
+  const t=isoOf(new Date()), last=DY.days.length?DY.days[DY.days.length-1].iso:'';
   doS.base=fromSlot||(planUsable()&&(!last||last>=t))?'plan':'near';
   doS.pick=null;doS.course=null;doS.rolls=0;doS.msg='';doS.chosen=null;doS.when='now';
 }
@@ -2228,7 +2142,7 @@ if(!Array.isArray(CUR.placed)) CUR.placed=DEFAULT.map(b=>({...b}));
 CUR.placed=CUR.placed.filter(b=>PM[b.id]).map(b=>({uid:TRIP.uids.next(),id:b.id,day:b.day,start:b.start,dur:b.dur||PM[b.id].dur,mk:Array.isArray(b.mk)?b.mk.filter(m=>MARKS[m]):undefined}));
 CUR.fmarks=TRIP.load('fmarks',{}); diceLog=store.get('gp.dice',[]); if(!Array.isArray(diceLog)) diceLog=[]; CUR.wish=TRIP.load('wish',[]); if(!Array.isArray(CUR.wish)) CUR.wish=[]; if(!CUR.fmarks||typeof CUR.fmarks!=='object') CUR.fmarks={};
 CUR.done=TRIP.load('done',{});
-let homeMin=60;
+DY.homeMin=60;
 CUR.kws=TRIP.kws.load(); if(!Array.isArray(CUR.kws)) CUR.kws=DEFAULT_KW.slice();
 const matchKw=id=>{const set=new Set(CUR.kws.map(norm));return tagsOf(id).filter(t=>set.has(norm(t)))};
 CUR.meals=TRIP.load('meals',{}); if(!CUR.meals||typeof CUR.meals!=='object') CUR.meals={};
@@ -2254,17 +2168,13 @@ function travel(a,b){const e=travelEst(a,b); if(!e) return e;
 const hoursFor=(p,wd)=>p.always?null:((p.hoursBy&&p.hoursBy[wd])||p.hours);
 const closedOn=(p,wd)=>!!(p.closed&&p.closed.includes(wd));
 
-function dayItems(d){
-  const fx=DAYS[d].fixed.map(f=>({kind:'fixed',uid:f.id,name:f.name,start:f.id==='f0a'?GMP_BY-homeMin:f.start,end:f.id==='f9'?f.start+40+Math.max(15,homeMin-15):f.end,skipIn:!!f.skipIn,yen:0,krw:f.krw||0,bagStart:!!f.bagStart,drop:!!f.drop,ll:LOC[f.loc].ll,locName:LOC[f.loc].name,area:LOC_AREA[f.loc],zone:LOC_ZONE[f.loc],stay:f.name.includes('숙박'),note:f.note,cc:'var(--c-fixed)'}));
-  const pl=CUR.placed.filter(b=>b.day===d).map(b=>{const p=PM[b.id];return {kind:'place',uid:b.uid,id:b.id,name:p.name,start:b.start,end:b.start+b.dur,ll:p.ll,locName:p.area,area:p.area,zone:ZONE_OF[p.id]||'outer',stay:false,drop:!!p.drop,yen:costOf(p.id)[0],costNote:costOf(p.id)[1],krw:0,note:p.note,cc:`var(--c-${p.cat})`,p}});
-  return fx.concat(pl).sort((a,b)=>a.start-b.start||a.end-b.end);
-}
+const dayItems=JD.days.dayItems;   // app/data/days.ts: fixed blocks + my blocks of a day
 // the day check (app/logic/schedule.ts): this builds the day's items and says what the check needs to know
 function analyze(d){
-  const items=dayItems(d), wd=DAYS[d].wd, MW=markWarnings().W, L=LOC[DAYS[d].startLoc];
-  const trans=JD.logic.schedule.checkDay(items,{firstDay:d===0,start:{ll:L.ll,name:L.name},dayStart:DAY_START,wdName:WD[wd],iso:DAYS[d].iso,
+  const items=dayItems(d), wd=DY.days[d].wd, MW=markWarnings().W, L=DY.loc[DY.days[d].startLoc];
+  const trans=JD.logic.schedule.checkDay(items,{firstDay:d===0,start:{ll:L.ll,name:L.name},dayStart:DAY_START,wdName:WD[wd],iso:DY.days[d].iso,
     kidsInParty:CUR.profile.party.kids>0,currency:PK.pack.currency||'',marksOf,hasMark,markWarnings:uid=>MW.get(d+':'+uid)||[],
-    closed:p=>closedOn(p,wd),outOfSeason:p=>outOfSeason(p,DAYS[d].iso)?`${mdTxt(p.dates[0])||'?'}~${mdTxt(p.dates[1])||'?'}`:null,
+    closed:p=>closedOn(p,wd),outOfSeason:p=>outOfSeason(p,DY.days[d].iso)?`${mdTxt(p.dates[0])||'?'}~${mdTxt(p.dates[1])||'?'}`:null,
     tips:bestTips,hours:p=>hoursFor(p,wd),travel,fare:fareOf,nav:navLink,fmt});
   return {items,trans};
 }
@@ -2273,14 +2183,14 @@ function gapsOf(d){return JD.logic.schedule.gaps(dayItems(d),d===0?arrEnd():480)
 // ---------- render ----------
 // The day buttons, the budget and the route line are drawn by React: app/screens/DayTop.tsx
 function renderDays(){
-  window.JEPI_UI.mount('days',$('#days'),{days:DAYS.map((D,i)=>{const n=analyze(i).items.reduce((a,it)=>a+it.warns.length,0);
+  window.JEPI_UI.mount('days',$('#days'),{days:DY.days.map((D,i)=>{const n=analyze(i).items.reduce((a,it)=>a+it.warns.length,0);
     return {date:`${D.date} ${WD[D.wd]}`,label:`Day ${i+1}${n?` · 경고 ${n}`:''}`,on:i===day}})});
 }
 function setZoom(h,quiet){h=h===100?100:60;document.documentElement.style.setProperty('--hour',h+'px');document.querySelectorAll('[data-zoom]').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.zoom===h)));if(!quiet){store.set('gp.zoom',h);renderTimeline()}}
 let gridRev=0;
 function renderTimeline(){
   const DAY_START=dayStart(day);
-  const D=DAYS[day]; hero({title:dayTitleOf(day)});
+  const D=DY.days[day]; hero({title:dayTitleOf(day)});
   const {items,trans}=analyze(day);
   const nPlaced=items.filter(i=>i.kind==='place').length;
   const g=gapsOf(day);
@@ -2317,7 +2227,7 @@ function dayCost(d){
   return {act,tr,meal,krw,yen:act+tr+meal};
 }
 function renderBudget(){
-  const c=dayCost(day); let tY=0,tK=0; DAYS.forEach((_,i)=>{const x=dayCost(i);tY+=x.yen;tK+=x.krw});
+  const c=dayCost(day); let tY=0,tK=0; DY.days.forEach((_,i)=>{const x=dayCost(i);tY+=x.yen;tK+=x.krw});
   const bp=budgetParts(), dl=bp?bp.daily/(KRW_PER_JPY||1):0, pct=bp&&dl?Math.round(c.yen/dl*100):0;
   const KRW=PK.pack.currency==='KRW', h=heads(), one=h>1?' (1인)':'', B=(t,cls)=>({t,tag:'b',cls});
   window.JEPI_UI.mount('budgetSum',$('#budgetSum'),{segs:segs(`💰 오늘 예상${one} `,B(yen(c.yen)),KRW?'':` · 약 ${won(c.yen*KRW_PER_JPY+c.krw)}`,
@@ -2334,7 +2244,7 @@ function renderBudget(){
 function segs(...xs){const out=[];xs.forEach(x=>{if(x==null||x==='')return;if(typeof x==='string'&&typeof out[out.length-1]==='string')out[out.length-1]+=x;else out.push(x)});return out}
 function renderRoute(items,trans){
   const stops=[];
-  if(day>0) stops.push({area:LOC_AREA[DAYS[day].startLoc]});
+  if(day>0) stops.push({area:DY.locArea[DY.days[day].startLoc]});
   items.forEach((i,k)=>{ if(i.stay&&k!==items.length-1) return; stops.push({area:i.area}) });
   const seq=stops.filter((s,i)=>i===0||s.area!==stops[i-1].area);
   const total=trans.reduce((a,t)=>a+t.min,0);
@@ -2344,7 +2254,7 @@ function renderRoute(items,trans){
 }
 function dayRefs(){
   const refs=dayItems(day).map(i=>({id:i.id,name:i.stay?`${i.area} 숙소`:i.name,ll:i.ll}));
-  if(day>0) refs.push({name:`${LOC_AREA[DAYS[day].startLoc]} 숙소`,ll:LOC[DAYS[day].startLoc].ll});
+  if(day>0) refs.push({name:`${DY.locArea[DY.days[day].startLoc]} 숙소`,ll:DY.loc[DY.days[day].startLoc].ll});
   return refs;
 }
 function nearestRef(p,refs){let best=null;for(const r of refs){if(r.id===p.id)continue;const d=km(p.ll,r.ll);if(!best||d<best.d)best={d,r}}return best}
@@ -2358,12 +2268,12 @@ function trayAct(n,v){
 }
 function renderTray(){
   recsMaybe();
-  const wd=DAYS[day].wd, openOnly=$('#openOnly').checked;
+  const wd=DY.days[day].wd, openOnly=$('#openOnly').checked;
   drawTrayTop();
   const cats=Object.entries(CATS);
   window.JEPI_UI.mount('trayFilters',$('#filters'),{chips:[['all','전체'],['wish','♥'],...(P.some(p=>p.season)?[['season','🗓 시즌']]:[]),...(RS.status!=='off'?[['users','👍']]:[]),['must','★']],cats,cat,rev:++trayRev});
   const used=new Set(CUR.placed.map(b=>b.id));
-  const inCat=P.filter(p=>!(cat==='all'&&p.drop)&&(cat==='all'||(cat==='wish'?isWish(p.id):cat==='season'?!!p.season:cat==='must'?!!MUST[p.id]:cat==='users'?(recOf(p)>0||p.shared):p.cat===cat))&&(!openOnly||(!closedOn(p,wd)&&!outOfSeason(p,DAYS[day].iso))));
+  const inCat=P.filter(p=>!(cat==='all'&&p.drop)&&(cat==='all'||(cat==='wish'?isWish(p.id):cat==='season'?!!p.season:cat==='must'?!!MUST[p.id]:cat==='users'?(recOf(p)>0||p.shared):p.cat===cat))&&(!openOnly||(!closedOn(p,wd)&&!outOfSeason(p,DY.days[day].iso))));
   const list=inCat.filter(p=>!used.has(p.id));
   const nHidden=inCat.length-list.length;
   // drawn by React: app/screens/Tray.tsx
@@ -2392,7 +2302,7 @@ function renderTray(){
 let trayRev=0;
 // one place card (drawn by React: Tray.tsx Card)
 function cardInfo(p,wd,used,near){
-    const h=hoursFor(p,wd), off=closedOn(p,wd), oos=outOfSeason(p,DAYS[day].iso), mk=matchKw(p.id), T=(c,t)=>({c,t});
+    const h=hoursFor(p,wd), off=closedOn(p,wd), oos=outOfSeason(p,DY.days[day].iso), mk=matchKw(p.id), T=(c,t)=>({c,t});
     let dist=''; if(near){const t=travel(near.r.ll,p.ll);dist=`${near.r.name}에서 ${t?`${t.mode} 약 ${t.min}분`:'바로 옆'}`}
     const key=off?T('tag w',`${WD[wd]} 휴관`):oos?T('tag w','이 날은 기간 아님'):p.season?T('tag r',`🗓 ${p.season}`):mustOf(p.id)?T('tag r','★ 추천'):mk.length?T('tag kwt',`#${mk[0]}`):null;
     const det=[p.shared||p.fromUsers?T('tag usr',p.userMade?'여행자가 올린 곳':'여행자 추천'):null,
@@ -2408,10 +2318,10 @@ function cardInfo(p,wd,used,near){
       vote:RS.status!=='off'?{on:!!iRec(p),n:recOf(p),locked:false}:null,extras:extras(CARD_EXTRAS,p),dur:p.dur,key,det};
 }
 function openFill(t){
-  const D=DAYS[day], wd=D.wd, {items}=analyze(day);
+  const D=DY.days[day], wd=D.wd, {items}=analyze(day);
   const prev=items.filter(i=>i.end<=t).pop()||null;
   const next=items.find(i=>i.start>t)||null;
-  const pLl=prev?prev.ll:LOC[D.startLoc].ll, pName=prev?(prev.stay?`${prev.area} 숙소`:prev.name):`${LOC_AREA[D.startLoc]} 숙소`;
+  const pLl=prev?prev.ll:DY.loc[D.startLoc].ll, pName=prev?(prev.stay?`${prev.area} 숙소`:prev.name):`${DY.locArea[D.startLoc]} 숙소`;
   const gS=prev?prev.end:(day===0?arrEnd():480), gE=next?next.start:1440, len=Math.max(0,gE-gS);
   const tm=(a,b)=>(travel(a,b)||{min:0}).min;
   const base=next?tm(pLl,next.ll):0;
@@ -2445,12 +2355,12 @@ function openFill(t){
 function renderChecks(){
   const groups=[];
   const warnRows=[], prepRows=[];
-  DAYS.forEach((D,i)=>{const {items}=analyze(i);
+  DY.days.forEach((D,i)=>{const {items}=analyze(i);
     items.forEach(it=>{ it.warns.forEach(w=>warnRows.push({d:i,uid:it.uid,t:`${it.name}: ${w}`}));
       if(it.kind==='place'&&it.p.check) prepRows.push({id:'p-'+it.id,d:i,t:it.p.check,s:it.name});
       if(it.kind==='place'&&it.p.verify) prepRows.push({id:'v-'+it.id,d:i,t:`${it.p.verify} 확인`,s:it.name}); });
   });
-  if(markWarnings().needTax) prepRows.push({id:'tax-'+cityKey(),d:DAYS.length-1,t:'쇼핑 일정이 있어요 · 면세 환급을 어디서 할지 🧾 표시를 붙여 두세요',s:'매장 또는 출국 공항'});
+  if(markWarnings().needTax) prepRows.push({id:'tax-'+cityKey(),d:DY.days.length-1,t:'쇼핑 일정이 있어요 · 면세 환급을 어디서 할지 🧾 표시를 붙여 두세요',s:'매장 또는 출국 공항'});
   tabs({warn:warnRows.length?String(warnRows.length):''}); $('#warnCount2').textContent=warnRows.length?' '+warnRows.length:'';
   dock({fixHidden:!(warnRows.length&&sample),fixText:`🛠 경고 ${warnRows.length}개 해결`});
   // drawn by React: app/screens/Checks.tsx
@@ -2488,7 +2398,7 @@ function renderAI(){
   box.hidden=false;
   // drawn by React: app/screens/AiBox.tsx
   const st=aiState.status==='loading'?{s:'loading'}:aiState.status==='error'?{s:'error',msg:String(aiState.msg||'')}
-    :{s:'done',date:String(DAYS[day].date),dropped:aiState.dropped||0,items:aiState.items.map(x=>({time:`${fmt(x.start)}–${fmt(x.start+PM[x.id].dur)}`,name:String(PM[x.id].name),why:String(x.reason||''),added:!!x.added}))};
+    :{s:'done',date:String(DY.days[day].date),dropped:aiState.dropped||0,items:aiState.items.map(x=>({time:`${fmt(x.start)}–${fmt(x.start+PM[x.id].dur)}`,name:String(PM[x.id].name),why:String(x.reason||''),added:!!x.added}))};
   window.JEPI_UI.mount('aiBox',box,{state:st,rev:++aiBoxRev});
 }
 let aiBoxRev=0;
@@ -2513,31 +2423,31 @@ function openSheet(uid,opt){
   const {items}=analyze(day); const it=items.find(i=>i.uid===uid); if(!it) return;
   const isP=it.kind==='place';
   const ti=it.travelIn;
-  const h=isP?hoursFor(it.p,DAYS[day].wd):null, B=t=>({t,tag:'b',cls:'mono'});
+  const h=isP?hoursFor(it.p,DY.days[day].wd):null, B=t=>({t,tag:'b',cls:'mono'});
   window.JEPI_UI.mount('block',$('#sheet'),{rev:++sheetRev,
-    name:String(it.name),when:`${DAYS[day].date} (${WD[DAYS[day].wd]}) ${fmt(it.start)}–${fmt(it.end)} · ${it.locName}`,note:it.note||'',
+    name:String(it.name),when:`${DY.days[day].date} (${WD[DY.days[day].wd]}) ${fmt(it.start)}–${fmt(it.end)} · ${it.locName}`,note:it.note||'',
     mapLink:isP&&!it.p.custom?placeLink(it.p):'',
     vote:isP&&RS.status!=='off'?{id:String(it.id),on:!!iRec(it.p),n:recOf(it.p),locked:false}:null,
     hours:isP&&h?`영업 ${fmt(h[0])}–${fmt(h[1])}${it.p.closed?` · 휴관 ${it.p.closed.map(w=>WD[w]).join('·')}`:''}`:'',
     cost:isP?segs('예상 비용 ',B(yen(it.yen)),it.costNote?` · ${it.costNote}`:''):null,
     krw:it.krw?won(it.krw):'',check:isP&&it.p.check?String(it.p.check):'',tips:it.tips&&it.tips.length?`💡 ${it.tips.join(' · ')}`:'',
     season:isP&&it.p.season?segs('🗓 ',{t:String(it.p.season),tag:'b'},it.p.dates?` · ${mdTxt(it.p.dates[0])||'?'}~${mdTxt(it.p.dates[1])||'?'}`:'',
-      ...(it.p.conf!=='high'?[' · ',{t:'올해 날짜 확인',tag:'a',href:`https://www.google.com/search?q=${encodeURIComponent((it.p.local||it.p.name)+' '+(DAYS[0].iso||'').slice(0,4))}`}]:[])):null,
+      ...(it.p.conf!=='high'?[' · ',{t:'올해 날짜 확인',tag:'a',href:`https://www.google.com/search?q=${encodeURIComponent((it.p.local||it.p.name)+' '+(DY.days[0].iso||'').slice(0,4))}`}]:[])):null,
     extras:extras(SHEET_EXTRAS,it,day),warns:it.warns.map(String),
     travel:ti?segs(`이동: ${ti.fromName}에서 ${ti.real?'':'약 '}${ti.mode} ${ti.min}분${ti.lines?` (${ti.lines}${ti.tf?` · 환승 ${ti.tf}회`:''})`:''}${ti.fare?` · ${yen(ti.fare)}`:''} · `,{t:'안내 시작',tag:'a',href:String(ti.link)}):null,
     marks:!it.stay&&!['f0a','f0b','f0c','f8','f9'].includes(it.uid)?marksInfo(it,opt&&opt.marksOpen):null,
     place:isP?{customId:it.p.custom?String(it.id):null,alts:altsInfo(it)}:null,
-    home:!isP&&uid==='f0a'?{word:MODE_WORD[CUR.profile.mode],min:homeMin}:null});
+    home:!isP&&uid==='f0a'?{word:MODE_WORD[CUR.profile.mode],min:DY.homeMin}:null});
   $('#sheet').dataset.uid=uid; $('#sheetBg').hidden=false;
   setTimeout(()=>{const b=$('#sheet button');b&&b.focus()},0);
 }
 const closeSheet=()=>{if(diceCloseAnim())return;$('#sheetBg').hidden=true};
 function altsFor(it){
-  const D=DAYS[day], wd=D.wd, {items}=analyze(day);
+  const D=DY.days[day], wd=D.wd, {items}=analyze(day);
   const others=items.filter(i=>i.uid!==it.uid);
   const prev=others.filter(i=>i.start<it.start||(i.start===it.start&&i.kind==='fixed')).pop()||null;
   const next=others.find(i=>i.start>=it.start&&i!==prev&&!(i.start===it.start&&i.kind==='fixed'))||null;
-  const pLl=prev?prev.ll:LOC[D.startLoc].ll, gS=prev?prev.end:dayStart(day), gE=next?next.start:1440;
+  const pLl=prev?prev.ll:DY.loc[D.startLoc].ll, gS=prev?prev.end:dayStart(day), gE=next?next.start:1440;
   const carrying=prev?!!prev.carryAfter:false;
   const tm=(a,b)=>(travel(a,b)||{min:0}).min;
   const used=new Set(CUR.placed.map(b=>b.id));
@@ -2593,7 +2503,7 @@ function altsInfo(it){
 // ---------- AI ----------
 async function askAI(){
   if(!sample) return;
-  const D=DAYS[day], wd=D.wd, gaps=gapsOf(day);
+  const D=DY.days[day], wd=D.wd, gaps=gapsOf(day);
   if(!gaps.length){aiState={day,status:'error',msg:'이 날은 90분 이상 빈 시간이 없어요. 블록을 조금 빼거나 옮겨 보세요.'};renderAI();return}
   const items=analyze(day).items.map(i=>`${fmt(i.start)}-${fmt(i.end)} ${i.name} @ ${i.locName}${i.carryAfter?' [after this the traveler carries a suitcase until a luggage-drop block]':''}${i.marks&&i.marks.length?' {'+i.marks.map(m=>'traveler '+MARK_EN[m]).join('; ')+'}':''}`).join('\n');
   const used=new Set(CUR.placed.map(b=>b.id));
@@ -2707,7 +2617,7 @@ function blockAct(n,v,o){
   if(n==='del'){TRIP.blocks.remove(uid);closeSheet();renderAll();return}
 }
 // 🛠 AI에게 경고 해결 맡기기 (the check list's button and the 경고 chip above the 일정표)
-function fixWarns(){const ws=[];DAYS.forEach((_,d)=>analyze(d).items.forEach(it=>it.warns.forEach(w=>ws.push(`Day ${d+1} ${it.name}: ${w}`))));tab='timeline';renderTabs();sendChat('지금 일정의 경고를 모두 해결해 줘. 꼭 필요한 것만 바꾸고, 바꿀 수 없는 고정 일정은 그대로 둬.\n'+ws.slice(0,20).join('\n'));const c=$('#chat');if(c)c.scrollIntoView({block:'start'})}
+function fixWarns(){const ws=[];DY.days.forEach((_,d)=>analyze(d).items.forEach(it=>it.warns.forEach(w=>ws.push(`Day ${d+1} ${it.name}: ${w}`))));tab='timeline';renderTabs();sendChat('지금 일정의 경고를 모두 해결해 줘. 꼭 필요한 것만 바꾸고, 바꿀 수 없는 고정 일정은 그대로 둬.\n'+ws.slice(0,20).join('\n'));const c=$('#chat');if(c)c.scrollIntoView({block:'start'})}
 // 준비하기 (Checks.tsx): a tick, a warning (go to its block), 경고 해결, 시즌 정보, 모두 지우기
 function checksAct(n,v,o){
   switch(n){
@@ -2902,7 +2812,7 @@ function applyIfOpen(id,data,who){
   if(id!==PL.curPlan) return true;
   const ae=document.activeElement, editing=(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))||!$('#sheetBg').hidden||!$('#onb').hidden||selected;
   if(editing) return false;
-  const d0=day; applyPlanData(data); day=Math.min(d0,Math.max(0,DAYS.length-1)); renderAll();
+  const d0=day; applyPlanData(data); day=Math.min(d0,Math.max(0,DY.days.length-1)); renderAll();
   if(who&&who!==myName()) showToast(`${who}님이 일정을 바꿨어요`);
   return true;
 }
@@ -2990,7 +2900,7 @@ function renderFind(){findRev++;findMount()}
 function findRowsUpdate(){findMount()}
 function findMount(){
   const F=FIND, gaps=gapsOf(day), gv=g=>({v:`${g[0]}-${g[1]}`,label:`${fmt(g[0])}–${fmt(g[1])}`});
-  window.JEPI_UI.mount('find',$('#sheet'),{dayNo:day+1,date:String(DAYS[day].date),city:String(PK.pack.city||''),where:F.where,area:F.area||'',
+  window.JEPI_UI.mount('find',$('#sheet'),{dayNo:day+1,date:String(DY.days[day].date),city:String(PK.pack.city||''),where:F.where,area:F.area||'',
     areas:Object.entries(AREAS).map(([k,v])=>({k,label:String(v[0])})),when:F.when,gaps:gaps.map(gv),gap:F.gap?gv(F.gap):null,into:F.into,q:F.q||'',busy:!!F.busy,mine:jp==='P',
     rows:F.res.map(r=>{const p=PM[r.id];if(!p)return null;
       const meta=[p.area,CATS[p.cat]||'',p.hours&&!p.always?`${fmt(p.hours[0])}–${fmt(p.hours[1])}`:''].filter(Boolean).join(' · ');
@@ -3001,7 +2911,7 @@ function findFocus(){
   if(F.q) parts.push(F.q);
   if(F.where==='near'){const a=findAreaOfDay();if(a)parts.push(`near ${a} (where the traveler is on Day ${day+1})`)}
   else if(F.where==='area'&&AREAS[F.area]) parts.push(`only in the ${AREAS[F.area][0]} area`);
-  if(F.when==='gap'&&F.gap) parts.push(`to visit on ${DAYS[day].iso||'Day '+(day+1)} between ${fmt(F.gap[0])} and ${fmt(F.gap[1])}; must be open then and fit within that time`);
+  if(F.when==='gap'&&F.gap) parts.push(`to visit on ${DY.days[day].iso||'Day '+(day+1)} between ${fmt(F.gap[0])} and ${fmt(F.gap[1])}; must be open then and fit within that time`);
   return parts.join('; ');
 }
 async function runFind(){
@@ -3052,7 +2962,7 @@ const alertOn=(it,d)=>AL.isOn(alertKey(it,d));
 const tripTZ=()=>JD.logic.alerts.tripTZ(PK.pack);
 const alertsSoon=ms=>AL.soon(ms);
 AL.connectAlerts({curPlan:()=>PL.curPlan,tz:tripTZ,demo:()=>!!DEMO.on,redraw:()=>{PANELS.notify.render();renderMore();renderAll()},
-  days:()=>DAYS.map((D,d)=>({iso:D.iso||'',rows:D.iso?analyze(d).items.filter(alertable).map(it=>({key:alertKey(it,d),name:String(it.name),start:it.start,end:it.end,locName:it.locName||'',travelIn:it.travelIn||null})):[]}))});
+  days:()=>DY.days.map((D,d)=>({iso:D.iso||'',rows:D.iso?analyze(d).items.filter(alertable).map(it=>({key:alertKey(it,d),name:String(it.name),start:it.start,end:it.end,locName:it.locName||'',travelIn:it.travelIn||null})):[]}))});
 BLOCK_BADGES.push((it,d)=>alertable(it)&&alertOn(it,d)&&NOTIFY.on?{k:'badge',t:'🔔',title:'알림 켜짐'}:null);
 SHEET_EXTRAS.push((it,d)=>{if(!alertable(it)||DEMO.on)return null;const on=alertOn(it,d);
   return {k:'alert',key:alertKey(it,d),on:!!on,hint:!NOTIFY.on?'더보기 → 알림에서 이 기기 알림을 켜야 와요':on?(NOTIFY.depart&&it.travelIn?`출발 ${NOTIFY.lead}분 전에 알려 드려요`:`시작 ${NOTIFY.lead}분 전에 알려 드려요`):''}});
@@ -3128,15 +3038,15 @@ if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)&&window.__jepi) Object.a
 // ---------- day titles the traveler can rename ----------
 // profile.dayTitles[d] overrides the automatic "Day 1 · 도착" title (rules: app/logic/memo.ts). The ✎ form is React
 // (app/screens/DayTitleForm.tsx, it saves itself); here: the header around it.
-function dayTitleOf(d){return JD.logic.memo.dayTitle(CUR.profile,d,(DAYS[d]||{}).title||'')}
+function dayTitleOf(d){return JD.logic.memo.dayTitle(CUR.profile,d,(DY.days[d]||{}).title||'')}
 let dayTitleRev=0;
 function titleEditing(on){
   hero({editing:on,slot:true});
-  window.JEPI_UI.mount('dayTitle',$('#dayTitleSlot'),{open:on,day,title:JD.logic.memo.ownDayTitle(CUR.profile,day),auto:String(DAYS[day].title||''),memo:dayMemoOf(day),rev:++dayTitleRev});
+  window.JEPI_UI.mount('dayTitle',$('#dayTitleSlot'),{open:on,day,title:JD.logic.memo.ownDayTitle(CUR.profile,day),auto:String(DY.days[day].title||''),memo:dayMemoOf(day),rev:++dayTitleRev});
 }
 // what React screens may ask of the old code (app/ui/host.ts)
-window.JEPI_UI.connectHost({renderAll:()=>renderAll(),closeSheet:()=>closeSheet(),reopenSheet:()=>{const u=$('#sheet').dataset.uid;if(u&&u!=='dice'&&!$('#sheetBg').hidden)openSheet(u)},toast:m=>showToast(m),day:()=>day,autoTitle:d=>String((DAYS[d]||{}).title||''),titleEditing,
-  closeNotebook:()=>closeNotebook(),renamePlan:nm=>lookRenamePlan(nm),aiDayTitles:n=>lookAiTitles(n),errText:(e,w)=>errText(e,w),welcomeNew:()=>{closeWelcome();openOnb()},welcomeDemo:()=>demoEnter(),welcomeLoggedIn:()=>welcomeLoggedIn(),dice:(n,v,m)=>diceAct(n,v,m),place:(n,v)=>placeAct(n,v),plans:(n,v,v2)=>plansAct(n,v,v2),helper:(n,v,v2)=>helperAct(n,v,v2),helperFrame:n=>helperFrameAct(n),dock:(n,v)=>dockAct(n,v),tray:(n,v)=>trayAct(n,v),tab:n=>goTab(n),onbFrame:n=>onbFrameAct(n),hero:n=>heroAct(n),miniDay:s=>{const n=day+s;if(n>=0&&n<DAYS.length){day=n;renderAll()}},mapTop:n=>mapTopAct(n),coach:n=>coachAct(n),banner:()=>{selected=null;renderAll()},chat:(n,v)=>chatAct(n,v),pview:(n,v)=>pviewAct(n,v),kw:(n,v)=>kwAct(n,v),grid:(n,v)=>gridAct(n,v),block:(n,v,o)=>blockAct(n,v,o),checks:(n,v,o)=>checksAct(n,v,o),aibox:(n,v)=>aiboxAct(n,v),settings:(n,v,v2)=>settingsAct(n,v,v2),form:(n,v,o)=>formAct(n,v,o),sum:(n,v)=>sumAct(n,v),trip:(a,u,t)=>tripAct(a,u,t),want:p=>wantAct(p),find:(n,v,t)=>findAct(n,v,t),planMenu:(n,v)=>planMenuAct(n,v),more:id=>moreAct(id),mapCard:i=>mapCardAct(i),nudge:(n,v)=>nudgeAct(n,v),importFile:f=>importBackup(f,ok=>{if(ok){maybeCoach()}}),shareNotebook:async()=>{await shareLink(true);return planMsg||'링크를 만들었어요'}});
+window.JEPI_UI.connectHost({renderAll:()=>renderAll(),closeSheet:()=>closeSheet(),reopenSheet:()=>{const u=$('#sheet').dataset.uid;if(u&&u!=='dice'&&!$('#sheetBg').hidden)openSheet(u)},toast:m=>showToast(m),day:()=>day,autoTitle:d=>String((DY.days[d]||{}).title||''),titleEditing,
+  closeNotebook:()=>closeNotebook(),renamePlan:nm=>lookRenamePlan(nm),aiDayTitles:n=>lookAiTitles(n),errText:(e,w)=>errText(e,w),welcomeNew:()=>{closeWelcome();openOnb()},welcomeDemo:()=>demoEnter(),welcomeLoggedIn:()=>welcomeLoggedIn(),dice:(n,v,m)=>diceAct(n,v,m),place:(n,v)=>placeAct(n,v),plans:(n,v,v2)=>plansAct(n,v,v2),helper:(n,v,v2)=>helperAct(n,v,v2),helperFrame:n=>helperFrameAct(n),dock:(n,v)=>dockAct(n,v),tray:(n,v)=>trayAct(n,v),tab:n=>goTab(n),onbFrame:n=>onbFrameAct(n),hero:n=>heroAct(n),miniDay:s=>{const n=day+s;if(n>=0&&n<DY.days.length){day=n;renderAll()}},mapTop:n=>mapTopAct(n),coach:n=>coachAct(n),banner:()=>{selected=null;renderAll()},chat:(n,v)=>chatAct(n,v),pview:(n,v)=>pviewAct(n,v),kw:(n,v)=>kwAct(n,v),grid:(n,v)=>gridAct(n,v),block:(n,v,o)=>blockAct(n,v,o),checks:(n,v,o)=>checksAct(n,v,o),aibox:(n,v)=>aiboxAct(n,v),settings:(n,v,v2)=>settingsAct(n,v,v2),form:(n,v,o)=>formAct(n,v,o),sum:(n,v)=>sumAct(n,v),trip:(a,u,t)=>tripAct(a,u,t),want:p=>wantAct(p),find:(n,v,t)=>findAct(n,v,t),planMenu:(n,v)=>planMenuAct(n,v),more:id=>moreAct(id),mapCard:i=>mapCardAct(i),nudge:(n,v)=>nudgeAct(n,v),importFile:f=>importBackup(f,ok=>{if(ok){maybeCoach()}}),shareNotebook:async()=>{await shareLink(true);return planMsg||'링크를 만들었어요'}});
 // ---------- how a trip looks: theme colour, cover, style, handwriting; folding hero header ----------
 // profile.look = {color, cover:'city'|'sea'|'mountain'|'none'|'photo', photo:dataURL, tagline, style:'color'|'note', hand}
 // Lives in the plan's profile, so it syncs across devices and to friends on a shared trip.
@@ -3168,9 +3078,9 @@ function renderLook(){
   document.body.classList.toggle('style-note',note);
   {const photo=L.cover==='photo'&&L.photo, p={
     artBg:photo?`linear-gradient(rgba(0,0,0,.35),rgba(0,0,0,.45)),url("${L.photo}")`:'',artPhoto:!!photo,
-    artHtml:note?`<div class="stamp"><span>${esc((PK.pack.city||'TRIP').slice(0,8))}</span><b>${esc(((DAYS[0]||{}).date||'').replace(/\s.*/,''))}</b><span>${esc(String(new Date().getFullYear()))}</span></div>`:photo?'':coverSVG(L.cover,190,120),
+    artHtml:note?`<div class="stamp"><span>${esc((PK.pack.city||'TRIP').slice(0,8))}</span><b>${esc(((DY.days[0]||{}).date||'').replace(/\s.*/,''))}</b><span>${esc(String(new Date().getFullYear()))}</span></div>`:photo?'':coverSVG(L.cover,190,120),
     tag:L.tagline||''};
-  if(DAYS[day]){const D=DAYS[day];p.day=note?`CHAPTER ${day+1} · ${D.date} ${WD[D.wd]}`:`DAY ${String(day+1).padStart(2,'0')} · ${D.date} ${WD[D.wd]}`}
+  if(DY.days[day]){const D=DY.days[day];p.day=note?`CHAPTER ${day+1} · ${D.date} ${WD[D.wd]}`:`DAY ${String(day+1).padStart(2,'0')} · ${D.date} ${WD[D.wd]}`}
   hero(p)}
   renderDayMemo(); miniUpdate();
 }
@@ -3179,8 +3089,8 @@ function renderLook(){
 let miniView={on:false,day:'',dayHidden:false,title:'',navHidden:false};
 function miniBar(p){miniView={...miniView,...p};window.JEPI_UI.mount('mini',$('#miniMount'),miniView)}
 function miniUpdate(){
-  const D=DAYS[day]; if(!D) return; const onDay=document.body.dataset.tab==='timeline'||!document.body.dataset.tab;
-  miniBar({day:onDay?String(day+1).padStart(2,'0'):'',dayHidden:!onDay,title:onDay?dayTitleOf(day):($('#planName')?$('#planName').textContent:''),navHidden:!onDay||DAYS.length<2});
+  const D=DY.days[day]; if(!D) return; const onDay=document.body.dataset.tab==='timeline'||!document.body.dataset.tab;
+  miniBar({day:onDay?String(day+1).padStart(2,'0'):'',dayHidden:!onDay,title:onDay?dayTitleOf(day):($('#planName')?$('#planName').textContent:''),navHidden:!onDay||DY.days.length<2});
 }
 function heroWatch(){
   const hero=$('#hero'); if(!hero) return;
@@ -3198,16 +3108,16 @@ function openLook(){
   const L=lookOf();
   window.JEPI_UI.mount('look',$('#sheet'),{name:(PL.plans.find(x=>x.id===PL.curPlan)||{}).name||planName(),tagline:L.tagline||'',style:L.style,color:L.color,cover:L.cover,hand:L.hand,photo:L.photo||'',pop:L.pop,
     colors:LOOK_COLORS,covers:LOOK_COVERS.map(([k,n])=>({k,name:n,svg:coverSVG(k,64,40)})),hands:LOOK_HANDS,
-    days:DAYS.map((D,i)=>({title:((CUR.profile.dayTitles||[])[i])||'',placeholder:String(D.title)})),ai:!!sample,rev:++lookRev});
+    days:DY.days.map((D,i)=>({title:((CUR.profile.dayTitles||[])[i])||'',placeholder:String(D.title)})),ai:!!sample,rev:++lookRev});
   $('#sheet').dataset.uid=''; $('#sheetBg').hidden=false;
 }
 // the question for AI로 지어 보기 (asked by the sheet through the host)
 async function lookAiTitles(tripName){
-  const days=DAYS.map((D,i)=>`Day ${i+1}: `+analyze(i).items.filter(x=>!x.stay).map(x=>x.name).slice(0,8).join(', '));
+  const days=DY.days.map((D,i)=>`Day ${i+1}: `+analyze(i).items.filter(x=>!x.stay).map(x=>x.name).slice(0,8).join(', '));
   const prompt=`Write a short, evocative Korean title for each day of this trip to ${PK.pack.city}, like chapter titles of a travel journal (8-18 Korean characters, no emoji, no "Day N"). Trip title: "${tripName}".
 ${days.join('\n')}
-Reply with only JSON: {"titles":["...", ...]} with exactly ${DAYS.length} items.`;
-  const r=await sample.json(prompt,{cache:false}); return Array.isArray(r&&r.titles)?r.titles.slice(0,DAYS.length):[];
+Reply with only JSON: {"titles":["...", ...]} with exactly ${DY.days.length} items.`;
+  const r=await sample.json(prompt,{cache:false}); return Array.isArray(r&&r.titles)?r.titles.slice(0,DY.days.length):[];
 }
 function lookRenamePlan(nm){const p=PL.plans.find(x=>x.id===PL.curPlan);if(p&&nm&&nm!==p.name){p.name=nm;p.custom_name=true;savePlans()}}
 // ---------- handwritten memos: one line per block, one line per day ----------
@@ -3224,11 +3134,11 @@ SHEET_EXTRAS.push(it=>it&&it.id?{k:'memo',key:memoKey(it,day),value:blockMemoOf(
 let notebookRev=0;
 function notebookInfo(){
   const L=lookOf(), name=(PL.plans.find(x=>x.id===PL.curPlan)||{}).name||planName();
-  const D0=DAYS[0]||{}, Dn=DAYS[DAYS.length-1]||{};
+  const D0=DY.days[0]||{}, Dn=DY.days[DY.days.length-1]||{};
   const photo=L.cover==='photo'&&L.photo;
   const cover={photo:photo?String(L.photo):'',svg:photo?'':coverSVG(L.cover,260,156),city:String((PK.pack.city||'TRIP').slice(0,8)),date:String(D0.date||'').replace(/\s.*/,''),name:String(name),
-    line:[D0.date&&Dn.date?`${D0.date} — ${Dn.date}`:'',DAYS.length>1?`${DAYS.length-1}박 ${DAYS.length}일`:'하루',L.tagline].filter(Boolean).join(' · ')};
-  const days=DAYS.map((D,d)=>{
+    line:[D0.date&&Dn.date?`${D0.date} — ${Dn.date}`:'',DY.days.length>1?`${DY.days.length-1}박 ${DY.days.length}일`:'하루',L.tagline].filter(Boolean).join(' · ')};
+  const days=DY.days.map((D,d)=>{
     const {items,trans}=analyze(d), list=items.filter(i=>!(i.stay&&i!==items[items.length-1]));
     const rows=list.map((it,k)=>{
       const prev=k?list[k-1]:null, t=prev?trans.find(x=>x.from>=prev.end-5&&x.from<=it.start):null;

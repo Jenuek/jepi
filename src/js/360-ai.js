@@ -1,7 +1,7 @@
 // ---------- AI ----------
 async function askAI(){
   if(!sample) return;
-  const D=DAYS[day], wd=D.wd, gaps=gapsOf(day);
+  const D=DY.days[day], wd=D.wd, gaps=gapsOf(day);
   if(!gaps.length){aiState={day,status:'error',msg:'이 날은 90분 이상 빈 시간이 없어요. 블록을 조금 빼거나 옮겨 보세요.'};renderAI();return}
   const items=analyze(day).items.map(i=>`${fmt(i.start)}-${fmt(i.end)} ${i.name} @ ${i.locName}${i.carryAfter?' [after this the traveler carries a suitcase until a luggage-drop block]':''}${i.marks&&i.marks.length?' {'+i.marks.map(m=>'traveler '+MARK_EN[m]).join('; ')+'}':''}`).join('\n');
   const used=new Set(CUR.placed.map(b=>b.id));

@@ -5,7 +5,7 @@ Object.assign(doS,LS.get('jepi.do',{}),{base:null,pick:null,course:null,busy:fal
 const saveDo=()=>LS.set('jepi.do',{mood:doS.mood,clen:doS.clen,area:doS.area,at:doS.at});
 let RECENT_AREAS=LS.get('jepi.areas',[])||[];
 function doDefaults(fromSlot){
-  const t=isoOf(new Date()), last=DAYS.length?DAYS[DAYS.length-1].iso:'';
+  const t=isoOf(new Date()), last=DY.days.length?DY.days[DY.days.length-1].iso:'';
   doS.base=fromSlot||(planUsable()&&(!last||last>=t))?'plan':'near';
   doS.pick=null;doS.course=null;doS.rolls=0;doS.msg='';doS.chosen=null;doS.when='now';
 }

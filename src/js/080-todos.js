@@ -17,7 +17,7 @@ const implicitBagDrop=it=>it.kind==='place'&&!!it.drop;   // a locker/storage pl
 function markWarnings(){
   const W=new Map(), add=(d,uid,w)=>{const k=d+':'+uid;(W.get(k)||W.set(k,[]).get(k)).push(w)};
   const open={bag:[],wait:[],order:[],rent:[],ship:[]}; let cashOk=false; const shops=[]; let tax=false;
-  DAYS.forEach((_,d)=>dayItems(d).forEach(it=>{
+  DY.days.forEach((_,d)=>dayItems(d).forEach(it=>{
     const mk=it.marks=marksOf(it);
     if(mk.includes('cash')) cashOk=true;
     if(mk.includes('tax')) tax=true;

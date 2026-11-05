@@ -4,7 +4,7 @@ let eat=Object.assign({walk:10,mood:'any'},LS.get('jepi.eat',{}),{base:null,org:
 const saveEat=()=>LS.set('jepi.eat',{walk:eat.walk,mood:eat.mood});
 const nowMin=()=>{const n=new Date();return n.getHours()*60+n.getMinutes()};
 const mealNow=()=>{const m=nowMin();return m>=630&&m<930?'lunch':m>=990&&m<1290?'dinner':'snack'};
-const planUsable=()=>DAYS.length&&PK.pack&&PK.pack.city&&PK.pack.city!=='새 여행';
+const planUsable=()=>DY.days.length&&PK.pack&&PK.pack.city&&PK.pack.city!=='새 여행';
 function eatDefaults(){
   const ti=todayIdx(); eat.base=ti>=0&&planUsable()?'plan':'near';
   if(eat.base==='plan') day=ti;
@@ -53,7 +53,7 @@ async function eatRoll(again){
 }
 function renderEat(){
   if($('#sheet').dataset.uid!=='dice') return;
-  const meal=eat.base==='plan'?eat.meal:mealNow(), mt=MEAL_TXT[meal]||'점심', D=DAYS[day]||{};
+  const meal=eat.base==='plan'?eat.meal:mealNow(), mt=MEAL_TXT[meal]||'점심', D=DY.days[day]||{};
   const orgs=[['gps','지금 위치'],...MYP.filter(x=>x.ll).map(x=>[x.id,x.name])];
   const nearLbl=eat.org==='gps'?'지금 위치':(mypOf(eat.org)||{}).name||'지금 위치';
   let stage, acts;

@@ -18,7 +18,7 @@ function applyIfOpen(id,data,who){
   if(id!==PL.curPlan) return true;
   const ae=document.activeElement, editing=(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))||!$('#sheetBg').hidden||!$('#onb').hidden||selected;
   if(editing) return false;
-  const d0=day; applyPlanData(data); day=Math.min(d0,Math.max(0,DAYS.length-1)); renderAll();
+  const d0=day; applyPlanData(data); day=Math.min(d0,Math.max(0,DY.days.length-1)); renderAll();
   if(who&&who!==myName()) showToast(`${who}님이 일정을 바꿨어요`);
   return true;
 }

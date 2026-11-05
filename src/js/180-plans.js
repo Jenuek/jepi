@@ -5,7 +5,7 @@ PL.plans=[]; PL.curPlan=''; let planTimer=null, cloudTimer=null, planMsg='', del
 const PLAN_KEYS=['profile','pack','placed3','custom','meal2','done','fmarks','wish'];
 function planName(){const pr=CUR.profile;if(pr.kind==='day')return `${PK.pack.city} 하루 코스`;const n=nightsOf(pr);return `${PK.pack.city} ${n}박 ${n+1}일`}
 function planData(){return {profile:clone(CUR.profile),pack:PK.pack,placed:TRIP.slimBlocks(CUR.placed),custom:clone(CUR.custom),fmarks:clone(CUR.fmarks),wish:CUR.wish.slice(),meals:clone(CUR.meals),done:clone(CUR.done)}}
-function planMeta(){const D0=DAYS[0]||{},Dn=DAYS[DAYS.length-1]||{};return {name:'',dates:D0.iso?`${D0.iso.slice(5).replace('-','/')}${DAYS.length>1?'~'+(Dn.iso||'').slice(5).replace('-','/'):''}`:'',blocks:CUR.placed.length,kind:CUR.profile.kind||'trip'}}
+function planMeta(){const D0=DY.days[0]||{},Dn=DY.days[DY.days.length-1]||{};return {name:'',dates:D0.iso?`${D0.iso.slice(5).replace('-','/')}${DY.days.length>1?'~'+(Dn.iso||'').slice(5).replace('-','/'):''}`:'',blocks:CUR.placed.length,kind:CUR.profile.kind||'trip'}}
 function savePlans(){TRIP.plans.saveList(PL.plans,PL.curPlan);syncSoon()}
 function snapshotCurrent(){
   if(!PL.curPlan) return; let p=PL.plans.find(x=>x.id===PL.curPlan);
@@ -80,7 +80,7 @@ async function openCode(raw){
 function planText(){
   const L=[`[JEPI] ${(PL.plans.find(x=>x.id===PL.curPlan)||{}).name||planName()}`];
   if(CUR.profile.purpose) L.push(`🧭 ${CUR.profile.purpose}`);
-  DAYS.forEach((D,d)=>{L.push('',`📅 ${D.title.replace(/^Day \d+ · /,'')||''} ${D.date} (${WD[D.wd]})`.replace('  ',' '));
+  DY.days.forEach((D,d)=>{L.push('',`📅 ${D.title.replace(/^Day \d+ · /,'')||''} ${D.date} (${WD[D.wd]})`.replace('  ',' '));
     analyze(d).items.filter(i=>!i.stay).forEach(i=>L.push(`${fmt(i.start)} ${i.name}${i.kind==='place'&&i.area?` · ${i.area}`:''}`))});
   L.push('','JEPI로 만든 일정이에요.'); return L.join('\n');
 }

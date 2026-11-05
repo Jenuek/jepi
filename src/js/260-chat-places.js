@@ -7,7 +7,7 @@ function chatFoldSync(){
 document.addEventListener('focusin',e=>{if(e.target&&e.target.id==='chatInput'&&chatFolded&&chatBusy){chatFolded=false;chatFoldSync()}});
 
 // ---------- chat place suggestions: choose per place ----------
-function cpSlot(o){const d=+o.day,st=parse(o.start);return Number.isInteger(d)&&d>=0&&d<DAYS.length&&st!=null?{d,st}:null}
+function cpSlot(o){const d=+o.day,st=parse(o.start);return Number.isInteger(d)&&d>=0&&d<DY.days.length&&st!=null?{d,st}:null}
 // place suggestions in a chat message (drawn by React: ChatLog.tsx)
 function placeRows(m){
   return (m.ops||[]).map((o,k)=>{if(o.op!=='add_place')return null;const sl=cpSlot(o);

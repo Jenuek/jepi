@@ -9,31 +9,31 @@ function openSheet(uid,opt){
   const {items}=analyze(day); const it=items.find(i=>i.uid===uid); if(!it) return;
   const isP=it.kind==='place';
   const ti=it.travelIn;
-  const h=isP?hoursFor(it.p,DAYS[day].wd):null, B=t=>({t,tag:'b',cls:'mono'});
+  const h=isP?hoursFor(it.p,DY.days[day].wd):null, B=t=>({t,tag:'b',cls:'mono'});
   window.JEPI_UI.mount('block',$('#sheet'),{rev:++sheetRev,
-    name:String(it.name),when:`${DAYS[day].date} (${WD[DAYS[day].wd]}) ${fmt(it.start)}–${fmt(it.end)} · ${it.locName}`,note:it.note||'',
+    name:String(it.name),when:`${DY.days[day].date} (${WD[DY.days[day].wd]}) ${fmt(it.start)}–${fmt(it.end)} · ${it.locName}`,note:it.note||'',
     mapLink:isP&&!it.p.custom?placeLink(it.p):'',
     vote:isP&&RS.status!=='off'?{id:String(it.id),on:!!iRec(it.p),n:recOf(it.p),locked:false}:null,
     hours:isP&&h?`영업 ${fmt(h[0])}–${fmt(h[1])}${it.p.closed?` · 휴관 ${it.p.closed.map(w=>WD[w]).join('·')}`:''}`:'',
     cost:isP?segs('예상 비용 ',B(yen(it.yen)),it.costNote?` · ${it.costNote}`:''):null,
     krw:it.krw?won(it.krw):'',check:isP&&it.p.check?String(it.p.check):'',tips:it.tips&&it.tips.length?`💡 ${it.tips.join(' · ')}`:'',
     season:isP&&it.p.season?segs('🗓 ',{t:String(it.p.season),tag:'b'},it.p.dates?` · ${mdTxt(it.p.dates[0])||'?'}~${mdTxt(it.p.dates[1])||'?'}`:'',
-      ...(it.p.conf!=='high'?[' · ',{t:'올해 날짜 확인',tag:'a',href:`https://www.google.com/search?q=${encodeURIComponent((it.p.local||it.p.name)+' '+(DAYS[0].iso||'').slice(0,4))}`}]:[])):null,
+      ...(it.p.conf!=='high'?[' · ',{t:'올해 날짜 확인',tag:'a',href:`https://www.google.com/search?q=${encodeURIComponent((it.p.local||it.p.name)+' '+(DY.days[0].iso||'').slice(0,4))}`}]:[])):null,
     extras:extras(SHEET_EXTRAS,it,day),warns:it.warns.map(String),
     travel:ti?segs(`이동: ${ti.fromName}에서 ${ti.real?'':'약 '}${ti.mode} ${ti.min}분${ti.lines?` (${ti.lines}${ti.tf?` · 환승 ${ti.tf}회`:''})`:''}${ti.fare?` · ${yen(ti.fare)}`:''} · `,{t:'안내 시작',tag:'a',href:String(ti.link)}):null,
     marks:!it.stay&&!['f0a','f0b','f0c','f8','f9'].includes(it.uid)?marksInfo(it,opt&&opt.marksOpen):null,
     place:isP?{customId:it.p.custom?String(it.id):null,alts:altsInfo(it)}:null,
-    home:!isP&&uid==='f0a'?{word:MODE_WORD[CUR.profile.mode],min:homeMin}:null});
+    home:!isP&&uid==='f0a'?{word:MODE_WORD[CUR.profile.mode],min:DY.homeMin}:null});
   $('#sheet').dataset.uid=uid; $('#sheetBg').hidden=false;
   setTimeout(()=>{const b=$('#sheet button');b&&b.focus()},0);
 }
 const closeSheet=()=>{if(diceCloseAnim())return;$('#sheetBg').hidden=true};
 function altsFor(it){
-  const D=DAYS[day], wd=D.wd, {items}=analyze(day);
+  const D=DY.days[day], wd=D.wd, {items}=analyze(day);
   const others=items.filter(i=>i.uid!==it.uid);
   const prev=others.filter(i=>i.start<it.start||(i.start===it.start&&i.kind==='fixed')).pop()||null;
   const next=others.find(i=>i.start>=it.start&&i!==prev&&!(i.start===it.start&&i.kind==='fixed'))||null;
-  const pLl=prev?prev.ll:LOC[D.startLoc].ll, gS=prev?prev.end:dayStart(day), gE=next?next.start:1440;
+  const pLl=prev?prev.ll:DY.loc[D.startLoc].ll, gS=prev?prev.end:dayStart(day), gE=next?next.start:1440;
   const carrying=prev?!!prev.carryAfter:false;
   const tm=(a,b)=>(travel(a,b)||{min:0}).min;
   const used=new Set(CUR.placed.map(b=>b.id));

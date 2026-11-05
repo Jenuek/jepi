@@ -1,16 +1,16 @@
 const WD=['일','월','화','수','목','금','토'];
 const DAY_START=7*60, DAY_END=24*60;
-let LOC={};
+DY.loc={};
 // the destination's lists (app/data/places.ts — the same objects, filled again when a destination opens; tokyo.ts until then)
 const PLC=JD.places, PK=PLC.state;
 const AIRPORTS=PLC.AIRPORTS, AREAS=PLC.AREAS, AREA_ZONE=PLC.AREA_ZONE, CATS=PLC.CATS, ZONES=PLC.ZONES, ZONE_OF=PLC.ZONE_OF,
   P=PLC.P, PM=PLC.PM, COST=PLC.COST, TAGS=PLC.TAGS, MUST=PLC.MUST, STATIC_CHECKS=PLC.STATIC_CHECKS;
-let LOC_AREA={};
-let LOC_ZONE={};
-const dayStart=d=>d===0?((typeof CUR.profile!=='undefined'&&CUR.profile&&CUR.profile.kind==='day')?Math.max(360,tmin(CUR.profile.meet.time,660)-60):240):((typeof CUR.profile!=='undefined'&&CUR.profile&&CUR.profile.style&&CUR.profile.style.rhythm==='late')?600:420);
-let GMP_BY=360; // when to be at the home airport, from the profile
+DY.locArea={};
+DY.locZone={};
+const dayStart=JD.days.dayStart;   // app/data/days.ts
+DY.gmpBy=360; // when to be at the home airport, from the profile
 const durTxt=JD.logic.time.durTxt;   // app/logic/time.ts
-let DAYS=[];
+DY.days=[];
 const costOf=PLC.costOf;
 const DEFAULT_KW=[];
 const tagsOf=PLC.tagsOf;
