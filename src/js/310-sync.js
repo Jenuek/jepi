@@ -27,10 +27,10 @@ function syncPush(){return JD.sync.syncPush()}
 function syncPull(){return JD.sync.syncPull()}
 function syncNow(){return JD.sync.syncNow()}
 JD.sync.connectSync({
-  plans:()=>plans, setPlans(p){plans=p}, curPlan:()=>curPlan,
-  kws:()=>kws, setKws(k){kws=k},
+  plans:()=>PL.plans, setPlans(p){PL.plans=p}, curPlan:()=>PL.curPlan,
+  kws:()=>CUR.kws, setKws(k){CUR.kws=k},
   myPlaces:()=>MYP, setMyPlaces(m){JD.myplaces.setAll(m)},
-  keys:()=>KEYS, setKeys(k){KEYS=k;saveKeys(true)},
+  keys:()=>KEYS, setKeys(k){JD.keys.replace(k);saveKeys(true)},
   setErr(m){ACC.state.err=m},
   async afterPush(){
     if(tab==='settings') renderSettings();

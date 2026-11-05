@@ -1,7 +1,7 @@
 // ================= JEPI standalone: AI keys, model router, routes, map, panels =================
 const STANDALONE=!(window.claude&&window.claude.use);
 const LS=JD.storage; // saved data on this device: app/data/storage.ts
-let KEYS=LS.get('jepi.keys',{})||{};
+JD.keys.load(); const KEYS=JD.keys.list;   // app/data/keys.ts (the same object, changed in place)
 const KEY_DEF={
   anthropic:{name:'Claude',sub:'일정 짜기·대화·여행지 준비 (필수)',ph:'sk-ant-...',re:/^sk-ant-/},
   gemini:{name:'Gemini',sub:'가벼운 작업용 (선택 · 넣으면 비용이 줄어요)',ph:'AIza...',re:/^AIza/},
@@ -10,7 +10,7 @@ const KEY_DEF={
 };
 const MODELS=Object.assign({heavy:'claude-sonnet-5-5',light:'claude-haiku-5-5',gemini:'gemini-3.6-flash'},LS.get('jepi.models',{})||{});
 let keyMsg={}, keyBad={};
-function saveKeys(quiet){LS.set('jepi.keys',KEYS);if(!quiet){LS.set('jepi.keysAt',Date.now());if(typeof syncSoon==='function')syncSoon()}}
+function saveKeys(quiet){JD.keys.save(quiet);if(!quiet&&typeof syncSoon==='function')syncSoon()}
 const maskKey=k=>k?k.slice(0,6)+'••••••'+k.slice(-4):'';
 function aiErr(code,msg,text){return JD.appError(code,msg,text)}
 // The AI connection (calling Claude / Gemini, retries, switching to the other AI) lives in app/data/ai.ts.
@@ -45,4 +45,4 @@ async function kakaoDiag(){
 }
 function keysChanged(){saveKeys();keyBad={};if(STANDALONE){sample=makeSample()}renderAll();renderSettings();if(!$('#onb').hidden)renderOnb()}
 
-function blankPack(){return Object.assign(manualPack('새 여행'),{areas:[{key:'center',name:'시내',lat:37.5665,lng:126.978,zone:'center'}]})}
+const blankPack=PLC.blankPack;   // app/data/places.ts

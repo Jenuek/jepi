@@ -81,6 +81,8 @@ export default defineConfig({
   plugins: [legacyPlugin, jepiLegacyTag(legacyPlugin.get), react()],
   build: {
     outDir: ROOT, emptyOutDir: false, assetsDir: 'assets', sourcemap: false,
+    // the new code grows as the old one (src/js) shrinks: one file of ~500 kB is expected while both exist
+    chunkSizeWarningLimit: 700,
     rollupOptions: { output: { entryFileNames: 'assets/app-[hash].js', chunkFileNames: 'assets/[name]-[hash].js' } },
   },
 });

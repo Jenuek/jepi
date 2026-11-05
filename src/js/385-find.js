@@ -18,7 +18,7 @@ function renderFind(){findRev++;findMount()}
 function findRowsUpdate(){findMount()}
 function findMount(){
   const F=FIND, gaps=gapsOf(day), gv=g=>({v:`${g[0]}-${g[1]}`,label:`${fmt(g[0])}–${fmt(g[1])}`});
-  window.JEPI_UI.mount('find',$('#sheet'),{dayNo:day+1,date:String(DAYS[day].date),city:String(PACK.city||''),where:F.where,area:F.area||'',
+  window.JEPI_UI.mount('find',$('#sheet'),{dayNo:day+1,date:String(DY.days[day].date),city:String(PK.pack.city||''),where:F.where,area:F.area||'',
     areas:Object.entries(AREAS).map(([k,v])=>({k,label:String(v[0])})),when:F.when,gaps:gaps.map(gv),gap:F.gap?gv(F.gap):null,into:F.into,q:F.q||'',busy:!!F.busy,mine:jp==='P',
     rows:F.res.map(r=>{const p=PM[r.id];if(!p)return null;
       const meta=[p.area,CATS[p.cat]||'',p.hours&&!p.always?`${fmt(p.hours[0])}–${fmt(p.hours[1])}`:''].filter(Boolean).join(' · ');
@@ -29,14 +29,14 @@ function findFocus(){
   if(F.q) parts.push(F.q);
   if(F.where==='near'){const a=findAreaOfDay();if(a)parts.push(`near ${a} (where the traveler is on Day ${day+1})`)}
   else if(F.where==='area'&&AREAS[F.area]) parts.push(`only in the ${AREAS[F.area][0]} area`);
-  if(F.when==='gap'&&F.gap) parts.push(`to visit on ${DAYS[day].iso||'Day '+(day+1)} between ${fmt(F.gap[0])} and ${fmt(F.gap[1])}; must be open then and fit within that time`);
+  if(F.when==='gap'&&F.gap) parts.push(`to visit on ${DY.days[day].iso||'Day '+(day+1)} between ${fmt(F.gap[0])} and ${fmt(F.gap[1])}; must be open then and fit within that time`);
   return parts.join('; ');
 }
 async function runFind(){
   if(FIND.busy) return;
   if(!sample){FIND.res=[];renderFind();setSt('findSt','AI가 연결되어 있지 않아요. 더보기 → 설정에서 연결해 주세요.');return}
   // "fill this gap" with no extra wish keeps the original behaviour: AI picks from the places already on the list
-  if(FIND.into==='sched'&&FIND.when==='gap'&&!FIND.q&&FIND.where==='near'&&P.some(p=>!placed.some(b=>b.id===p.id))){closeSheet();askAI();return}
+  if(FIND.into==='sched'&&FIND.when==='gap'&&!FIND.q&&FIND.where==='near'&&P.some(p=>!CUR.placed.some(b=>b.id===p.id))){closeSheet();askAI();return}
   FIND.busy=true; FIND.res=[]; FIND.cursor=FIND.gap?FIND.gap[0]+15:null; renderFind();
   const ctl=new AbortController(); FIND.ctl=ctl;
   const n=await morePlaces(FIND.into==='sched'?5:8,'findSt',findFocus(),ctl.signal).catch(()=>0);
@@ -45,7 +45,7 @@ async function runFind(){
   renderTray();
 }
 function findDrop(id){ // 안 함: the place was only just found, so take it off the list again
-  const k=PACK.places.findIndex(x=>x.id===id); if(k>=0){PACK.places.splice(k,1);savePack()}
+  const k=PK.pack.places.findIndex(x=>x.id===id); if(k>=0){PK.pack.places.splice(k,1);savePack()}
   const i=P.findIndex(x=>x.id===id); if(i>=0)P.splice(i,1); delete PM[id]; FRESH.delete(id);
 }
 // 장소 찾기 sheet (FindSheet.tsx tells: a choice chip "key:value" with what is typed, a result "id:sched|list|skip",

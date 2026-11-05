@@ -1,10 +1,10 @@
 // ---------- phase strip: before / during / after the trip ----------
 const isoOf=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-function todayIdx(){const t=isoOf(new Date());return DAYS.findIndex(D=>D.iso===t)}
+function todayIdx(){const t=isoOf(new Date());return DY.days.findIndex(D=>D.iso===t)}
 // drawn by React: app/screens/Phase.tsx
 function renderPhase(){
   const el=$('#phase'); if(!el) return;
-  const pr=profile, t=isoOf(new Date()), D0=DAYS[0], Dn=DAYS[DAYS.length-1];
+  const pr=CUR.profile, t=isoOf(new Date()), D0=DY.days[0], Dn=DY.days[DY.days.length-1];
   const show=v=>{window.JEPI_UI.mount('phase',el,v);el.hidden=v.s==='none'};
   // AI 꺼짐 now lives on the 더보기 → 설정 row only (tidy day screen)
   if(!D0||!D0.iso||pr.dateUnknown){show({s:'none'});return}
@@ -28,12 +28,12 @@ function planCovers(id,t){const d=TRIP.plans.get(id);const p=d&&d.profile;if(!p|
   const s=new Date(p.startDate+'T00:00:00'),e=new Date(s);e.setDate(e.getDate()+(p.kind==='day'?0:(+p.nights||0)));const x=new Date(t+'T00:00:00');return x>=s&&x<=e}
 function startupFocus(){
   const t=isoOf(new Date());
-  if(!(DAYS[0]&&DAYS[0].iso&&todayIdx()>=0)){const p=plans.find(p=>p.id!==curPlan&&planCovers(p.id,t));if(p){openPlan(p.id)}}
+  if(!(DY.days[0]&&DY.days[0].iso&&todayIdx()>=0)){const p=PL.plans.find(p=>p.id!==PL.curPlan&&planCovers(p.id,t));if(p){openPlan(p.id)}}
   const ti=todayIdx(); if(ti>=0){day=ti;renderAll();
     setTimeout(()=>{const H=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hour'))||60;const g=$('#grid');if(!g)return;
       const now=new Date(), nm=now.getHours()*60+now.getMinutes(); const y=g.getBoundingClientRect().top+window.scrollY+Math.max(0,(nm-dayStart(day))/60*H-140);window.scrollTo({top:y})},80)}
 }
-function renderPlanBtn(){const p=plans.find(x=>x.id===curPlan);hero({planName:(p&&p.name)||planName()})}
+function renderPlanBtn(){const p=PL.plans.find(x=>x.id===PL.curPlan);hero({planName:(p&&p.name)||planName()})}
 const inside=sel=>{const a=document.activeElement;return !!(a&&a.closest&&a.closest(sel))};
 function renderExt(){renderPhase();renderMore();renderPlanBtn();
   if(tab==='me'&&$('#onb').hidden&&!inside('#meBox'))renderMeRows();

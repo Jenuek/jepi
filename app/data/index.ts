@@ -17,6 +17,15 @@ import * as routes from './routes';
 import * as account from './account';
 import * as recs from './recs';
 import * as nearby from './nearby';
+import * as keys from './keys';
+import * as places from './places';
+import * as ops from './ops';
+import * as days from './days';
+import * as marks from './marks';
+import * as season from './season';
+import * as check from './check';
+import * as traveler from './traveler';
+import * as asks from './asks';
 import * as logic from '../logic';
 import * as trips from './trips';
 import { status, syncDocs, syncSoon, syncPush, syncPull, syncNow, connectSync } from './sync';
@@ -45,6 +54,24 @@ export const data = {
   recs,
   /** 🎲 places nearby (뭐 먹지 · 뭐 하지) */
   nearby,
+  /** AI·지도 keys on this device */
+  keys,
+  /** the destination's places and the lists made from them */
+  places,
+  /** changes to the schedule as a list: apply, try out, avoid new warnings */
+  ops,
+  /** the trip's days and fixed blocks (from 여행 정보) */
+  days,
+  /** 할 일 표시 and their warnings */
+  marks,
+  /** this trip's season and what it means for places */
+  season,
+  /** the day check with travel, fares and opening hours */
+  check,
+  /** the traveler as the AI is told about them; money text */
+  traveler,
+  /** what JEPI asks the AI (helper, season …) and how answers are tidied */
+  asks,
   /** calculations: time text, distances, the day check (app/logic) */
   logic,
   /** 친구와 함께 on the server */

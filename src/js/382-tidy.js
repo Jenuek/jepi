@@ -15,7 +15,7 @@ function renderDaySum(items,trans,gaps){
   if(sumOpen==='budget'&&$('#budgetBox')) $('#budgetBox').open=true;
   const body=$('#sumBody');
   const sw=sumOpen==='warn'?warns.map(i=>({uid:String(i.uid),time:fmt(i.start),name:String(i.name),warn:String(i.warns[0])})):[];
-  const sg=sumOpen==='gap'?gaps.map(g=>({range:`${fmt(g[0])}–${fmt(g[1])}`,find:sample&&!PACK.manual?`${g[0]}-${g[1]}`:null})):[];
+  const sg=sumOpen==='gap'?gaps.map(g=>({range:`${fmt(g[0])}–${fmt(g[1])}`,find:sample&&!PK.pack.manual?`${g[0]}-${g[1]}`:null})):[];
   window.JEPI_UI.mount('sumBody',body,{warns:sw,gaps:sg});
   body.hidden=!(sw.length||sg.length);
 }

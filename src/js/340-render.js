@@ -1,14 +1,14 @@
 // ---------- render ----------
 // The day buttons, the budget and the route line are drawn by React: app/screens/DayTop.tsx
 function renderDays(){
-  window.JEPI_UI.mount('days',$('#days'),{days:DAYS.map((D,i)=>{const n=analyze(i).items.reduce((a,it)=>a+it.warns.length,0);
+  window.JEPI_UI.mount('days',$('#days'),{days:DY.days.map((D,i)=>{const n=analyze(i).items.reduce((a,it)=>a+it.warns.length,0);
     return {date:`${D.date} ${WD[D.wd]}`,label:`Day ${i+1}${n?` · 경고 ${n}`:''}`,on:i===day}})});
 }
 function setZoom(h,quiet){h=h===100?100:60;document.documentElement.style.setProperty('--hour',h+'px');document.querySelectorAll('[data-zoom]').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.zoom===h)));if(!quiet){store.set('gp.zoom',h);renderTimeline()}}
 let gridRev=0;
 function renderTimeline(){
   const DAY_START=dayStart(day);
-  const D=DAYS[day]; hero({title:dayTitleOf(day)});
+  const D=DY.days[day]; hero({title:dayTitleOf(day)});
   const {items,trans}=analyze(day);
   const nPlaced=items.filter(i=>i.kind==='place').length;
   const g=gapsOf(day);
@@ -39,30 +39,26 @@ function renderTimeline(){
   renderBudget();
   renderPView();
 }
-function dayCost(d){
-  const {items,trans}=analyze(d);
-  const act=items.reduce((a,i)=>a+(i.yen||0),0), tr=trans.reduce((a,t)=>a+(t.fare||0),0), meal=mealOf(d), krw=items.reduce((a,i)=>a+(i.krw||0),0);
-  return {act,tr,meal,krw,yen:act+tr+meal};
-}
+const dayCost=JD.check.dayCost;   // app/data/check.ts
 function renderBudget(){
-  const c=dayCost(day); let tY=0,tK=0; DAYS.forEach((_,i)=>{const x=dayCost(i);tY+=x.yen;tK+=x.krw});
-  const bp=budgetParts(), dl=bp?bp.daily/(KRW_PER_JPY||1):0, pct=bp&&dl?Math.round(c.yen/dl*100):0;
-  const KRW=PACK.currency==='KRW', h=heads(), one=h>1?' (1인)':'', B=(t,cls)=>({t,tag:'b',cls});
-  window.JEPI_UI.mount('budgetSum',$('#budgetSum'),{segs:segs(`💰 오늘 예상${one} `,B(yen(c.yen)),KRW?'':` · 약 ${won(c.yen*KRW_PER_JPY+c.krw)}`,
+  const c=dayCost(day); let tY=0,tK=0; DY.days.forEach((_,i)=>{const x=dayCost(i);tY+=x.yen;tK+=x.krw});
+  const bp=budgetParts(), dl=bp?bp.daily/(PLC.rate()||1):0, pct=bp&&dl?Math.round(c.yen/dl*100):0;
+  const KRW=PK.pack.currency==='KRW', h=heads(), one=h>1?' (1인)':'', B=(t,cls)=>({t,tag:'b',cls});
+  window.JEPI_UI.mount('budgetSum',$('#budgetSum'),{segs:segs(`💰 오늘 예상${one} `,B(yen(c.yen)),KRW?'':` · 약 ${won(c.yen*PLC.rate()+c.krw)}`,
     ...(bp?[' · ',{t:`예산의 ${pct}%`,tag:'span',cls:pct>100?'over':''}]:[]))});
-  const local=bp?bp.local/(KRW_PER_JPY||1):0;
-  window.JEPI_UI.mount('budget',$('#budget'),{act:yen(c.act),tr:yen(c.tr),meal:yen(c.meal),step:PACK.step,home:c.krw?won(c.krw):'',
+  const local=bp?bp.local/(PLC.rate()||1):0;
+  window.JEPI_UI.mount('budget',$('#budget'),{act:yen(c.act),tr:yen(c.tr),meal:yen(c.meal),step:PK.pack.step,home:c.krw?won(c.krw):'',
     bar:bp?{pct,over:pct>100,line:segs('하루 현지 예산 ',B(yen(dl),'mono'),` 중 ${pct}% 사용`,...(pct>100?[' · ',{t:`${yen(c.yen-dl)} 넘어요`,tag:'span',color:'#c27a00'}]:[]),
       ' · 여행 전체 현지 예산 ',B(yen(local),'mono'),` 중 ${Math.round(tY/local*100)}%`)}:null,
-    totalLabel:`오늘 예상${one}`,total:yen(c.yen),totalSub:KRW?'집 오가는 교통 포함 '+won(c.yen+c.krw):'약 '+won(c.yen*KRW_PER_JPY+c.krw),
-    group:h>1?segs(`${h}명 합계 오늘 `,B(yen(c.yen*h),'mono'),KRW?'':` (약 ${won((c.yen*KRW_PER_JPY+c.krw)*h)})`,' · 여행 전체 ',B(yen(tY*h),'mono'),KRW?'':` (약 ${won((tY*KRW_PER_JPY+tK)*h)})`):null,
-    trip:segs(`여행 전체 현지 예상${one} `,B(yen(tY),'mono'),` ${KRW?'':`(약 ${won(tY*KRW_PER_JPY+tK)}) `}· 쇼핑 제외 · 미리 결제한 교통편·숙소·예약은 제외${rateTxt()}`)});
+    totalLabel:`오늘 예상${one}`,total:yen(c.yen),totalSub:KRW?'집 오가는 교통 포함 '+won(c.yen+c.krw):'약 '+won(c.yen*PLC.rate()+c.krw),
+    group:h>1?segs(`${h}명 합계 오늘 `,B(yen(c.yen*h),'mono'),KRW?'':` (약 ${won((c.yen*PLC.rate()+c.krw)*h)})`,' · 여행 전체 ',B(yen(tY*h),'mono'),KRW?'':` (약 ${won((tY*PLC.rate()+tK)*h)})`):null,
+    trip:segs(`여행 전체 현지 예상${one} `,B(yen(tY),'mono'),` ${KRW?'':`(약 ${won(tY*PLC.rate()+tK)}) `}· 쇼핑 제외 · 미리 결제한 교통편·숙소·예약은 제외${rateTxt()}`)});
 }
 // a line of text and bold/colored parts for React (DayTop.tsx Line): neighbouring text is merged, empty text dropped
 function segs(...xs){const out=[];xs.forEach(x=>{if(x==null||x==='')return;if(typeof x==='string'&&typeof out[out.length-1]==='string')out[out.length-1]+=x;else out.push(x)});return out}
 function renderRoute(items,trans){
   const stops=[];
-  if(day>0) stops.push({area:LOC_AREA[DAYS[day].startLoc]});
+  if(day>0) stops.push({area:DY.locArea[DY.days[day].startLoc]});
   items.forEach((i,k)=>{ if(i.stay&&k!==items.length-1) return; stops.push({area:i.area}) });
   const seq=stops.filter((s,i)=>i===0||s.area!==stops[i-1].area);
   const total=trans.reduce((a,t)=>a+t.min,0);
@@ -72,12 +68,12 @@ function renderRoute(items,trans){
 }
 function dayRefs(){
   const refs=dayItems(day).map(i=>({id:i.id,name:i.stay?`${i.area} 숙소`:i.name,ll:i.ll}));
-  if(day>0) refs.push({name:`${LOC_AREA[DAYS[day].startLoc]} 숙소`,ll:LOC[DAYS[day].startLoc].ll});
+  if(day>0) refs.push({name:`${DY.locArea[DY.days[day].startLoc]} 숙소`,ll:DY.loc[DY.days[day].startLoc].ll});
   return refs;
 }
 function nearestRef(p,refs){let best=null;for(const r of refs){if(r.id===p.id)continue;const d=km(p.ll,r.ll);if(!best||d<best.d)best={d,r}}return best}
 // the top of the 장소 tab is drawn by React (app/screens/Tops.tsx); #filters and #cards inside it get their own screens
-function drawTrayTop(){window.JEPI_UI.mount('trayTop',$('#trayTopMount'),{moreHidden:!sample||!!PACK.manual,rec:REC.statusText(PACK.city||''),group})}
+function drawTrayTop(){window.JEPI_UI.mount('trayTop',$('#trayTopMount'),{moreHidden:!sample||!!PK.pack.manual,rec:REC.statusText(PK.pack.city||''),group})}
 // pressed in the 장소 tab's top
 function trayAct(n,v){
   if(n==='group'){group=v;renderTray()}
@@ -86,19 +82,19 @@ function trayAct(n,v){
 }
 function renderTray(){
   recsMaybe();
-  const wd=DAYS[day].wd, openOnly=$('#openOnly').checked;
+  const wd=DY.days[day].wd, openOnly=$('#openOnly').checked;
   drawTrayTop();
   const cats=Object.entries(CATS);
   window.JEPI_UI.mount('trayFilters',$('#filters'),{chips:[['all','전체'],['wish','♥'],...(P.some(p=>p.season)?[['season','🗓 시즌']]:[]),...(RS.status!=='off'?[['users','👍']]:[]),['must','★']],cats,cat,rev:++trayRev});
-  const used=new Set(placed.map(b=>b.id));
-  const inCat=P.filter(p=>!(cat==='all'&&p.drop)&&(cat==='all'||(cat==='wish'?isWish(p.id):cat==='season'?!!p.season:cat==='must'?!!MUST[p.id]:cat==='users'?(recOf(p)>0||p.shared):p.cat===cat))&&(!openOnly||(!closedOn(p,wd)&&!outOfSeason(p,DAYS[day].iso))));
+  const used=new Set(CUR.placed.map(b=>b.id));
+  const inCat=P.filter(p=>!(cat==='all'&&p.drop)&&(cat==='all'||(cat==='wish'?isWish(p.id):cat==='season'?!!p.season:cat==='must'?!!MUST[p.id]:cat==='users'?(recOf(p)>0||p.shared):p.cat===cat))&&(!openOnly||(!closedOn(p,wd)&&!outOfSeason(p,DY.days[day].iso))));
   const list=inCat.filter(p=>!used.has(p.id));
   const nHidden=inCat.length-list.length;
   // drawn by React: app/screens/Tray.tsx
-  const pmode=jp==='P'?{count:wish.filter(id=>PM[id]&&!used.has(id)).length,ai:!!sample}:null;
+  const pmode=jp==='P'?{count:CUR.wish.filter(id=>PM[id]&&!used.has(id)).length,ai:!!sample}:null;
   const show=(empty,groups)=>window.JEPI_UI.mount('trayCards',$('#cards'),{dups:dupInfo(),hidden:nHidden,empty,groups,pmode,rev:++trayRev});
   if(!list.length&&jp==='P'&&!P.length){show(sample?'아직 장소가 없어요. 위의 "AI에게 추천받기"로 후보를 받아 보세요.':'아직 장소가 없어요. 위의 "직접 적어 담기"로 가고 싶은 곳을 적어 보세요.',[]);return}
-  if(!list.length){show(P.length?'이 조건에서 남은 후보지가 없어요.':sample&&!PACK.manual?'아직 장소 후보가 없어요. 위에서 AI로 찾아보세요.':'장소 후보가 없어요. 타임라인의 "+ 직접 만들기"로 블록을 만들어 쓰세요.',[]);return}
+  if(!list.length){show(P.length?'이 조건에서 남은 후보지가 없어요.':sample&&!PK.pack.manual?'아직 장소 후보가 없어요. 위에서 AI로 찾아보세요.':'장소 후보가 없어요. 타임라인의 "+ 직접 만들기"로 블록을 만들어 쓰세요.',[]);return}
   const refs=dayRefs();
   let rows=list.map(p=>({p,near:nearestRef(p,refs)}));
   const card=x=>cardInfo(x.p,wd,used,x.near);
@@ -120,7 +116,7 @@ function renderTray(){
 let trayRev=0;
 // one place card (drawn by React: Tray.tsx Card)
 function cardInfo(p,wd,used,near){
-    const h=hoursFor(p,wd), off=closedOn(p,wd), oos=outOfSeason(p,DAYS[day].iso), mk=matchKw(p.id), T=(c,t)=>({c,t});
+    const h=hoursFor(p,wd), off=closedOn(p,wd), oos=outOfSeason(p,DY.days[day].iso), mk=matchKw(p.id), T=(c,t)=>({c,t});
     let dist=''; if(near){const t=travel(near.r.ll,p.ll);dist=`${near.r.name}에서 ${t?`${t.mode} 약 ${t.min}분`:'바로 옆'}`}
     const key=off?T('tag w',`${WD[wd]} 휴관`):oos?T('tag w','이 날은 기간 아님'):p.season?T('tag r',`🗓 ${p.season}`):mustOf(p.id)?T('tag r','★ 추천'):mk.length?T('tag kwt',`#${mk[0]}`):null;
     const det=[p.shared||p.fromUsers?T('tag usr',p.userMade?'여행자가 올린 곳':'여행자 추천'):null,
@@ -136,14 +132,14 @@ function cardInfo(p,wd,used,near){
       vote:RS.status!=='off'?{on:!!iRec(p),n:recOf(p),locked:false}:null,extras:extras(CARD_EXTRAS,p),dur:p.dur,key,det};
 }
 function openFill(t){
-  const D=DAYS[day], wd=D.wd, {items}=analyze(day);
+  const D=DY.days[day], wd=D.wd, {items}=analyze(day);
   const prev=items.filter(i=>i.end<=t).pop()||null;
   const next=items.find(i=>i.start>t)||null;
-  const pLl=prev?prev.ll:LOC[D.startLoc].ll, pName=prev?(prev.stay?`${prev.area} 숙소`:prev.name):`${LOC_AREA[D.startLoc]} 숙소`;
+  const pLl=prev?prev.ll:DY.loc[D.startLoc].ll, pName=prev?(prev.stay?`${prev.area} 숙소`:prev.name):`${DY.locArea[D.startLoc]} 숙소`;
   const gS=prev?prev.end:(day===0?arrEnd():480), gE=next?next.start:1440, len=Math.max(0,gE-gS);
   const tm=(a,b)=>(travel(a,b)||{min:0}).min;
   const base=next?tm(pLl,next.ll):0;
-  const used=new Set(placed.map(b=>b.id));
+  const used=new Set(CUR.placed.map(b=>b.id));
   const carrying=prev?!!prev.carryAfter:false;
   const rows=P.filter(p=>!used.has(p.id)).map(p=>{
     const tin=tm(pLl,p.ll), tout=next?tm(p.ll,next.ll):0, h=hoursFor(p,wd);
@@ -173,12 +169,12 @@ function openFill(t){
 function renderChecks(){
   const groups=[];
   const warnRows=[], prepRows=[];
-  DAYS.forEach((D,i)=>{const {items}=analyze(i);
+  DY.days.forEach((D,i)=>{const {items}=analyze(i);
     items.forEach(it=>{ it.warns.forEach(w=>warnRows.push({d:i,uid:it.uid,t:`${it.name}: ${w}`}));
       if(it.kind==='place'&&it.p.check) prepRows.push({id:'p-'+it.id,d:i,t:it.p.check,s:it.name});
       if(it.kind==='place'&&it.p.verify) prepRows.push({id:'v-'+it.id,d:i,t:`${it.p.verify} 확인`,s:it.name}); });
   });
-  if(markWarnings().needTax) prepRows.push({id:'tax-'+cityKey(),d:DAYS.length-1,t:'쇼핑 일정이 있어요 · 면세 환급을 어디서 할지 🧾 표시를 붙여 두세요',s:'매장 또는 출국 공항'});
+  if(markWarnings().needTax) prepRows.push({id:'tax-'+cityKey(),d:DY.days.length-1,t:'쇼핑 일정이 있어요 · 면세 환급을 어디서 할지 🧾 표시를 붙여 두세요',s:'매장 또는 출국 공항'});
   tabs({warn:warnRows.length?String(warnRows.length):''}); $('#warnCount2').textContent=warnRows.length?' '+warnRows.length:'';
   dock({fixHidden:!(warnRows.length&&sample),fixText:`🛠 경고 ${warnRows.length}개 해결`});
   // drawn by React: app/screens/Checks.tsx
@@ -186,7 +182,7 @@ function renderChecks(){
     season:seasonInfo(),all:STATIC_CHECKS.map(s=>ckInfo(s.id,s.t)),resetArm:!!resetArm,rev:++checksRev});
 }
 let checksRev=0;
-function ckInfo(id,t,sub){return {id,t:String(t),sub,on:!!done[id]}}
+function ckInfo(id,t,sub){return {id,t:String(t),sub,on:!!CUR.done[id]}}
 // the bottom tabs are drawn by React (app/screens/Bars.tsx); tabs({…}) changes some of it and draws again
 let tabsView={shown:'timeline',warn:''};
 function tabs(p){tabsView={...tabsView,...p};window.JEPI_UI.mount('tabs',$('#tabsMount'),tabsView)}
@@ -216,7 +212,7 @@ function renderAI(){
   box.hidden=false;
   // drawn by React: app/screens/AiBox.tsx
   const st=aiState.status==='loading'?{s:'loading'}:aiState.status==='error'?{s:'error',msg:String(aiState.msg||'')}
-    :{s:'done',date:String(DAYS[day].date),dropped:aiState.dropped||0,items:aiState.items.map(x=>({time:`${fmt(x.start)}–${fmt(x.start+PM[x.id].dur)}`,name:String(PM[x.id].name),why:String(x.reason||''),added:!!x.added}))};
+    :{s:'done',date:String(DY.days[day].date),dropped:aiState.dropped||0,items:aiState.items.map(x=>({time:`${fmt(x.start)}–${fmt(x.start+PM[x.id].dur)}`,name:String(PM[x.id].name),why:String(x.reason||''),added:!!x.added}))};
   window.JEPI_UI.mount('aiBox',box,{state:st,rev:++aiBoxRev});
 }
 let aiBoxRev=0;
@@ -224,9 +220,9 @@ let aiBoxRev=0;
 function renderPref(){
   const box=$('#prefBox'); if(!box) return;
   const counts=k=>P.filter(p=>tagsOf(p.id).some(t=>norm(t)===norm(k))).length;
-  const known=[...new Set([...GENERIC_KW,...Object.values(TAGS).flat()])].filter(t=>!kws.some(k=>norm(k)===norm(t)));
-  window.JEPI_UI.mount('keywords',box,{kws:kws.map(k=>({k:String(k),n:counts(k)})),known:known.map(String)});
+  const known=[...new Set([...GENERIC_KW,...Object.values(TAGS).flat()])].filter(t=>!CUR.kws.some(k=>norm(k)===norm(t)));
+  window.JEPI_UI.mount('keywords',box,{kws:CUR.kws.map(k=>({k:String(k),n:counts(k)})),known:known.map(String)});
 }
-const saveKw=()=>{TRIP.kws.save(kws);LS.set('jepi.kwAt',Date.now());syncSoon();renderPref();renderTray()};
+const saveKw=()=>{TRIP.kws.save(CUR.kws);LS.set('jepi.kwAt',Date.now());syncSoon();renderPref();renderTray()};
 function renderAll(){touchPlan();renderMeta();renderNudges();renderDays();renderTimeline();renderTray();renderChecks();renderPref();renderTabs();renderBanner();renderAI();renderChat();renderExt();renderLook()}
 

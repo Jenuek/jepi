@@ -4,7 +4,7 @@ let eat=Object.assign({walk:10,mood:'any'},LS.get('jepi.eat',{}),{base:null,org:
 const saveEat=()=>LS.set('jepi.eat',{walk:eat.walk,mood:eat.mood});
 const nowMin=()=>{const n=new Date();return n.getHours()*60+n.getMinutes()};
 const mealNow=()=>{const m=nowMin();return m>=630&&m<930?'lunch':m>=990&&m<1290?'dinner':'snack'};
-const planUsable=()=>DAYS.length&&PACK&&PACK.city&&PACK.city!=='새 여행';
+const planUsable=()=>DY.days.length&&PK.pack&&PK.pack.city&&PK.pack.city!=='새 여행';
 function eatDefaults(){
   const ti=todayIdx(); eat.base=ti>=0&&planUsable()?'plan':'near';
   if(eat.base==='plan') day=ti;
@@ -53,7 +53,7 @@ async function eatRoll(again){
 }
 function renderEat(){
   if($('#sheet').dataset.uid!=='dice') return;
-  const meal=eat.base==='plan'?eat.meal:mealNow(), mt=MEAL_TXT[meal]||'점심', D=DAYS[day]||{};
+  const meal=eat.base==='plan'?eat.meal:mealNow(), mt=MEAL_TXT[meal]||'점심', D=DY.days[day]||{};
   const orgs=[['gps','지금 위치'],...MYP.filter(x=>x.ll).map(x=>[x.id,x.name])];
   const nearLbl=eat.org==='gps'?'지금 위치':(mypOf(eat.org)||{}).name||'지금 위치';
   let stage, acts;
@@ -71,10 +71,10 @@ function renderEat(){
   }
   diceMount({eat:true,tabs:dice.tab==='eat'?'eat':'do',
     bases:[{attr:'eatbase',v:'near',on:eat.base==='near',label:`📍 ${nearLbl} 주변`,small:`걸어서 ${eat.walk}분`},
-      ...(planUsable()?[{attr:'eatbase',v:'plan',on:eat.base==='plan',label:`🗓 ${PACK.city} Day ${day+1}`,small:`${D.date||''} ${MEAL_TXT[eat.meal]}`}]:[])],
+      ...(planUsable()?[{attr:'eatbase',v:'plan',on:eat.base==='plan',label:`🗓 ${PK.pack.city} Day ${day+1}`,small:`${D.date||''} ${MEAL_TXT[eat.meal]}`}]:[])],
     cond:{open:!!eat.cond,txt:eatCondTxt(),rows:[...(eat.base==='near'?[dHint('기준'),dPills('eatorg',eat.org,orgs),...(MYP.some(x=>x.ll)?[]:[{r:'setPlaces'}])]:[dHint('언제'),dPills('eatmeal',eat.meal,[['lunch','점심'],['dinner','저녁']])]),
       dHint('걸어서'),dPills('eatwalk',eat.walk,[[5,'5분'],[10,'10분'],[15,'15분'],[20,'20분']]),dHint('기분'),dPills('eatmood',eat.mood,EAT_MOODS.map(m=>[m[0],m[1]]))]},
-    stage,msg:eat.base==='near'?(eat.msg||''):(dice.msg||''),acts,ai:eat.base==='plan'&&sample&&!PACK.manual?{primary:false}:null,foot:'최근 5일 동안 고른 곳은 빼고 굴려요.'});
+    stage,msg:eat.base==='near'?(eat.msg||''):(dice.msg||''),acts,ai:eat.base==='plan'&&sample&&!PK.pack.manual?{primary:false}:null,foot:'최근 5일 동안 고른 곳은 빼고 굴려요.'});
 }
 function openDiceTab(tab,fromT){
   dice.tab=tab; if(tab==='eat'){eatDefaults(); eat.chosen=null} else doDefaults(fromT!=null);

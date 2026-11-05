@@ -10,7 +10,7 @@ async function unpackText(t){
 }
 let lastLink='';
 async function shareLink(asNote){
-  snapshotCurrent(); const name=(plans.find(x=>x.id===curPlan)||{}).name||planName();
+  snapshotCurrent(); const name=(PL.plans.find(x=>x.id===PL.curPlan)||{}).name||planName();
   const pd=planData(); if(pd.profile&&pd.profile.home){pd.profile.home=Object.assign({},pd.profile.home,{area:''});delete pd.profile.home.ll}
   if(pd.profile&&pd.profile.look&&pd.profile.look.photo){pd.profile.look=Object.assign({},pd.profile.look,{photo:'',cover:'city'})} // a photo would make the link too long
   const t=await packText(JSON.stringify({n:name,d:pd})); const url=location.origin+location.pathname+'#s='+t+(asNote?'&note=1':'');
@@ -25,8 +25,8 @@ async function openShared(){
   const asNote=/[#&]note=1/.test(location.hash||'');
   try{const v=JSON.parse(await unpackText(m[1])); if(!v||!v.d||!v.d.profile) throw 0;
     snapshotCurrent(); const nid='p'+Date.now().toString(36);
-    TRIP.plans.put(nid,v.d); plans.unshift({id:nid,name:String(v.n||'공유받은 계획').slice(0,30)+' (공유받음)',custom_name:true,updated:Date.now()});
-    curPlan=nid; savePlans(); onbFrame({open:false}); applyPlanData(v.d); snapshotCurrent(); tab='timeline'; renderTabs();
+    TRIP.plans.put(nid,v.d); PL.plans.unshift({id:nid,name:String(v.n||'공유받은 계획').slice(0,30)+' (공유받음)',custom_name:true,updated:Date.now()});
+    PL.curPlan=nid; savePlans(); onbFrame({open:false}); applyPlanData(v.d); snapshotCurrent(); tab='timeline'; renderTabs();
     history.replaceState(null,'',location.pathname); showToast('공유받은 계획을 내 계획에 추가했어요.');if(asNote)setTimeout(()=>openNotebook(),400);
   }catch(_){history.replaceState(null,'',location.pathname);showToast('공유 링크가 잘렸거나 손상됐어요.')}
 }

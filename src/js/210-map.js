@@ -37,7 +37,7 @@ function mapLegs(d){
 function drawMap(fit){
   if(!mapState.map||!mapState.on) return;
   const lg=mapState.layer; lg.clearLayers(); const bounds=[];
-  const days=mapState.all?DAYS.map((_,i)=>i):[day];
+  const days=mapState.all?DY.days.map((_,i)=>i):[day];
   days.forEach(d=>{
     const col=mapState.all?DAY_COLORS[d%DAY_COLORS.length]:getComputedStyle(document.body).getPropertyValue('--accent').trim()||'#27306b';
     const {stops,legs}=mapLegs(d);

@@ -1198,6 +1198,95 @@ module.exports = [
     }
   },
   {
+    name: 'data: destination places (app/data/places.ts): the AI answer checked, a place fitted to the city, lists filled, a very old "tokyo" plan',
+    async run({ b, S, device, ok }) {
+      const p = await device(b, S);
+      const r = await p.evaluate(() => {
+        const L = window.JEPI_DATA.places, out = {};
+        const pk = L.cleanPack({ city: '오사카', currency: 'jpy', rate: 9.1, areas: [{ key: 'Namba!', name: '난바', lat: 34.666, lng: 135.501, zone: 'south' }, { key: 'umeda', name: '우메다', lat: 34.703, lng: 135.497, zone: 'north' }, { key: 'far', name: '먼 곳', lat: 10, lng: 10 }],
+          gateways: [{ key: 'kix', iata: 'kix', name: '간사이 공항', lat: 34.43, lng: 135.23, fare: 1000 }], zones: { South: '미나미' } }, '오사카');
+        out.pack = pk && pk.currency === 'JPY' && pk.areas.length === 2 && pk.areas[0].key === 'namba' && pk.gateways[0].iata === 'KIX' && pk.zones.south === '미나미';
+        out.badPack = L.cleanPack({ city: 'x', areas: [] }, 'x') === null && L.cleanPack(null, 'x') === null;
+        L.loadPack(pk);
+        out.lists = L.state.pack === pk && Object.keys(L.AREAS).join() === 'namba,umeda' && L.AIRPORTS.gw_kix.name === '간사이 공항' && L.firstArea() === 'namba' && pk.snack > 0 && pk.step > 0;
+        const pl = L.cleanPlace({ name: '도톤보리', area: 'namba', lat: 34.6687, lng: 135.5013, cat: 'food', dur: 50, open: '10:00-02:00', tags: ['야경'] });
+        out.place = pl && pl.area === '난바' && pl.dur === 45 && pl.hours[0] === 600 && pl.hours[1] === 1440 && pl.zone === 'south' && pl.cat === 'food';
+        const off = L.cleanPlace({ name: '엉뚱한 곳', area: 'umeda', lat: 0, lng: 0, cat: 'nope' });
+        out.fitted = off && off.ll[0] === 34.703 && off.cat === 'walk' && off.always === true;
+        L.addPackPlace(pl); out.added = L.PM[pl.id] === pl && L.tagsOf(pl.id)[0] === '야경' && L.P.includes(pl);
+        out.tokyo = L.packFrom('tokyo') === L.TOKYO_PACK && L.TOKYO_PACK.places.length > 30 && L.packFrom({ city: 'x' }) === null;
+        return out;
+      });
+      for (const [k, v] of Object.entries(r)) ok(v === true, k);
+      // a plan saved by the very first version as "tokyo" still opens
+      await p.evaluate(() => { localStorage.setItem('gp.pack', '"tokyo"') }); await p.reload(); await p.waitForTimeout(3400);
+      ok(await p.evaluate(() => window.JEPI_DATA.places.state.pack.city === '도쿄' && window.JEPI_DATA.places.P.length > 30), 'old "tokyo" plan opens with the Tokyo places');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'data: changes as a list (app/data/ops.ts): trying out leaves the trip alone, repair avoids a new overlap, apply then save',
+    async run({ b, S, device, ok, skipCoach }) {
+      const p = await device(b, S);
+      await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await p.waitForTimeout(400); await skipCoach(p);
+      const r = await p.evaluate(() => {
+        const O = window.JEPI_DATA.ops, T = window.JEPI_DATA.trip, L = window.JEPI_DATA.places, out = {};
+        const day0 = T.cur.placed.filter(b => b.day === 0).sort((a, b) => a.start - b.start), first = day0[0];
+        const unused = L.P.find(x => !x.drop && !T.cur.placed.some(b => b.id === x.id) && x.always);
+        const at = Math.floor(first.start / 60) * 60, hh = m => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+        const ops = [{ op: 'add', id: unused.id, day: 0, start: hh(first.start), dur: 60 }];
+        const n0 = T.cur.placed.length, saved0 = localStorage.getItem('gp.placed3'), w0 = O.warnings().size;
+        const sim = O.simulate(ops);
+        out.tryOut = T.cur.placed.length === n0 && localStorage.getItem('gp.placed3') === saved0 && O.state.dry === false;
+        out.simSeesMore = sim.size > w0;
+        const fixed = O.repair(ops);
+        const moved = fixed.ops[0].start !== hh(first.start), before = sim.size - w0;
+        out.repair = before > 0 && (moved ? fixed.warns.length < before : fixed.warns.length === before);
+        O.apply(fixed.ops); T.blocks.saved();
+        out.applied = T.cur.placed.length === n0 + 1 && JSON.parse(localStorage.getItem('gp.placed3')).length === n0 + 1;
+        out.noDupe = (O.apply(fixed.ops), T.cur.placed.length === n0 + 1);
+        return out;
+      });
+      for (const [k, v] of Object.entries(r)) ok(v === true, k);
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'AI answers reach the screen (pretend AI): 시즌 정보 · 동네 분위기 · 숙소 후보 · 노선 · 붙여 넣은 목록',
+    async run({ b, S, device, ok, skipCoach }) {
+      const p = await device(b, S);
+      const say = (r, o) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content: [{ type: 'text', text: JSON.stringify(o) }] }) });
+      await p.route(/api\.anthropic\.com/, r => { const q = r.request().postData() || '';
+        if (q.includes('What is special about these exact dates')) return say(r, { sunrise: '06:20', sunset: '16:50', weather: '선선해요, 겉옷을 챙기세요', notes: ['주말엔 붐벼요'], places: [{ name: '단풍 정원', area: 'namba', cat: 'walk', lat: 34.666, lng: 135.501, dur: 60, season: '단풍 절정', from: '2026-11-01', to: '2026-12-05', confidence: 'high' }] });
+        if (q.includes('Describe these neighbourhoods')) { const k = (q.match(/Areas: ([a-z0-9_]+)=/) || [])[1]; return say(r, { areas: [{ key: k, vibe: '밤늦게까지 활기찬 동네예요', good: '먹방 여행', caution: '' }] }) }
+        if (q.includes('places to stay')) return say(r, { stays: [{ name: '테스트 호텔', local: 'Test Hotel', type: '호텔', why: '역 앞이에요', price: '1박 12만원', caution: '' }] });
+        if (q.includes('usual ways to get there')) return say(r, { routes: [{ from: '인천', to: '간사이', type: '직항', carriers: ['대한항공'], lcc: false, duration: '약 1시간 40분', note: '' }], tips: ['짐 요금 확인'] });
+        if (q.includes('pasted places')) return say(r, { places: [{ name: '우메다 스카이 빌딩', area: 'umeda', cat: 'walk', lat: 34.705, lng: 135.49, dur: 60 }] });
+        r.fulfill({ status: 503, body: '{}' }) });
+      await p.click('[data-w="new"]'); await p.waitForTimeout(250);
+      await p.fill('#onbKey_anthropic', 'sk-ant-test-key'); await p.click('#onbBody [data-onbkey="anthropic"]'); await p.waitForTimeout(300);
+      await p.evaluate(() => window.__jepi.demoLikeTrip()); await p.waitForTimeout(400); await skipCoach(p);
+      await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="check"]'); await p.waitForTimeout(300);
+      await p.click('#seasonBtn'); await p.waitForTimeout(1500);
+      ok((await p.textContent('#checks')).includes('16:50') && await p.evaluate(() => window.JEPI_DATA.places.P.some(x => x.name === '단풍 정원' && x.season)), '시즌 정보: sunset shown, a seasonal place added');
+      await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="me"]'); await p.waitForTimeout(300);
+      await p.click('#meHelper'); await p.waitForTimeout(400);
+      await p.fill('#wishPaste', '우메다 스카이 빌딩'); await p.click('#wishPasteBtn'); await p.waitForTimeout(1500);
+      ok((await p.textContent('#st_wish')).includes('♥'), '붙여 넣은 목록: ♥ put on what was found · ' + await p.textContent('#st_wish'));
+      await p.click('#helperNext'); await p.waitForTimeout(300);
+      await p.click('#vibeBtn'); await p.waitForTimeout(1500);
+      ok((await p.textContent('#helperBody')).includes('밤늦게까지 활기찬 동네예요'), '동네 분위기 shown');
+      await p.click('#helperBody [data-hotels] >> nth=0'); await p.waitForTimeout(1500);
+      ok((await p.textContent('#helperBody')).includes('테스트 호텔'), '숙소 후보 shown');
+      await p.click('#helperNext'); await p.waitForTimeout(300); await p.click('#routeBtn'); await p.waitForTimeout(1500);
+      ok((await p.textContent('#helperBody')).includes('대한항공'), '노선 shown');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
     name: 'data: 친구와 함께 merge rules (app/data/merge.ts) case by case',
     async run({ b, S, device, ok }) {
       const p = await device(b, S);

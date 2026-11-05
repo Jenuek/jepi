@@ -4,12 +4,12 @@
 // drawn by React: app/screens/Notebook.tsx
 let notebookRev=0;
 function notebookInfo(){
-  const L=lookOf(), name=(plans.find(x=>x.id===curPlan)||{}).name||planName();
-  const D0=DAYS[0]||{}, Dn=DAYS[DAYS.length-1]||{};
+  const L=lookOf(), name=(PL.plans.find(x=>x.id===PL.curPlan)||{}).name||planName();
+  const D0=DY.days[0]||{}, Dn=DY.days[DY.days.length-1]||{};
   const photo=L.cover==='photo'&&L.photo;
-  const cover={photo:photo?String(L.photo):'',svg:photo?'':coverSVG(L.cover,260,156),city:String((PACK.city||'TRIP').slice(0,8)),date:String(D0.date||'').replace(/\s.*/,''),name:String(name),
-    line:[D0.date&&Dn.date?`${D0.date} — ${Dn.date}`:'',DAYS.length>1?`${DAYS.length-1}박 ${DAYS.length}일`:'하루',L.tagline].filter(Boolean).join(' · ')};
-  const days=DAYS.map((D,d)=>{
+  const cover={photo:photo?String(L.photo):'',svg:photo?'':coverSVG(L.cover,260,156),city:String((PK.pack.city||'TRIP').slice(0,8)),date:String(D0.date||'').replace(/\s.*/,''),name:String(name),
+    line:[D0.date&&Dn.date?`${D0.date} — ${Dn.date}`:'',DY.days.length>1?`${DY.days.length-1}박 ${DY.days.length}일`:'하루',L.tagline].filter(Boolean).join(' · ')};
+  const days=DY.days.map((D,d)=>{
     const {items,trans}=analyze(d), list=items.filter(i=>!(i.stay&&i!==items[items.length-1]));
     const rows=list.map((it,k)=>{
       const prev=k?list[k-1]:null, t=prev?trans.find(x=>x.from>=prev.end-5&&x.from<=it.start):null;

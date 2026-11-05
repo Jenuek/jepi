@@ -8,10 +8,10 @@ const pushSupported=AL.pushSupported, isIOS=AL.isIOS, standaloneApp=AL.standalon
 const alertKey=(it,d)=>`${it.kind==='place'?it.id:it.uid}@${d}`;
 const alertable=it=>!it.stay&&(it.kind==='place'||it.kind==='fixed');
 const alertOn=(it,d)=>AL.isOn(alertKey(it,d));
-const tripTZ=()=>JD.logic.alerts.tripTZ(PACK);
+const tripTZ=()=>JD.logic.alerts.tripTZ(PK.pack);
 const alertsSoon=ms=>AL.soon(ms);
-AL.connectAlerts({curPlan:()=>curPlan,tz:tripTZ,demo:()=>!!DEMO.on,redraw:()=>{PANELS.notify.render();renderMore();renderAll()},
-  days:()=>DAYS.map((D,d)=>({iso:D.iso||'',rows:D.iso?analyze(d).items.filter(alertable).map(it=>({key:alertKey(it,d),name:String(it.name),start:it.start,end:it.end,locName:it.locName||'',travelIn:it.travelIn||null})):[]}))});
+AL.connectAlerts({curPlan:()=>PL.curPlan,tz:tripTZ,demo:()=>!!DEMO.on,redraw:()=>{PANELS.notify.render();renderMore();renderAll()},
+  days:()=>DY.days.map((D,d)=>({iso:D.iso||'',rows:D.iso?analyze(d).items.filter(alertable).map(it=>({key:alertKey(it,d),name:String(it.name),start:it.start,end:it.end,locName:it.locName||'',travelIn:it.travelIn||null})):[]}))});
 BLOCK_BADGES.push((it,d)=>alertable(it)&&alertOn(it,d)&&NOTIFY.on?{k:'badge',t:'🔔',title:'알림 켜짐'}:null);
 SHEET_EXTRAS.push((it,d)=>{if(!alertable(it)||DEMO.on)return null;const on=alertOn(it,d);
   return {k:'alert',key:alertKey(it,d),on:!!on,hint:!NOTIFY.on?'더보기 → 알림에서 이 기기 알림을 켜야 와요':on?(NOTIFY.depart&&it.travelIn?`출발 ${NOTIFY.lead}분 전에 알려 드려요`:`시작 ${NOTIFY.lead}분 전에 알려 드려요`):''}});

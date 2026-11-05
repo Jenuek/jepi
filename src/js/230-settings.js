@@ -45,17 +45,17 @@ function renderSettings(){
 }
 function backupAll(){
   snapshotCurrent();
-  const all={jepi:2,at:new Date().toISOString(),cur:curPlan,kw:kws,plans:plans.map(p=>({meta:p,data:TRIP.plans.get(p.id)})).filter(x=>x.data)};
+  const all={jepi:2,at:new Date().toISOString(),cur:PL.curPlan,kw:CUR.kws,plans:PL.plans.map(p=>({meta:p,data:TRIP.plans.get(p.id)})).filter(x=>x.data)};
   const d=new Date(), nm=`JEPI-백업-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.json`;
   downloadText(nm,JSON.stringify(all));
 }
 function importAll(v){
   if(!v||v.jepi!==2||!Array.isArray(v.plans)) return false;
   snapshotCurrent(); let n=0;
-  v.plans.forEach(x=>{if(!x||!x.meta||!x.data)return;const ex=plans.find(p=>p.id===x.meta.id);TRIP.plans.put(x.meta.id,x.data);if(ex)Object.assign(ex,x.meta);else plans.push(Object.assign({},x.meta));n++});
-  if(Array.isArray(v.kw)&&v.kw.length){kws=[...new Set([...kws,...v.kw])];saveKw&&saveKw()}
-  plans.sort((a,b)=>(b.updated||0)-(a.updated||0)); savePlans();
-  const target=plans.find(p=>p.id===v.cur)||plans[0]; if(target&&target.id!==curPlan){curPlan='';openPlan(target.id)}
+  v.plans.forEach(x=>{if(!x||!x.meta||!x.data)return;const ex=PL.plans.find(p=>p.id===x.meta.id);TRIP.plans.put(x.meta.id,x.data);if(ex)Object.assign(ex,x.meta);else PL.plans.push(Object.assign({},x.meta));n++});
+  if(Array.isArray(v.kw)&&v.kw.length){CUR.kws=[...new Set([...CUR.kws,...v.kw])];saveKw&&saveKw()}
+  PL.plans.sort((a,b)=>(b.updated||0)-(a.updated||0)); savePlans();
+  const target=PL.plans.find(p=>p.id===v.cur)||PL.plans[0]; if(target&&target.id!==PL.curPlan){PL.curPlan='';openPlan(target.id)}
   planMsg=`계획 ${n}개를 불러왔어요.`; renderPlans(); return true;
 }
 

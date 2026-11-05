@@ -5,7 +5,7 @@ Object.assign(doS,LS.get('jepi.do',{}),{base:null,pick:null,course:null,busy:fal
 const saveDo=()=>LS.set('jepi.do',{mood:doS.mood,clen:doS.clen,area:doS.area,at:doS.at});
 let RECENT_AREAS=LS.get('jepi.areas',[])||[];
 function doDefaults(fromSlot){
-  const t=isoOf(new Date()), last=DAYS.length?DAYS[DAYS.length-1].iso:'';
+  const t=isoOf(new Date()), last=DY.days.length?DY.days[DY.days.length-1].iso:'';
   doS.base=fromSlot||(planUsable()&&(!last||last>=t))?'plan':'near';
   doS.pick=null;doS.course=null;doS.rolls=0;doS.msg='';doS.chosen=null;doS.when='now';
 }
@@ -58,18 +58,18 @@ function saveCourse(){
   Object.assign(prof,{kind:'day',dest:areaName,startDate:today,nights:1,meet:{time:fmt(Math.max(0,c[0].start-c[0].walk)),end:fmt(Math.min(1439,last.start+last.dur+15)),area:'center'},
     dateSet:true,nightsSet:true,dateUnknown:false,bookedFlight:true,bookedStay:true,flightSet:true,staySet:true,jpPicked:true,startMode:'day',purpose:'',
     party:{type:'solo',adults:1,kids:0},stays:[{name:'숙소',area:'center',checkin:'15:00',checkout:'11:00',from:0,to:1}],events:[]});
-  carryTaste(profile,prof); if(profile&&profile.party) prof.party=clone(profile.party);
+  carryTaste(CUR.profile,prof); if(CUR.profile&&CUR.profile.party) prof.party=clone(CUR.profile.party);
   const data={profile:prof,pack,placed:places.map((p,i)=>({id:p.id,day:0,start:c[i].start,dur:c[i].dur})),custom:[],fmarks:{},wish:[],meals:{},done:{}};
   snapshotCurrent(); const nid='p'+Date.now().toString(36);
-  TRIP.plans.put(nid,data); plans.unshift({id:nid,name:`${areaName} · ${+today.slice(5,7)}/${+today.slice(8,10)} ${fmt(c[0].start)} 코스`,custom_name:true,updated:Date.now(),kind:'day',dates:today.slice(5).replace('-','/'),blocks:places.length});
-  curPlan=nid; savePlans(); closeSheet(); applyPlanData(data); snapshotCurrent(); day=0; tab='timeline'; renderTabs(); renderAll();
+  TRIP.plans.put(nid,data); PL.plans.unshift({id:nid,name:`${areaName} · ${+today.slice(5,7)}/${+today.slice(8,10)} ${fmt(c[0].start)} 코스`,custom_name:true,updated:Date.now(),kind:'day',dates:today.slice(5).replace('-','/'),blocks:places.length});
+  PL.curPlan=nid; savePlans(); closeSheet(); applyPlanData(data); snapshotCurrent(); day=0; tab='timeline'; renderTabs(); renderAll();
   showToast('내 계획에 저장했어요 · 일정과 지도에서 볼 수 있어요');
 }
 function doCondTxt(){const mood=(DO_MOODS.find(m=>m[0]===doS.mood)||[])[1];return [doS.when==='now'?'지금':`이따 ${doS.at}`,doS.clen==='rest'?'코스: 오늘 끝까지':doS.clen==='half'?'코스: 반나절':'코스: 2~3시간',mood==='상관없음'?'':mood].filter(Boolean).join(' · ')}
 function eatCondTxt(){const mood=(EAT_MOODS.find(m=>m[0]===eat.mood)||[])[1];return [eat.base==='plan'?MEAL_TXT[eat.meal]:'',`걸어서 ${eat.walk}분`,mood==='상관없음'?'':mood].filter(Boolean).join(' · ')}
 function doBases(){const nearLbl=doS.org==='gps'?'지금 위치':(mypOf(doS.org)||{}).name||'지금 위치';
   return [{attr:'dobase',v:'near',on:doS.base==='near',label:'📍 내 주변',small:nearLbl},{attr:'dobase',v:'area',on:doS.base==='area',label:'🗺 동네',small:doS.area?doS.area.name:'골라 주세요'},
-    ...(planUsable()?[{attr:'dobase',v:'plan',on:doS.base==='plan',label:`🗓 ${PACK.city}`,small:`Day ${day+1} 빈 시간`}]:[])]}
+    ...(planUsable()?[{attr:'dobase',v:'plan',on:doS.base==='plan',label:`🗓 ${PK.pack.city}`,small:`Day ${day+1} 빈 시간`}]:[])]}
 function renderDoNear(){
   const orgs=[['gps','지금 위치'],...MYP.filter(x=>x.ll).map(x=>[x.id,x.name])];
   const busy=doS.busy?{s:'die',spin:true,face:'🎲',hint:`${doS.base==='area'&&doS.area?doS.area.name:'주변'}에서 찾는 중…`}:null;

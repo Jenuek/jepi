@@ -15,7 +15,7 @@ let diceLog=[];
 const isoShift=(iso,n)=>{const d=new Date(iso+'T00:00:00');d.setDate(d.getDate()+n);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
 function diceGaps(d){
   const its=analyze(d).items.filter(i=>!i.stay), out=[]; let cur=d===0?arrEnd():dayStart(d), prev=null;
-  const end=profile.kind==='day'?tmin(profile.meet.end,1200):1380;
+  const end=CUR.profile.kind==='day'?tmin(CUR.profile.meet.end,1200):1380;
   for(const it of its){ if(it.start>=end) break; if(it.start-cur>=45) out.push({s:cur,e:it.start,prev}); if(it.end>cur){cur=it.end;prev=it} }
   if(end-cur>=45) out.push({s:cur,e:end,prev}); return out;
 }
@@ -27,7 +27,7 @@ function moodOk(p,from){const tg=tagsOf(p.id).join(' ')+' '+p.name+' '+(p.note||
     case 'mine':return isWish(p.id);
     default:return true}}
 function diceCands(g){
-  const D=DAYS[day],wd=D.wd,used=new Set(placed.map(b=>b.id)),from=g.prev?g.prev.ll:LOC[D.startLoc].ll;
+  const D=DY.days[day],wd=D.wd,used=new Set(CUR.placed.map(b=>b.id)),from=g.prev?g.prev.ll:DY.loc[D.startLoc].ll;
   const recent=new Set(diceLog.filter(x=>x.d&&D.iso&&x.d<D.iso&&x.d>=isoShift(D.iso,-5)).map(x=>norm(x.n)));
   let s0=g.s,e0=g.e; if(dice.lunch){const mw=dice.meal==='dinner'?[1050,1260]:[690,840];s0=Math.max(s0,mw[0]);e0=Math.min(e0,mw[1]);if(e0-s0<30)return []}
   const out=[];
@@ -71,19 +71,19 @@ function diceFix(force){
   const c=dice.pick; if(!c) return;
   const ops=[{op:'add',day,id:c.p.id,start:fmt(c.arr),dur:c.dur}], r=force?{ops:dice.force||ops,warns:[]}:repairOps(ops);
   if(r.warns.length){dice.force=r.ops;dice.msg='넣으면 경고가 생겨요: '+r.warns[0];renderDice();return}
-  applyOpsCore(r.ops); save(); learnFrom(c.p); diceLog.push({n:c.p.name,d:DAYS[day].iso}); diceLog=diceLog.slice(-60); store.set('gp.dice',diceLog);
+  applyOpsCore(r.ops); save(); learnFrom(c.p); diceLog.push({n:c.p.name,d:DY.days[day].iso}); diceLog=diceLog.slice(-60); store.set('gp.dice',diceLog);
   closeSheet(); renderAll();
 }
 function renderDiceDo(top){
   if($('#sheet').dataset.uid!=='dice') return;
-  const D=DAYS[day], gs=diceGaps(day), c=dice.pick, left=Math.max(0,3-dice.rolls);
+  const D=DY.days[day], gs=diceGaps(day), c=dice.pick, left=Math.max(0,3-dice.rolls);
   const reasons=c?[isWish(c.p.id)?'♥ 가고 싶은 곳':'',...matchKw(c.p.id).slice(0,2).map(k=>'#'+k),c.p.season?'🗓 '+c.p.season:'',recOf(c.p)?`👍 ${recOf(c.p)}`:'',c.tm?`${c.mode} ${c.tm}분`:'바로 옆'].filter(Boolean):[];
   diceMount({...top,head:D.date||'',rows:[...(gs.length?[dHint('언제'),dPills('dicegap',dice.gapI,gs.map((g,i)=>[i,`${fmt(g.s)}–${fmt(g.e)}`]))]:[]),
       ...(dice.lunch?[]:[dHint('지금 기분'),dPills('dicemood',dice.mood,DICE_MOODS.map(([k,l])=>[k,l]))])],
     stage:dice.rolling?dSpin():c?{s:'planCard',cat:c.p.cat,name:c.p.name,line:`${fmt(c.arr)}–${fmt(c.arr+c.dur)} · ${c.p.area}`,note:c.p.note||'',tags:reasons}:{s:'die',face:'⚄'},
     msg:dice.msg||'',acts:c&&!dice.rolling?[dBtn('small-btn primary','이걸로 할래요',{id:'diceFix'}),...(dice.force?[dBtn('small-btn','그래도 넣기',{id:'diceForce'})]:[]),dBtn('small-btn',`다시 굴리기 (${left}번)`,{id:'diceAgain',disabled:!left})]
       :dice.rolling?[]:[dBtn('dice-go','🎲 굴리기',{id:'diceGo'})],
-    ai:sample&&!PACK.manual?{primary:true}:null});
+    ai:sample&&!PK.pack.manual?{primary:true}:null});
 }
 async function diceAI(){
   const mood=(DICE_MOODS.find(m=>m[0]===dice.mood)||[])[1]||'';

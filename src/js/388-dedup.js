@@ -21,15 +21,15 @@ function dupInfo(){
 function mergePlaces(aId,bId){
   let a=PM[aId], b=PM[bId]; if(!a||!b) return;
   // keep the one already in the schedule, else the one that is not hand-made
-  const inUse=id=>placed.some(x=>x.id===id);
+  const inUse=id=>CUR.placed.some(x=>x.id===id);
   if((inUse(b.id)&&!inUse(a.id))||(a.custom&&!b.custom)){const t=a;a=b;b=t}
-  placed.forEach(x=>{if(x.id===b.id)x.id=a.id});
+  CUR.placed.forEach(x=>{if(x.id===b.id)x.id=a.id});
   if(isWish(b.id)&&!isWish(a.id)) toggleWish(a.id); if(isWish(b.id)) toggleWish(b.id);
   if(b.note&&b.note!==a.note&&!/직접 만든 블록이에요/.test(b.note)) a.note=[a.note,b.note].filter(Boolean).join(' · ').slice(0,300);
   if(b.by&&!a.by) a.by=b.by;
   if(b.custom)TRIP.customs.remove(b.id);
-  const k=PACK.places.findIndex(x=>x.id===b.id); if(k>=0) PACK.places.splice(k,1);
-  const ka=PACK.places.find(x=>x.id===a.id); if(ka){ka.note=a.note;if(a.by)ka.by=a.by}
+  const k=PK.pack.places.findIndex(x=>x.id===b.id); if(k>=0) PK.pack.places.splice(k,1);
+  const ka=PK.pack.places.find(x=>x.id===a.id); if(ka){ka.note=a.note;if(a.by)ka.by=a.by}
   savePack();
   const i=P.findIndex(x=>x.id===b.id); if(i>=0) P.splice(i,1); delete PM[b.id]; FRESH.delete(b.id);
   save(); renderAll(); showToast(`"${a.name}" 하나로 묶었어요`);
@@ -45,10 +45,10 @@ document.addEventListener('input',e=>{
   if(!customLast||!$('#customForm')) return;
   const q=e.target.value.trim();
   const hits=q.length<2?[]:P.filter(p=>!p.drop&&(nameSim(p.name,q)>=.5||norm(p.name).includes(norm(q)))).slice(0,4);
-  customLast=Object.assign({},customLast,{dup:hits.map(p=>({id:String(p.id),name:String(p.name),sub:`${p.area||''}${p.shared?' · 여행자 추천':''}${placed.some(x=>x.id===p.id)?' · 이미 일정에 있어요':''}`}))});
+  customLast=Object.assign({},customLast,{dup:hits.map(p=>({id:String(p.id),name:String(p.name),sub:`${p.area||''}${p.shared?' · 여행자 추천':''}${CUR.placed.some(x=>x.id===p.id)?' · 이미 일정에 있어요':''}`}))});
   window.JEPI_UI.mount('custom',$('#sheet'),customLast);   // same rev: what is typed stays
 });
 // local test hooks (tools/checks.js)
 if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)&&window.__jepi) Object.assign(window.__jepi,{
-  dupTest(){const a=P.find(p=>!p.custom&&!p.drop&&!placed.some(b=>b.id===p.id));const b=Object.assign({},a,{id:'dupx',name:a.name+' 본점'});PACK.places.push(b);addPackPlace(b);renderTray();return a.name},
+  dupTest(){const a=P.find(p=>!p.custom&&!p.drop&&!CUR.placed.some(b=>b.id===p.id));const b=Object.assign({},a,{id:'dupx',name:a.name+' 본점'});PK.pack.places.push(b);addPackPlace(b);renderTray();return a.name},
   has:id=>!!PM[id], openCustom:()=>openCustom(), openFind:o=>openFind(o)});
