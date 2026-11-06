@@ -38,6 +38,7 @@ import { Tabs, MiniBar, type TabsProps, type MiniBarProps } from './screens/Bars
 import { Hero, type HeroProps } from './screens/Hero';
 import { HelperFrame, Coach, Banner, OnbFrame, type HelperFrameProps, type CoachProps, type BannerProps, type OnbFrameProps } from './screens/Frames';
 import { connectHost, type AppHost } from './ui/host';
+import * as map from './ui/map';
 import { liveOf, type LiveHandle } from './ui/live';
 
 // Every screen React owns, with the props the old code must pass.
@@ -147,6 +148,8 @@ export interface JepiUI {
   live(el: Element | null): LiveHandle | null;
   /** the old code tells React screens how to redraw / close the sheet / show a message (app/ui/host.ts) */
   connectHost(h: AppHost): void;
+  /** the 지도 tab (Leaflet): app/ui/map.ts */
+  map: typeof map;
 }
 
 declare global {
@@ -162,6 +165,7 @@ export function installBridge(): void {
   window.JEPI_UI = {
     live: liveOf,
     connectHost,
+    map,
     mount(name, el, props) {
       let cur = roots.get(el);
       if (!cur || cur.host.parentNode !== el || cur.name !== name) {

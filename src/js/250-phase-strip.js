@@ -46,7 +46,7 @@ document.addEventListener('click',e=>{
   if(t.id==='wishGo'){cat='wish';tab='tray';renderTray();renderTabs();return}
 });
 // a card under the map (MapCards in Dice.tsx): the map moves to that stop
-function mapCardAct(i){const {stops}=mapLegs(day);const s=stops[+i];if(s&&mapState.map){mapState.map.setView(s.ll,16)}}
+const mapCardAct=MAP.mapCardAct;   // app/ui/map.ts
 // autosave for 이번 여행 / 취향 panels
 document.addEventListener('change',e=>{if(e.target.closest&&e.target.closest('#meBox,#tasteStyle')&&!e.target.classList.contains('importFile'))autoSave()});
 // onboarding: connect AI right on the first screen
