@@ -5,7 +5,7 @@ const saveEat=()=>LS.set('jepi.eat',{walk:eat.walk,mood:eat.mood});
 const nowMin=DICEV.nowMin, mealNow=DICEV.mealNow, planUsable=DICEV.planUsable;   // app/view/dice.ts
 function eatDefaults(){
   const ti=todayIdx(); eat.base=ti>=0&&planUsable()?'plan':'near';
-  if(eat.base==='plan') day=ti;
+  if(eat.base==='plan') UI.day=ti;
   const n=new Date(), wkLunch=n.getDay()>0&&n.getDay()<6&&nowMin()>=630&&nowMin()<900;
   eat.org=wkLunch&&mypOf('work')&&mypOf('work').ll?'work':'gps';
   eat.meal=mealNow()==='dinner'?'dinner':'lunch'; eat.pick=null; eat.rolls=0; eat.msg='';
@@ -26,12 +26,12 @@ async function eatOrigin(){
   const x=mypOf(eat.org); if(!x||!x.ll) throw aiErr('noplace',`${x?x.name:'이 장소'}를 아직 등록하지 않았어요. 더보기 → 설정 → 내 장소에서 등록해 주세요.`);
   eat.where=x.name; return x.ll;
 }
-const nbLook=()=>({kakao:!!KEYS.kakao,ai:sample});
+const nbLook=()=>({kakao:!!KEYS.kakao,ai:UI.sample});
 async function eatRoll(again){
   if(eat.busy) return;
   if(eat.base==='plan'){
     dice.lunch=true; dice.meal=eat.meal; dice.walk=eat.walk; dice.mood='any';
-    const gs=diceGaps(day), mw=eat.meal==='dinner'?[1050,1260]:[690,840];
+    const gs=diceGaps(UI.day), mw=eat.meal==='dinner'?[1050,1260]:[690,840];
     const gi=gs.findIndex(g=>g.e>mw[0]&&g.s<mw[1]); if(gi>=0) dice.gapI=gi;
     if(again&&dice.rolls>=3) return; diceRoll(!!again); return;
   }

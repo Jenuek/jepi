@@ -14,7 +14,7 @@ async function quickStart(){
     draft.kind='day'; draft.meet=Object.assign({},draft.meet||{},{time:fmt(st),end:fmt(Math.max(st+180,sl[3]))});}
   else{draft.kind='trip'; draft.nights=+q.len; draft.bookedFlight=true; draft.bookedStay=true; draft.flightSet=false; draft.staySet=false;}
   if(norm(dest)!==norm(PK.pack.city)){
-    if(sample){if(!(await genPack(dest,'quickStart')))return}
+    if(UI.sample){if(!(await genPack(dest,'quickStart')))return}
     else{CUR.custom=[];TRIP.save('custom',CUR.custom);CUR.placed=[];save();loadPack(manualPack(dest));savePack()}
   }
   draft.dest=PK.pack.city; if(draft.kind==='day'&&!AREAS[draft.meet.area]) draft.meet.area=firstArea();
@@ -27,17 +27,17 @@ async function quickStart(){
 const shortFuzzy=PVIEW.shortFuzzy, partOfDay=PVIEW.partOfDay, P_DICE=PVIEW.P_DICE;
 let pSt={mood:'any',draw:null}, pviewRev=0, pSpinT=0;
 const pAheadOn=()=>!!store.get('gp.pAhead',false);
-const pGaps=()=>PVIEW.pGaps(day);
+const pGaps=()=>PVIEW.pGaps(UI.day);
 function renderPView(){
   const box=$('#pview'); if(!box) return;
-  const on=jp==='P'; box.hidden=!on; $('.grid-wrap').hidden=on; if(!on) return;
-  window.JEPI_UI.mount('pview',box,{...PVIEW.board(day,pSt,{ahead:pAheadOn(),demo:!!DEMO.on,ai:!!sample}),rev:++pviewRev});
+  const on=UI.jp==='P'; box.hidden=!on; $('.grid-wrap').hidden=on; if(!on) return;
+  window.JEPI_UI.mount('pview',box,{...PVIEW.board(UI.day,pSt,{ahead:pAheadOn(),demo:!!DEMO.on,ai:!!UI.sample}),rev:++pviewRev});
 }
 function pPick(cs){const fw=c=>c.w*(dice.fresh&&dice.fresh.includes(c.p.id)?8:1); const tot=cs.reduce((a,c)=>a+fw(c),0); let r=Math.random()*tot, pick=cs[cs.length-1]; for(const c of cs){r-=fw(c);if(r<=0){pick=c;break}} return pick}
 // roll the chosen die for one free time: spin, then show a card
 function pRollDo(gi,auto){
   const gs=pGaps(), g=gs[+gi]; if(!g){pSt.draw=null;renderPView();return}
-  const old=pSt.draw, same=old&&old.day===day&&old.gi===+gi&&old.mood===pSt.mood, seen=same?old.seen.slice():[];
+  const old=pSt.draw, same=old&&old.day===UI.day&&old.gi===+gi&&old.mood===pSt.mood, seen=same?old.seen.slice():[];
   if(same&&old.cand) seen.push(old.cand.p.id);
   const m0=dice.mood, l0=dice.lunch; dice.mood=pSt.mood; dice.lunch=false; let cs=diceCands(g); dice.mood=m0; dice.lunch=l0;
   const pt=partOfDay(g.s);
@@ -47,14 +47,14 @@ function pRollDo(gi,auto){
   // the roll button looks for the next ? square this die can fill
   if(auto&&!cs.length&&!seen.length&&+gi+1<gs.length) return pRollDo(+gi+1,true);
   const cand=cs.length?pPick(cs):null, spin=!matchMedia('(prefers-reduced-motion:reduce)').matches;
-  pSt.draw={day,gi:+gi,g,mood:pSt.mood,seen,cand,left:Math.max(0,cs.length-1),rolling:spin};
+  pSt.draw={day:UI.day,gi:+gi,g,mood:pSt.mood,seen,cand,left:Math.max(0,cs.length-1),rolling:spin};
   clearTimeout(pSpinT); renderPView();
   if(spin) pSpinT=setTimeout(()=>{if(pSt.draw){pSt.draw.rolling=false;renderPView()}},1100);
 }
 function learnFrom(p){const t=tagsOf(p.id)[0];if(t)TRIP.keywords.add(t,12)}
 function pYes(){const d=pSt.draw; if(!d||!d.cand) return; const c=d.cand; learnFrom(c.p);
-  const r=repairOps([{op:'add',day,id:c.p.id,start:fmt(c.arr),dur:c.dur}]); applyOpsCore(r.ops); save();
-  diceLog.push({n:c.p.name,d:DY.days[day].iso}); diceLog=diceLog.slice(-60); store.set('gp.dice',diceLog); pSt.draw=null; renderAll();}
+  const r=repairOps([{op:'add',day:UI.day,id:c.p.id,start:fmt(c.arr),dur:c.dur}]); applyOpsCore(r.ops); save();
+  diceLog.push({n:c.p.name,d:DY.days[UI.day].iso}); diceLog=diceLog.slice(-60); store.set('gp.dice',diceLog); pSt.draw=null; renderAll();}
 function pKeep(){const d=pSt.draw; if(!d||!d.cand) return; if(!isWish(d.cand.p.id)) toggleWish(d.cand.p.id); showToast('내 카드에 넣었어요'); pRollDo(d.gi)}
 function pClose(){clearTimeout(pSpinT); pSt.draw=null; renderPView()}
 function pMood(k){if(P_DICE.some(v=>v[0]===k)){pSt.mood=k;renderPView()}}
@@ -68,6 +68,6 @@ function pPlaceNow(id){
   let hit=null; for(const g of pGaps()){const c=diceCands(g).find(x=>x.p.id===id);if(c){hit=c;break}}
   dice.mood=m0; dice.lunch=l0;
   if(!hit){showToast('이 날 빈 칸에는 맞지 않아요. 내 카드로 담아 두세요.');return}
-  const r=repairOps([{op:'add',day,id,start:fmt(hit.arr),dur:hit.dur}]); applyOpsCore(r.ops); save();
-  showToast(`${DY.days[day].date||'이 날'} ${shortFuzzy(hit.arr)}에 넣었어요`); renderAll();
+  const r=repairOps([{op:'add',day:UI.day,id,start:fmt(hit.arr),dur:hit.dur}]); applyOpsCore(r.ops); save();
+  showToast(`${DY.days[UI.day].date||'이 날'} ${shortFuzzy(hit.arr)}에 넣었어요`); renderAll();
 }

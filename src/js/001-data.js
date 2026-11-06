@@ -12,3 +12,6 @@ const PL=TRIP.planList;
 const DY=JD.days.state;
 // how the traveler is described to the AI, and money text (app/data/traveler.ts)
 const TV=JD.traveler;
+
+// where the person is in the app (app/ui/state.ts): UI.day, UI.tab, UI.cat, UI.group, UI.zoneOpen, UI.selected, UI.aiState, UI.sample, UI.jp, UI.resetArm
+const UI=window.JEPI_UI.ui;

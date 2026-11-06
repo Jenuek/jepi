@@ -1833,5 +1833,20 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'ui state (app/ui/state.ts): the old code and React share the open day, tab, picked place and J/P',
+    async run({ b, S, device, ok, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      const U = () => p.evaluate(() => { const u = window.JEPI_UI.ui; return { day: u.day, tab: u.tab, jp: u.jp, selected: u.selected, ai: !!u.sample } });
+      ok(JSON.stringify(await U()) === JSON.stringify({ day: 0, tab: 'timeline', jp: 'J', selected: null, ai: false }), 'starts on Day 1, 일정표, J, nothing picked, no AI');
+      await p.click('#days [data-day="1"]'); await p.waitForTimeout(300);
+      ok((await U()).day === 1, 'tapping Day 2 sets UI.day');
+      await p.click('[data-jp="P"]'); await p.waitForTimeout(300);
+      ok((await U()).jp === 'P' && await p.evaluate(() => document.body.classList.contains('mode-p')), 'P모드 sets UI.jp');
+      await p.click('[data-jp="J"]'); await p.waitForTimeout(300);
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];

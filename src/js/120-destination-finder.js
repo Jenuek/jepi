@@ -2,19 +2,19 @@
 let destRecs=null, destAsked=[], destBusy=false;
 // drawn by React: app/screens/OnbFinder.tsx
 function partFinder(p){
-  return {f:'finder',ai:!!sample,party:p.party.type,reach:p.reach,budget:p.budget,budgetMan:p.budgetMan||'',nights:nightsOf(p),
+  return {f:'finder',ai:!!UI.sample,party:p.party.type,reach:p.reach,budget:p.budget,budgetMan:p.budgetMan||'',nights:nightsOf(p),
     chips:[...new Set([...GENERIC_KW,...CUR.kws])].map(k=>({k,on:CUR.kws.some(x=>norm(x)===norm(k))})),
     styleRows:STYLE_ROWS,style:clone(p.style||{}),styleOpen,want:p.want||'',recs:destRecs?clone(destRecs):null,asked:clone(destAsked)};
 }
 async function recommendDest(mode){
-  if(!sample||destBusy) return; destBusy=true; mode=mode||{};
+  if(!UI.sample||destBusy) return; destBusy=true; mode=mode||{};
   const prev=(destRecs||[]).map(d=>d.city);
   const want=(($('#destWant')||{}).value||'').trim(); draft.want=want; if(want&&!draft.purpose) draft.purpose=want.slice(0,80);
   const stId=mode.ask?'st_ask':mode.more?'st_more':'st_dest';
   progStart(stId,mode.ask?`${mode.ask}이(가) 맞는지 살펴보는 중이에요 (보통 15~30초)`:'이 조건에 맞는 여행지를 고르는 중이에요 (보통 20~40초)',['destRecBtn','destMoreBtn','destAskBtn'],'고르는 중…');
   const q=fixProfile(draft);
   try{
-    const got=await JD.asks.destinations(sample,q,mode,prev,want);   // the question and tidying the answer: app/data/asks.ts
+    const got=await JD.asks.destinations(UI.sample,q,mode,prev,want);   // the question and tidying the answer: app/data/asks.ts
     if(mode.ask) destAsked=[...got.slice(0,1),...destAsked.filter(d=>!got.some(g=>g.city===d.city))].slice(0,3);
     else destRecs=mode.more?[...(destRecs||[]),...got.filter(g=>!prev.includes(g.city))].slice(0,15):got;
     progStop(stId); TRIP.kws.save(CUR.kws); rerenderForm();

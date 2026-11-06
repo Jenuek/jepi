@@ -14,7 +14,7 @@ async function doOrigin(){
   if(doS.org==='gps'){const ll=await getPos(120000);doS.where='지금 위치';return ll}
   const x=mypOf(doS.org);if(!x||!x.ll)throw aiErr('noplace','이 장소를 아직 등록하지 않았어요.');doS.where=x.name;return x.ll;
 }
-const doLook=()=>({kakao:!!KEYS.kakao&&!keyBad.kakao,ai:sample,mood:doS.mood,areaName:doS.base==='area'&&doS.area?doS.area.name:''});
+const doLook=()=>({kakao:!!KEYS.kakao&&!keyBad.kakao,ai:UI.sample,mood:doS.mood,areaName:doS.base==='area'&&doS.area?doS.area.name:''});
 async function poolFor(type,ll,t){const r=await NB.poolFor(type,ll,t,doLook());doS.src=r.src;return r.list}
 async function doGo(kind,again){
   if(doS.busy) return;
@@ -22,7 +22,7 @@ async function doGo(kind,again){
   doS.busy=true; doS.msg=''; if(!again){doS.rolls=0;doS.chosen=null} if(kind==='course'){doS.pick=null}else{doS.course=null}
   renderDice();
   try{
-    let ll=await doOrigin(); if(!ll){const pl=await NB.aiPool(null,doS.area?doS.area.name:'',doS.mood,sample);if(!pl.length)throw aiErr('none','이 동네를 찾지 못했어요. 다르게 적어 보세요.');ll=pl[0].ll}
+    let ll=await doOrigin(); if(!ll){const pl=await NB.aiPool(null,doS.area?doS.area.name:'',doS.mood,UI.sample);if(!pl.length)throw aiErr('none','이 동네를 찾지 못했어요. 다르게 적어 보세요.');ll=pl[0].ll}
     doS.origin=ll; const t0=doStart();
     if(kind==='one'){
       const type=doS.mood==='hungry'?'meal':'act';
@@ -61,7 +61,7 @@ function saveCourse(){
   const data={profile:prof,pack,placed:places.map((p,i)=>({id:p.id,day:0,start:c[i].start,dur:c[i].dur})),custom:[],fmarks:{},wish:[],meals:{},done:{}};
   snapshotCurrent(); const nid='p'+Date.now().toString(36);
   TRIP.plans.put(nid,data); PL.plans.unshift({id:nid,name:`${areaName} · ${+today.slice(5,7)}/${+today.slice(8,10)} ${fmt(c[0].start)} 코스`,custom_name:true,updated:Date.now(),kind:'day',dates:today.slice(5).replace('-','/'),blocks:places.length});
-  PL.curPlan=nid; savePlans(); closeSheet(); applyPlanData(data); snapshotCurrent(); day=0; tab='timeline'; renderTabs(); renderAll();
+  PL.curPlan=nid; savePlans(); closeSheet(); applyPlanData(data); snapshotCurrent(); UI.day=0; UI.tab='timeline'; renderTabs(); renderAll();
   showToast('내 계획에 저장했어요 · 일정과 지도에서 볼 수 있어요');
 }
 const doBases=()=>DICEV.doBases(diceState());
@@ -74,7 +74,7 @@ async function diceAct(n,v,more){
   // both tabs
   case 'dicetab': if(v==='eat'){dice.tab='eat';eatDefaults();eat.chosen=null}else{dice.tab='do';dice.pick=null;dice.rolls=0;dice.msg='';doDefaults(false)}renderDice();return;
   case 'cond': if(dice.tab==='eat')eat.cond=!!v;else doS.cond=!!v;return;   // the 조건 box opened / closed
-  case 'eatSetPlaces': closeSheet();tab='settings';JD.myplaces.ui.edit=null;renderSettings();renderTabs();return;
+  case 'eatSetPlaces': closeSheet();UI.tab='settings';JD.myplaces.ui.edit=null;renderSettings();renderTabs();return;
   // 일정 빈 시간에서 굴리기 (160-modes-roll.js)
   case 'dicegap': dice.gapI=+v;dice.pick=null;dice.msg='';renderDice();return;
   case 'dicemood': dice.mood=v;dice.pick=null;dice.msg='';renderDice();return;
@@ -85,7 +85,7 @@ async function diceAct(n,v,more){
   case 'diceForce': diceFix(true);return;
   case 'diceAI': diceAI();return;
   // 뭐 먹지 (280-dice-eat.js)
-  case 'eatbase': eat.base=v;eat.pick=null;eat.rolls=0;eat.msg='';dice.pick=null;dice.rolls=0;dice.msg='';if(eat.base==='plan'){const ti=todayIdx();if(ti>=0)day=ti}renderEat();return;
+  case 'eatbase': eat.base=v;eat.pick=null;eat.rolls=0;eat.msg='';dice.pick=null;dice.rolls=0;dice.msg='';if(eat.base==='plan'){const ti=todayIdx();if(ti>=0)UI.day=ti}renderEat();return;
   case 'eatorg': eat.org=v;eat.pick=null;eat.rolls=0;NB.forgetEat();renderEat();return;
   case 'eatmeal': eat.meal=v;dice.pick=null;dice.rolls=0;renderEat();return;
   case 'eatwalk': eat.walk=+v;eat.pick=null;eat.rolls=0;saveEat();renderEat();return;
@@ -96,7 +96,7 @@ async function diceAct(n,v,more){
   case 'dobase': doS.base=v;doS.pick=null;doS.course=null;doS.msg='';doS.picking=doS.base==='area'&&!doS.area;
     if(doS.base==='area'&&doS.area&&doS.prevBase==='area')doS.picking=true; doS.prevBase=doS.base; dice.pick=null;dice.rolls=0;doS.focus=doS.picking;renderDice();doS.focus=false;return;
   case 'doAreaFind': {const q=String(v||'').trim();if(!q)return;
-    if(!KEYS.kakao){const a={name:q,ll:null};doS.area=a;doS.picking=false;doS.msg=sample?'':'동네를 찾으려면 설정에서 카카오 지도 키나 AI를 연결해 주세요.';renderDice();return}
+    if(!KEYS.kakao){const a={name:q,ll:null};doS.area=a;doS.picking=false;doS.msg=UI.sample?'':'동네를 찾으려면 설정에서 카카오 지도 키나 AI를 연결해 주세요.';renderDice();return}
     try{const j=await kakaoGet('/v2/local/search/keyword.json',{query:q,size:6});doS.hits=(j.documents||[]).map(d=>({name:d.place_name,addr:d.road_address_name||d.address_name||'',ll:[+d.y,+d.x]}));doS.msg=doS.hits.length?'':'찾지 못했어요. 역 이름으로 적어 보세요.'}catch(err){doS.msg=err.message}renderDice();return}
   case 'doareapick': {const h=doS.hits[+v];if(h){doS.area={name:h.name,ll:h.ll};pushRecentArea(doS.area);saveDo();doS.hits=[];doS.picking=false;doS.msg=''}renderDice();return}
   case 'doarecent': {const a=RECENT_AREAS[+v];if(a){doS.area=a;pushRecentArea(a);saveDo();doS.picking=false;doS.msg=''}renderDice();return}

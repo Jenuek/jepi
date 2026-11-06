@@ -17,6 +17,9 @@ const PL=TRIP.planList;
 const DY=JD.days.state;
 // how the traveler is described to the AI, and money text (app/data/traveler.ts)
 const TV=JD.traveler;
+
+// where the person is in the app (app/ui/state.ts): UI.day, UI.tab, UI.cat, UI.group, UI.zoneOpen, UI.selected, UI.aiState, UI.sample, UI.jp, UI.resetArm
+const UI=window.JEPI_UI.ui;
 // ---------- demo sandbox ----------
 // The sandbox itself (copy aside on entering, put back on leaving or on the next launch) is in app/data/demo.ts
 // and has already run before this script. DEMO.on is true while the demo is open.
@@ -66,7 +69,7 @@ const opt=(v,l,sel)=>`<option value="${esc(v)}"${String(v)===String(sel)?' selec
 function setPath(o,path,v){const ks=path.split('.');for(let i=0;i<ks.length-1;i++)o=o[ks[i]];o[ks[ks.length-1]]=v}
 // drawn by React: TripForms.tsx PasteBox. The last message stays across redraws (pasteMsg) until another row opens.
 let pasteMsg={};
-const pasteBox=(kind,hint)=>({kind,hint,ai:!!sample,msg:pasteMsg[kind]||''});
+const pasteBox=(kind,hint)=>({kind,hint,ai:!!UI.sample,msg:pasteMsg[kind]||''});
 const pasteSay=(kind,t)=>{pasteMsg[kind]=t;setSt('st_'+kind,t)};
 // 더보기 → 이번 여행 forms are drawn by React (app/screens/TripForms.tsx): these build what each form shows.
 // what each form part shows: app/view/forms.ts
@@ -76,7 +79,7 @@ function datesReady(p){return p.dateSet!==false&&p.nightsSet!==false}
 function needDates(){setSt('st_dates','여행 날짜와 기간을 먼저 골라 주세요. 모르면 "날짜는 아직 몰라요"를 눌러 주세요.');const d=document.getElementById('datesSec');if(d)d.scrollIntoView({block:'center'})}
 const isoPlus=n=>{const d=new Date();d.setDate(d.getDate()+n);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
 const ONB=[
-  {t:'어디로, 언제, 누구와 떠나나요?',s:'세 가지만 알려 주면 바로 일정표를 만들어요. 교통편, 숙소, 취향은 필요할 때 물어볼게요.',f:p=>!p.jpPicked?[partJP()]:!p.startMode?[{f:'chooser',ai:!!sample}]:p.startMode==='pq'?[partQuick(p,false)]:p.startMode==='talk'?[partTalk(p)]:p.startMode==='day'?[partQuick(p,true)]
+  {t:'어디로, 언제, 누구와 떠나나요?',s:'세 가지만 알려 주면 바로 일정표를 만들어요. 교통편, 숙소, 취향은 필요할 때 물어볼게요.',f:p=>!p.jpPicked?[partJP()]:!p.startMode?[{f:'chooser',ai:!!UI.sample}]:p.startMode==='pq'?[partQuick(p,false)]:p.startMode==='talk'?[partTalk(p)]:p.startMode==='day'?[partQuick(p,true)]
     :p.destMode==='find'?[...(p.fromTalk?[partBanner(p,'날짜·기간·예산을 확인하고 아래 "AI로 여행지 추천받기"를 눌러 주세요.')]:[]),{f:'dates',dates:datesInfo(p)},partDest(p)]
     :[...(p.fromTalk?[partBanner(p,'날짜와 동행을 확인하고 "AI로 여행지 준비하기"를 눌러 주세요.')]:[]),partDest(p),{f:'dates',dates:datesInfo(p)},partParty(p)]}
 ];
@@ -98,18 +101,18 @@ function renderOnb(){const st=ONB[onbStep];
     sub:!draft.jpPicked?'고르는 쪽에 맞춰 화면과 시작 방법이 달라져요.':md==='pq'?'네 가지만 누르면 바로 굴릴 수 있어요.':!md?'편한 방법을 골라 주세요. 언제든 바꿀 수 있어요.':md==='talk'?'정답은 없어요. 떠오르는 대로 답하면 방향을 정리해 드릴게요.':md==='day'?'동네와 시간만 정하면 하루 코스를 바로 짤 수 있어요.':st.s,
     prevOff:onbStep===0,prevHidden:ONB.length===1,nextLabel:onbStep===ONB.length-1?'일정표 만들기':'다음',skipHidden:onbStep===ONB.length-1,nextHidden:!draft.jpPicked||!md||['talk','pq','day'].includes(md)});
   window.JEPI_UI.mount('onb',$('#onbBody'),{parts:st.f(fixProfile(draft)),rev:++onbRev});$('#onb').scrollTop=0}
-function commitProfile(p){CUR.profile=fixProfile(clone(p));TRIP.save('profile',CUR.profile);TRIP.kws.save(CUR.kws);buildDays();CUR.placed=CUR.placed.filter(b=>b.day<DY.days.length);save();if(day>=DY.days.length)day=0}
-async function finishOnb(){commitProfile(draft);day=0;
-  if(sample&&!PK.pack.example&&!PK.pack.manual&&P.length<8){onbBusy=true;setBusy(true);placeCtl=new AbortController();
+function commitProfile(p){CUR.profile=fixProfile(clone(p));TRIP.save('profile',CUR.profile);TRIP.kws.save(CUR.kws);buildDays();CUR.placed=CUR.placed.filter(b=>b.day<DY.days.length);save();if(UI.day>=DY.days.length)UI.day=0}
+async function finishOnb(){commitProfile(draft);UI.day=0;
+  if(UI.sample&&!PK.pack.example&&!PK.pack.manual&&P.length<8){onbBusy=true;setBusy(true);placeCtl=new AbortController();
     onbFrame({nextLabel:'장소 찾는 중…',skipHidden:false,skipOff:false,skipLabel:'기다리지 않고 시작'});
     const st=$('#st_onb'); if(st) st.scrollIntoView({block:'nearest'});
     await morePlaces(24,'st_onb','',placeCtl.signal); if(placeCtl&&!placeCtl.signal.aborted) await genSeason('st_onb',placeCtl.signal); placeCtl=null; onbBusy=false; setBusy(false)}
-  onbFrame({open:false});renderAll();if(tab==='me'){draft=clone(CUR.profile);renderMe()}
+  onbFrame({open:false});renderAll();if(UI.tab==='me'){draft=clone(CUR.profile);renderMe()}
   if(needBooking()) openHelper(0); else maybeCoach()}
 function renderMe(){renderMeRows()}
 function rerenderForm(){
   const ob=$('#onb'), sd=$('#panel-side'), wy=window.scrollY, oy=ob.scrollTop, sy=sd.scrollTop;
-  if(!ob.hidden) renderOnb(); else {if(tab==='me'||matchMedia('(min-width:900px)').matches) renderMe(); if(tab==='pref') renderTasteStyle();}
+  if(!ob.hidden) renderOnb(); else {if(UI.tab==='me'||matchMedia('(min-width:900px)').matches) renderMe(); if(UI.tab==='pref') renderTasteStyle();}
   ob.scrollTop=oy; sd.scrollTop=sy; window.scrollTo(0,wy);
 }
 // What was pressed in 처음 설정 / 이번 여행 / 취향 (OnbBody, OnbTalk, OnbFinder, TripForms, MeRows, TasteStyle tell:
@@ -141,7 +144,7 @@ async function formAct(n,v,o){
   case 'destMore': recommendDest({more:true});return;
   case 'destAsk': {const x=String(v||'').trim();if(x)recommendDest({ask:x});else setSt('st_ask','궁금한 여행지를 적어 주세요.');return}
   case 'pickdest': case 'pickask': {if(!draft||(n==='pickdest'&&!destRecs))return;const dd=n==='pickask'?destAsked[+v]:destRecs[+v];if(!dd)return;draft.dest=dd.city;draft.destMode='';draft.bookedFlight=false;draft.bookedStay=false;draft.mode=dd.country&&dd.country!=='대한민국'&&dd.country!=='한국'?'flight':draft.mode;rerenderForm();
-    setTimeout(()=>{if(sample)formAct('genPack')},0);return}
+    setTimeout(()=>{if(UI.sample)formAct('genPack')},0);return}
   case 'genPack': {
     const dest=String((draft&&draft.dest)||($('[data-pf="dest"]')||{}).value||'').trim();
     if(!dest){setSt('st_pack','여행지를 먼저 적어 주세요.');return}
@@ -179,10 +182,10 @@ function onPf(e){const el=e.target;if(el&&el.dataset&&el.dataset.pk&&e.type==='c
   if(['budgetMan','tripMan','localMan'].includes(el.dataset.pf))meSetBudgetHint(budgetHintTxt(draft))}
 async function aiFill(kind){
   const ta=$('#paste_'+kind), st=$('#st_'+kind), text=(ta&&ta.value||'').trim();
-  if(!st) return; if(!text){pasteSay(kind,'붙여 넣은 내용이 없어요.');return} if(!sample) return;
+  if(!st) return; if(!text){pasteSay(kind,'붙여 넣은 내용이 없어요.');return} if(!UI.sample) return;
   pasteMsg[kind]='';progStart('st_'+kind,'예약 내용을 읽는 중이에요 (보통 10~20초)',[],'');
   try{
-    const r=await JD.asks.readBooking(sample,kind,text);   // app/data/asks.ts progStop('st_'+kind);
+    const r=await JD.asks.readBooking(UI.sample,kind,text);   // app/data/asks.ts progStop('st_'+kind);
     if(kind==='flight'){
       if(r.startDate&&!isNaN(new Date(r.startDate))) draft.startDate=r.startDate;
       if(r.startDate&&r.endDate){const n=Math.round((new Date(r.endDate)-new Date(r.startDate))/864e5);if(n>=1&&n<=MAX_N) draft.nights=n}
@@ -203,9 +206,9 @@ const addCustomToData=PLC.addCustom;   // app/data/places.ts
 let customLast=null;
 function openCustom(editId,startAt,opts){
   const c=editId?CUR.custom.find(x=>x.id===editId):{id:'',name:'',area:firstArea(),cat:'walk',dur:60,cost:0,memo:'',drop:false,tags:''}; if(!c) return;
-  const st=startAt!=null?startAt:Math.max(dayStart(day),600);
+  const st=startAt!=null?startAt:Math.max(dayStart(UI.day),600);
   // drawn by React: app/screens/CustomSheet.tsx (the same props again with dup while a new name is typed: 388-dedup.js)
-  customLast={edit:editId||'',dayLabel:`Day ${day+1} (${DY.days[day].date})`,name:c.name||'',area:c.area,cat:c.cat,dur:c.dur,cost:c.cost??'',memo:c.memo||'',tags:c.tags||'',drop:!!c.drop,
+  customLast={edit:editId||'',dayLabel:`Day ${UI.day+1} (${DY.days[UI.day].date})`,name:c.name||'',area:c.area,cat:c.cat,dur:c.dur,cost:c.cost??'',memo:c.memo||'',tags:c.tags||'',drop:!!c.drop,
     share:RS.status==='on'&&!PK.pack.manual?!!c.share:null,start:fmt(st),areas:optsOf(AREAS),cats:Object.entries(CATS),durs:[15,30,45,60,90,120,150,180,240].map(m=>[m,durTxt(m)]),
     currency:String(PK.pack.currency),dup:null,card:!!(opts&&opts.card),rev:++sheetRev};
   window.JEPI_UI.mount('custom',$('#sheet'),customLast);
@@ -217,7 +220,7 @@ function saveCustomForm(f){
   TRIP.customs.put(c); addCustomToData(c);
   const asCard=f.dataset.card==='1';
   if(asCard){if(!isWish(c.id))toggleWish(c.id);showToast('내 카드에 담았어요')}
-  else if(!editId){const st=parse($('#cfStart').value);TRIP.blocks.add({id:c.id,day,start:Math.max(dayStart(day),Math.min(1410,st??600)),dur:c.dur})}
+  else if(!editId){const st=parse($('#cfStart').value);TRIP.blocks.add({id:c.id,day:UI.day,start:Math.max(dayStart(UI.day),Math.min(1410,st??600)),dur:c.dur})}
   {const prev=editId?(CUR.custom.find(x=>x.id===c.id)||{}):{};if(RS.status==='on'&&(c.share||prev.share!==undefined))shareCustom(c,c.share)}
   closeSheet(); renderAll();
 }
@@ -239,7 +242,7 @@ function dockAct(n,v){
   else if(n==='send'){chatFolded=false;if(v)sendChat(v)}
 }
 function renderChat(){setTimeout(chatFoldSync,0);
-  dock({note:sample?'':'AI 기능은 더보기 → 설정에서 키를 연결하면 쓸 수 있어요',inputOff:!sample||chatBusy,sendOff:!sample||chatBusy});
+  dock({note:UI.sample?'':'AI 기능은 더보기 → 설정에서 키를 연결하면 쓸 수 있어요',inputOff:!UI.sample||chatBusy,sendOff:!UI.sample||chatBusy});
   const start=Math.max(0,chat.length-8);
   // drawn by React: app/screens/ChatLog.tsx
   window.JEPI_UI.mount('chat',$('#chatLog'),{rev:++chatRev,msgs:chat.slice(start).map((m,k)=>{const i=start+k;
@@ -251,12 +254,12 @@ function renderChat(){setTimeout(chatFoldSync,0);
   const lg=$('#chatLog'); lg.scrollTop=lg.scrollHeight;
 }
 async function sendChat(text){
-  if(!sample||chatBusy||!text) return;
+  if(!UI.sample||chatBusy||!text) return;
   chat.push({role:'user',text}); chat.push({role:'busy'}); chatBusy=true; renderChat();
   chatCtl=new AbortController();
   try{
     // the question, checking the changes and asking once more when they bring warnings: app/data/asks.ts
-    const ans=await JD.asks.chatAnswer(sample,text,chat.filter(m=>m.role==='user'||m.role==='a').slice(-7,-1),
+    const ans=await JD.asks.chatAnswer(UI.sample,text,chat.filter(m=>m.role==='user'||m.role==='a').slice(-7,-1),
       ()=>{chat[chat.length-1].note='바꿀 내용을 검사했더니 경고가 생겨서 다시 고치는 중이에요.';renderChat()},chatCtl.signal);
     const r={reply:ans.reply}, ops=ans.ops, chk={warns:ans.warns};
     chat.pop(); chat.push({role:'a',text:String((r&&r.reply)||(ops.length?'이렇게 바꿔 볼게요.':'바꿀 내용을 찾지 못했어요.')).slice(0,600),ops,warns:chk.warns,checked:ops.length>0,state:ops.length?'pending':'none'});
@@ -283,7 +286,7 @@ function renderNudges(){
     rows:C.map(([k,ic,t,d,bs])=>({k,ic,title:d,aria:`${t} 나중에`,label:t.replace(' 알려 주세요','').replace('을','').replace('를',''),
       btns:bs.map(([id,l,pr])=>({id,primary:!!pr,label:pr?l.replace(/ .*/,'')==='시간'?'넣기':l.split(' ')[0]==='숙소'?'넣기':'고르기':'예약 전'}))}))});
 }
-function goMe(h){tab='me';draft=clone(CUR.profile);renderMe();renderTabs();setTimeout(()=>{const el=[...document.querySelectorAll('#meBox h3')].find(x=>x.textContent.includes(h));if(el)el.scrollIntoView({block:'start'})},0)}
+function goMe(h){UI.tab='me';draft=clone(CUR.profile);renderMe();renderTabs();setTimeout(()=>{const el=[...document.querySelectorAll('#meBox h3')].find(x=>x.textContent.includes(h));if(el)el.scrollIntoView({block:'start'})},0)}
 function renderMeta(){if(CUR.profile.kind==='day'){dock({helperHidden:true});hero({meta:`${PK.pack.city} · ${(DY.days[0].iso||'').slice(5).replace('-','/')} 하루 코스 · ${CUR.profile.meet.time}–${CUR.profile.meet.end}`});return}if(CUR.profile.dateUnknown){const n=DY.days.length-1;dock({helperHidden:!needBooking()});hero({meta:`${PK.pack.city} · 날짜 미정 (대략 ${(DY.days[0].iso||'').slice(5).replace('-','/')}부터) · ${n}박 ${n+1}일`});return}dock({helperHidden:!needBooking()});const n=DY.days.length-1;hero({meta:`${PK.pack.city} · ${(DY.days[0].iso||'').replace(/-/g,'.')} – ${(DY.days[n].iso||'').slice(5).replace('-','.')} · ${n}박 ${n+1}일 · ${apName(CUR.profile.out.airport)}`})}
 
 
@@ -313,25 +316,25 @@ function errText(e,what){const c=e&&e.code;
     :c==='too_long'?`${what}. 답이 너무 길어 잘렸어요. 조건을 줄여 다시 해 주세요.`:c==='invalid_json'?`${what}. AI 답을 읽지 못했어요. 다시 해 주세요.`
     :`${what}. 다시 시도해 주세요.`}
 async function genPack(dest,btn){
-  if(!sample){setSt('st_pack','AI가 연결되어 있지 않아요. 더보기 → 설정에서 키를 넣어 주세요.');return false}
+  if(!UI.sample){setSt('st_pack','AI가 연결되어 있지 않아요. 더보기 → 설정에서 키를 넣어 주세요.');return false}
   if(onbBusy) return false; onbBusy=true; setBusy(true);
   const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),120000);
   progStart('st_pack',`${dest} 정보를 준비하는 중이에요 (보통 20~40초)`,[btn||'genPack','genPack'],'준비하는 중…');
   try{
-    const pk=await JD.asks.destination(sample,dest,ctl.signal);   // app/data/asks.ts
+    const pk=await JD.asks.destination(UI.sample,dest,ctl.signal);   // app/data/asks.ts
     if(!pk){setSt('st_pack','여행지를 찾지 못했어요. 도시 이름을 조금 더 정확히 적어 주세요.');return false}
     CUR.custom=[]; TRIP.save('custom',CUR.custom); CUR.placed=[]; save(); undoSnap=null;
     loadPack(pk); savePack();
     if(draft){draft.dest=pk.city; draft.stays.forEach(s=>{s.area=firstArea();if(/시부야/.test(s.name))s.name='숙소'}); draft.events.forEach(e=>e.area=firstArea()); draft.out.airport=draft.back.airport=firstGw(); if(pk.intl) draft.mode='flight'}
-    if($('#onb').hidden&&draft&&tab==='me')autoSave();setSt('st_pack',`${pk.city} 준비 완료 · 동네 ${pk.areas.length}곳 · 공항·역 ${pk.gateways.length}곳`); return true;
+    if($('#onb').hidden&&draft&&UI.tab==='me')autoSave();setSt('st_pack',`${pk.city} 준비 완료 · 동네 ${pk.areas.length}곳 · 공항·역 ${pk.gateways.length}곳`); return true;
   }catch(e){setSt('st_pack',e&&e.code==='cancelled'?'2분 안에 답을 받지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.':errText(e,'여행지를 준비하지 못했어요')+(e&&e.code?` (${e.code})`:''));return false}
   finally{clearTimeout(to);onbBusy=false; setBusy(false)}
 }
 async function morePlaces(n,stId,focus,signal){
-  if(!sample) return 0;
+  if(!UI.sample) return 0;
   progStart(stId,n>15?(CUR.kws.length?'고른 취향에 맞는 장소 후보를 찾는 중이에요 (보통 1~2분)':`${PK.pack.city}에서 가 볼 만한 곳을 골고루 찾는 중이에요 (보통 1~2분)`):'장소를 찾는 중이에요 (보통 30초~1분)',stId==='moreSt'?['moreBtn']:[],'찾는 중…');
   try{
-    const ids=await JD.asks.morePlaces(sample,n,focus,signal), added=ids.length;   // app/data/asks.ts
+    const ids=await JD.asks.morePlaces(UI.sample,n,focus,signal), added=ids.length;   // app/data/asks.ts
     FRESH.clear(); ids.forEach(id=>FRESH.add(id)); setSt(stId,added?`새 장소 ${added}곳을 찾았어요. 장소 탭 맨 위 "✨ 방금 찾은 곳"에 모아 뒀어요.`:'이미 있는 곳과 겹쳐서 새로 추가할 장소가 없었어요. 찾는 말을 바꿔 보세요 (예: 현지인 맛집, 조용한 카페).'); return added;
   }catch(e){setSt(stId,e&&e.code==='cancelled'?'멈췄어요. 장소 블록 탭에서 언제든 다시 찾을 수 있어요.':errText(e,'장소를 찾지 못했어요'));return 0}
 }
@@ -343,14 +346,14 @@ async function onbAdvance(){
     const dest=String(draft.dest||'').trim();
     if(!dest){setSt('st_pack','여행지를 먼저 적어 주세요.');return}
     if(norm(dest)!==norm(PK.pack.city)){
-      if(sample){if(!(await genPack(dest,'onbNext')))return}
+      if(UI.sample){if(!(await genPack(dest,'onbNext')))return}
       else{CUR.custom=[];TRIP.save('custom',CUR.custom);CUR.placed=[];save();loadPack(manualPack(dest));savePack();draft.stays.forEach(s=>s.area=firstArea());draft.events.forEach(e=>e.area=firstArea());draft.out.airport=draft.back.airport=firstGw()}
     }
   }
   if(onbStep<ONB.length-1){onbStep++;renderOnb()} else await finishOnb();
 }
 // 여행지 (drawn by React: TripForms.tsx Dest). Not decided yet → the finder (OnbFinder.tsx).
-const partDest=p=>p.destMode==='find'?partFinder(p):FORMS.dest(p,!!sample);   // app/view/forms.ts
+const partDest=p=>p.destMode==='find'?partFinder(p):FORMS.dest(p,!!UI.sample);   // app/view/forms.ts
 
 // ---------- demo trip: a generic first-timer's Osaka, 3 nights / 4 days ----------
 // Used only by "데모 둘러보기" (see 381-welcome-demo.js). No personal taste in here on purpose.
@@ -413,9 +416,9 @@ const MK=JD.marks, MARKS=MK.MARKS, PAIRS=MK.PAIRS, markWarnings=MK.warnings;
 CUR.fmarks=null;
 const toggleMark=(uid,m)=>TRIP.toggleMark(uid,m);   // app/data/trip.ts
 function makePairBlock(uid,T){
-  const it=dayItems(day).find(x=>x.uid===uid); if(!it) return;
+  const it=dayItems(UI.day).find(x=>x.uid===uid); if(!it) return;
   // put the closing block before the next block that needs it (lodging, airport) or late in the day
-  const d=day; let start;
+  const d=UI.day; let start;
   const nx=dayItems(d).find(x=>x.start>it.end&&x.kind==='fixed'&&(x.uid==='f7'||/^ci|^co|^ev/.test(x.uid)));
   if(T==='wait') start=it.end+60;
   else if(nx) start=nx.start-PAIRS[T].dur-30;
@@ -424,7 +427,7 @@ function makePairBlock(uid,T){
   const c={id:'c'+Date.now().toString(36),name:`${PAIRS[T].pair} · ${it.name.replace(/ \(.*\)$/,'')}`.slice(0,40),area:nearestArea(it.ll)||firstArea(),cat:T==='wait'?'food':'trip',dur:PAIRS[T].dur,cost:0,memo:`${it.name}에서 시작한 일을 마무리해요.`,tags:'',drop:false,ll:it.ll};
   TRIP.customs.put(c); addCustomToData(c);
   TRIP.blocks.add({id:c.id,day:d,start,dur:c.dur,mk:[T+'-']});
-  day=d; closeSheet(); renderAll();
+  UI.day=d; closeSheet(); renderAll();
 }
 
 // ---------- check AI changes before showing them: simulate, nudge times, report what is left ----------
@@ -439,16 +442,16 @@ const needBooking=()=>CUR.profile.kind!=='day'&&(CUR.profile.bookedFlight===fals
 // the helper's steps (areas to stay, time slots, links): app/view/helper.ts
 const areaScores=()=>window.JEPI_UI.view.helper.areaScores();
 async function resolveWishes(text,stId){
-  if(!sample||!text.trim()) return;
+  if(!UI.sample||!text.trim()) return;
   progStart(stId,'목록의 장소를 찾는 중이에요 (보통 30초~1분)',['wishPasteBtn'],'찾는 중…');
   try{
-    const {n,added}=await JD.asks.wishesFromList(sample,text); progStop(stId); renderHelper(); renderTray(); setSt(stId,n?`${n}곳에 ♥를 붙였어요${added?` (새로 찾은 곳 ${added}곳)`:''}.`:'목록에서 장소를 찾지 못했어요.');
+    const {n,added}=await JD.asks.wishesFromList(UI.sample,text); progStop(stId); renderHelper(); renderTray(); setSt(stId,n?`${n}곳에 ♥를 붙였어요${added?` (새로 찾은 곳 ${added}곳)`:''}.`:'목록에서 장소를 찾지 못했어요.');
   }catch(e){setSt(stId,errText(e,'장소를 찾지 못했어요'))}
 }
 async function askVibes(){
-  if(!sample||hBusy) return; hBusy=true; const top=areaScores().slice(0,3);
+  if(!UI.sample||hBusy) return; hBusy=true; const top=areaScores().slice(0,3);
   progStart('st_vibe','동네 분위기를 정리하는 중이에요 (보통 15~30초)',['vibeBtn'],'정리하는 중…');
-  try{hVibe=await JD.asks.vibes(sample,top); progStop('st_vibe');
+  try{hVibe=await JD.asks.vibes(UI.sample,top); progStop('st_vibe');
   }catch(e){setSt('st_vibe',errText(e,'정리하지 못했어요'))} finally{hBusy=false;renderHelper()}
 }
 // What was pressed inside the 예약 도우미 (HelperBody.tsx tells: its name and value)
@@ -461,7 +464,7 @@ function helperAct(n,v,v2){
   case 'setarea': {const k=v;CUR.profile.stayPicked=k;CUR.profile.stays.forEach((st,i)=>{if(i===0||CUR.profile.bookedStay===false){st.area=k;if(CUR.profile.bookedStay===false)st.name=`숙소 (미정 · ${AREAS[k][0]})`}});TRIP.save('profile',CUR.profile);buildDays();renderHelper();return}
   case 'slot': {const [a,d]=String(v).split(',').map(Number);setSlot(a,d);return}
   case 'radio': CUR.profile[v]=v2==='true';TRIP.save('profile',CUR.profile);renderHelper();return;   // ④ 예약 상태
-  case 'toMe': closeHelper();tab='me';draft=clone(CUR.profile);renderMe();renderTabs();return;
+  case 'toMe': closeHelper();UI.tab='me';draft=clone(CUR.profile);renderMe();renderTabs();return;
   }
 }
 // the frame (drawn by React: app/screens/Frames.tsx) shows what helperView says; the step itself goes into #helperBody
@@ -476,15 +479,15 @@ function helperFrameAct(n){
   if(n==='close')closeHelper()
 }
 function openHelper(step){hStep=step||0;slotPicked=null;$('#meBox').innerHTML='';helperShow(true);renderHelper()}
-function closeHelper(){helperShow(false);renderAll();maybeCoach();if(tab==='me'){draft=clone(CUR.profile);renderMe()}}
+function closeHelper(){helperShow(false);renderAll();maybeCoach();if(UI.tab==='me'){draft=clone(CUR.profile);renderMe()}}
 const H_STEPS=['가고 싶은 곳 고르기','숙소 동네 정하기','교통편 시간대 정하기','예약하고 일정에 넣기'];
 function renderHelper(){
   if(!helperView.open) return;
   helperView={...helperView,step:`${hStep+1} / ${H_STEPS.length}`,title:H_STEPS[hStep],prevOff:hStep===0,nextLabel:hStep===H_STEPS.length-1?'일정표로 가기':'다음'}; drawHelperFrame();
   const el=$('#helperBody'); if(!el) return;
   // drawn by React: app/screens/HelperBody.tsx
-  const st=window.JEPI_UI.view.helper.step(hStep,{vibe:hVibe,hotelRecs,routeInfo,slotPicked,ai:!!sample});
-  window.JEPI_UI.mount('helper',el,{step:st,ai:!!sample,rev:++helperRev});
+  const st=window.JEPI_UI.view.helper.step(hStep,{vibe:hVibe,hotelRecs,routeInfo,slotPicked,ai:!!UI.sample});
+  window.JEPI_UI.mount('helper',el,{step:st,ai:!!UI.sample,rev:++helperRev});
 }
 let helperRev=0, slotPicked=null;
 function setSlot(a,d){
@@ -497,10 +500,10 @@ function setSlot(a,d){
 // season facts of this trip and what they mean for places: app/data/season.ts
 const SN=JD.season, tripKey=SN.tripKey, seasonOf=SN.seasonOf;
 async function genSeason(stId,signal){
-  if(!sample) return false;
+  if(!UI.sample) return false;
   progStart(stId,'이 시기만의 특징과 행사를 찾는 중이에요 (보통 30초~1분)',['seasonBtn'],'찾는 중…');
   try{
-    const n=await JD.asks.seasonInfo(sample,signal);   // app/data/asks.ts
+    const n=await JD.asks.seasonInfo(UI.sample,signal);   // app/data/asks.ts
     progStop(stId); renderAll(); setSt(stId,`이 시기 정보를 받았어요${n?` · 시즌 장소 ${n}곳 추가`:''}.`); return true;
   }catch(e){setSt(stId,e&&e.code==='cancelled'?'멈췄어요. "확인할 것" 탭에서 다시 받을 수 있어요.':errText(e,'시즌 정보를 받지 못했어요'));return false}
 }
@@ -508,26 +511,26 @@ async function genSeason(stId,signal){
 function seasonInfo(){
   const s=seasonOf(), stale=!!(PK.pack.season&&!s);
   return {got:s?{sun:`${s.sunrise?`🌅 일출 약 ${s.sunrise} · `:''}${s.sunset?`🌇 일몰 약 ${s.sunset}`:''}`,weather:s.weather||'',notes:(s.notes||[]).map((t,i)=>ckInfo('sn'+i+'_'+tripKey(),t))}:null,
-    stale,canAsk:!!(sample&&!PK.pack.manual)};
+    stale,canAsk:!!(UI.sample&&!PK.pack.manual)};
 }
 
 // ---------- destination finder: for travelers who have not picked a place yet ----------
 let destRecs=null, destAsked=[], destBusy=false;
 // drawn by React: app/screens/OnbFinder.tsx
 function partFinder(p){
-  return {f:'finder',ai:!!sample,party:p.party.type,reach:p.reach,budget:p.budget,budgetMan:p.budgetMan||'',nights:nightsOf(p),
+  return {f:'finder',ai:!!UI.sample,party:p.party.type,reach:p.reach,budget:p.budget,budgetMan:p.budgetMan||'',nights:nightsOf(p),
     chips:[...new Set([...GENERIC_KW,...CUR.kws])].map(k=>({k,on:CUR.kws.some(x=>norm(x)===norm(k))})),
     styleRows:STYLE_ROWS,style:clone(p.style||{}),styleOpen,want:p.want||'',recs:destRecs?clone(destRecs):null,asked:clone(destAsked)};
 }
 async function recommendDest(mode){
-  if(!sample||destBusy) return; destBusy=true; mode=mode||{};
+  if(!UI.sample||destBusy) return; destBusy=true; mode=mode||{};
   const prev=(destRecs||[]).map(d=>d.city);
   const want=(($('#destWant')||{}).value||'').trim(); draft.want=want; if(want&&!draft.purpose) draft.purpose=want.slice(0,80);
   const stId=mode.ask?'st_ask':mode.more?'st_more':'st_dest';
   progStart(stId,mode.ask?`${mode.ask}이(가) 맞는지 살펴보는 중이에요 (보통 15~30초)`:'이 조건에 맞는 여행지를 고르는 중이에요 (보통 20~40초)',['destRecBtn','destMoreBtn','destAskBtn'],'고르는 중…');
   const q=fixProfile(draft);
   try{
-    const got=await JD.asks.destinations(sample,q,mode,prev,want);   // the question and tidying the answer: app/data/asks.ts
+    const got=await JD.asks.destinations(UI.sample,q,mode,prev,want);   // the question and tidying the answer: app/data/asks.ts
     if(mode.ask) destAsked=[...got.slice(0,1),...destAsked.filter(d=>!got.some(g=>g.city===d.city))].slice(0,3);
     else destRecs=mode.more?[...(destRecs||[]),...got.filter(g=>!prev.includes(g.city))].slice(0,15):got;
     progStop(stId); TRIP.kws.save(CUR.kws); rerenderForm();
@@ -553,7 +556,7 @@ let talk=null;
 function talkReset(){talk={msgs:[{role:'a',text:TALK_OPEN.q}],options:TALK_OPEN.o.slice(),n:0,busy:false,summary:null}}
 // 처음 설정 parts drawn by React (app/screens/OnbBody.tsx)
 const partBanner=FORMS.banner;   // app/view/forms.ts
-function partJP(){return {f:'jp',keyBox:!!(STANDALONE&&!sample),keyHelpHTML:KEY_HELP.anthropic,importBox:!inClaude()}}
+function partJP(){return {f:'jp',keyBox:!!(STANDALONE&&!UI.sample),keyHelpHTML:KEY_HELP.anthropic,importBox:!inClaude()}}
 // drawn by React: app/screens/OnbTalk.tsx
 function partTalk(p){
   if(!talk) talkReset();
@@ -566,7 +569,7 @@ function partTalk(p){
 }
 async function talkSend(text,opt){
   opt=opt||{};
-  if(!sample||!talk||talk.busy) return;
+  if(!UI.sample||!talk||talk.busy) return;
   if(opt.retry){ if(talk.failed&&talk.msgs.length&&talk.msgs[talk.msgs.length-1].err) talk.msgs.pop(); text=talk.lastText; }
   if(!text) return;
   const finish=text==='__finish__';
@@ -575,7 +578,7 @@ async function talkSend(text,opt){
   const force=talk.n>=TALK_MAX||finish;
   const dates=datesReady(draft)?(draft.dateUnknown?`Dates: not fixed (roughly a month from now), ${nightsOf(draft)} nights.`:`Dates: from ${draft.startDate}, ${nightsOf(draft)} nights.`):'Dates and trip length: not decided yet. Do not assume any; ask about timing and length in the practical question if the user has not said.';
   let r=null;
-  try{ r=await JD.asks.talkTurn(sample,draft,talk.msgs,dates,force); }   // the question (and rescuing a broken answer): app/data/asks.ts
+  try{ r=await JD.asks.talkTurn(UI.sample,draft,talk.msgs,dates,force); }   // the question (and rescuing a broken answer): app/data/asks.ts
   catch(e){
     if(!r){
       talk.busy=false; talk.failed={code:e&&e.code};
@@ -605,26 +608,25 @@ function scrollTalk(){const c=document.querySelector('.talk2');if(c)c.scrollInto
 // ---------- named lodging candidates and route advice (AI knowledge, verify prices via links) ----------
 let hotelRecs={}, routeInfo=null, hrBusy=false;
 async function askHotels(k){
-  if(!sample||hrBusy||!AREAS[k]) return; hrBusy=true; const area=AREAS[k][0], st='st_hotel_'+k;
+  if(!UI.sample||hrBusy||!AREAS[k]) return; hrBusy=true; const area=AREAS[k][0], st='st_hotel_'+k;
   progStart(st,`${area} 숙소 후보를 고르는 중이에요 (보통 20~40초)`,['hotelBtn_'+k],'고르는 중…');
   const cap=roomCap();
   try{
-    hotelRecs[k]=await JD.asks.hotels(sample,k,cap);
+    hotelRecs[k]=await JD.asks.hotels(UI.sample,k,cap);
     progStop(st); renderHelper(); setSt(st,hotelRecs[k].length?'가격과 빈방은 링크에서 꼭 확인하세요.':'후보를 찾지 못했어요.');
   }catch(e){setSt(st,errText(e,'숙소 후보를 받지 못했어요'))} finally{hrBusy=false}
 }
 // named stays for one area (drawn by React: HelperBody.tsx)
 async function askRoutes(){
-  if(!sample||hrBusy) return; hrBusy=true;
+  if(!UI.sample||hrBusy) return; hrBusy=true;
   progStart('st_route','다니는 노선과 항공사를 정리하는 중이에요 (보통 20~40초)',['routeBtn'],'정리하는 중…');
   try{
-    routeInfo=await JD.asks.routes(sample);
+    routeInfo=await JD.asks.routes(UI.sample);
     progStop('st_route'); renderHelper(); setSt('st_route','시간표와 가격은 아래 검색 링크에서 확인하세요.');
   }catch(e){setSt('st_route',errText(e,'노선 정보를 받지 못했어요'))} finally{hrBusy=false}
 }
 // ---------- J / P modes ----------
-let jp='J';
-function setJP(m,quiet){jp=m==='P'?'P':'J';dock({placeholder:jp==='P'?'뭐 하고 싶어요? 말로 해도 돼요':'AI에게 말로 부탁하기'});document.body.classList.toggle('mode-p',jp==='P');hero({jp});if(!quiet)store.set('gp.jp',jp)}
+function setJP(m,quiet){UI.jp=m==='P'?'P':'J';dock({placeholder:UI.jp==='P'?'뭐 하고 싶어요? 말로 해도 돼요':'AI에게 말로 부탁하기'});document.body.classList.toggle('mode-p',UI.jp==='P');hero({jp:UI.jp});if(!quiet)store.set('gp.jp',UI.jp)}
 
 // ---------- one-day course ----------
 // 하루 코스: 여행지 + 언제·어디서 만나요 + 누구와 (drawn by React: TripForms.tsx)
@@ -634,18 +636,18 @@ function partsDay(p){const m=p.meet||{};
 // ---------- DICE: roll for an empty slot ----------
 // what the 🎲 sheet shows and where the dice can land: app/view/dice.ts (the rolls and choices stay here)
 const DICEV=window.JEPI_UI.view.dice, DICE_MOODS=DICEV.DICE_MOODS;
-const diceState=()=>({dice,eat,doS,diceLog,recentAreas:RECENT_AREAS,day,ai:!!sample});
+const diceState=()=>({dice,eat,doS,diceLog,recentAreas:RECENT_AREAS,day:UI.day,ai:!!UI.sample});
 let dice={mood:'any',lunch:false,walk:10,gapI:0,rolls:0,pick:null,rolling:false,msg:'',force:null};
 let diceLog=[];
 const isoShift=(iso,n)=>{const d=new Date(iso+'T00:00:00');d.setDate(d.getDate()+n);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
 const diceGaps=DICEV.diceGaps, diceCands=g=>DICEV.diceCands(g,diceState());
 function openDice(fromT){
-  const gs=diceGaps(day); dice.pick=null; dice.rolls=0; dice.msg=''; dice.force=null;
+  const gs=diceGaps(UI.day); dice.pick=null; dice.rolls=0; dice.msg=''; dice.force=null;
   if(fromT!=null){const i=gs.findIndex(g=>fromT>=g.s&&fromT<g.e);dice.gapI=i>=0?i:0} else if(dice.gapI>=gs.length) dice.gapI=0;
   $('#sheet').dataset.uid='dice'; $('#sheetBg').hidden=false; renderDice();
 }
 function diceRoll(re){
-  const gs=diceGaps(day), g=gs[dice.gapI]||gs[0];
+  const gs=diceGaps(UI.day), g=gs[dice.gapI]||gs[0];
   if(!g){dice.pick=null;dice.msg='이 날은 45분 이상 빈 시간이 없어요.';renderDice();return}
   if(re&&dice.rolls>=3) return; if(!re) dice.rolls=0;
   const prev=dice.pick, cs=diceCands(g).filter(c=>!prev||c.p.id!==prev.p.id);
@@ -657,9 +659,9 @@ function diceRoll(re){
 }
 function diceFix(force){
   const c=dice.pick; if(!c) return;
-  const ops=[{op:'add',day,id:c.p.id,start:fmt(c.arr),dur:c.dur}], r=force?{ops:dice.force||ops,warns:[]}:repairOps(ops);
+  const ops=[{op:'add',day:UI.day,id:c.p.id,start:fmt(c.arr),dur:c.dur}], r=force?{ops:dice.force||ops,warns:[]}:repairOps(ops);
   if(r.warns.length){dice.force=r.ops;dice.msg='넣으면 경고가 생겨요: '+r.warns[0];renderDice();return}
-  applyOpsCore(r.ops); save(); learnFrom(c.p); diceLog.push({n:c.p.name,d:DY.days[day].iso}); diceLog=diceLog.slice(-60); store.set('gp.dice',diceLog);
+  applyOpsCore(r.ops); save(); learnFrom(c.p); diceLog.push({n:c.p.name,d:DY.days[UI.day].iso}); diceLog=diceLog.slice(-60); store.set('gp.dice',diceLog);
   closeSheet(); renderAll();
 }
 function renderDiceDo(top){if($('#sheet').dataset.uid!=='dice')return;diceMount(DICEV.plan(diceState(),top))}
@@ -685,7 +687,7 @@ async function quickStart(){
     draft.kind='day'; draft.meet=Object.assign({},draft.meet||{},{time:fmt(st),end:fmt(Math.max(st+180,sl[3]))});}
   else{draft.kind='trip'; draft.nights=+q.len; draft.bookedFlight=true; draft.bookedStay=true; draft.flightSet=false; draft.staySet=false;}
   if(norm(dest)!==norm(PK.pack.city)){
-    if(sample){if(!(await genPack(dest,'quickStart')))return}
+    if(UI.sample){if(!(await genPack(dest,'quickStart')))return}
     else{CUR.custom=[];TRIP.save('custom',CUR.custom);CUR.placed=[];save();loadPack(manualPack(dest));savePack()}
   }
   draft.dest=PK.pack.city; if(draft.kind==='day'&&!AREAS[draft.meet.area]) draft.meet.area=firstArea();
@@ -698,17 +700,17 @@ async function quickStart(){
 const shortFuzzy=PVIEW.shortFuzzy, partOfDay=PVIEW.partOfDay, P_DICE=PVIEW.P_DICE;
 let pSt={mood:'any',draw:null}, pviewRev=0, pSpinT=0;
 const pAheadOn=()=>!!store.get('gp.pAhead',false);
-const pGaps=()=>PVIEW.pGaps(day);
+const pGaps=()=>PVIEW.pGaps(UI.day);
 function renderPView(){
   const box=$('#pview'); if(!box) return;
-  const on=jp==='P'; box.hidden=!on; $('.grid-wrap').hidden=on; if(!on) return;
-  window.JEPI_UI.mount('pview',box,{...PVIEW.board(day,pSt,{ahead:pAheadOn(),demo:!!DEMO.on,ai:!!sample}),rev:++pviewRev});
+  const on=UI.jp==='P'; box.hidden=!on; $('.grid-wrap').hidden=on; if(!on) return;
+  window.JEPI_UI.mount('pview',box,{...PVIEW.board(UI.day,pSt,{ahead:pAheadOn(),demo:!!DEMO.on,ai:!!UI.sample}),rev:++pviewRev});
 }
 function pPick(cs){const fw=c=>c.w*(dice.fresh&&dice.fresh.includes(c.p.id)?8:1); const tot=cs.reduce((a,c)=>a+fw(c),0); let r=Math.random()*tot, pick=cs[cs.length-1]; for(const c of cs){r-=fw(c);if(r<=0){pick=c;break}} return pick}
 // roll the chosen die for one free time: spin, then show a card
 function pRollDo(gi,auto){
   const gs=pGaps(), g=gs[+gi]; if(!g){pSt.draw=null;renderPView();return}
-  const old=pSt.draw, same=old&&old.day===day&&old.gi===+gi&&old.mood===pSt.mood, seen=same?old.seen.slice():[];
+  const old=pSt.draw, same=old&&old.day===UI.day&&old.gi===+gi&&old.mood===pSt.mood, seen=same?old.seen.slice():[];
   if(same&&old.cand) seen.push(old.cand.p.id);
   const m0=dice.mood, l0=dice.lunch; dice.mood=pSt.mood; dice.lunch=false; let cs=diceCands(g); dice.mood=m0; dice.lunch=l0;
   const pt=partOfDay(g.s);
@@ -718,14 +720,14 @@ function pRollDo(gi,auto){
   // the roll button looks for the next ? square this die can fill
   if(auto&&!cs.length&&!seen.length&&+gi+1<gs.length) return pRollDo(+gi+1,true);
   const cand=cs.length?pPick(cs):null, spin=!matchMedia('(prefers-reduced-motion:reduce)').matches;
-  pSt.draw={day,gi:+gi,g,mood:pSt.mood,seen,cand,left:Math.max(0,cs.length-1),rolling:spin};
+  pSt.draw={day:UI.day,gi:+gi,g,mood:pSt.mood,seen,cand,left:Math.max(0,cs.length-1),rolling:spin};
   clearTimeout(pSpinT); renderPView();
   if(spin) pSpinT=setTimeout(()=>{if(pSt.draw){pSt.draw.rolling=false;renderPView()}},1100);
 }
 function learnFrom(p){const t=tagsOf(p.id)[0];if(t)TRIP.keywords.add(t,12)}
 function pYes(){const d=pSt.draw; if(!d||!d.cand) return; const c=d.cand; learnFrom(c.p);
-  const r=repairOps([{op:'add',day,id:c.p.id,start:fmt(c.arr),dur:c.dur}]); applyOpsCore(r.ops); save();
-  diceLog.push({n:c.p.name,d:DY.days[day].iso}); diceLog=diceLog.slice(-60); store.set('gp.dice',diceLog); pSt.draw=null; renderAll();}
+  const r=repairOps([{op:'add',day:UI.day,id:c.p.id,start:fmt(c.arr),dur:c.dur}]); applyOpsCore(r.ops); save();
+  diceLog.push({n:c.p.name,d:DY.days[UI.day].iso}); diceLog=diceLog.slice(-60); store.set('gp.dice',diceLog); pSt.draw=null; renderAll();}
 function pKeep(){const d=pSt.draw; if(!d||!d.cand) return; if(!isWish(d.cand.p.id)) toggleWish(d.cand.p.id); showToast('내 카드에 넣었어요'); pRollDo(d.gi)}
 function pClose(){clearTimeout(pSpinT); pSt.draw=null; renderPView()}
 function pMood(k){if(P_DICE.some(v=>v[0]===k)){pSt.mood=k;renderPView()}}
@@ -739,8 +741,8 @@ function pPlaceNow(id){
   let hit=null; for(const g of pGaps()){const c=diceCands(g).find(x=>x.p.id===id);if(c){hit=c;break}}
   dice.mood=m0; dice.lunch=l0;
   if(!hit){showToast('이 날 빈 칸에는 맞지 않아요. 내 카드로 담아 두세요.');return}
-  const r=repairOps([{op:'add',day,id,start:fmt(hit.arr),dur:hit.dur}]); applyOpsCore(r.ops); save();
-  showToast(`${DY.days[day].date||'이 날'} ${shortFuzzy(hit.arr)}에 넣었어요`); renderAll();
+  const r=repairOps([{op:'add',day:UI.day,id,start:fmt(hit.arr),dur:hit.dur}]); applyOpsCore(r.ops); save();
+  showToast(`${DY.days[UI.day].date||'이 날'} ${shortFuzzy(hit.arr)}에 넣었어요`); renderAll();
 }
 // ---------- my plans: several saved plans, account sync, sharing ----------
 const PLANS=JD.plans;   // a plan's name, contents and text: app/data/plans.ts
@@ -761,20 +763,20 @@ function applyPlanData(d){
   CUR.placed=(Array.isArray(d.placed)?d.placed:[]).filter(b=>PM[b.id]).map(b=>({uid:TRIP.uids.next(),id:b.id,day:b.day,start:b.start,dur:b.dur||PM[b.id].dur,mk:Array.isArray(b.mk)?b.mk.filter(m=>MARKS[m]):undefined}));
   CUR.fmarks=d.fmarks&&typeof d.fmarks==='object'?d.fmarks:{}; CUR.wish=Array.isArray(d.wish)?d.wish:[]; CUR.meals=d.meals&&typeof d.meals==='object'?d.meals:{}; CUR.done=d.done&&typeof d.done==='object'?d.done:{};
   TRIP.save('profile',CUR.profile); savePack(); TRIP.save('custom',CUR.custom); TRIP.save('fmarks',CUR.fmarks); TRIP.save('wish',CUR.wish); TRIP.save('meals',CUR.meals); TRIP.save('done',CUR.done);
-  chat=[]; undoSnap=null; aiState=null; selected=null; pSt.draw=null; hVibe=null; hotelRecs={}; routeInfo=null; destRecs=null; destAsked=[];
-  buildDays(); day=0; save(); renderAll();
+  chat=[]; undoSnap=null; UI.aiState=null; UI.selected=null; pSt.draw=null; hVibe=null; hotelRecs={}; routeInfo=null; destRecs=null; destAsked=[];
+  buildDays(); UI.day=0; save(); renderAll();
 }
 function openPlan(id){
   if(id===PL.curPlan) return; snapshotCurrent();
   const d=TRIP.plans.get(id); if(!d){planMsg='이 계획을 불러오지 못했어요.';renderPlans();return}
-  PL.curPlan=id; savePlans(); applyPlanData(d); if(CUR.profile.kind==='day'&&jp!=='P') setJP('P'); tab='timeline'; renderTabs(); planMsg='';
+  PL.curPlan=id; savePlans(); applyPlanData(d); if(CUR.profile.kind==='day'&&UI.jp!=='P') setJP('P'); UI.tab='timeline'; renderTabs(); planMsg='';
 }
 function newPlan(){
   const prevP=CUR.profile; snapshotCurrent(); PL.curPlan='p'+Date.now().toString(36); savePlans();
   CUR.custom=[];CUR.placed=[];CUR.fmarks={};CUR.wish=[];CUR.meals={};CUR.done={};
   loadPack(blankPack()); savePack();
   CUR.profile=clone(PROFILE_EXAMPLE); Object.assign(CUR.profile,{stays:[{name:'숙소',area:'center',checkin:'15:00',checkout:'11:00',from:0,to:3}],events:[],dest:'',pace:'normal',social:'some',breakfast:true,purpose:'',party:{type:'solo',adults:1,kids:0},flightSet:false,staySet:false,dateSet:false,nightsSet:false,dateUnknown:false,startDate:isoPlus(30)});
-  carryTaste(prevP,CUR.profile); applyPlanData({profile:CUR.profile,pack:blankPack()}); tab='timeline'; renderTabs(); openOnb();
+  carryTaste(prevP,CUR.profile); applyPlanData({profile:CUR.profile,pack:blankPack()}); UI.tab='timeline'; renderTabs(); openOnb();
 }
 function dupPlan(id){snapshotCurrent();const d=TRIP.plans.get(id),src=PL.plans.find(x=>x.id===id);if(!d||!src)return;
   const nid='p'+Date.now().toString(36);TRIP.plans.put(nid,d);const p=Object.assign({},src,{id:nid,name:src.name+' (복사본)',custom_name:true,updated:Date.now()});PL.plans.unshift(p);savePlans();planMsg='복사본을 만들었어요.';renderPlans()}
@@ -797,10 +799,10 @@ function downloadText(name,text){
 // restore a backup file (.json made by "백업 파일 받기")
 function importBackup(file,after){
   if(!file) return; const rd=new FileReader();
-  rd.onload=()=>{try{const v=JSON.parse(String(rd.result||''));if(v&&v.jepi===2){onbFrame({open:false});if(!importAll(v))throw 0;tab='timeline';renderTabs();if(after)after(true);return}if(!v||!v.data||!v.data.profile)throw 0;
+  rd.onload=()=>{try{const v=JSON.parse(String(rd.result||''));if(v&&v.jepi===2){onbFrame({open:false});if(!importAll(v))throw 0;UI.tab='timeline';renderTabs();if(after)after(true);return}if(!v||!v.data||!v.data.profile)throw 0;
       snapshotCurrent(); const nid='p'+Date.now().toString(36); TRIP.plans.put(nid,v.data);
       PL.plans.unshift({id:nid,name:String(v.name||'불러온 계획').slice(0,40),custom_name:true,updated:Date.now()}); PL.curPlan=nid; savePlans();
-      onbFrame({open:false}); applyPlanData(v.data); snapshotCurrent(); tab='timeline'; renderTabs(); planMsg='백업을 불러왔어요.'; if(after) after(true);
+      onbFrame({open:false}); applyPlanData(v.data); snapshotCurrent(); UI.tab='timeline'; renderTabs(); planMsg='백업을 불러왔어요.'; if(after) after(true);
     }catch(_){planMsg='JEPI 백업 파일이 아니거나 손상됐어요.';renderPlans();setSt('st_import','JEPI 백업 파일이 아니거나 손상됐어요.');if(after)after(false)}};
   rd.readAsText(file);
 }
@@ -876,7 +878,7 @@ async function kakaoDiag(){
   if(!r.ok)return `✕ 카카오 오류 (HTTP ${r.status})${c} ${j.msg||j.message||''}`.trim();
   return '✓ 장소·주소 검색 연결됨 · 국내 이동 시간은 거리로 어림하고, "안내 시작"은 카카오맵으로 열어요';
 }
-function keysChanged(){saveKeys();keyBad={};if(STANDALONE){sample=makeSample()}renderAll();renderSettings();if(!$('#onb').hidden)renderOnb()}
+function keysChanged(){saveKeys();keyBad={};if(STANDALONE){UI.sample=makeSample()}renderAll();renderSettings();if(!$('#onb').hidden)renderOnb()}
 
 const blankPack=PLC.blankPack;   // app/data/places.ts
 // ---------- routes: Google Routes (abroad), cached on this device ----------
@@ -907,9 +909,9 @@ function renderMore(){
   if(b) tripChips.push({text:`예산 1인 ${Math.round(b.total/10000)}만원`});
   const w=warnTotal(), sp=PL.plans.find(x=>x.id===PL.curPlan&&x.shared);
   window.JEPI_UI.mount('more',box,{city:s.city,line:s.line,tripChips,warnCount:w,prepLeft:prepLeft(),
-    full:jp!=='P'||moreAll,showToggle:jp==='P',moreAll,plansCount:PL.plans.length,
+    full:UI.jp!=='P'||moreAll,showToggle:UI.jp==='P',moreAll,plansCount:PL.plans.length,
     friendsChip:sp?'👥 '+(((TRIPS&&TRIPS.members[PL.curPlan])||[]).length||'공유 중'):null,
-    notifyOn:!!(NOTIFY&&NOTIFY.on),aiOff:!!(STANDALONE&&!sample)});
+    notifyOn:!!(NOTIFY&&NOTIFY.on),aiOff:!!(STANDALONE&&!UI.sample)});
   tabs({warn:w?String(w):''});
 }
 // 이번 여행: one row per topic, opens only that part, saves on change
@@ -960,7 +962,7 @@ function settingsAI(){return {standalone:!!STANDALONE,editing:keyEdit,hasGemini:
 function settingsAct(n,v,v2){
   switch(n){
   case 'theme': themePref=v;LS.set('jepi.theme',themePref);applyTheme();renderSettings();if(mapState.on)drawMap();return;
-  case 'zoom': setZoom(+v);if(tab==='settings')renderSettings();return;
+  case 'zoom': setZoom(+v);if(UI.tab==='settings')renderSettings();return;
   case 'keyedit': keyEdit=v;keyMsg[keyEdit]='';renderSettings();return;   // its box opens, with the cursor in it
   case 'keycancel': keyEdit=null;renderSettings();return;
   case 'keysave': {const k=v,key=String(v2||'').trim().replace(/\s+/g,'');
@@ -1025,7 +1027,7 @@ async function openShared(){
   try{const v=JSON.parse(await unpackText(m[1])); if(!v||!v.d||!v.d.profile) throw 0;
     snapshotCurrent(); const nid='p'+Date.now().toString(36);
     TRIP.plans.put(nid,v.d); PL.plans.unshift({id:nid,name:String(v.n||'공유받은 계획').slice(0,30)+' (공유받음)',custom_name:true,updated:Date.now()});
-    PL.curPlan=nid; savePlans(); onbFrame({open:false}); applyPlanData(v.d); snapshotCurrent(); tab='timeline'; renderTabs();
+    PL.curPlan=nid; savePlans(); onbFrame({open:false}); applyPlanData(v.d); snapshotCurrent(); UI.tab='timeline'; renderTabs();
     history.replaceState(null,'',location.pathname); showToast('공유받은 계획을 내 계획에 추가했어요.');if(asNote)setTimeout(()=>openNotebook(),400);
   }catch(_){history.replaceState(null,'',location.pathname);showToast('공유 링크가 잘렸거나 손상됐어요.')}
 }
@@ -1049,7 +1051,7 @@ function renderPhase(){
     let next=null;
     if(nx){const from=cur||[...items].reverse().find(i=>i.end<=nm)||null; const tr=from&&from.ll&&nx.ll?travel(from.ll,nx.ll):null;
       next={time:fmt(nx.start),name:String(nx.name),travel:tr?`${tr.real?'':'≈'}${tr.mode} ${tr.min}분`:'',nav:from&&from.ll&&nx.ll?navLink(from.ll,nx.ll,tr?tr.mode:'도보',nx.name):''}}
-    show({s:'now',cur:cur?{name:String(cur.name),end:fmt(cur.end)}:null,next,todayDay:day!==ti?ti:null});
+    show({s:'now',cur:cur?{name:String(cur.name),end:fmt(cur.end)}:null,next,todayDay:UI.day!==ti?ti:null});
   } else if(D0.iso>t){
     const dd=Math.round((new Date(D0.iso+'T00:00:00')-new Date(t+'T00:00:00'))/864e5);
     show({s:'before',dd,warns:warnTotal(),prepLeft:prepLeft(),miss:[pr.kind!=='day'&&pr.bookedFlight===false?'교통편 미정':'',pr.kind!=='day'&&pr.bookedStay===false?'숙소 미정':''].filter(Boolean)});
@@ -1062,21 +1064,21 @@ function planCovers(id,t){const d=TRIP.plans.get(id);const p=d&&d.profile;if(!p|
 function startupFocus(){
   const t=isoOf(new Date());
   if(!(DY.days[0]&&DY.days[0].iso&&todayIdx()>=0)){const p=PL.plans.find(p=>p.id!==PL.curPlan&&planCovers(p.id,t));if(p){openPlan(p.id)}}
-  const ti=todayIdx(); if(ti>=0){day=ti;renderAll();
+  const ti=todayIdx(); if(ti>=0){UI.day=ti;renderAll();
     setTimeout(()=>{const H=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hour'))||60;const g=$('#grid');if(!g)return;
-      const now=new Date(), nm=now.getHours()*60+now.getMinutes(); const y=g.getBoundingClientRect().top+window.scrollY+Math.max(0,(nm-dayStart(day))/60*H-140);window.scrollTo({top:y})},80)}
+      const now=new Date(), nm=now.getHours()*60+now.getMinutes(); const y=g.getBoundingClientRect().top+window.scrollY+Math.max(0,(nm-dayStart(UI.day))/60*H-140);window.scrollTo({top:y})},80)}
 }
 function renderPlanBtn(){const p=PL.plans.find(x=>x.id===PL.curPlan);hero({planName:(p&&p.name)||planName()})}
 const inside=sel=>{const a=document.activeElement;return !!(a&&a.closest&&a.closest(sel))};
 function renderExt(){renderPhase();renderMore();renderPlanBtn();
-  if(tab==='me'&&$('#onb').hidden&&!inside('#meBox'))renderMeRows();
-  if(tab==='pref'&&!inside('#tasteStyle'))renderTasteStyle();
-  if(tab==='settings'&&!inside('#setBox'))renderSettings();
-  if(mapState.on){if(mapState.lastDay!==day){mapState.lastDay=day;drawMap(true)}else renderMapCards()}}
+  if(UI.tab==='me'&&$('#onb').hidden&&!inside('#meBox'))renderMeRows();
+  if(UI.tab==='pref'&&!inside('#tasteStyle'))renderTasteStyle();
+  if(UI.tab==='settings'&&!inside('#setBox'))renderSettings();
+  if(mapState.on){if(mapState.lastDay!==UI.day){mapState.lastDay=UI.day;drawMap(true)}else renderMapCards()}}
 // events for the new panels (registered before the main handler; returns early only for its own controls)
 document.addEventListener('click',e=>{
   const t=e.target.closest('button,a,label,input'); if(!t) return;
-  if(t.id==='wishGo'){cat='wish';tab='tray';renderTray();renderTabs();return}
+  if(t.id==='wishGo'){UI.cat='wish';UI.tab='tray';renderTray();renderTabs();return}
 });
 // a card under the map (MapCards in Dice.tsx): the map moves to that stop
 const mapCardAct=MAP.mapCardAct;   // app/ui/map.ts
@@ -1086,8 +1088,8 @@ document.addEventListener('change',e=>{if(e.target.closest&&e.target.closest('#m
 
 
 setInterval(()=>{try{const el=document.getElementById('aiSec');if(!el)return;const L=window.JEPI_UI.live(el),put=t=>{if(L)L.text(t);else el.textContent=t};   // AiBox.tsx draws it
-  if(!aiState||aiState.status!=='loading'){put('');return}
-  if(!aiState.t0)aiState.t0=Date.now();put(`${aiWho} · ${Math.round((Date.now()-aiState.t0)/1000)}초째`)}catch(_){}},1000);
+  if(!UI.aiState||UI.aiState.status!=='loading'){put('');return}
+  if(!UI.aiState.t0)UI.aiState.t0=Date.now();put(`${aiWho} · ${Math.round((Date.now()-UI.aiState.t0)/1000)}초째`)}catch(_){}},1000);
 
 // ---------- AI-found places, chat folding ----------
 const FRESH=new Set();
@@ -1126,8 +1128,8 @@ function cpAct(v){
   if(act==='list'){o._c='list';o._txt=o._dup?`이미 있는 "${o._dup}"와 같은 곳이라 새로 만들지 않았어요`:'장소 목록에 넣었어요 · 장소 탭 맨 위';renderChat();renderTray();renderExt();return}
   const sl=cpSlot(o);
   if(sl&&!CUR.placed.some(b=>b.id===id)){const r=repairOps([{op:'add',day:sl.d,id,start:fmt(sl.st),dur:PM[id].dur}]);
-    applyOpsCore(r.ops);save();o._c='sched';o._txt=`Day ${sl.d+1} ${r.ops[0].start}에 넣었어요${r.warns.length?` · 경고 ${r.warns.length}개`:''}`;day=sl.d;renderAll();renderChat();return}
-  selected=id;o._c='pick';o._txt='일정표에서 넣을 시간을 탭하세요';tab='timeline';chatFolded=true;renderAll();renderChat();
+    applyOpsCore(r.ops);save();o._c='sched';o._txt=`Day ${sl.d+1} ${r.ops[0].start}에 넣었어요${r.warns.length?` · 경고 ${r.warns.length}개`:''}`;UI.day=sl.d;renderAll();renderChat();return}
+  UI.selected=id;o._c='pick';o._txt='일정표에서 넣을 시간을 탭하세요';UI.tab='timeline';chatFolded=true;renderAll();renderChat();
   const g=document.getElementById('grid');if(g)g.scrollIntoView({block:'start',behavior:'smooth'});
 }
 
@@ -1149,7 +1151,7 @@ const saveEat=()=>LS.set('jepi.eat',{walk:eat.walk,mood:eat.mood});
 const nowMin=DICEV.nowMin, mealNow=DICEV.mealNow, planUsable=DICEV.planUsable;   // app/view/dice.ts
 function eatDefaults(){
   const ti=todayIdx(); eat.base=ti>=0&&planUsable()?'plan':'near';
-  if(eat.base==='plan') day=ti;
+  if(eat.base==='plan') UI.day=ti;
   const n=new Date(), wkLunch=n.getDay()>0&&n.getDay()<6&&nowMin()>=630&&nowMin()<900;
   eat.org=wkLunch&&mypOf('work')&&mypOf('work').ll?'work':'gps';
   eat.meal=mealNow()==='dinner'?'dinner':'lunch'; eat.pick=null; eat.rolls=0; eat.msg='';
@@ -1170,12 +1172,12 @@ async function eatOrigin(){
   const x=mypOf(eat.org); if(!x||!x.ll) throw aiErr('noplace',`${x?x.name:'이 장소'}를 아직 등록하지 않았어요. 더보기 → 설정 → 내 장소에서 등록해 주세요.`);
   eat.where=x.name; return x.ll;
 }
-const nbLook=()=>({kakao:!!KEYS.kakao,ai:sample});
+const nbLook=()=>({kakao:!!KEYS.kakao,ai:UI.sample});
 async function eatRoll(again){
   if(eat.busy) return;
   if(eat.base==='plan'){
     dice.lunch=true; dice.meal=eat.meal; dice.walk=eat.walk; dice.mood='any';
-    const gs=diceGaps(day), mw=eat.meal==='dinner'?[1050,1260]:[690,840];
+    const gs=diceGaps(UI.day), mw=eat.meal==='dinner'?[1050,1260]:[690,840];
     const gi=gs.findIndex(g=>g.e>mw[0]&&g.s<mw[1]); if(gi>=0) dice.gapI=gi;
     if(again&&dice.rolls>=3) return; diceRoll(!!again); return;
   }
@@ -1219,7 +1221,7 @@ async function doOrigin(){
   if(doS.org==='gps'){const ll=await getPos(120000);doS.where='지금 위치';return ll}
   const x=mypOf(doS.org);if(!x||!x.ll)throw aiErr('noplace','이 장소를 아직 등록하지 않았어요.');doS.where=x.name;return x.ll;
 }
-const doLook=()=>({kakao:!!KEYS.kakao&&!keyBad.kakao,ai:sample,mood:doS.mood,areaName:doS.base==='area'&&doS.area?doS.area.name:''});
+const doLook=()=>({kakao:!!KEYS.kakao&&!keyBad.kakao,ai:UI.sample,mood:doS.mood,areaName:doS.base==='area'&&doS.area?doS.area.name:''});
 async function poolFor(type,ll,t){const r=await NB.poolFor(type,ll,t,doLook());doS.src=r.src;return r.list}
 async function doGo(kind,again){
   if(doS.busy) return;
@@ -1227,7 +1229,7 @@ async function doGo(kind,again){
   doS.busy=true; doS.msg=''; if(!again){doS.rolls=0;doS.chosen=null} if(kind==='course'){doS.pick=null}else{doS.course=null}
   renderDice();
   try{
-    let ll=await doOrigin(); if(!ll){const pl=await NB.aiPool(null,doS.area?doS.area.name:'',doS.mood,sample);if(!pl.length)throw aiErr('none','이 동네를 찾지 못했어요. 다르게 적어 보세요.');ll=pl[0].ll}
+    let ll=await doOrigin(); if(!ll){const pl=await NB.aiPool(null,doS.area?doS.area.name:'',doS.mood,UI.sample);if(!pl.length)throw aiErr('none','이 동네를 찾지 못했어요. 다르게 적어 보세요.');ll=pl[0].ll}
     doS.origin=ll; const t0=doStart();
     if(kind==='one'){
       const type=doS.mood==='hungry'?'meal':'act';
@@ -1266,7 +1268,7 @@ function saveCourse(){
   const data={profile:prof,pack,placed:places.map((p,i)=>({id:p.id,day:0,start:c[i].start,dur:c[i].dur})),custom:[],fmarks:{},wish:[],meals:{},done:{}};
   snapshotCurrent(); const nid='p'+Date.now().toString(36);
   TRIP.plans.put(nid,data); PL.plans.unshift({id:nid,name:`${areaName} · ${+today.slice(5,7)}/${+today.slice(8,10)} ${fmt(c[0].start)} 코스`,custom_name:true,updated:Date.now(),kind:'day',dates:today.slice(5).replace('-','/'),blocks:places.length});
-  PL.curPlan=nid; savePlans(); closeSheet(); applyPlanData(data); snapshotCurrent(); day=0; tab='timeline'; renderTabs(); renderAll();
+  PL.curPlan=nid; savePlans(); closeSheet(); applyPlanData(data); snapshotCurrent(); UI.day=0; UI.tab='timeline'; renderTabs(); renderAll();
   showToast('내 계획에 저장했어요 · 일정과 지도에서 볼 수 있어요');
 }
 const doBases=()=>DICEV.doBases(diceState());
@@ -1279,7 +1281,7 @@ async function diceAct(n,v,more){
   // both tabs
   case 'dicetab': if(v==='eat'){dice.tab='eat';eatDefaults();eat.chosen=null}else{dice.tab='do';dice.pick=null;dice.rolls=0;dice.msg='';doDefaults(false)}renderDice();return;
   case 'cond': if(dice.tab==='eat')eat.cond=!!v;else doS.cond=!!v;return;   // the 조건 box opened / closed
-  case 'eatSetPlaces': closeSheet();tab='settings';JD.myplaces.ui.edit=null;renderSettings();renderTabs();return;
+  case 'eatSetPlaces': closeSheet();UI.tab='settings';JD.myplaces.ui.edit=null;renderSettings();renderTabs();return;
   // 일정 빈 시간에서 굴리기 (160-modes-roll.js)
   case 'dicegap': dice.gapI=+v;dice.pick=null;dice.msg='';renderDice();return;
   case 'dicemood': dice.mood=v;dice.pick=null;dice.msg='';renderDice();return;
@@ -1290,7 +1292,7 @@ async function diceAct(n,v,more){
   case 'diceForce': diceFix(true);return;
   case 'diceAI': diceAI();return;
   // 뭐 먹지 (280-dice-eat.js)
-  case 'eatbase': eat.base=v;eat.pick=null;eat.rolls=0;eat.msg='';dice.pick=null;dice.rolls=0;dice.msg='';if(eat.base==='plan'){const ti=todayIdx();if(ti>=0)day=ti}renderEat();return;
+  case 'eatbase': eat.base=v;eat.pick=null;eat.rolls=0;eat.msg='';dice.pick=null;dice.rolls=0;dice.msg='';if(eat.base==='plan'){const ti=todayIdx();if(ti>=0)UI.day=ti}renderEat();return;
   case 'eatorg': eat.org=v;eat.pick=null;eat.rolls=0;NB.forgetEat();renderEat();return;
   case 'eatmeal': eat.meal=v;dice.pick=null;dice.rolls=0;renderEat();return;
   case 'eatwalk': eat.walk=+v;eat.pick=null;eat.rolls=0;saveEat();renderEat();return;
@@ -1301,7 +1303,7 @@ async function diceAct(n,v,more){
   case 'dobase': doS.base=v;doS.pick=null;doS.course=null;doS.msg='';doS.picking=doS.base==='area'&&!doS.area;
     if(doS.base==='area'&&doS.area&&doS.prevBase==='area')doS.picking=true; doS.prevBase=doS.base; dice.pick=null;dice.rolls=0;doS.focus=doS.picking;renderDice();doS.focus=false;return;
   case 'doAreaFind': {const q=String(v||'').trim();if(!q)return;
-    if(!KEYS.kakao){const a={name:q,ll:null};doS.area=a;doS.picking=false;doS.msg=sample?'':'동네를 찾으려면 설정에서 카카오 지도 키나 AI를 연결해 주세요.';renderDice();return}
+    if(!KEYS.kakao){const a={name:q,ll:null};doS.area=a;doS.picking=false;doS.msg=UI.sample?'':'동네를 찾으려면 설정에서 카카오 지도 키나 AI를 연결해 주세요.';renderDice();return}
     try{const j=await kakaoGet('/v2/local/search/keyword.json',{query:q,size:6});doS.hits=(j.documents||[]).map(d=>({name:d.place_name,addr:d.road_address_name||d.address_name||'',ll:[+d.y,+d.x]}));doS.msg=doS.hits.length?'':'찾지 못했어요. 역 이름으로 적어 보세요.'}catch(err){doS.msg=err.message}renderDice();return}
   case 'doareapick': {const h=doS.hits[+v];if(h){doS.area={name:h.name,ll:h.ll};pushRecentArea(doS.area);saveDo();doS.hits=[];doS.picking=false;doS.msg=''}renderDice();return}
   case 'doarecent': {const a=RECENT_AREAS[+v];if(a){doS.area=a;pushRecentArea(a);saveDo();doS.picking=false;doS.msg=''}renderDice();return}
@@ -1343,7 +1345,7 @@ document.addEventListener('click',e=>{
 function planMenuAct(n,v){planMenu(false);
   if(n==='open'){if(v!==PL.curPlan){openPlan(v);showToast('계획을 바꿨어요')}return}
   if(n==='new'){newPlan();return}
-  tab='plans';snapshotCurrent();showText=false;renderPlans();renderTabs()}
+  UI.tab='plans';snapshotCurrent();showText=false;renderPlans();renderTabs()}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){const m=document.getElementById('planMenu');if(m&&!m.hidden){planMenu(false);document.getElementById('planBtn').focus()}}});
 
 // ---------- DICE motion: rolls while the page scrolls, opens out of the die ----------
@@ -1411,14 +1413,14 @@ JD.sync.connectSync({
   keys:()=>KEYS, setKeys(k){JD.keys.replace(k);saveKeys(true)},
   setErr(m){ACC.state.err=m},
   async afterPush(){
-    if(tab==='settings') renderSettings();
+    if(UI.tab==='settings') renderSettings();
     for(const f of SYNC_AFTER_PUSH){try{await f()}catch(e){console.warn(e)}}
   },
   async afterPull({changed,curChanged,keysPulled}){
     if(curChanged){const ae=document.activeElement;const editing=(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))||!$('#sheetBg').hidden||!$('#onb').hidden;
       if(!editing){applyPlanData(curChanged);showToast('다른 기기에서 바꾼 내용을 받아왔어요')} }
-    if(keysPulled){keyBad={};if(STANDALONE)sample=makeSample();renderAll();showToast('AI·지도 키도 받아왔어요')}
-    if(changed){renderPlans();renderExt()} if(tab==='settings')renderSettings();
+    if(keysPulled){keyBad={};if(STANDALONE)UI.sample=makeSample();renderAll();showToast('AI·지도 키도 받아왔어요')}
+    if(changed){renderPlans();renderExt()} if(UI.tab==='settings')renderSettings();
     for(const f of SYNC_AFTER_PULL){try{await f()}catch(e){console.warn(e)}}
   }
 });
@@ -1441,7 +1443,7 @@ async function syncBoot(){
     if(h.get('access_token')&&SYNC.url&&SYNC.key){
       const at=h.get('access_token');let user={};
       try{const r=await fetch(SYNC.url+'/auth/v1/user',{headers:{apikey:SYNC.key,Authorization:'Bearer '+at}});user=await r.json()}catch(_){}
-      keepSess({access_token:at,refresh_token:h.get('refresh_token'),expires_in:+h.get('expires_in')||3600,user});SYNC.sent={};SYNC.lastPull=0;saveSync();ACC.state.step=h.get('type')==='recovery'?'newpw':'';if(ACC.state.step==='newpw'){tab='settings';setTimeout(()=>{renderTabs();renderSettings()},300)}
+      keepSess({access_token:at,refresh_token:h.get('refresh_token'),expires_in:+h.get('expires_in')||3600,user});SYNC.sent={};SYNC.lastPull=0;saveSync();ACC.state.step=h.get('type')==='recovery'?'newpw':'';if(ACC.state.step==='newpw'){UI.tab='settings';setTimeout(()=>{renderTabs();renderSettings()},300)}
       showToast('로그인했어요 · 동기화를 켰어요');
     }
     if(sb||h.get('access_token')||h.get('error_description')) history.replaceState(null,'',location.pathname);
@@ -1463,7 +1465,7 @@ DY.homeMin=60;
 CUR.kws=TRIP.kws.load(); if(!Array.isArray(CUR.kws)) CUR.kws=DEFAULT_KW.slice();
 CUR.meals=TRIP.load('meals',{}); if(!CUR.meals||typeof CUR.meals!=='object') CUR.meals={};
 const mealOf=JD.check.mealOf;   // app/data/check.ts
-let day=0, tab='timeline', cat='all', selected=null, aiState=null, sample=null, group='zone', zoneOpen={}, resetArm=false;
+// where the person is in the app (the open day, tab, picked place, the AI …): app/ui/state.ts, read as UI.day, UI.tab …
 // changes to the trip happen in app/data/trip.ts (TRIP.blocks / wish / toggleMark …); not while an AI check tries them out on a copy,
 // and blocks first keep the places other travelers shared that they use
 TRIP.connectSaving(part=>{if(OPS.state.dry)return false;if(part==='placed')keepShared();return true});
@@ -1483,36 +1485,36 @@ const analyze=CK.analyze, gapsOf=CK.gapsOf;
 // ---------- render ----------
 // The day buttons, the budget and the route line are drawn by React: app/screens/DayTop.tsx
 const VIEW=window.JEPI_UI.view;   // what each screen shows, worked out in app/view/*.ts
-function renderDays(){window.JEPI_UI.mount('days',$('#days'),VIEW.day.dayButtons(day))}
+function renderDays(){window.JEPI_UI.mount('days',$('#days'),VIEW.day.dayButtons(UI.day))}
 function setZoom(h,quiet){h=h===100?100:60;document.documentElement.style.setProperty('--hour',h+'px');document.querySelectorAll('[data-zoom]').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.zoom===h)));if(!quiet){store.set('gp.zoom',h);renderTimeline()}}
 let gridRev=0;
 function renderTimeline(){
-  const D=DY.days[day]; hero({title:dayTitleOf(day)});
+  const D=DY.days[UI.day]; hero({title:dayTitleOf(UI.day)});
   const H=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hour'))||60;
   // drawn by React: app/screens/DayGrid.tsx (its props: app/view/day.ts); badges and memos come from the features that add them
-  const T=VIEW.day.timeline(day,H,{badges:it=>extras(BLOCK_BADGES,it,day),memo:it=>blockMemoOf(it,day)});
-  {hero({sub:`${D.date} (${WD[D.wd]})`});renderDaySum(T.items,T.trans,gapsOf(day))}
+  const T=VIEW.day.timeline(UI.day,H,{badges:it=>extras(BLOCK_BADGES,it,UI.day),memo:it=>blockMemoOf(it,UI.day)});
+  {hero({sub:`${D.date} (${WD[D.wd]})`});renderDaySum(T.items,T.trans,gapsOf(UI.day))}
   const grid=$('#grid');
   window.JEPI_UI.mount('grid',grid,{...T.grid,rev:++gridRev});
   grid.style.height=T.height+'px';
-  window.JEPI_UI.mount('route',$('#route'),VIEW.day.route(day,T.items,T.trans));
+  window.JEPI_UI.mount('route',$('#route'),VIEW.day.route(UI.day,T.items,T.trans));
   renderBudget();
   renderPView();
 }
 const dayCost=JD.check.dayCost;   // app/data/check.ts
-function renderBudget(){const B=VIEW.day.budget(day);window.JEPI_UI.mount('budgetSum',$('#budgetSum'),B.sum);window.JEPI_UI.mount('budget',$('#budget'),B.box)}
+function renderBudget(){const B=VIEW.day.budget(UI.day);window.JEPI_UI.mount('budgetSum',$('#budgetSum'),B.sum);window.JEPI_UI.mount('budget',$('#budget'),B.box)}
 // the top of the 장소 tab is drawn by React (app/screens/Tops.tsx); #filters and #cards inside it get their own screens
-function drawTrayTop(){window.JEPI_UI.mount('trayTop',$('#trayTopMount'),{moreHidden:!sample||!!PK.pack.manual,rec:REC.statusText(PK.pack.city||''),group})}
+function drawTrayTop(){window.JEPI_UI.mount('trayTop',$('#trayTopMount'),{moreHidden:!UI.sample||!!PK.pack.manual,rec:REC.statusText(PK.pack.city||''),group:UI.group})}
 // pressed in the 장소 tab's top
 function trayAct(n,v){
-  if(n==='group'){group=v;renderTray()}
+  if(n==='group'){UI.group=v;renderTray()}
   else if(n==='open')renderTray();
   else if(n==='more')openFind({where:'city',into:'list',q:v,autorun:true})
 }
 function renderTray(){
   recsMaybe(); drawTrayTop();
   // drawn by React: app/screens/Tray.tsx (its props: app/view/tray.ts)
-  const V=VIEW.tray.tray({day,cat,group,zoneOpen,openOnly:$('#openOnly').checked,selected,pmode:jp==='P',ai:!!sample,manual:!!PK.pack.manual,
+  const V=VIEW.tray.tray({day:UI.day,cat:UI.cat,group:UI.group,zoneOpen:UI.zoneOpen,openOnly:$('#openOnly').checked,selected:UI.selected,pmode:UI.jp==='P',ai:!!UI.sample,manual:!!PK.pack.manual,
     fresh:FRESH,shared:!!curShared(),dups:dupInfo(),extras:p=>extras(CARD_EXTRAS,p)});
   window.JEPI_UI.mount('trayFilters',$('#filters'),{...V.filters,rev:++trayRev});
   window.JEPI_UI.mount('trayCards',$('#cards'),{...V.cards,rev:++trayRev});
@@ -1520,7 +1522,7 @@ function renderTray(){
 let trayRev=0;
 // an empty time in the 일정표 was tapped: places that fit there (drawn by React: BlockSheet.tsx FillSheet; props: app/view/tray.ts)
 function openFill(t){
-  window.JEPI_UI.mount('fill',$('#sheet'),{rev:++sheetRev,...VIEW.tray.fill(day,t)});
+  window.JEPI_UI.mount('fill',$('#sheet'),{rev:++sheetRev,...VIEW.tray.fill(UI.day,t)});
   $('#sheet').dataset.uid=''; $('#sheetBg').hidden=false;
   setTimeout(()=>{const b=$('#sheet button');b&&b.focus()},0);
 }
@@ -1534,10 +1536,10 @@ function renderChecks(){
   });
   if(markWarnings().needTax) prepRows.push({id:'tax-'+cityKey(),d:DY.days.length-1,t:'쇼핑 일정이 있어요 · 면세 환급을 어디서 할지 🧾 표시를 붙여 두세요',s:'매장 또는 출국 공항'});
   tabs({warn:warnRows.length?String(warnRows.length):''}); $('#warnCount2').textContent=warnRows.length?' '+warnRows.length:'';
-  dock({fixHidden:!(warnRows.length&&sample),fixText:`🛠 경고 ${warnRows.length}개 해결`});
+  dock({fixHidden:!(warnRows.length&&UI.sample),fixText:`🛠 경고 ${warnRows.length}개 해결`});
   // drawn by React: app/screens/Checks.tsx
-  window.JEPI_UI.mount('checks',$('#checks'),{ai:!!sample,warns:warnRows.map(r=>({d:r.d,uid:String(r.uid),t:r.t})),prep:prepRows.map(r=>ckInfo(r.id,r.t,`Day ${r.d+1} · ${r.s}`)),
-    season:seasonInfo(),all:STATIC_CHECKS.map(s=>ckInfo(s.id,s.t)),resetArm:!!resetArm,rev:++checksRev});
+  window.JEPI_UI.mount('checks',$('#checks'),{ai:!!UI.sample,warns:warnRows.map(r=>({d:r.d,uid:String(r.uid),t:r.t})),prep:prepRows.map(r=>ckInfo(r.id,r.t,`Day ${r.d+1} · ${r.s}`)),
+    season:seasonInfo(),all:STATIC_CHECKS.map(s=>ckInfo(s.id,s.t)),resetArm:!!UI.resetArm,rev:++checksRev});
 }
 let checksRev=0;
 function ckInfo(id,t,sub){return {id,t:String(t),sub,on:!!CUR.done[id]}}
@@ -1547,30 +1549,30 @@ function tabs(p){tabsView={...tabsView,...p};window.JEPI_UI.mount('tabs',$('#tab
 function renderTabs(){setTimeout(fabDodge,0);   // the 🎲 button shows on every tab (300-intro-header.js fabDodge)
   const wide=matchMedia('(min-width:900px)').matches;
   const grp={check:'more',pref:'more',me:'more',plans:'more',settings:'more'}; Object.keys(PANELS).forEach(k=>grp[k]='more');
-  const shown=wide&&tab==='timeline'?'tray':(grp[tab]||tab);
+  const shown=wide&&UI.tab==='timeline'?'tray':(grp[UI.tab]||UI.tab);
   tabs({shown});
-  document.body.dataset.tab=grp[tab]||tab;
-  $('#panel-timeline').hidden=!wide&&tab!=='timeline';
-  $('#panel-side').hidden=!wide&&tab==='timeline';
+  document.body.dataset.tab=grp[UI.tab]||UI.tab;
+  $('#panel-timeline').hidden=!wide&&UI.tab!=='timeline';
+  $('#panel-side').hidden=!wide&&UI.tab==='timeline';
   const sides=['tray','check','pref','me','more','plans','settings','map',...Object.keys(PANELS)];
-  const sideTab=sides.includes(tab)&&tab!=='tray'?tab:'tray';
+  const sideTab=sides.includes(UI.tab)&&UI.tab!=='tray'?UI.tab:'tray';
   sides.forEach(k=>{const el=$('#side-'+k);if(el)el.hidden=sideTab!==k});
 }
 function renderBanner(){
-  document.body.classList.toggle('placing',!!selected);
-  if(selected){const p=PM[selected];bannerView={open:true,text:`${p.name} (${p.dur}분) · 넣을 시간을 탭하세요`}}else bannerView={...bannerView,open:false};
+  document.body.classList.toggle('placing',!!UI.selected);
+  if(UI.selected){const p=PM[UI.selected];bannerView={open:true,text:`${p.name} (${p.dur}분) · 넣을 시간을 탭하세요`}}else bannerView={...bannerView,open:false};
   drawBanner();
 }
 // the banner is drawn by React (app/screens/Frames.tsx); it keeps its last text while hidden
 let bannerView={open:false,text:''};
 function drawBanner(){window.JEPI_UI.mount('banner',$('#bannerMount'),bannerView)}
 function renderAI(){
-  const box=$('#aiBox'); dock({aiHidden:!sample});
-  if(!aiState||aiState.day!==day){box.hidden=true;return}
+  const box=$('#aiBox'); dock({aiHidden:!UI.sample});
+  if(!UI.aiState||UI.aiState.day!==UI.day){box.hidden=true;return}
   box.hidden=false;
   // drawn by React: app/screens/AiBox.tsx
-  const st=aiState.status==='loading'?{s:'loading'}:aiState.status==='error'?{s:'error',msg:String(aiState.msg||'')}
-    :{s:'done',date:String(DY.days[day].date),dropped:aiState.dropped||0,items:aiState.items.map(x=>({time:`${fmt(x.start)}–${fmt(x.start+PM[x.id].dur)}`,name:String(PM[x.id].name),why:String(x.reason||''),added:!!x.added}))};
+  const st=UI.aiState.status==='loading'?{s:'loading'}:UI.aiState.status==='error'?{s:'error',msg:String(UI.aiState.msg||'')}
+    :{s:'done',date:String(DY.days[UI.day].date),dropped:UI.aiState.dropped||0,items:UI.aiState.items.map(x=>({time:`${fmt(x.start)}–${fmt(x.start+PM[x.id].dur)}`,name:String(PM[x.id].name),why:String(x.reason||''),added:!!x.added}))};
   window.JEPI_UI.mount('aiBox',box,{state:st,rev:++aiBoxRev});
 }
 let aiBoxRev=0;
@@ -1585,7 +1587,7 @@ const saveKw=()=>{TRIP.kws.save(CUR.kws);LS.set('jepi.kwAt',Date.now());syncSoon
 function renderAll(){touchPlan();renderMeta();renderNudges();renderDays();renderTimeline();renderTray();renderChecks();renderPref();renderTabs();renderBanner();renderAI();renderChat();renderExt();renderLook()}
 
 // ---------- actions ----------
-function place(id,start,d=day){
+function place(id,start,d=UI.day){
   const p=PM[id]; start=Math.max(dayStart(d),Math.min(1410,start));
   TRIP.blocks.add({id,day:d,start,dur:p.dur});
 }
@@ -1593,7 +1595,7 @@ function place(id,start,d=day){
 let sheetRev=0;
 function openSheet(uid,opt){
   // its props: app/view/sheet.ts (what other features add: SHEET_EXTRAS)
-  const v=window.JEPI_UI.view.sheet.blockSheet(day,uid,!!(opt&&opt.marksOpen),it=>extras(SHEET_EXTRAS,it,day)); if(!v) return;
+  const v=window.JEPI_UI.view.sheet.blockSheet(UI.day,uid,!!(opt&&opt.marksOpen),it=>extras(SHEET_EXTRAS,it,UI.day)); if(!v) return;
   window.JEPI_UI.mount('block',$('#sheet'),{rev:++sheetRev,...v});
   $('#sheet').dataset.uid=uid; $('#sheetBg').hidden=false;
   setTimeout(()=>{const b=$('#sheet button');b&&b.focus()},0);
@@ -1601,20 +1603,20 @@ function openSheet(uid,opt){
 const closeSheet=()=>{if(diceCloseAnim())return;$('#sheetBg').hidden=true};
 // ---------- AI ----------
 async function askAI(){
-  if(!sample) return;
-  const gaps=gapsOf(day);
-  if(!gaps.length){aiState={day,status:'error',msg:'이 날은 90분 이상 빈 시간이 없어요. 블록을 조금 빼거나 옮겨 보세요.'};renderAI();return}
+  if(!UI.sample) return;
+  const gaps=gapsOf(UI.day);
+  if(!gaps.length){UI.aiState={day:UI.day,status:'error',msg:'이 날은 90분 이상 빈 시간이 없어요. 블록을 조금 빼거나 옮겨 보세요.'};renderAI();return}
   const ctl=new AbortController();
-  aiState={day,status:'loading',ctl}; renderAI(); dock({aiOff:true});
+  UI.aiState={day:UI.day,status:'loading',ctl}; renderAI(); dock({aiOff:true});
   try{
-    const {items:kept,dropped}=await JD.asks.fillDay(sample,day,ctl.signal);   // the question and its checks: app/data/asks.ts
-    aiState={day,status:'done',items:kept,dropped};
+    const {items:kept,dropped}=await JD.asks.fillDay(UI.sample,UI.day,ctl.signal);   // the question and its checks: app/data/asks.ts
+    UI.aiState={day:UI.day,status:'done',items:kept,dropped};
   }catch(e){
-    if(e&&e.code==='cancelled'){aiState=null}
-    else if(e&&(e.code==='not_granted'||e.code==='sampling_disabled'||e.code==='not_declared'||e.code==='capability_disabled')){sample=null;aiState={day,status:'error',msg:'이 화면에서는 AI 추천을 쓸 수 없어요. 블록은 직접 넣을 수 있어요.'}}
-    else if(e&&e.code==='rate_limited'){aiState={day,status:'error',msg:'요청이 많아 잠시 쉬어야 해요. 조금 뒤에 다시 눌러 주세요.'}}
-    else if(e&&e.code==='invalid_json'){aiState={day,status:'error',msg:'추천 형식을 읽지 못했어요. 한 번 더 눌러 주세요.'}}
-    else {aiState={day,status:'error',msg:(e&&e.message&&e.code!=='upstream_error'||e&&e.code==='upstream_error'&&e.message?e.message+' · ':'연결이 잠시 끊겼어요. ')+'다시 눌러 주세요.'}}
+    if(e&&e.code==='cancelled'){UI.aiState=null}
+    else if(e&&(e.code==='not_granted'||e.code==='sampling_disabled'||e.code==='not_declared'||e.code==='capability_disabled')){UI.sample=null;UI.aiState={day:UI.day,status:'error',msg:'이 화면에서는 AI 추천을 쓸 수 없어요. 블록은 직접 넣을 수 있어요.'}}
+    else if(e&&e.code==='rate_limited'){UI.aiState={day:UI.day,status:'error',msg:'요청이 많아 잠시 쉬어야 해요. 조금 뒤에 다시 눌러 주세요.'}}
+    else if(e&&e.code==='invalid_json'){UI.aiState={day:UI.day,status:'error',msg:'추천 형식을 읽지 못했어요. 한 번 더 눌러 주세요.'}}
+    else {UI.aiState={day:UI.day,status:'error',msg:(e&&e.message&&e.code!=='upstream_error'||e&&e.code==='upstream_error'&&e.message?e.message+' · ':'연결이 잠시 끊겼어요. ')+'다시 눌러 주세요.'}}
   }finally{dock({aiOff:false}); renderAll()}
 }
 
@@ -1623,10 +1625,10 @@ let wipeArm=false;
 function wipeAll(){
   ['profile','pack','placed3','custom','kw','meal2','done','fmarks','wish','coach','dice','jp'].forEach(k=>JD.storage.del('gp.'+k));
   PL.plans.forEach(p=>TRIP.plans.del(p.id)); PL.plans=[]; PL.curPlan='p'+Date.now().toString(36); savePlans();
-  CUR.custom=[]; CUR.placed=[]; CUR.fmarks={}; CUR.wish=[]; CUR.kws=[]; CUR.meals={}; CUR.done={}; chat=[]; undoSnap=null; aiState=null; selected=null; hVibe=null; wipeArm=false;
+  CUR.custom=[]; CUR.placed=[]; CUR.fmarks={}; CUR.wish=[]; CUR.kws=[]; CUR.meals={}; CUR.done={}; chat=[]; undoSnap=null; UI.aiState=null; UI.selected=null; hVibe=null; wipeArm=false;
   loadPack(blankPack()); savePack();
   CUR.profile=clone(PROFILE_EXAMPLE); Object.assign(CUR.profile,{stays:[{name:'숙소',area:'center',checkin:'15:00',checkout:'11:00',from:0,to:3}],events:[],dest:'',pace:'normal',social:'some',breakfast:true,purpose:'',party:{type:'solo',adults:1,kids:0},flightSet:false,staySet:false,dateSet:false,nightsSet:false,dateUnknown:false,startDate:isoPlus(30)}); CUR.profile.stays[0].name='숙소';
-  buildDays(); day=0; tab='timeline'; helperShow(false); closeSheet(); renderAll(); openOnb();
+  buildDays(); UI.day=0; UI.tab='timeline'; helperShow(false); closeSheet(); renderAll(); openOnb();
 }
 // ---------- first-use guide ----------
 // first-use guide: four steps only; everything else is in 더보기 → 사용 안내 (387-help.js)
@@ -1641,15 +1643,15 @@ function coachAct(n){if(n==='next')showCoach(+coachView.i+1);else if(n==='skip')
 function showCoach(i){
   document.querySelectorAll('.coach-hl').forEach(e=>e.classList.remove('coach-hl'));
   if(i>=COACH.length){coachView={...coachView,open:false};drawCoach();store.set('gp.coach',1);return}
-  if(!matchMedia('(min-width:900px)').matches&&tab!=='timeline'){tab='timeline';renderTabs()}
-  let el=document.querySelector(COACH[i].sel); if(COACH[i].sel==='#grid'&&jp==='P') el=document.querySelector('#pview'); if(COACH[i].sel==='#grid .blk'&&jp==='P') el=document.querySelector('#pview .sq'); if(!el||!el.offsetParent){showCoach(i+1);return}
+  if(!matchMedia('(min-width:900px)').matches&&UI.tab!=='timeline'){UI.tab='timeline';renderTabs()}
+  let el=document.querySelector(COACH[i].sel); if(COACH[i].sel==='#grid'&&UI.jp==='P') el=document.querySelector('#pview'); if(COACH[i].sel==='#grid .blk'&&UI.jp==='P') el=document.querySelector('#pview .sq'); if(!el||!el.offsetParent){showCoach(i+1);return}
   if(el){el.classList.add('coach-hl');el.scrollIntoView({block:i===0?'start':'center'})}
   coachView={open:true,i,text:COACH[i].t,step:`${i+1} / ${COACH.length}`,last:i===COACH.length-1}; drawCoach();
 }
 const maybeCoach=()=>{if(!store.get('gp.coach',0)&&$('#onb').hidden&&!helperOpen()) setTimeout(()=>showCoach(0),400)};
 // ---------- events ----------
 // open a tab (the bottom tabs, and any button with data-tab: 더보기 rows, back buttons …)
-function goTab(name){tab=name;autoMsg='';if(tab==='me'){draft=clone(CUR.profile);meOpen=null;renderMe()}if(tab==='pref'){draft=clone(CUR.profile);renderTasteStyle()}if(tab==='plans'){snapshotCurrent();showText=false;renderPlans()}if(tab==='settings'){keyEdit=null;renderSettings()}if(tab==='more')renderMore();if(PANELS[tab])PANELS[tab].render({opened:true});renderTabs();if(tab==='map')openMap();else mapState.on=false;window.scrollTo({top:0});}
+function goTab(name){UI.tab=name;autoMsg='';if(UI.tab==='me'){draft=clone(CUR.profile);meOpen=null;renderMe()}if(UI.tab==='pref'){draft=clone(CUR.profile);renderTasteStyle()}if(UI.tab==='plans'){snapshotCurrent();showText=false;renderPlans()}if(UI.tab==='settings'){keyEdit=null;renderSettings()}if(UI.tab==='more')renderMore();if(PANELS[UI.tab])PANELS[UI.tab].render({opened:true});renderTabs();if(UI.tab==='map')openMap();else mapState.on=false;window.scrollTo({top:0});}
 document.addEventListener('click',e=>{
   const t=e.target.closest('button,input,label'); if(!t) return;
   if(t.dataset.tab){if(!t.closest('.tabs'))goTab(t.dataset.tab);return}
@@ -1675,7 +1677,7 @@ function blockAct(n,v,o){
   switch(n){
   case 'fill': place(v,+o.start);closeSheet();renderAll();return;          // an empty time: put this place there
   case 'dicefrom': dice.tab='do';doDefaults(true);openDice(+v);diceRoll(false);return;
-  case 'totray': closeSheet();tab='tray';renderTabs();return;
+  case 'totray': closeSheet();UI.tab='tray';renderTabs();return;
   case 'newcustom': openCustom(null,+v);return;
   case 'editcustom': openCustom(v,null);return;
   case 'swap': if(b){TRIP.blocks.change(uid,{id:v,start:+o.start,dur:+o.dur});renderAll();openSheet(uid)}return;
@@ -1684,36 +1686,36 @@ function blockAct(n,v,o){
   case 'home': CUR.profile.home.min=Math.max(10,Math.min(240,(+CUR.profile.home.min||60)+ +v));TRIP.save('profile',CUR.profile);buildDays();renderAll();openSheet('f0a');return;
   }
   if(!b) return;
-  if(n==='mv'){TRIP.blocks.change(uid,{start:Math.max(dayStart(day),Math.min(1410,b.start+ +v))});renderAll();openSheet(uid);return}
+  if(n==='mv'){TRIP.blocks.change(uid,{start:Math.max(dayStart(UI.day),Math.min(1410,b.start+ +v))});renderAll();openSheet(uid);return}
   if(n==='du'){TRIP.blocks.change(uid,{dur:Math.max(30,Math.min(720,b.dur+ +v))});renderAll();openSheet(uid);return}
   if(n==='del'){TRIP.blocks.remove(uid);closeSheet();renderAll();return}
 }
 // 🛠 AI에게 경고 해결 맡기기 (the check list's button and the 경고 chip above the 일정표)
-function fixWarns(){const ws=[];DY.days.forEach((_,d)=>analyze(d).items.forEach(it=>it.warns.forEach(w=>ws.push(`Day ${d+1} ${it.name}: ${w}`))));tab='timeline';renderTabs();sendChat('지금 일정의 경고를 모두 해결해 줘. 꼭 필요한 것만 바꾸고, 바꿀 수 없는 고정 일정은 그대로 둬.\n'+ws.slice(0,20).join('\n'));const c=$('#chat');if(c)c.scrollIntoView({block:'start'})}
+function fixWarns(){const ws=[];DY.days.forEach((_,d)=>analyze(d).items.forEach(it=>it.warns.forEach(w=>ws.push(`Day ${d+1} ${it.name}: ${w}`))));UI.tab='timeline';renderTabs();sendChat('지금 일정의 경고를 모두 해결해 줘. 꼭 필요한 것만 바꾸고, 바꿀 수 없는 고정 일정은 그대로 둬.\n'+ws.slice(0,20).join('\n'));const c=$('#chat');if(c)c.scrollIntoView({block:'start'})}
 // 준비하기 (Checks.tsx): a tick, a warning (go to its block), 경고 해결, 시즌 정보, 모두 지우기
 function checksAct(n,v,o){
   switch(n){
   case 'ck': TRIP.tick(v,!!o);renderChecks();return;
-  case 'goto': {const [d,u]=String(v).split('~');day=+d;tab='timeline';renderAll();openSheet(u);return}
+  case 'goto': {const [d,u]=String(v).split('~');UI.day=+d;UI.tab='timeline';renderAll();openSheet(u);return}
   case 'fix': fixWarns();return;
   case 'season': genSeason('st_season');return;
-  case 'reset': if(!resetArm){resetArm=true;renderChecks();return}
-    resetArm=false;CUR.fmarks={};TRIP.save('fmarks',CUR.fmarks);CUR.placed=DEFAULT.map(b=>({uid:TRIP.uids.next(),id:b.id,day:b.day,start:b.start,dur:PM[b.id].dur}));save();renderAll();return;
+  case 'reset': if(!UI.resetArm){UI.resetArm=true;renderChecks();return}
+    UI.resetArm=false;CUR.fmarks={};TRIP.save('fmarks',CUR.fmarks);CUR.placed=DEFAULT.map(b=>({uid:TRIP.uids.next(),id:b.id,day:b.day,start:b.start,dur:PM[b.id].dur}));save();renderAll();return;
   }
 }
 // ✨ 빈 시간 채우기 results (AiBox.tsx): stop, close, put one in
 function aiboxAct(n,v){
-  if(n==='stop'){aiState?.ctl?.abort();return}
-  if(n==='close'){aiState=null;renderAI();return}
-  if(n==='acc'&&aiState?.items){const x=aiState.items[+v];if(x&&!x.added){place(x.id,x.start);x.added=true;renderAll()}}
+  if(n==='stop'){UI.aiState?.ctl?.abort();return}
+  if(n==='close'){UI.aiState=null;renderAI();return}
+  if(n==='acc'&&UI.aiState?.items){const x=UI.aiState.items[+v];if(x&&!x.added){place(x.id,x.start);x.added=true;renderAll()}}
 }
 // What was pressed in the 일정표 and around it (DayGrid.tsx slots and blocks, the Day buttons, 오늘 보기, 간식비 −/+)
 function gridAct(n,v){
   switch(n){
-  case 'day': day=+v;renderAll();return;
-  case 'slot': if(!selected){openFill(+v);return} place(selected,+v); selected=null; renderAll(); return;   // an empty time: fill it, or put the chosen card there
+  case 'day': UI.day=+v;renderAll();return;
+  case 'slot': if(!UI.selected){openFill(+v);return} place(UI.selected,+v); UI.selected=null; renderAll(); return;   // an empty time: fill it, or put the chosen card there
   case 'blk': openSheet(v);return;
-  case 'meal': TRIP.setMeal(day,Math.max(0,Math.min((PK.pack.snack||1000)*20,mealOf(day)+ +v)));renderBudget();return;
+  case 'meal': TRIP.setMeal(UI.day,Math.max(0,Math.min((PK.pack.snack||1000)*20,mealOf(UI.day)+ +v)));renderBudget();return;
   }
 }
 // 취향 키워드 (TasteKeywords.tsx, and the chips in 처음 설정): toggle returns whether the keyword is on now
@@ -1755,7 +1757,7 @@ function nudgeAct(n,v){
   case 'nudgeStayIn': if(CUR.profile.bookedStay===false){CUR.profile.bookedStay=true}goMe('숙소');return;
   case 'nudgeStayNo': CUR.profile.bookedStay=false;TRIP.save('profile',CUR.profile);renderAll();openHelper(CUR.wish.length?1:0);return;
   case 'nudgeDate': goMe('여행 기간');return;
-  case 'nudgeTaste': tab='pref';renderPref();renderTabs();return;
+  case 'nudgeTaste': UI.tab='pref';renderPref();renderTabs();return;
   case 'off': CUR.profile.nudgeOff=Object.assign({},CUR.profile.nudgeOff,{[v]:true});TRIP.save('profile',CUR.profile);renderNudges();return;
   }
 }
@@ -1764,23 +1766,23 @@ function placeAct(n,v){
   switch(n){
   case 'wish': toggleWish(v);if(helperOpen())renderHelper();renderTray();renderPView();return;
   case 'vote': toggleRec(v);return;
-  case 'pick': selected=selected===v?null:v; if(selected&&!matchMedia('(min-width:900px)').matches){tab='timeline'} renderAll();return;   // 넣기: then a time slot
+  case 'pick': UI.selected=UI.selected===v?null:v; if(UI.selected&&!matchMedia('(min-width:900px)').matches){UI.tab='timeline'} renderAll();return;   // 넣기: then a time slot
   case 'ppick': pPlaceNow(v);return;
   case 'pairec': pAIRec();return;
   case 'pfind': openFind({where:'city',into:'list'});return;
   case 'pnewcard': openCustom(null,null,{card:true});return;
-  case 'cat': cat=v||'all';renderTray();return;   // a filter chip or the 분류 list
-  case 'zone': {const [z,open]=v.split('~');zoneOpen[z]=open==='1';return}   // a 동네 group folded / unfolded
+  case 'cat': UI.cat=v||'all';renderTray();return;   // a filter chip or the 분류 list
+  case 'zone': {const [z,open]=v.split('~');UI.zoneOpen[z]=open==='1';return}   // a 동네 group folded / unfolded
   case 'dupmerge': {const [a,b]=v.split('~');mergePlaces(a,b);return}
   case 'dupno': {const [a,b]=v.split('~');const no=store.get('gp.dupNo',[])||[];no.push(dupNoKey(a,b));store.set('gp.dupNo',no.slice(-200));renderTray();return}
   }
 }
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('#sheetBg').hidden)closeSheet();else if(selected){selected=null;renderAll()}}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('#sheetBg').hidden)closeSheet();else if(UI.selected){UI.selected=null;renderAll()}}});
 // drag & drop (desktop): app/ui/drag.ts marks the slot and works out the time; putting the card / block there is here
 window.JEPI_UI.drag.connectGrid($('#grid'));
 function dropped(kind,id,m){
-  if(kind==='new') place(id,m); else if(TRIP.blocks.find(id)) TRIP.blocks.change(id,{start:Math.max(dayStart(day),Math.min(1410,m))});
-  selected=null; renderAll();
+  if(kind==='new') place(id,m); else if(TRIP.blocks.find(id)) TRIP.blocks.change(id,{start:Math.max(dayStart(UI.day),Math.min(1410,m))});
+  UI.selected=null; renderAll();
 }
 matchMedia('(min-width:900px)').addEventListener?.('change',renderTabs);
 
@@ -1826,7 +1828,7 @@ if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__jepi={demoEnte
 let sumOpen=null;
 function renderDaySum(items,trans,gaps){
   const box=$('#daySum'); if(!box) return;
-  const total=trans.reduce((a,t)=>a+t.min,0), c=dayCost(day), warns=items.filter(i=>i.warns.length);
+  const total=trans.reduce((a,t)=>a+t.min,0), c=dayCost(UI.day), warns=items.filter(i=>i.warns.length);
   const nudge=($('#nudges')&&$('#nudges').textContent.trim())?1:0;
   // drawn by React: app/screens/DayTop.tsx
   const chip=(k,t,warn)=>({k,t,warn:!!warn,open:sumOpen===k});
@@ -1837,7 +1839,7 @@ function renderDaySum(items,trans,gaps){
   if(sumOpen==='budget'&&$('#budgetBox')) $('#budgetBox').open=true;
   const body=$('#sumBody');
   const sw=sumOpen==='warn'?warns.map(i=>({uid:String(i.uid),time:fmt(i.start),name:String(i.name),warn:String(i.warns[0])})):[];
-  const sg=sumOpen==='gap'?gaps.map(g=>({range:`${fmt(g[0])}–${fmt(g[1])}`,find:sample&&!PK.pack.manual?`${g[0]}-${g[1]}`:null})):[];
+  const sg=sumOpen==='gap'?gaps.map(g=>({range:`${fmt(g[0])}–${fmt(g[1])}`,find:UI.sample&&!PK.pack.manual?`${g[0]}-${g[1]}`:null})):[];
   window.JEPI_UI.mount('sumBody',body,{warns:sw,gaps:sg});
   body.hidden=!(sw.length||sg.length);
 }
@@ -1867,14 +1869,14 @@ const curShared=()=>{const p=planOf(PL.curPlan);return p&&p.shared?p:null};
 // a new version of the open plan: put it in, unless the person is typing or has a sheet open (then the next pull tries again)
 function applyIfOpen(id,data,who){
   if(id!==PL.curPlan) return true;
-  const ae=document.activeElement, editing=(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))||!$('#sheetBg').hidden||!$('#onb').hidden||selected;
+  const ae=document.activeElement, editing=(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))||!$('#sheetBg').hidden||!$('#onb').hidden||UI.selected;
   if(editing) return false;
-  const d0=day; applyPlanData(data); day=Math.min(d0,Math.max(0,DY.days.length-1)); renderAll();
+  const d0=UI.day; applyPlanData(data); UI.day=Math.min(d0,Math.max(0,DY.days.length-1)); renderAll();
   if(who&&who!==myName()) showToast(`${who}님이 일정을 바꿨어요`);
   return true;
 }
 JD.trips.connectTrips({plans:()=>PL.plans,curPlan:()=>PL.curPlan,savePlans:()=>savePlans(),applyIfOpen,myName,snapshotCurrent:()=>snapshotCurrent(),toast:m=>showToast(m),
-  pulled(listChanged){if(listChanged){renderPlans();renderExt()} if(curShared()) renderAll(); if(tab==='friends') PANELS.friends.render()}});
+  pulled(listChanged){if(listChanged){renderPlans();renderExt()} if(curShared()) renderAll(); if(UI.tab==='friends') PANELS.friends.render()}});
 const tripPush=id=>JD.trips.push(id), tripsPull=()=>JD.trips.pull(), tripShare=()=>JD.trips.share(), tripInvite=role=>JD.trips.invite(role,location.origin+location.pathname);
 const tripLeave=uid=>JD.trips.leave(uid), tripStop=()=>JD.trips.stop();
 SYNC_AFTER_PUSH.push(async()=>{for(const p of PL.plans.filter(p=>p.shared)) await tripPush(p.id)});
@@ -1943,10 +1945,10 @@ PANELS.friends={render(opts){
 // Results always come back with the same three choices as chat: 일정에 넣기 / 장소에만 / 안 함.
 // Chat and 🎲 DICE keep their own way of asking; only how results are kept is shared.
 let FIND={where:'near',area:'',when:'any',gap:null,into:'list',q:'',busy:false,res:[],ctl:null,cursor:null};
-function findAreaOfDay(){const it=analyze(day).items.find(i=>!i.stay&&i.area);return it?it.area:''}
+function findAreaOfDay(){const it=analyze(UI.day).items.find(i=>!i.stay&&i.area);return it?it.area:''}
 function openFind(o){
   FIND=Object.assign({where:'near',area:firstArea(),when:'any',gap:null,into:'list',q:'',busy:false,res:[],ctl:null,cursor:null},o||{});
-  if(FIND.when==='gap'&&!FIND.gap){const g=gapsOf(day)[0];if(g)FIND.gap=g;else FIND.when='any'}
+  if(FIND.when==='gap'&&!FIND.gap){const g=gapsOf(UI.day)[0];if(g)FIND.gap=g;else FIND.when='any'}
   renderFind(); $('#sheet').dataset.uid=''; $('#sheetBg').hidden=false;
   if(o&&o.autorun) runFind();
 }
@@ -1956,9 +1958,9 @@ let findRev=0;
 function renderFind(){findRev++;findMount()}
 function findRowsUpdate(){findMount()}
 function findMount(){
-  const F=FIND, gaps=gapsOf(day), gv=g=>({v:`${g[0]}-${g[1]}`,label:`${fmt(g[0])}–${fmt(g[1])}`});
-  window.JEPI_UI.mount('find',$('#sheet'),{dayNo:day+1,date:String(DY.days[day].date),city:String(PK.pack.city||''),where:F.where,area:F.area||'',
-    areas:Object.entries(AREAS).map(([k,v])=>({k,label:String(v[0])})),when:F.when,gaps:gaps.map(gv),gap:F.gap?gv(F.gap):null,into:F.into,q:F.q||'',busy:!!F.busy,mine:jp==='P',
+  const F=FIND, gaps=gapsOf(UI.day), gv=g=>({v:`${g[0]}-${g[1]}`,label:`${fmt(g[0])}–${fmt(g[1])}`});
+  window.JEPI_UI.mount('find',$('#sheet'),{dayNo:UI.day+1,date:String(DY.days[UI.day].date),city:String(PK.pack.city||''),where:F.where,area:F.area||'',
+    areas:Object.entries(AREAS).map(([k,v])=>({k,label:String(v[0])})),when:F.when,gaps:gaps.map(gv),gap:F.gap?gv(F.gap):null,into:F.into,q:F.q||'',busy:!!F.busy,mine:UI.jp==='P',
     rows:F.res.map(r=>{const p=PM[r.id];if(!p)return null;
       const meta=[p.area,CATS[p.cat]||'',p.hours&&!p.always?`${fmt(p.hours[0])}–${fmt(p.hours[1])}`:''].filter(Boolean).join(' · ');
       return {id:r.id,name:String(p.name),meta,note:p.note?String(p.note):'',c:r.c||'',txt:r.txt||''}}).filter(Boolean),rev:findRev});
@@ -1966,14 +1968,14 @@ function findMount(){
 function findFocus(){
   const F=FIND, parts=[];
   if(F.q) parts.push(F.q);
-  if(F.where==='near'){const a=findAreaOfDay();if(a)parts.push(`near ${a} (where the traveler is on Day ${day+1})`)}
+  if(F.where==='near'){const a=findAreaOfDay();if(a)parts.push(`near ${a} (where the traveler is on Day ${UI.day+1})`)}
   else if(F.where==='area'&&AREAS[F.area]) parts.push(`only in the ${AREAS[F.area][0]} area`);
-  if(F.when==='gap'&&F.gap) parts.push(`to visit on ${DY.days[day].iso||'Day '+(day+1)} between ${fmt(F.gap[0])} and ${fmt(F.gap[1])}; must be open then and fit within that time`);
+  if(F.when==='gap'&&F.gap) parts.push(`to visit on ${DY.days[UI.day].iso||'Day '+(UI.day+1)} between ${fmt(F.gap[0])} and ${fmt(F.gap[1])}; must be open then and fit within that time`);
   return parts.join('; ');
 }
 async function runFind(){
   if(FIND.busy) return;
-  if(!sample){FIND.res=[];renderFind();setSt('findSt','AI가 연결되어 있지 않아요. 더보기 → 설정에서 연결해 주세요.');return}
+  if(!UI.sample){FIND.res=[];renderFind();setSt('findSt','AI가 연결되어 있지 않아요. 더보기 → 설정에서 연결해 주세요.');return}
   // "fill this gap" with no extra wish keeps the original behaviour: AI picks from the places already on the list
   if(FIND.into==='sched'&&FIND.when==='gap'&&!FIND.q&&FIND.where==='near'&&P.some(p=>!CUR.placed.some(b=>b.id===p.id))){closeSheet();askAI();return}
   FIND.busy=true; FIND.res=[]; FIND.cursor=FIND.gap?FIND.gap[0]+15:null; renderFind();
@@ -1991,19 +1993,19 @@ function findDrop(id){ // 안 함: the place was only just found, so take it off
 // the 동네 / 빈 시간 lists, or 찾기); and "찾기" next to an empty time in the day summary (gap "start-end")
 function findAct(n,v,typed){
   if(n==='chip'){const [k,x]=String(v).split(':');FIND[k]=x;FIND.q=typed!=null?typed||FIND.q:FIND.q;
-    if(k==='when'&&x==='gap'&&!FIND.gap)FIND.gap=gapsOf(day)[0]||null; renderFind();return}
+    if(k==='when'&&x==='gap'&&!FIND.gap)FIND.gap=gapsOf(UI.day)[0]||null; renderFind();return}
   if(n==='gap'){const [a,b]=String(v).split('-').map(Number);openFind({when:'gap',gap:[a,b],into:'sched'});return}
   if(n==='area'){FIND.area=v;return}
   if(n==='gapsel'){FIND.gap=String(v).split('-').map(Number);return}
   if(n==='submit'){FIND.q=String(typed||'').trim();runFind();return}
   if(n==='r'){const [id,act]=String(v).split(':'), r=FIND.res.find(x=>x.id===id), p=PM[id]; if(!r||!p) return;
     if(act==='skip'){findDrop(id);r.c='skip';r.txt='넣지 않았어요'}
-    else if(act==='list'){r.c='list';if(jp==='P'){if(!isWish(id))toggleWish(id);r.txt='내 카드에 담았어요'}else r.txt='장소 목록에 넣었어요'}
+    else if(act==='list'){r.c='list';if(UI.jp==='P'){if(!isWish(id))toggleWish(id);r.txt='내 카드에 담았어요'}else r.txt='장소 목록에 넣었어요'}
     else if(FIND.when==='gap'&&FIND.gap){
-      const st=Math.max(FIND.cursor||FIND.gap[0],FIND.gap[0]), rr=repairOps([{op:'add',day,id,start:fmt(st),dur:p.dur}]);
+      const st=Math.max(FIND.cursor||FIND.gap[0],FIND.gap[0]), rr=repairOps([{op:'add',day:UI.day,id,start:fmt(st),dur:p.dur}]);
       applyOpsCore(rr.ops); save(); FIND.cursor=parse(rr.ops[0].start)+p.dur+20;
       r.c='sched'; r.txt=`${rr.ops[0].start}에 넣었어요${rr.warns.length?` · 확인할 것 ${rr.warns.length}`:''}`; renderAll();
-    } else {selected=id;r.c='pick';r.txt='일정표에서 넣을 시간을 탭하세요';closeSheet();tab='timeline';renderAll();return}
+    } else {UI.selected=id;r.c='pick';r.txt='일정표에서 넣을 시간을 탭하세요';closeSheet();UI.tab='timeline';renderAll();return}
     findRowsUpdate(); renderTray(); return}
 }
 // ---------- 알림: push notifications while travelling ----------
@@ -2036,7 +2038,7 @@ setInterval(()=>{if(NOTIFY.on&&!document.hidden)alertsSoon(100)},30000);
 // The screen itself is drawn by React: app/screens/HelpPanel.tsx
 PANELS.help={render(){
   const box=$('#helpBox'); if(!box) return;
-  window.JEPI_UI.mount('help',box,{demoOn:!!DEMO.on,onCoach(){tab='timeline';renderTabs();showCoach(0)},onDemo(){demoEnter()}});
+  window.JEPI_UI.mount('help',box,{demoOn:!!DEMO.on,onCoach(){UI.tab='timeline';renderTabs();showCoach(0)},onDemo(){demoEnter()}});
 }};
 // ---------- same place twice: catch it when adding, offer to merge what is already doubled ----------
 // "Same place" = within 100 m and a similar name (one contains the other, or most letter pairs match).
@@ -2077,7 +2079,7 @@ function mergePlaces(aId,bId){
 document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
   if(t.dataset.dupuse){ // typing a name in "직접 만들기" found a place that is already there → schedule that one instead
     const p=PM[t.dataset.dupuse]; if(!p) return; const st=$('#cfStart')?parse($('#cfStart').value):null;
-    TRIP.blocks.add({id:p.id,day,start:Math.max(dayStart(day),Math.min(1410,st??600)),dur:p.dur});closeSheet();renderAll();showToast(`이미 있는 "${p.name}"을(를) 일정에 넣었어요`);return}
+    TRIP.blocks.add({id:p.id,day:UI.day,start:Math.max(dayStart(UI.day),Math.min(1410,st??600)),dur:p.dur});closeSheet();renderAll();showToast(`이미 있는 "${p.name}"을(를) 일정에 넣었어요`);return}
 });
 // --- while typing a new place's name: show places that are already there ---
 document.addEventListener('input',e=>{
@@ -2099,11 +2101,11 @@ function dayTitleOf(d){return JD.logic.memo.dayTitle(CUR.profile,d,(DY.days[d]||
 let dayTitleRev=0;
 function titleEditing(on){
   hero({editing:on,slot:true});
-  window.JEPI_UI.mount('dayTitle',$('#dayTitleSlot'),{open:on,day,title:JD.logic.memo.ownDayTitle(CUR.profile,day),auto:String(DY.days[day].title||''),memo:dayMemoOf(day),rev:++dayTitleRev});
+  window.JEPI_UI.mount('dayTitle',$('#dayTitleSlot'),{open:on,day:UI.day,title:JD.logic.memo.ownDayTitle(CUR.profile,UI.day),auto:String(DY.days[UI.day].title||''),memo:dayMemoOf(UI.day),rev:++dayTitleRev});
 }
 // what React screens may ask of the old code (app/ui/host.ts)
-window.JEPI_UI.connectHost({renderAll:()=>renderAll(),closeSheet:()=>closeSheet(),reopenSheet:()=>{const u=$('#sheet').dataset.uid;if(u&&u!=='dice'&&!$('#sheetBg').hidden)openSheet(u)},toast:m=>showToast(m),day:()=>day,autoTitle:d=>String((DY.days[d]||{}).title||''),titleEditing,
-  closeNotebook:()=>closeNotebook(),renamePlan:nm=>lookRenamePlan(nm),aiDayTitles:n=>lookAiTitles(n),errText:(e,w)=>errText(e,w),welcomeNew:()=>{closeWelcome();openOnb()},welcomeDemo:()=>demoEnter(),welcomeLoggedIn:()=>welcomeLoggedIn(),dice:(n,v,m)=>diceAct(n,v,m),place:(n,v)=>placeAct(n,v),plans:(n,v,v2)=>plansAct(n,v,v2),helper:(n,v,v2)=>helperAct(n,v,v2),helperFrame:n=>helperFrameAct(n),dock:(n,v)=>dockAct(n,v),tray:(n,v)=>trayAct(n,v),tab:n=>goTab(n),onbFrame:n=>onbFrameAct(n),hero:n=>heroAct(n),miniDay:s=>{const n=day+s;if(n>=0&&n<DY.days.length){day=n;renderAll()}},mapTop:n=>mapTopAct(n),coach:n=>coachAct(n),banner:()=>{selected=null;renderAll()},chat:(n,v)=>chatAct(n,v),pview:(n,v)=>pviewAct(n,v),kw:(n,v)=>kwAct(n,v),grid:(n,v)=>gridAct(n,v),block:(n,v,o)=>blockAct(n,v,o),checks:(n,v,o)=>checksAct(n,v,o),aibox:(n,v)=>aiboxAct(n,v),settings:(n,v,v2)=>settingsAct(n,v,v2),form:(n,v,o)=>formAct(n,v,o),sum:(n,v)=>sumAct(n,v),trip:(a,u,t)=>tripAct(a,u,t),want:p=>wantAct(p),find:(n,v,t)=>findAct(n,v,t),planMenu:(n,v)=>planMenuAct(n,v),more:id=>moreAct(id),mapCard:i=>mapCardAct(i),dropped:(k,id,m)=>dropped(k,id,m),nudge:(n,v)=>nudgeAct(n,v),importFile:f=>importBackup(f,ok=>{if(ok){maybeCoach()}}),shareNotebook:async()=>{await shareLink(true);return planMsg||'링크를 만들었어요'}});
+window.JEPI_UI.connectHost({renderAll:()=>renderAll(),closeSheet:()=>closeSheet(),reopenSheet:()=>{const u=$('#sheet').dataset.uid;if(u&&u!=='dice'&&!$('#sheetBg').hidden)openSheet(u)},toast:m=>showToast(m),day:()=>UI.day,autoTitle:d=>String((DY.days[d]||{}).title||''),titleEditing,
+  closeNotebook:()=>closeNotebook(),renamePlan:nm=>lookRenamePlan(nm),aiDayTitles:n=>lookAiTitles(n),errText:(e,w)=>errText(e,w),welcomeNew:()=>{closeWelcome();openOnb()},welcomeDemo:()=>demoEnter(),welcomeLoggedIn:()=>welcomeLoggedIn(),dice:(n,v,m)=>diceAct(n,v,m),place:(n,v)=>placeAct(n,v),plans:(n,v,v2)=>plansAct(n,v,v2),helper:(n,v,v2)=>helperAct(n,v,v2),helperFrame:n=>helperFrameAct(n),dock:(n,v)=>dockAct(n,v),tray:(n,v)=>trayAct(n,v),tab:n=>goTab(n),onbFrame:n=>onbFrameAct(n),hero:n=>heroAct(n),miniDay:s=>{const n=UI.day+s;if(n>=0&&n<DY.days.length){UI.day=n;renderAll()}},mapTop:n=>mapTopAct(n),coach:n=>coachAct(n),banner:()=>{UI.selected=null;renderAll()},chat:(n,v)=>chatAct(n,v),pview:(n,v)=>pviewAct(n,v),kw:(n,v)=>kwAct(n,v),grid:(n,v)=>gridAct(n,v),block:(n,v,o)=>blockAct(n,v,o),checks:(n,v,o)=>checksAct(n,v,o),aibox:(n,v)=>aiboxAct(n,v),settings:(n,v,v2)=>settingsAct(n,v,v2),form:(n,v,o)=>formAct(n,v,o),sum:(n,v)=>sumAct(n,v),trip:(a,u,t)=>tripAct(a,u,t),want:p=>wantAct(p),find:(n,v,t)=>findAct(n,v,t),planMenu:(n,v)=>planMenuAct(n,v),more:id=>moreAct(id),mapCard:i=>mapCardAct(i),dropped:(k,id,m)=>dropped(k,id,m),nudge:(n,v)=>nudgeAct(n,v),importFile:f=>importBackup(f,ok=>{if(ok){maybeCoach()}}),shareNotebook:async()=>{await shareLink(true);return planMsg||'링크를 만들었어요'}});
 // ---------- how a trip looks: theme colour, cover, style, handwriting; folding hero header ----------
 // profile.look = {color, cover:'city'|'sea'|'mountain'|'none'|'photo', photo:dataURL, tagline, style:'color'|'note', hand}
 // Lives in the plan's profile, so it syncs across devices and to friends on a shared trip.
@@ -2137,7 +2139,7 @@ function renderLook(){
     artBg:photo?`linear-gradient(rgba(0,0,0,.35),rgba(0,0,0,.45)),url("${L.photo}")`:'',artPhoto:!!photo,
     artHtml:note?`<div class="stamp"><span>${esc((PK.pack.city||'TRIP').slice(0,8))}</span><b>${esc(((DY.days[0]||{}).date||'').replace(/\s.*/,''))}</b><span>${esc(String(new Date().getFullYear()))}</span></div>`:photo?'':coverSVG(L.cover,190,120),
     tag:L.tagline||''};
-  if(DY.days[day]){const D=DY.days[day];p.day=note?`CHAPTER ${day+1} · ${D.date} ${WD[D.wd]}`:`DAY ${String(day+1).padStart(2,'0')} · ${D.date} ${WD[D.wd]}`}
+  if(DY.days[UI.day]){const D=DY.days[UI.day];p.day=note?`CHAPTER ${UI.day+1} · ${D.date} ${WD[D.wd]}`:`DAY ${String(UI.day+1).padStart(2,'0')} · ${D.date} ${WD[D.wd]}`}
   hero(p)}
   renderDayMemo(); miniUpdate();
 }
@@ -2146,8 +2148,8 @@ function renderLook(){
 let miniView={on:false,day:'',dayHidden:false,title:'',navHidden:false};
 function miniBar(p){miniView={...miniView,...p};window.JEPI_UI.mount('mini',$('#miniMount'),miniView)}
 function miniUpdate(){
-  const D=DY.days[day]; if(!D) return; const onDay=document.body.dataset.tab==='timeline'||!document.body.dataset.tab;
-  miniBar({day:onDay?String(day+1).padStart(2,'0'):'',dayHidden:!onDay,title:onDay?dayTitleOf(day):($('#planName')?$('#planName').textContent:''),navHidden:!onDay||DY.days.length<2});
+  const D=DY.days[UI.day]; if(!D) return; const onDay=document.body.dataset.tab==='timeline'||!document.body.dataset.tab;
+  miniBar({day:onDay?String(UI.day+1).padStart(2,'0'):'',dayHidden:!onDay,title:onDay?dayTitleOf(UI.day):($('#planName')?$('#planName').textContent:''),navHidden:!onDay||DY.days.length<2});
 }
 function heroWatch(){
   const hero=$('#hero'); if(!hero) return;
@@ -2165,19 +2167,19 @@ function openLook(){
   const L=lookOf();
   window.JEPI_UI.mount('look',$('#sheet'),{name:(PL.plans.find(x=>x.id===PL.curPlan)||{}).name||planName(),tagline:L.tagline||'',style:L.style,color:L.color,cover:L.cover,hand:L.hand,photo:L.photo||'',pop:L.pop,
     colors:LOOK_COLORS,covers:LOOK_COVERS.map(([k,n])=>({k,name:n,svg:coverSVG(k,64,40)})),hands:LOOK_HANDS,
-    days:DY.days.map((D,i)=>({title:((CUR.profile.dayTitles||[])[i])||'',placeholder:String(D.title)})),ai:!!sample,rev:++lookRev});
+    days:DY.days.map((D,i)=>({title:((CUR.profile.dayTitles||[])[i])||'',placeholder:String(D.title)})),ai:!!UI.sample,rev:++lookRev});
   $('#sheet').dataset.uid=''; $('#sheetBg').hidden=false;
 }
 // the question for AI로 지어 보기 (asked by the sheet through the host)
-const lookAiTitles=tripName=>JD.asks.dayTitles(sample,tripName);   // app/data/asks.ts
+const lookAiTitles=tripName=>JD.asks.dayTitles(UI.sample,tripName);   // app/data/asks.ts
 function lookRenamePlan(nm){const p=PL.plans.find(x=>x.id===PL.curPlan);if(p&&nm&&nm!==p.name){p.name=nm;p.custom_name=true;savePlans()}}
 // ---------- handwritten memos: one line per block, one line per day ----------
 // The rules live in app/logic/memo.ts; the memo box in a block's sheet saves itself (app/screens/Extras.tsx MemoBox).
 const memoKey=(it,d)=>JD.logic.memo.blockKey(it.id,d);
 const blockMemoOf=(it,d)=>JD.logic.memo.blockMemo(CUR.profile,memoKey(it,d));
 const dayMemoOf=d=>JD.logic.memo.dayMemo(CUR.profile,d);
-function renderDayMemo(){const m=dayMemoOf(day);hero({memo:m?`“${m}”`:''})}
-SHEET_EXTRAS.push(it=>it&&it.id?{k:'memo',key:memoKey(it,day),value:blockMemoOf(it,day)}:null);   // drawn by React: Extras.tsx
+function renderDayMemo(){const m=dayMemoOf(UI.day);hero({memo:m?`“${m}”`:''})}
+SHEET_EXTRAS.push(it=>it&&it.id?{k:'memo',key:memoKey(it,UI.day),value:blockMemoOf(it,UI.day)}:null);   // drawn by React: Extras.tsx
 // ---------- 여행 노트 보기: the whole trip as one notebook (cover + a chapter per day) ----------
 // Read-only. "PDF로 저장" uses the browser's print (print CSS in 17-look.css keeps only the notebook).
 // "링크로 보내기" sends the usual share link with &note=1, so the receiver opens straight into the notebook.
@@ -2205,7 +2207,7 @@ function openNotebook(){
 function closeNotebook(){const nb=$('#notebook');if(nb)nb.hidden=true;document.body.style.overflow=''}
 
 // ---------- start-up: runs after every file above has defined its variables ----------
-if(STANDALONE) sample=makeSample();
+if(STANDALONE) UI.sample=makeSample();
 hero({}); onbFrame({}); tabs({}); miniBar({}); dock({}); drawTrayTop(); mapTop({}); drawHelperFrame(); drawCoach(); drawBanner();   // the fixed frames (React)
 PL.plans=TRIP.plans.list()||[]; if(!Array.isArray(PL.plans)) PL.plans=[]; PL.curPlan=TRIP.plans.current()||''; if(!PL.curPlan){PL.curPlan='p'+Date.now().toString(36);savePlans()}
 setZoom(store.get('gp.zoom',60),true);
@@ -2226,7 +2228,7 @@ window.addEventListener('error',e=>showErr(e.message||'알 수 없는 오류'));
 window.addEventListener('unhandledrejection',e=>{const r=e.reason;if(r&&r.code==='cancelled')return;showErr((r&&(r.message||r.code))||r)});
 initRecs(); heroWatch();
 if('serviceWorker' in navigator&&location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
-(async()=>{try{ if(window.claude&&window.claude.use){ const s=await window.claude.use('sample'); if(s){sample=s; renderAI(); renderChat(); renderTray(); if(!$('#onb').hidden) renderOnb(); else if(tab==='me') renderMe()} } }catch(_){} })();
+(async()=>{try{ if(window.claude&&window.claude.use){ const s=await window.claude.use('sample'); if(s){UI.sample=s; renderAI(); renderChat(); renderTray(); if(!$('#onb').hidden) renderOnb(); else if(UI.tab==='me') renderMe()} } }catch(_){} })();
 // iOS Safari only shows :active (press feedback) once the page listens for touches
 document.addEventListener('touchstart',()=>{},{passive:true});
 })();

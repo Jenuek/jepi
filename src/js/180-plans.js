@@ -17,20 +17,20 @@ function applyPlanData(d){
   CUR.placed=(Array.isArray(d.placed)?d.placed:[]).filter(b=>PM[b.id]).map(b=>({uid:TRIP.uids.next(),id:b.id,day:b.day,start:b.start,dur:b.dur||PM[b.id].dur,mk:Array.isArray(b.mk)?b.mk.filter(m=>MARKS[m]):undefined}));
   CUR.fmarks=d.fmarks&&typeof d.fmarks==='object'?d.fmarks:{}; CUR.wish=Array.isArray(d.wish)?d.wish:[]; CUR.meals=d.meals&&typeof d.meals==='object'?d.meals:{}; CUR.done=d.done&&typeof d.done==='object'?d.done:{};
   TRIP.save('profile',CUR.profile); savePack(); TRIP.save('custom',CUR.custom); TRIP.save('fmarks',CUR.fmarks); TRIP.save('wish',CUR.wish); TRIP.save('meals',CUR.meals); TRIP.save('done',CUR.done);
-  chat=[]; undoSnap=null; aiState=null; selected=null; pSt.draw=null; hVibe=null; hotelRecs={}; routeInfo=null; destRecs=null; destAsked=[];
-  buildDays(); day=0; save(); renderAll();
+  chat=[]; undoSnap=null; UI.aiState=null; UI.selected=null; pSt.draw=null; hVibe=null; hotelRecs={}; routeInfo=null; destRecs=null; destAsked=[];
+  buildDays(); UI.day=0; save(); renderAll();
 }
 function openPlan(id){
   if(id===PL.curPlan) return; snapshotCurrent();
   const d=TRIP.plans.get(id); if(!d){planMsg='이 계획을 불러오지 못했어요.';renderPlans();return}
-  PL.curPlan=id; savePlans(); applyPlanData(d); if(CUR.profile.kind==='day'&&jp!=='P') setJP('P'); tab='timeline'; renderTabs(); planMsg='';
+  PL.curPlan=id; savePlans(); applyPlanData(d); if(CUR.profile.kind==='day'&&UI.jp!=='P') setJP('P'); UI.tab='timeline'; renderTabs(); planMsg='';
 }
 function newPlan(){
   const prevP=CUR.profile; snapshotCurrent(); PL.curPlan='p'+Date.now().toString(36); savePlans();
   CUR.custom=[];CUR.placed=[];CUR.fmarks={};CUR.wish=[];CUR.meals={};CUR.done={};
   loadPack(blankPack()); savePack();
   CUR.profile=clone(PROFILE_EXAMPLE); Object.assign(CUR.profile,{stays:[{name:'숙소',area:'center',checkin:'15:00',checkout:'11:00',from:0,to:3}],events:[],dest:'',pace:'normal',social:'some',breakfast:true,purpose:'',party:{type:'solo',adults:1,kids:0},flightSet:false,staySet:false,dateSet:false,nightsSet:false,dateUnknown:false,startDate:isoPlus(30)});
-  carryTaste(prevP,CUR.profile); applyPlanData({profile:CUR.profile,pack:blankPack()}); tab='timeline'; renderTabs(); openOnb();
+  carryTaste(prevP,CUR.profile); applyPlanData({profile:CUR.profile,pack:blankPack()}); UI.tab='timeline'; renderTabs(); openOnb();
 }
 function dupPlan(id){snapshotCurrent();const d=TRIP.plans.get(id),src=PL.plans.find(x=>x.id===id);if(!d||!src)return;
   const nid='p'+Date.now().toString(36);TRIP.plans.put(nid,d);const p=Object.assign({},src,{id:nid,name:src.name+' (복사본)',custom_name:true,updated:Date.now()});PL.plans.unshift(p);savePlans();planMsg='복사본을 만들었어요.';renderPlans()}
@@ -53,10 +53,10 @@ function downloadText(name,text){
 // restore a backup file (.json made by "백업 파일 받기")
 function importBackup(file,after){
   if(!file) return; const rd=new FileReader();
-  rd.onload=()=>{try{const v=JSON.parse(String(rd.result||''));if(v&&v.jepi===2){onbFrame({open:false});if(!importAll(v))throw 0;tab='timeline';renderTabs();if(after)after(true);return}if(!v||!v.data||!v.data.profile)throw 0;
+  rd.onload=()=>{try{const v=JSON.parse(String(rd.result||''));if(v&&v.jepi===2){onbFrame({open:false});if(!importAll(v))throw 0;UI.tab='timeline';renderTabs();if(after)after(true);return}if(!v||!v.data||!v.data.profile)throw 0;
       snapshotCurrent(); const nid='p'+Date.now().toString(36); TRIP.plans.put(nid,v.data);
       PL.plans.unshift({id:nid,name:String(v.name||'불러온 계획').slice(0,40),custom_name:true,updated:Date.now()}); PL.curPlan=nid; savePlans();
-      onbFrame({open:false}); applyPlanData(v.data); snapshotCurrent(); tab='timeline'; renderTabs(); planMsg='백업을 불러왔어요.'; if(after) after(true);
+      onbFrame({open:false}); applyPlanData(v.data); snapshotCurrent(); UI.tab='timeline'; renderTabs(); planMsg='백업을 불러왔어요.'; if(after) after(true);
     }catch(_){planMsg='JEPI 백업 파일이 아니거나 손상됐어요.';renderPlans();setSt('st_import','JEPI 백업 파일이 아니거나 손상됐어요.');if(after)after(false)}};
   rd.readAsText(file);
 }

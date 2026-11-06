@@ -39,6 +39,7 @@ import { Hero, type HeroProps } from './screens/Hero';
 import { HelperFrame, Coach, Banner, OnbFrame, type HelperFrameProps, type CoachProps, type BannerProps, type OnbFrameProps } from './screens/Frames';
 import { connectHost, type AppHost } from './ui/host';
 import * as map from './ui/map';
+import { ui } from './ui/state';
 import * as drag from './ui/drag';
 import * as dayView from './view/day';
 import * as trayView from './view/tray';
@@ -158,6 +159,8 @@ export interface JepiUI {
   connectHost(h: AppHost): void;
   /** the 지도 tab (Leaflet): app/ui/map.ts */
   map: typeof map;
+  /** where the person is in the app: the open day, tab, picked place … (app/ui/state.ts) */
+  ui: typeof ui;
   /** drag & drop onto the 일정표: app/ui/drag.ts */
   drag: typeof drag;
   /** what each screen shows, worked out from the trip (app/view/*.ts) */
@@ -178,6 +181,7 @@ export function installBridge(): void {
     live: liveOf,
     connectHost,
     map,
+    ui,
     drag,
     view: { day: dayView, tray: trayView, sheet: sheetView, helper: helperView, forms: formsView, dice: diceView, pview: pviewView },
     mount(name, el, props) {

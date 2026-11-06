@@ -5,7 +5,7 @@ let talk=null;
 function talkReset(){talk={msgs:[{role:'a',text:TALK_OPEN.q}],options:TALK_OPEN.o.slice(),n:0,busy:false,summary:null}}
 // 처음 설정 parts drawn by React (app/screens/OnbBody.tsx)
 const partBanner=FORMS.banner;   // app/view/forms.ts
-function partJP(){return {f:'jp',keyBox:!!(STANDALONE&&!sample),keyHelpHTML:KEY_HELP.anthropic,importBox:!inClaude()}}
+function partJP(){return {f:'jp',keyBox:!!(STANDALONE&&!UI.sample),keyHelpHTML:KEY_HELP.anthropic,importBox:!inClaude()}}
 // drawn by React: app/screens/OnbTalk.tsx
 function partTalk(p){
   if(!talk) talkReset();
@@ -18,7 +18,7 @@ function partTalk(p){
 }
 async function talkSend(text,opt){
   opt=opt||{};
-  if(!sample||!talk||talk.busy) return;
+  if(!UI.sample||!talk||talk.busy) return;
   if(opt.retry){ if(talk.failed&&talk.msgs.length&&talk.msgs[talk.msgs.length-1].err) talk.msgs.pop(); text=talk.lastText; }
   if(!text) return;
   const finish=text==='__finish__';
@@ -27,7 +27,7 @@ async function talkSend(text,opt){
   const force=talk.n>=TALK_MAX||finish;
   const dates=datesReady(draft)?(draft.dateUnknown?`Dates: not fixed (roughly a month from now), ${nightsOf(draft)} nights.`:`Dates: from ${draft.startDate}, ${nightsOf(draft)} nights.`):'Dates and trip length: not decided yet. Do not assume any; ask about timing and length in the practical question if the user has not said.';
   let r=null;
-  try{ r=await JD.asks.talkTurn(sample,draft,talk.msgs,dates,force); }   // the question (and rescuing a broken answer): app/data/asks.ts
+  try{ r=await JD.asks.talkTurn(UI.sample,draft,talk.msgs,dates,force); }   // the question (and rescuing a broken answer): app/data/asks.ts
   catch(e){
     if(!r){
       talk.busy=false; talk.failed={code:e&&e.code};

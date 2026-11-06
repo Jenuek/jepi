@@ -22,7 +22,7 @@ function settingsAI(){return {standalone:!!STANDALONE,editing:keyEdit,hasGemini:
 function settingsAct(n,v,v2){
   switch(n){
   case 'theme': themePref=v;LS.set('jepi.theme',themePref);applyTheme();renderSettings();if(mapState.on)drawMap();return;
-  case 'zoom': setZoom(+v);if(tab==='settings')renderSettings();return;
+  case 'zoom': setZoom(+v);if(UI.tab==='settings')renderSettings();return;
   case 'keyedit': keyEdit=v;keyMsg[keyEdit]='';renderSettings();return;   // its box opens, with the cursor in it
   case 'keycancel': keyEdit=null;renderSettings();return;
   case 'keysave': {const k=v,key=String(v2||'').trim().replace(/\s+/g,'');

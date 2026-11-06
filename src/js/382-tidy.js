@@ -4,7 +4,7 @@
 let sumOpen=null;
 function renderDaySum(items,trans,gaps){
   const box=$('#daySum'); if(!box) return;
-  const total=trans.reduce((a,t)=>a+t.min,0), c=dayCost(day), warns=items.filter(i=>i.warns.length);
+  const total=trans.reduce((a,t)=>a+t.min,0), c=dayCost(UI.day), warns=items.filter(i=>i.warns.length);
   const nudge=($('#nudges')&&$('#nudges').textContent.trim())?1:0;
   // drawn by React: app/screens/DayTop.tsx
   const chip=(k,t,warn)=>({k,t,warn:!!warn,open:sumOpen===k});
@@ -15,7 +15,7 @@ function renderDaySum(items,trans,gaps){
   if(sumOpen==='budget'&&$('#budgetBox')) $('#budgetBox').open=true;
   const body=$('#sumBody');
   const sw=sumOpen==='warn'?warns.map(i=>({uid:String(i.uid),time:fmt(i.start),name:String(i.name),warn:String(i.warns[0])})):[];
-  const sg=sumOpen==='gap'?gaps.map(g=>({range:`${fmt(g[0])}–${fmt(g[1])}`,find:sample&&!PK.pack.manual?`${g[0]}-${g[1]}`:null})):[];
+  const sg=sumOpen==='gap'?gaps.map(g=>({range:`${fmt(g[0])}–${fmt(g[1])}`,find:UI.sample&&!PK.pack.manual?`${g[0]}-${g[1]}`:null})):[];
   window.JEPI_UI.mount('sumBody',body,{warns:sw,gaps:sg});
   body.hidden=!(sw.length||sg.length);
 }

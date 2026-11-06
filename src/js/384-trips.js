@@ -14,14 +14,14 @@ const curShared=()=>{const p=planOf(PL.curPlan);return p&&p.shared?p:null};
 // a new version of the open plan: put it in, unless the person is typing or has a sheet open (then the next pull tries again)
 function applyIfOpen(id,data,who){
   if(id!==PL.curPlan) return true;
-  const ae=document.activeElement, editing=(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))||!$('#sheetBg').hidden||!$('#onb').hidden||selected;
+  const ae=document.activeElement, editing=(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))||!$('#sheetBg').hidden||!$('#onb').hidden||UI.selected;
   if(editing) return false;
-  const d0=day; applyPlanData(data); day=Math.min(d0,Math.max(0,DY.days.length-1)); renderAll();
+  const d0=UI.day; applyPlanData(data); UI.day=Math.min(d0,Math.max(0,DY.days.length-1)); renderAll();
   if(who&&who!==myName()) showToast(`${who}님이 일정을 바꿨어요`);
   return true;
 }
 JD.trips.connectTrips({plans:()=>PL.plans,curPlan:()=>PL.curPlan,savePlans:()=>savePlans(),applyIfOpen,myName,snapshotCurrent:()=>snapshotCurrent(),toast:m=>showToast(m),
-  pulled(listChanged){if(listChanged){renderPlans();renderExt()} if(curShared()) renderAll(); if(tab==='friends') PANELS.friends.render()}});
+  pulled(listChanged){if(listChanged){renderPlans();renderExt()} if(curShared()) renderAll(); if(UI.tab==='friends') PANELS.friends.render()}});
 const tripPush=id=>JD.trips.push(id), tripsPull=()=>JD.trips.pull(), tripShare=()=>JD.trips.share(), tripInvite=role=>JD.trips.invite(role,location.origin+location.pathname);
 const tripLeave=uid=>JD.trips.leave(uid), tripStop=()=>JD.trips.stop();
 SYNC_AFTER_PUSH.push(async()=>{for(const p of PL.plans.filter(p=>p.shared)) await tripPush(p.id)});

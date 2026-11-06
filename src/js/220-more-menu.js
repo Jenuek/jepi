@@ -11,9 +11,9 @@ function renderMore(){
   if(b) tripChips.push({text:`예산 1인 ${Math.round(b.total/10000)}만원`});
   const w=warnTotal(), sp=PL.plans.find(x=>x.id===PL.curPlan&&x.shared);
   window.JEPI_UI.mount('more',box,{city:s.city,line:s.line,tripChips,warnCount:w,prepLeft:prepLeft(),
-    full:jp!=='P'||moreAll,showToggle:jp==='P',moreAll,plansCount:PL.plans.length,
+    full:UI.jp!=='P'||moreAll,showToggle:UI.jp==='P',moreAll,plansCount:PL.plans.length,
     friendsChip:sp?'👥 '+(((TRIPS&&TRIPS.members[PL.curPlan])||[]).length||'공유 중'):null,
-    notifyOn:!!(NOTIFY&&NOTIFY.on),aiOff:!!(STANDALONE&&!sample)});
+    notifyOn:!!(NOTIFY&&NOTIFY.on),aiOff:!!(STANDALONE&&!UI.sample)});
   tabs({warn:w?String(w):''});
 }
 // 이번 여행: one row per topic, opens only that part, saves on change

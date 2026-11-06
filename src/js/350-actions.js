@@ -1,5 +1,5 @@
 // ---------- actions ----------
-function place(id,start,d=day){
+function place(id,start,d=UI.day){
   const p=PM[id]; start=Math.max(dayStart(d),Math.min(1410,start));
   TRIP.blocks.add({id,day:d,start,dur:p.dur});
 }
@@ -7,7 +7,7 @@ function place(id,start,d=day){
 let sheetRev=0;
 function openSheet(uid,opt){
   // its props: app/view/sheet.ts (what other features add: SHEET_EXTRAS)
-  const v=window.JEPI_UI.view.sheet.blockSheet(day,uid,!!(opt&&opt.marksOpen),it=>extras(SHEET_EXTRAS,it,day)); if(!v) return;
+  const v=window.JEPI_UI.view.sheet.blockSheet(UI.day,uid,!!(opt&&opt.marksOpen),it=>extras(SHEET_EXTRAS,it,UI.day)); if(!v) return;
   window.JEPI_UI.mount('block',$('#sheet'),{rev:++sheetRev,...v});
   $('#sheet').dataset.uid=uid; $('#sheetBg').hidden=false;
   setTimeout(()=>{const b=$('#sheet button');b&&b.focus()},0);

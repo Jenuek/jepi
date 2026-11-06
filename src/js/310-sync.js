@@ -18,14 +18,14 @@ JD.sync.connectSync({
   keys:()=>KEYS, setKeys(k){JD.keys.replace(k);saveKeys(true)},
   setErr(m){ACC.state.err=m},
   async afterPush(){
-    if(tab==='settings') renderSettings();
+    if(UI.tab==='settings') renderSettings();
     for(const f of SYNC_AFTER_PUSH){try{await f()}catch(e){console.warn(e)}}
   },
   async afterPull({changed,curChanged,keysPulled}){
     if(curChanged){const ae=document.activeElement;const editing=(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))||!$('#sheetBg').hidden||!$('#onb').hidden;
       if(!editing){applyPlanData(curChanged);showToast('다른 기기에서 바꾼 내용을 받아왔어요')} }
-    if(keysPulled){keyBad={};if(STANDALONE)sample=makeSample();renderAll();showToast('AI·지도 키도 받아왔어요')}
-    if(changed){renderPlans();renderExt()} if(tab==='settings')renderSettings();
+    if(keysPulled){keyBad={};if(STANDALONE)UI.sample=makeSample();renderAll();showToast('AI·지도 키도 받아왔어요')}
+    if(changed){renderPlans();renderExt()} if(UI.tab==='settings')renderSettings();
     for(const f of SYNC_AFTER_PULL){try{await f()}catch(e){console.warn(e)}}
   }
 });
@@ -48,7 +48,7 @@ async function syncBoot(){
     if(h.get('access_token')&&SYNC.url&&SYNC.key){
       const at=h.get('access_token');let user={};
       try{const r=await fetch(SYNC.url+'/auth/v1/user',{headers:{apikey:SYNC.key,Authorization:'Bearer '+at}});user=await r.json()}catch(_){}
-      keepSess({access_token:at,refresh_token:h.get('refresh_token'),expires_in:+h.get('expires_in')||3600,user});SYNC.sent={};SYNC.lastPull=0;saveSync();ACC.state.step=h.get('type')==='recovery'?'newpw':'';if(ACC.state.step==='newpw'){tab='settings';setTimeout(()=>{renderTabs();renderSettings()},300)}
+      keepSess({access_token:at,refresh_token:h.get('refresh_token'),expires_in:+h.get('expires_in')||3600,user});SYNC.sent={};SYNC.lastPull=0;saveSync();ACC.state.step=h.get('type')==='recovery'?'newpw':'';if(ACC.state.step==='newpw'){UI.tab='settings';setTimeout(()=>{renderTabs();renderSettings()},300)}
       showToast('로그인했어요 · 동기화를 켰어요');
     }
     if(sb||h.get('access_token')||h.get('error_description')) history.replaceState(null,'',location.pathname);

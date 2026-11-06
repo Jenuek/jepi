@@ -111,6 +111,7 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 | 그날 점검(경고·이동·요금·영업시간), 할 일 표시 경고, 시즌·좋은 시간대 | `app/data/check.ts`, `app/data/marks.ts`, `app/data/season.ts` (규칙 `app/logic/schedule.ts`) |
 | 여행 날짜·고정 블록(비행·숙소·예약 일정)·하루 항목, 여행 정보 다듬기 | `app/data/days.ts` |
 | 지도 탭(핀·경로 선·카드·내 위치) | `app/ui/map.ts` (Leaflet은 처음 열 때 불러와요) |
+| 화면 위치 값 (열린 날·탭·고른 장소·AI 연결·J/P) | `app/ui/state.ts` (예전 코드는 `UI.day`, `UI.tab` …) |
 | 화면에 보일 값 만들기 (일정표·장소 탭·블록 시트·예약 도우미·이번 여행 칸·🎲·P모드 보드) | `app/view/day.ts`·`tray.ts`·`sheet.ts`·`helper.ts`·`forms.ts`·`dice.ts`·`pview.ts` (예전 코드는 `JEPI_UI.view`) |
 | 데모(오사카 3박 4일) 데이터 | `app/data/demo-osaka.ts` |
 | 여행지 장소 목록(지역·장소·비용·태그), 여행지 열기, AI 답 확인 | `app/data/places.ts` (도쿄 예시 데이터 `app/data/tokyo.ts`) |
