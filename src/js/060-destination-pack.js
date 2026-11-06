@@ -9,7 +9,7 @@ const firstArea=PLC.firstArea, firstGw=PLC.firstGw, cityLL=PLC.cityLL, nearestAr
 // after a destination is loaded: other travelers' 👍 places of that city (070-shared-recs.js)
 PLC.connectPlaces(pk=>{if(RS.status!=='off'){SHARED_IDS.clear();rebuildShared()}});
 const placeLink=p=>`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((p.local||p.name)+' '+(PK.pack.city||''))}`;
-const rateTxt=()=>PK.pack.currency==='KRW'?'':` · 환율 ${yen(PLC.rate()<50?100:1)} ≈ ${won(PLC.rate()*(PLC.rate()<50?100:1))}`;
+const rateTxt=()=>window.JEPI_UI.view.day.rateTxt();   // app/view/day.ts
 let onbBusy=false, placeCtl=null;
 const prog={};
 // Status lines and buttons React drew are updated through a handle (app/ui/live.tsx), others the old way.

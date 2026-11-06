@@ -1,71 +1,25 @@
 // ---------- render ----------
 // The day buttons, the budget and the route line are drawn by React: app/screens/DayTop.tsx
-function renderDays(){
-  window.JEPI_UI.mount('days',$('#days'),{days:DY.days.map((D,i)=>{const n=analyze(i).items.reduce((a,it)=>a+it.warns.length,0);
-    return {date:`${D.date} ${WD[D.wd]}`,label:`Day ${i+1}${n?` · 경고 ${n}`:''}`,on:i===day}})});
-}
+const VIEW=window.JEPI_UI.view;   // what each screen shows, worked out in app/view/*.ts
+function renderDays(){window.JEPI_UI.mount('days',$('#days'),VIEW.day.dayButtons(day))}
 function setZoom(h,quiet){h=h===100?100:60;document.documentElement.style.setProperty('--hour',h+'px');document.querySelectorAll('[data-zoom]').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.zoom===h)));if(!quiet){store.set('gp.zoom',h);renderTimeline()}}
 let gridRev=0;
 function renderTimeline(){
-  const DAY_START=dayStart(day);
   const D=DY.days[day]; hero({title:dayTitleOf(day)});
-  const {items,trans}=analyze(day);
-  const nPlaced=items.filter(i=>i.kind==='place').length;
-  const g=gapsOf(day);
-  {hero({sub:`${D.date} (${WD[D.wd]})`});renderDaySum(items,trans,g)}
   const H=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hour'))||60;
-  const y=m=>(m-DAY_START)/60*H;
-  // drawn by React: app/screens/DayGrid.tsx
-  const hours=[]; for(let h=DAY_START/60;h<DAY_END/60;h++) hours.push(h);
-  const tr=trans.map(t=>({top:y(Math.max(DAY_START,t.from)),h:Math.max(16,t.min/60*H),bad:!!t.bad,text:`${t.real?'':'≈'}${t.mode} ${t.min}분${t.lines?` · ${t.lines}`:''}${t.fare?` · ${yen(t.fare)}`:''}`}));
-  const blocks=items.map(it=>{
-    const top=y(Math.max(DAY_START,it.start)), hgt=Math.max(30,(it.end-Math.max(DAY_START,it.start))/60*H-2);
-    const cls=['blk',it.kind==='fixed'?'fixed':'',it.warns.length?'bad':'',hgt<48?'compact':hgt<72?'short':''].join(' ');
-    const full=`${fmt(it.start)}–${fmt(it.end)} ${it.name}${it.marks&&it.marks.length?' · '+it.marks.map(m=>MARKS[m][1]).join(', '):''}${it.warns.length?' · '+it.warns[0]:''}`;
-    return {uid:String(it.uid),cls,top,h:hgt,cc:String(it.cc),full,drag:it.kind==='place',time:hgt<48?`${fmt(it.start)} · ${durTxt(it.end-it.start)}`:`${fmt(it.start)}–${fmt(it.end)}`,
-      bang:!!it.warns.length,badges:extras(BLOCK_BADGES,it,day),marks:it.marks&&it.marks.length?[...new Set(it.marks.map(m=>MARKS[m][0]))].join(''):'',name:String(it.name),
-      memo:blockMemoOf(it,day)||'',loc:hgt>=72?String(it.locName??''):null}});
-  // area bands: consecutive blocks (not lodging) in the same area group
-  const bands=[], seq=items.filter(i=>!i.stay);
-  for(let i=0;i<seq.length;){let j=i;while(j+1<seq.length&&seq[j+1].zone===seq[i].zone)j++;
-    if(j>i){const top=y(Math.max(DAY_START,seq[i].start)),bot=y(seq[j].end),zn=ZONES[seq[i].zone];
-      bands.push({top,h:Math.max(20,bot-top),title:`${zn} 권역 ${fmt(seq[i].start)}–${fmt(seq[j].end)}`,label:bot-top>90?`${zn.split('·')[0]} 권역`:null})}
-    i=j+1}
-  const ss=sunsetMin();
+  // drawn by React: app/screens/DayGrid.tsx (its props: app/view/day.ts); badges and memos come from the features that add them
+  const T=VIEW.day.timeline(day,H,{badges:it=>extras(BLOCK_BADGES,it,day),memo:it=>blockMemoOf(it,day)});
+  {hero({sub:`${D.date} (${WD[D.wd]})`});renderDaySum(T.items,T.trans,gapsOf(day))}
   const grid=$('#grid');
-  window.JEPI_UI.mount('grid',grid,{hours,trans:tr,blocks,bands,sunset:ss&&ss>DAY_START?{top:y(ss),text:`🌇 일몰 ${fmt(ss)}`}:null,rev:++gridRev});
-  grid.style.height=((DAY_END-DAY_START)/60*H)+'px';
-  renderRoute(items,trans);
+  window.JEPI_UI.mount('grid',grid,{...T.grid,rev:++gridRev});
+  grid.style.height=T.height+'px';
+  window.JEPI_UI.mount('route',$('#route'),VIEW.day.route(day,T.items,T.trans));
   renderBudget();
   renderPView();
 }
 const dayCost=JD.check.dayCost;   // app/data/check.ts
-function renderBudget(){
-  const c=dayCost(day); let tY=0,tK=0; DY.days.forEach((_,i)=>{const x=dayCost(i);tY+=x.yen;tK+=x.krw});
-  const bp=budgetParts(), dl=bp?bp.daily/(PLC.rate()||1):0, pct=bp&&dl?Math.round(c.yen/dl*100):0;
-  const KRW=PK.pack.currency==='KRW', h=heads(), one=h>1?' (1인)':'', B=(t,cls)=>({t,tag:'b',cls});
-  window.JEPI_UI.mount('budgetSum',$('#budgetSum'),{segs:segs(`💰 오늘 예상${one} `,B(yen(c.yen)),KRW?'':` · 약 ${won(c.yen*PLC.rate()+c.krw)}`,
-    ...(bp?[' · ',{t:`예산의 ${pct}%`,tag:'span',cls:pct>100?'over':''}]:[]))});
-  const local=bp?bp.local/(PLC.rate()||1):0;
-  window.JEPI_UI.mount('budget',$('#budget'),{act:yen(c.act),tr:yen(c.tr),meal:yen(c.meal),step:PK.pack.step,home:c.krw?won(c.krw):'',
-    bar:bp?{pct,over:pct>100,line:segs('하루 현지 예산 ',B(yen(dl),'mono'),` 중 ${pct}% 사용`,...(pct>100?[' · ',{t:`${yen(c.yen-dl)} 넘어요`,tag:'span',color:'#c27a00'}]:[]),
-      ' · 여행 전체 현지 예산 ',B(yen(local),'mono'),` 중 ${Math.round(tY/local*100)}%`)}:null,
-    totalLabel:`오늘 예상${one}`,total:yen(c.yen),totalSub:KRW?'집 오가는 교통 포함 '+won(c.yen+c.krw):'약 '+won(c.yen*PLC.rate()+c.krw),
-    group:h>1?segs(`${h}명 합계 오늘 `,B(yen(c.yen*h),'mono'),KRW?'':` (약 ${won((c.yen*PLC.rate()+c.krw)*h)})`,' · 여행 전체 ',B(yen(tY*h),'mono'),KRW?'':` (약 ${won((tY*PLC.rate()+tK)*h)})`):null,
-    trip:segs(`여행 전체 현지 예상${one} `,B(yen(tY),'mono'),` ${KRW?'':`(약 ${won(tY*PLC.rate()+tK)}) `}· 쇼핑 제외 · 미리 결제한 교통편·숙소·예약은 제외${rateTxt()}`)});
-}
-// a line of text and bold/colored parts for React (DayTop.tsx Line): neighbouring text is merged, empty text dropped
-function segs(...xs){const out=[];xs.forEach(x=>{if(x==null||x==='')return;if(typeof x==='string'&&typeof out[out.length-1]==='string')out[out.length-1]+=x;else out.push(x)});return out}
-function renderRoute(items,trans){
-  const stops=[];
-  if(day>0) stops.push({area:DY.locArea[DY.days[day].startLoc]});
-  items.forEach((i,k)=>{ if(i.stay&&k!==items.length-1) return; stops.push({area:i.area}) });
-  const seq=stops.filter((s,i)=>i===0||s.area!==stops[i-1].area);
-  const total=trans.reduce((a,t)=>a+t.min,0);
-  const zs=items.filter(i=>!i.stay&&!i.drop).map(i=>i.zone).filter((z,i,a)=>i===0||z!==a[i-1]);
-  const seen=new Set(), back=new Set(); zs.forEach(z=>{if(seen.has(z))back.add(z);seen.add(z)});
-  window.JEPI_UI.mount('route',$('#route'),{stops:seq.map(x=>String(x.area)),total:durTxt(total),back:back.size?[...back].map(z=>ZONES[z].split('·')[0]).join(', '):''});
-}
+function renderBudget(){const B=VIEW.day.budget(day);window.JEPI_UI.mount('budgetSum',$('#budgetSum'),B.sum);window.JEPI_UI.mount('budget',$('#budget'),B.box)}
+const segs=VIEW.day.segs;   // a line of text with bold / coloured parts (DayTop.tsx Line)
 function dayRefs(){
   const refs=dayItems(day).map(i=>({id:i.id,name:i.stay?`${i.area} 숙소`:i.name,ll:i.ll}));
   if(day>0) refs.push({name:`${DY.locArea[DY.days[day].startLoc]} 숙소`,ll:DY.loc[DY.days[day].startLoc].ll});
