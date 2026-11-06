@@ -1871,5 +1871,31 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'flow: presses on the 일정표 (app/flow/schedule.ts): move a block, 준비하기 tick, the summary chip, a keyword, a day title',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      const r = await p.evaluate(() => {
+        const F = window.JEPI_UI.flow, T = window.JEPI_DATA.trip, R = F.render, X = F.schedule;
+        const b0 = T.cur.placed.find(b => b.day === 0 && b.start < 1300); R.openSheet(b0.uid); const s0 = b0.start;
+        X.blockAct('mv', '30'); const moved = T.cur.placed.find(b => b.uid === b0.uid).start - s0;
+        X.blockAct('du', '30'); const longer = T.cur.placed.find(b => b.uid === b0.uid).dur;
+        X.checksAct('ck', 'test-tick', true); const ticked = T.cur.done['test-tick'] === true;
+        const on = X.kwAct('toggle', '테스트키워드'), has = T.cur.kws.includes('테스트키워드'); X.kwAct('toggle', '테스트키워드');
+        X.sumAct('chip', 'route'); const open = document.querySelector('#panel-timeline').classList.contains('sum-route'); X.sumAct('chip', 'route');
+        X.gridAct('day', '1'); const d1 = window.JEPI_UI.ui.day; X.gridAct('day', '0');
+        return { moved, longer: longer >= 60, ticked, on, has, after: T.cur.kws.includes('테스트키워드'), open, closed: !document.querySelector('#panel-timeline').classList.contains('sum-route'), d1, title: X.dayTitleOf(0) };
+      });
+      ok(r.moved === 30 && r.longer, '30분 뒤로 · 30분 더 ' + JSON.stringify(r));
+      ok(r.ticked, '준비하기 tick saved');
+      ok(r.on === true && r.has && !r.after, 'a keyword on, then off again');
+      ok(r.open && r.closed, 'the 이동 chip opens the route line, again closes it');
+      ok(r.d1 === 1 && r.title.length > 0, 'Day 2 button sets the day; Day 1 has a title');
+      await p.evaluate(() => window.JEPI_UI.flow.schedule.titleEditing(true)); await p.waitForTimeout(200);
+      ok(await vis(p, '#dayTitleForm'), '✎: the day title form opens');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];

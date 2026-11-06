@@ -1487,9 +1487,9 @@ const analyze=CK.analyze, gapsOf=CK.gapsOf;
 // app/flow/render.ts. What it still needs from the old code is connected here (each one looked up when it runs).
 const RENDER=window.JEPI_UI.flow.render;
 RENDER.connect({
-  hero:p=>hero(p), dayTitleOf:d=>dayTitleOf(d),
+  hero:p=>hero(p),
   badges:(it,d)=>extras(BLOCK_BADGES,it,d), cardExtras:p=>extras(CARD_EXTRAS,p), sheetExtras:(it,d)=>extras(SHEET_EXTRAS,it,d),
-  blockMemoOf:(it,d)=>blockMemoOf(it,d), renderDaySum:(i,t,g)=>renderDaySum(i,t,g), renderPView:()=>renderPView(), recsMaybe:()=>recsMaybe(),
+  renderPView:()=>renderPView(), recsMaybe:()=>recsMaybe(),
   openFind:o=>openFind(o), fresh:()=>FRESH, curShared:()=>curShared(), dupInfo:()=>dupInfo(), dock:p=>dock(p), seasonInfo:()=>seasonInfo(),
   fabDodge:()=>fabDodge(), panels:()=>Object.keys(PANELS), diceCloseAnim:()=>diceCloseAnim(),
   touchPlan:()=>touchPlan(), renderMeta:()=>renderMeta(), renderNudges:()=>renderNudges(), renderChat:()=>renderChat(), renderExt:()=>renderExt(), renderLook:()=>renderLook(),
@@ -1570,63 +1570,14 @@ document.addEventListener('submit',e=>{const f=e.target;
 });
 document.addEventListener('input',onPf);
 document.addEventListener('change',onPf);
-// What was pressed in a block's sheet (BlockSheet.tsx; the sheet's block is #sheet's uid). Only changes that move the
-// block redraw the sheet: tapping an input (memo, …) keeps the keyboard.
-function blockAct(n,v,o){
-  o=o||{}; const uid=$('#sheet').dataset.uid, b=CUR.placed.find(x=>x.uid===uid);
-  switch(n){
-  case 'fill': place(v,+o.start);closeSheet();renderAll();return;          // an empty time: put this place there
-  case 'dicefrom': dice.tab='do';doDefaults(true);openDice(+v);diceRoll(false);return;
-  case 'totray': closeSheet();UI.tab='tray';renderTabs();return;
-  case 'newcustom': openCustom(null,+v);return;
-  case 'editcustom': openCustom(v,null);return;
-  case 'swap': if(b){TRIP.blocks.change(uid,{id:v,start:+o.start,dur:+o.dur});renderAll();openSheet(uid)}return;
-  case 'mark': toggleMark(uid,v);renderAll();openSheet(uid,{marksOpen:true});return;
-  case 'pairblock': makePairBlock(uid,v);return;
-  case 'home': CUR.profile.home.min=Math.max(10,Math.min(240,(+CUR.profile.home.min||60)+ +v));TRIP.save('profile',CUR.profile);buildDays();renderAll();openSheet('f0a');return;
-  }
-  if(!b) return;
-  if(n==='mv'){TRIP.blocks.change(uid,{start:Math.max(dayStart(UI.day),Math.min(1410,b.start+ +v))});renderAll();openSheet(uid);return}
-  if(n==='du'){TRIP.blocks.change(uid,{dur:Math.max(30,Math.min(720,b.dur+ +v))});renderAll();openSheet(uid);return}
-  if(n==='del'){TRIP.blocks.remove(uid);closeSheet();renderAll();return}
-}
+// presses on the 일정표 and around it (block sheet, empty time, Day buttons, 간식비, 준비하기, AI box, 취향 키워드, drag & drop):
+// app/flow/schedule.ts. What it still needs from the old code is connected here.
+const SCHED=window.JEPI_UI.flow.schedule;
+SCHED.connect({hero:p=>hero(p),diceFrom:t=>{dice.tab='do';doDefaults(true);openDice(t);diceRoll(false)},openCustom:(id,st)=>openCustom(id,st),
+  makePairBlock:(uid,k)=>makePairBlock(uid,k),genSeason:id=>genSeason(id),fixWarns:()=>fixWarns()});
+const blockAct=SCHED.blockAct, checksAct=SCHED.checksAct, aiboxAct=SCHED.aiboxAct, gridAct=SCHED.gridAct, kwAct=SCHED.kwAct, dropped=SCHED.dropped;
 // 🛠 AI에게 경고 해결 맡기기 (the check list's button and the 경고 chip above the 일정표)
 function fixWarns(){const ws=[];DY.days.forEach((_,d)=>analyze(d).items.forEach(it=>it.warns.forEach(w=>ws.push(`Day ${d+1} ${it.name}: ${w}`))));UI.tab='timeline';renderTabs();sendChat('지금 일정의 경고를 모두 해결해 줘. 꼭 필요한 것만 바꾸고, 바꿀 수 없는 고정 일정은 그대로 둬.\n'+ws.slice(0,20).join('\n'));const c=$('#chat');if(c)c.scrollIntoView({block:'start'})}
-// 준비하기 (Checks.tsx): a tick, a warning (go to its block), 경고 해결, 시즌 정보, 모두 지우기
-function checksAct(n,v,o){
-  switch(n){
-  case 'ck': TRIP.tick(v,!!o);renderChecks();return;
-  case 'goto': {const [d,u]=String(v).split('~');UI.day=+d;UI.tab='timeline';renderAll();openSheet(u);return}
-  case 'fix': fixWarns();return;
-  case 'season': genSeason('st_season');return;
-  case 'reset': if(!UI.resetArm){UI.resetArm=true;renderChecks();return}
-    UI.resetArm=false;CUR.fmarks={};TRIP.save('fmarks',CUR.fmarks);CUR.placed=DEFAULT.map(b=>({uid:TRIP.uids.next(),id:b.id,day:b.day,start:b.start,dur:PM[b.id].dur}));save();renderAll();return;
-  }
-}
-// ✨ 빈 시간 채우기 results (AiBox.tsx): stop, close, put one in
-function aiboxAct(n,v){
-  if(n==='stop'){UI.aiState?.ctl?.abort();return}
-  if(n==='close'){UI.aiState=null;renderAI();return}
-  if(n==='acc'&&UI.aiState?.items){const x=UI.aiState.items[+v];if(x&&!x.added){place(x.id,x.start);x.added=true;renderAll()}}
-}
-// What was pressed in the 일정표 and around it (DayGrid.tsx slots and blocks, the Day buttons, 오늘 보기, 간식비 −/+)
-function gridAct(n,v){
-  switch(n){
-  case 'day': UI.day=+v;renderAll();return;
-  case 'slot': if(!UI.selected){openFill(+v);return} place(UI.selected,+v); UI.selected=null; renderAll(); return;   // an empty time: fill it, or put the chosen card there
-  case 'blk': openSheet(v);return;
-  case 'meal': TRIP.setMeal(UI.day,Math.max(0,Math.min((PK.pack.snack||1000)*20,mealOf(UI.day)+ +v)));renderBudget();return;
-  }
-}
-// 취향 키워드 (TasteKeywords.tsx, and the chips in 처음 설정): toggle returns whether the keyword is on now
-function kwAct(n,v){
-  switch(n){
-  case 'toggle': {const on=TRIP.keywords.toggle(v);renderPref();return on}
-  case 'del': TRIP.keywords.remove(+v);saveKw();return;
-  case 'add': if(TRIP.keywords.add(v))saveKw();return;   // a suggestion, or what was typed
-  case 'reset': CUR.kws=DEFAULT_KW.slice();saveKw();return;
-  }
-}
 // 더보기 rows that are not a tab (MoreMenu.tsx): 여행 노트, 여행 꾸미기, 전체 메뉴 보기
 function moreAct(id){
   if(id==='nbOpen'){openNotebook();return}
@@ -1678,12 +1629,8 @@ function placeAct(n,v){
   }
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('#sheetBg').hidden)closeSheet();else if(UI.selected){UI.selected=null;renderAll()}}});
-// drag & drop (desktop): app/ui/drag.ts marks the slot and works out the time; putting the card / block there is here
+// drag & drop (desktop): app/ui/drag.ts marks the slot and works out the time; putting the card / block there: app/flow/schedule.ts dropped
 window.JEPI_UI.drag.connectGrid($('#grid'));
-function dropped(kind,id,m){
-  if(kind==='new') place(id,m); else if(TRIP.blocks.find(id)) TRIP.blocks.change(id,{start:Math.max(dayStart(UI.day),Math.min(1410,m))});
-  UI.selected=null; renderAll();
-}
 matchMedia('(min-width:900px)').addEventListener?.('change',renderTabs);
 
 // ---------- first screen: 새 여행 만들기 / 이미 계정이 있어요 / 데모 둘러보기 ----------
@@ -1725,29 +1672,7 @@ if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__jepi={demoEnte
 // ---------- tidy day screen: one summary line; details open on tap ----------
 // The route strip, today's cost, warnings, free gaps and "tell us more" nudges used to sit above the
 // timeline all at once. Now one line of chips shows the numbers and each chip opens its part.
-let sumOpen=null;
-function renderDaySum(items,trans,gaps){
-  const box=$('#daySum'); if(!box) return;
-  const total=trans.reduce((a,t)=>a+t.min,0), c=dayCost(UI.day), warns=items.filter(i=>i.warns.length);
-  const nudge=($('#nudges')&&$('#nudges').textContent.trim())?1:0;
-  // drawn by React: app/screens/DayTop.tsx
-  const chip=(k,t,warn)=>({k,t,warn:!!warn,open:sumOpen===k});
-  window.JEPI_UI.mount('daySum',box,{chips:[chip('route',`이동 ${durTxt(total)}`),chip('budget',`${heads()>1?'1인 ':''}${yen(c.yen)}`),
-    ...(warns.length?[chip('warn',`확인할 것 ${warns.reduce((a,i)=>a+i.warns.length,0)}`,true)]:[]),...(gaps.length?[chip('gap',`빈 시간 ${gaps.length}`)]:[]),...(nudge?[chip('nudge','💡 더 정확하게')]:[])]});
-  if(sumOpen==='warn'&&!warns.length||sumOpen==='gap'&&!gaps.length||sumOpen==='nudge'&&!nudge) sumOpen=null;
-  const P0=$('#panel-timeline'); ['route','budget','nudge'].forEach(k=>P0.classList.toggle('sum-'+k,sumOpen===k));
-  if(sumOpen==='budget'&&$('#budgetBox')) $('#budgetBox').open=true;
-  const body=$('#sumBody');
-  const sw=sumOpen==='warn'?warns.map(i=>({uid:String(i.uid),time:fmt(i.start),name:String(i.name),warn:String(i.warns[0])})):[];
-  const sg=sumOpen==='gap'?gaps.map(g=>({range:`${fmt(g[0])}–${fmt(g[1])}`,find:UI.sample&&!PK.pack.manual?`${g[0]}-${g[1]}`:null})):[];
-  window.JEPI_UI.mount('sumBody',body,{warns:sw,gaps:sg});
-  body.hidden=!(sw.length||sg.length);
-}
-// the day's summary chips (DayTop.tsx DaySum / SumBody tell: a chip opens its list, a warning row opens its block)
-function sumAct(n,v){
-  if(n==='uid'){openSheet(v);return}
-  if(n==='chip'){sumOpen=sumOpen===v?null:v;renderTimeline()}
-}
+const renderDaySum=SCHED.renderDaySum, sumAct=SCHED.sumAct;   // app/flow/schedule.ts
 // ---------- 영업시간: real opening hours from Google Places (abroad), AI estimate in Korea ----------
 // The lookups, the 30-day cache and the monthly cap live in app/data/hours.ts (rules: app/logic/hours.ts). Here: the trip side.
 const HOURS_CAP=JD.hours.CAP, hoursUse=add=>JD.hours.used(add), hoursSweep=()=>JD.hours.sweep();
@@ -1997,12 +1922,7 @@ if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)&&window.__jepi) Object.a
 // ---------- day titles the traveler can rename ----------
 // profile.dayTitles[d] overrides the automatic "Day 1 · 도착" title (rules: app/logic/memo.ts). The ✎ form is React
 // (app/screens/DayTitleForm.tsx, it saves itself); here: the header around it.
-function dayTitleOf(d){return JD.logic.memo.dayTitle(CUR.profile,d,(DY.days[d]||{}).title||'')}
-let dayTitleRev=0;
-function titleEditing(on){
-  hero({editing:on,slot:true});
-  window.JEPI_UI.mount('dayTitle',$('#dayTitleSlot'),{open:on,day:UI.day,title:JD.logic.memo.ownDayTitle(CUR.profile,UI.day),auto:String(DY.days[UI.day].title||''),memo:dayMemoOf(UI.day),rev:++dayTitleRev});
-}
+const dayTitleOf=SCHED.dayTitleOf, titleEditing=SCHED.titleEditing;   // app/flow/schedule.ts
 // what React screens may ask of the old code (app/ui/host.ts)
 window.JEPI_UI.connectHost({renderAll:()=>renderAll(),closeSheet:()=>closeSheet(),reopenSheet:()=>{const u=$('#sheet').dataset.uid;if(u&&u!=='dice'&&!$('#sheetBg').hidden)openSheet(u)},toast:m=>showToast(m),day:()=>UI.day,autoTitle:d=>String((DY.days[d]||{}).title||''),titleEditing,
   closeNotebook:()=>closeNotebook(),renamePlan:nm=>lookRenamePlan(nm),aiDayTitles:n=>lookAiTitles(n),errText:(e,w)=>errText(e,w),welcomeNew:()=>{closeWelcome();openOnb()},welcomeDemo:()=>demoEnter(),welcomeLoggedIn:()=>welcomeLoggedIn(),dice:(n,v,m)=>diceAct(n,v,m),place:(n,v)=>placeAct(n,v),plans:(n,v,v2)=>plansAct(n,v,v2),helper:(n,v,v2)=>helperAct(n,v,v2),helperFrame:n=>helperFrameAct(n),dock:(n,v)=>dockAct(n,v),tray:(n,v)=>trayAct(n,v),tab:n=>goTab(n),onbFrame:n=>onbFrameAct(n),hero:n=>heroAct(n),miniDay:s=>{const n=UI.day+s;if(n>=0&&n<DY.days.length){UI.day=n;renderAll()}},mapTop:n=>mapTopAct(n),coach:n=>coachAct(n),banner:()=>{UI.selected=null;renderAll()},chat:(n,v)=>chatAct(n,v),pview:(n,v)=>pviewAct(n,v),kw:(n,v)=>kwAct(n,v),grid:(n,v)=>gridAct(n,v),block:(n,v,o)=>blockAct(n,v,o),checks:(n,v,o)=>checksAct(n,v,o),aibox:(n,v)=>aiboxAct(n,v),settings:(n,v,v2)=>settingsAct(n,v,v2),form:(n,v,o)=>formAct(n,v,o),sum:(n,v)=>sumAct(n,v),trip:(a,u,t)=>tripAct(a,u,t),want:p=>wantAct(p),find:(n,v,t)=>findAct(n,v,t),planMenu:(n,v)=>planMenuAct(n,v),more:id=>moreAct(id),mapCard:i=>mapCardAct(i),dropped:(k,id,m)=>dropped(k,id,m),nudge:(n,v)=>nudgeAct(n,v),importFile:f=>importBackup(f,ok=>{if(ok){maybeCoach()}}),shareNotebook:async()=>{await shareLink(true);return planMsg||'링크를 만들었어요'}});
@@ -2075,10 +1995,7 @@ const lookAiTitles=tripName=>JD.asks.dayTitles(UI.sample,tripName);   // app/dat
 function lookRenamePlan(nm){const p=PL.plans.find(x=>x.id===PL.curPlan);if(p&&nm&&nm!==p.name){p.name=nm;p.custom_name=true;savePlans()}}
 // ---------- handwritten memos: one line per block, one line per day ----------
 // The rules live in app/logic/memo.ts; the memo box in a block's sheet saves itself (app/screens/Extras.tsx MemoBox).
-const memoKey=(it,d)=>JD.logic.memo.blockKey(it.id,d);
-const blockMemoOf=(it,d)=>JD.logic.memo.blockMemo(CUR.profile,memoKey(it,d));
-const dayMemoOf=d=>JD.logic.memo.dayMemo(CUR.profile,d);
-function renderDayMemo(){const m=dayMemoOf(UI.day);hero({memo:m?`“${m}”`:''})}
+const memoKey=SCHED.memoKey, blockMemoOf=SCHED.blockMemoOf, dayMemoOf=SCHED.dayMemoOf, renderDayMemo=SCHED.renderDayMemo;   // app/flow/schedule.ts
 SHEET_EXTRAS.push(it=>it&&it.id?{k:'memo',key:memoKey(it,UI.day),value:blockMemoOf(it,UI.day)}:null);   // drawn by React: Extras.tsx
 // ---------- 여행 노트 보기: the whole trip as one notebook (cover + a chapter per day) ----------
 // Read-only. "PDF로 저장" uses the browser's print (print CSS in 17-look.css keeps only the notebook).

@@ -16,17 +16,15 @@ import { ui } from '../ui/state';
 import * as dayView from '../view/day';
 import * as trayView from '../view/tray';
 import * as sheetView from '../view/sheet';
+import { dayTitleOf, blockMemoOf, renderDaySum } from './schedule';
 
 /** what the old code (src/js) still draws or knows */
 export interface Legacy {
   hero(p: any): void;
-  dayTitleOf(d: number): string;
   /** what features add to a block (badges), a place card and a block sheet (007-panels.js) */
   badges(it: any, d: number): any[];
   cardExtras(p: any): any[];
   sheetExtras(it: any, d: number): any[];
-  blockMemoOf(it: any, d: number): any;
-  renderDaySum(items: any[], trans: any[], gaps: any[]): void;
   renderPView(): void;
   recsMaybe(): void;
   openFind(o: any): void;
@@ -62,11 +60,11 @@ export function setZoom(h: number, quiet?: boolean): void {
   if (!quiet) { storage.set('gp.zoom', h); renderTimeline() }
 }
 export function renderTimeline(): void {
-  const D = D_.days[ui.day]; L.hero({ title: L.dayTitleOf(ui.day) });
+  const D = D_.days[ui.day]; L.hero({ title: dayTitleOf(ui.day) });
   const H = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hour')) || 60;
   // drawn by React: app/screens/DayGrid.tsx (its props: app/view/day.ts); badges and memos come from the features that add them
-  const T = dayView.timeline(ui.day, H, { badges: (it: any) => L.badges(it, ui.day), memo: (it: any) => L.blockMemoOf(it, ui.day) }) as any;
-  L.hero({ sub: `${D.date} (${WD[D.wd]})` }); L.renderDaySum(T.items, T.trans, check.gapsOf(ui.day));
+  const T = dayView.timeline(ui.day, H, { badges: (it: any) => L.badges(it, ui.day), memo: (it: any) => blockMemoOf(it, ui.day) }) as any;
+  L.hero({ sub: `${D.date} (${WD[D.wd]})` }); renderDaySum(T.items, T.trans, check.gapsOf(ui.day));
   const grid = $('#grid');
   mount('grid', grid, { ...T.grid, rev: ++gridRev });
   grid.style.height = T.height + 'px';

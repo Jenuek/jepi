@@ -47,6 +47,7 @@ import * as formsView from './view/forms';
 import * as diceView from './view/dice';
 import * as pviewView from './view/pview';
 import * as render from './flow/render';
+import * as schedule from './flow/schedule';
 import * as sheetView from './view/sheet';
 import * as helperView from './view/helper';
 import { liveOf, type LiveHandle } from './ui/live';
@@ -167,7 +168,7 @@ export interface JepiUI {
   /** what each screen shows, worked out from the trip (app/view/*.ts) */
   view: { day: typeof dayView; tray: typeof trayView; sheet: typeof sheetView; helper: typeof helperView; forms: typeof formsView; dice: typeof diceView; pview: typeof pviewView };
   /** what happens in the app, moved out of the old code (app/flow/*.ts) */
-  flow: { render: typeof render };
+  flow: { render: typeof render; schedule: typeof schedule };
 }
 
 declare global {
@@ -187,7 +188,7 @@ export function installBridge(): void {
     ui,
     drag,
     view: { day: dayView, tray: trayView, sheet: sheetView, helper: helperView, forms: formsView, dice: diceView, pview: pviewView },
-    flow: { render },
+    flow: { render, schedule },
     mount(name, el, props) {
       let cur = roots.get(el);
       if (!cur || cur.host.parentNode !== el || cur.name !== name) {
