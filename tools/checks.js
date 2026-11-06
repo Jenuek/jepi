@@ -1897,5 +1897,25 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'flow: 🎲 and the P board (app/flow/dice.ts): roll in free time → 이걸로 → in the schedule, remembered; the board draws a card',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      const n0 = await p.evaluate(() => window.JEPI_DATA.trip.cur.placed.length);
+      await p.evaluate(() => { const F = window.JEPI_UI.flow.dice; F.openDiceTab('do', null); F.diceAct('dobase', 'plan') }); await p.waitForTimeout(200);
+      ok(await vis(p, '#sheetBg') && await p.$eval('#sheet', e => e.dataset.uid) === 'dice', 'the 🎲 sheet opens');
+      await p.evaluate(() => window.JEPI_UI.flow.dice.diceAct('diceGo')); await p.waitForTimeout(900);
+      const pick = await p.evaluate(() => { const d = window.JEPI_UI.flow.dice.st.dice; return d.pick && d.pick.p.name });
+      ok(!!pick, 'rolled: ' + pick);
+      await p.evaluate(() => window.JEPI_UI.flow.dice.diceAct('diceFix')); await p.waitForTimeout(300);
+      const r = await p.evaluate(() => ({ n: window.JEPI_DATA.trip.cur.placed.length, log: JSON.parse(localStorage.getItem('gp.dice') || '[]').map(x => x.n) }));
+      ok((r.n === n0 + 1 && r.log.includes(pick)) || (await p.evaluate(() => !!window.JEPI_UI.flow.dice.st.dice.force)), '이걸로: in the schedule and remembered (or it asks first because of a warning)');
+      await p.evaluate(() => { window.JEPI_UI.ui.jp = 'P'; localStorage.setItem('gp.pAhead', 'true'); window.JEPI_UI.flow.dice.renderPView(); window.JEPI_UI.flow.dice.pviewAct('roll', '0') }); await p.waitForTimeout(1400);
+      const draw = await p.evaluate(() => { const d = window.JEPI_UI.flow.dice.st.pSt.draw; return d ? { card: !!d.cand, rolling: d.rolling } : null });
+      ok(draw && draw.rolling === false, 'the board: a die rolled and settled ' + JSON.stringify(draw));
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];

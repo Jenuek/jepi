@@ -10,7 +10,4 @@ RENDER.connect({
   fabDodge:()=>fabDodge(), panels:()=>Object.keys(PANELS), diceCloseAnim:()=>diceCloseAnim(),
   touchPlan:()=>touchPlan(), renderMeta:()=>renderMeta(), renderNudges:()=>renderNudges(), renderChat:()=>renderChat(), renderExt:()=>renderExt(), renderLook:()=>renderLook(),
 });
-const setZoom=RENDER.setZoom, renderTimeline=RENDER.renderTimeline, renderBudget=RENDER.renderBudget, drawTrayTop=RENDER.drawTrayTop, trayAct=RENDER.trayAct,
-  renderTray=RENDER.renderTray, openFill=RENDER.openFill, renderChecks=RENDER.renderChecks, ckInfo=RENDER.ckInfo, tabs=RENDER.tabs, renderTabs=RENDER.renderTabs,
-  drawBanner=RENDER.drawBanner, renderAI=RENDER.renderAI, renderPref=RENDER.renderPref, saveKw=RENDER.saveKw, renderAll=RENDER.renderAll;
-const dayCost=JD.check.dayCost;   // app/data/check.ts
+const setZoom=RENDER.setZoom, renderBudget=RENDER.renderBudget, drawTrayTop=RENDER.drawTrayTop, trayAct=RENDER.trayAct, renderTray=RENDER.renderTray, ckInfo=RENDER.ckInfo, tabs=RENDER.tabs, renderTabs=RENDER.renderTabs, drawBanner=RENDER.drawBanner, renderAI=RENDER.renderAI, renderPref=RENDER.renderPref, saveKw=RENDER.saveKw, renderAll=RENDER.renderAll;

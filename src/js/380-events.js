@@ -4,7 +4,7 @@ function goTab(name){UI.tab=name;autoMsg='';if(UI.tab==='me'){draft=clone(CUR.pr
 document.addEventListener('click',e=>{
   const t=e.target.closest('button,input,label'); if(!t) return;
   if(t.dataset.tab){if(!t.closest('.tabs'))goTab(t.dataset.tab);return}
-  if(t.id==='diceFab'){openDiceTab(mealNow()==='snack'?'do':'eat',null);return}
+  if(t.id==='diceFab'){openDiceTab(DICEV.mealNow()==='snack'?'do':'eat',null);return}
   if(t.id==='coachAgain'){showCoach(0);return}
   if(t.id==='moreHelper'){openHelper(CUR.wish.length?1:0);return}
   // 닫기 in any sheet (#sheet: block, 🎲, 장소 찾기, 직접 만들기)
@@ -22,7 +22,7 @@ document.addEventListener('change',onPf);
 // presses on the 일정표 and around it (block sheet, empty time, Day buttons, 간식비, 준비하기, AI box, 취향 키워드, drag & drop):
 // app/flow/schedule.ts. What it still needs from the old code is connected here.
 const SCHED=window.JEPI_UI.flow.schedule;
-SCHED.connect({hero:p=>hero(p),diceFrom:t=>{dice.tab='do';doDefaults(true);openDice(t);diceRoll(false)},openCustom:(id,st)=>openCustom(id,st),
+SCHED.connect({hero:p=>hero(p),diceFrom:t=>DFLOW.diceFrom(t),openCustom:(id,st)=>openCustom(id,st),
   makePairBlock:(uid,k)=>makePairBlock(uid,k),genSeason:id=>genSeason(id),fixWarns:()=>fixWarns()});
 const blockAct=SCHED.blockAct, checksAct=SCHED.checksAct, aiboxAct=SCHED.aiboxAct, gridAct=SCHED.gridAct, kwAct=SCHED.kwAct, dropped=SCHED.dropped;
 // 🛠 AI에게 경고 해결 맡기기 (the check list's button and the 경고 chip above the 일정표)
@@ -32,22 +32,6 @@ function moreAct(id){
   if(id==='nbOpen'){openNotebook();return}
   if(id==='lookOpen'){openLook();return}
   if(id==='moreAll'){moreAll=!moreAll;renderMore();return}
-}
-// What was pressed on the P모드 판 (PView.tsx tells: its name and value)
-function pviewAct(n,v){
-  switch(n){
-  case 'sq': openSheet(v);return;              // a square with a block on it
-  case 'gap': pRollDo(v);return;               // an empty square: roll to fill it
-  case 'roll': pRollDo(v,true);return;
-  case 'mood': pMood(v);return;
-  case 'card': pMood('mine');return;           // one of 내 카드
-  case 'next': if(pSt.draw)pRollDo(pSt.draw.gi);return;
-  case 'yes': pYes();return;
-  case 'keep': pKeep();return;
-  case 'close': pClose();return;
-  case 'ai': pAI();return;
-  case 'ahead': pAhead();return;
-  }
 }
 // What was pressed in the "더 정확한 일정을 위해 알려 주세요" box (ChatLog.tsx Nudges: a button id, or ✕ with its row)
 function nudgeAct(n,v){
