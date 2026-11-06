@@ -888,34 +888,18 @@ function pPlaceNow(id){
   showToast(`${DY.days[day].date||'이 날'} ${shortFuzzy(hit.arr)}에 넣었어요`); renderAll();
 }
 // ---------- my plans: several saved plans, account sync, sharing ----------
-// rdb/myId: the plan copies kept inside Claude (when JEPI ran as a Claude page); always empty in the app
-let rdb=null, myId=null;
-PL.plans=[]; PL.curPlan=''; let planTimer=null, cloudTimer=null, planMsg='', delArm='';
+const PLANS=JD.plans;   // a plan's name, contents and text: app/data/plans.ts
+PL.plans=[]; PL.curPlan=''; let planTimer=null, planMsg='', delArm='';
 const PLAN_KEYS=['profile','pack','placed3','custom','meal2','done','fmarks','wish'];
-function planName(){const pr=CUR.profile;if(pr.kind==='day')return `${PK.pack.city} 하루 코스`;const n=nightsOf(pr);return `${PK.pack.city} ${n}박 ${n+1}일`}
-function planData(){return {profile:clone(CUR.profile),pack:PK.pack,placed:TRIP.slimBlocks(CUR.placed),custom:clone(CUR.custom),fmarks:clone(CUR.fmarks),wish:CUR.wish.slice(),meals:clone(CUR.meals),done:clone(CUR.done)}}
-function planMeta(){const D0=DY.days[0]||{},Dn=DY.days[DY.days.length-1]||{};return {name:'',dates:D0.iso?`${D0.iso.slice(5).replace('-','/')}${DY.days.length>1?'~'+(Dn.iso||'').slice(5).replace('-','/'):''}`:'',blocks:CUR.placed.length,kind:CUR.profile.kind||'trip'}}
+const planName=PLANS.planName, planData=PLANS.planData, planMeta=PLANS.planMeta;   // app/data/plans.ts
 function savePlans(){TRIP.plans.saveList(PL.plans,PL.curPlan);syncSoon()}
 function snapshotCurrent(){
   if(!PL.curPlan) return; let p=PL.plans.find(x=>x.id===PL.curPlan);
   if(!p){p={id:PL.curPlan,name:''};PL.plans.unshift(p)}
   const m=planMeta(); Object.assign(p,{dates:m.dates,blocks:m.blocks,kind:m.kind,updated:Date.now()}); if(!p.custom_name) p.name=planName();
-  TRIP.plans.put(PL.curPlan,planData()); savePlans(); cloudSave(p);
+  TRIP.plans.put(PL.curPlan,planData()); savePlans();
 }
 function touchPlan(){clearTimeout(planTimer);planTimer=setTimeout(()=>{if($('#onb').hidden)snapshotCurrent()},1200)}
-const cloudTimers={};
-function cloudSave(p){if(!rdb||!myId||RS.status!=='on')return;clearTimeout(cloudTimers[p.id]);cloudTimers[p.id]=setTimeout(()=>{
-  try{rdb.doc(`data/users/${myId}/plan_${p.id}`).set({meta:{id:p.id,name:p.name,custom_name:!!p.custom_name,dates:p.dates||'',blocks:p.blocks||0,kind:p.kind||'trip',updated:p.updated||Date.now()},data:TRIP.plans.get(p.id)}).catch(()=>{})}catch(_){}},3000)}
-async function cloudPull(){
-  if(!rdb||!myId) return;
-  try{const snap=await rdb.collection(`data/users/${myId}`).get();let ch=false;
-    snap.docs.forEach(d=>{if(!d.exists||!d.id.startsWith('plan_'))return;const v=d.data()||{},m=v.meta;if(!m||!m.id||!v.data)return;
-      const loc=PL.plans.find(x=>x.id===m.id);
-      if(!loc||(m.updated||0)>(loc.updated||0)){if(m.id===PL.curPlan&&loc)return;TRIP.plans.put(m.id,v.data);if(loc)Object.assign(loc,m);else PL.plans.push(Object.assign({},m));ch=true}});
-    if(ch){PL.plans.sort((a,b)=>(b.updated||0)-(a.updated||0));savePlans();renderPlans()}
-  }catch(_){}
-}
-function cloudDelete(id){if(!rdb||!myId)return;try{rdb.doc(`data/users/${myId}/plan_${id}`).delete().catch(()=>{})}catch(_){}}
 function applyPlanData(d){
   d=d||{}; loadPack(packFrom(d.pack)||blankPack());
   CUR.custom=Array.isArray(d.custom)?d.custom:[]; CUR.custom.forEach(addCustomToData);
@@ -939,44 +923,23 @@ function newPlan(){
   carryTaste(prevP,CUR.profile); applyPlanData({profile:CUR.profile,pack:blankPack()}); tab='timeline'; renderTabs(); openOnb();
 }
 function dupPlan(id){snapshotCurrent();const d=TRIP.plans.get(id),src=PL.plans.find(x=>x.id===id);if(!d||!src)return;
-  const nid='p'+Date.now().toString(36);TRIP.plans.put(nid,d);const p=Object.assign({},src,{id:nid,name:src.name+' (복사본)',custom_name:true,updated:Date.now()});PL.plans.unshift(p);savePlans();cloudSave(p);planMsg='복사본을 만들었어요.';renderPlans()}
+  const nid='p'+Date.now().toString(36);TRIP.plans.put(nid,d);const p=Object.assign({},src,{id:nid,name:src.name+' (복사본)',custom_name:true,updated:Date.now()});PL.plans.unshift(p);savePlans();planMsg='복사본을 만들었어요.';renderPlans()}
 function delPlan(id){if(delArm!==id){delArm=id;renderPlans();return}delArm='';
-  PL.plans=PL.plans.filter(x=>x.id!==id);TRIP.plans.del(id);clearTimeout(cloudTimers[id]);cloudDelete(id);
+  PL.plans=PL.plans.filter(x=>x.id!==id);TRIP.plans.del(id);
   if(id===PL.curPlan){if(PL.plans[0]){PL.curPlan='';openPlan(PL.plans[0].id)}else{PL.curPlan='';newPlan()}}savePlans();renderPlans()}
-function renamePlan(id,name){const p=PL.plans.find(x=>x.id===id);if(!p||!name)return;p.name=name.slice(0,40);p.custom_name=true;p.updated=Date.now();savePlans();cloudSave(p);renderPlans();renderPlanBtn()}
+function renamePlan(id,name){const p=PL.plans.find(x=>x.id===id);if(!p||!name)return;p.name=name.slice(0,40);p.custom_name=true;p.updated=Date.now();savePlans();renderPlans();renderPlanBtn()}
 // sharing
-const CODE_AB='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-async function shareCode(){
-  if(STANDALONE) return shareLink();
-  if(!rdb||RS.status!=='on'){planMsg='공유 코드는 Claude 안에서, 이 페이지를 편집할 수 있는 권한이 있을 때 만들 수 있어요.';renderPlans();return}
-  snapshotCurrent(); const code='JP-'+Array.from({length:5},()=>CODE_AB[Math.floor(Math.random()*CODE_AB.length)]).join('');
-  try{await rdb.doc('shares/'+code).set({name:(PL.plans.find(x=>x.id===PL.curPlan)||{}).name||planName(),by:myId,at:Date.now(),data:planData()});
-    lastCode=code; planMsg=''; renderPlans();
-  }catch(e){planMsg=e&&e.code==='quota_exceeded'?'공유 저장 공간이 가득 찼어요.':'공유 코드를 만들지 못했어요. 잠시 뒤 다시 시도해 주세요.';renderPlans()}
+const shareCode=()=>shareLink();   // a share link (240-share-link.js)
+const lastCode='';
+function openCode(raw){
+  const m=/[#&]s=([A-Za-z0-9_-]+)/.exec(String(raw||''));if(m){location.hash='s='+m[1];openShared();return}
+  planMsg='친구에게 받은 공유 링크를 통째로 붙여 넣어 주세요.';renderPlans();
 }
-let lastCode='';
-async function openCode(raw){
-  if(STANDALONE){const m=/[#&]s=([A-Za-z0-9_-]+)/.exec(String(raw||''));if(m){location.hash='s='+m[1];openShared();return}planMsg='친구에게 받은 공유 링크를 통째로 붙여 넣어 주세요.';renderPlans();return}
-  const code=String(raw||'').trim().toUpperCase().replace(/^JP-?/,'JP-');
-  if(!/^JP-[A-Z0-9]{5}$/.test(code)){planMsg='코드는 JP-로 시작하는 8자리예요. 예: JP-7K2QX';renderPlans();return}
-  if(!rdb){planMsg='공유받은 계획은 Claude 안에서 열 수 있어요.';renderPlans();return}
-  try{const d=await rdb.doc('shares/'+code).get();if(!d.exists){planMsg='이 코드의 계획을 찾지 못했어요.';renderPlans();return}
-    const v=d.data()||{}; snapshotCurrent(); const nid='p'+Date.now().toString(36);
-    TRIP.plans.put(nid,v.data||{}); PL.plans.unshift({id:nid,name:String(v.name||'공유받은 계획').slice(0,30)+' (공유받음)',custom_name:true,updated:Date.now()}); savePlans();
-    PL.curPlan=nid; savePlans(); applyPlanData(v.data||{}); snapshotCurrent(); tab='timeline'; renderTabs(); planMsg='';
-  }catch(e){planMsg='계획을 열지 못했어요. 잠시 뒤 다시 시도해 주세요.';renderPlans()}
-}
-function planText(){
-  const L=[`[JEPI] ${(PL.plans.find(x=>x.id===PL.curPlan)||{}).name||planName()}`];
-  if(CUR.profile.purpose) L.push(`🧭 ${CUR.profile.purpose}`);
-  DY.days.forEach((D,d)=>{L.push('',`📅 ${D.title.replace(/^Day \d+ · /,'')||''} ${D.date} (${WD[D.wd]})`.replace('  ',' '));
-    analyze(d).items.filter(i=>!i.stay).forEach(i=>L.push(`${fmt(i.start)} ${i.name}${i.kind==='place'&&i.area?` · ${i.area}`:''}`))});
-  L.push('','JEPI로 만든 일정이에요.'); return L.join('\n');
-}
+const planText=PLANS.planText;   // 카톡용 글: app/data/plans.ts
 const inClaude=()=>!!(window.claude&&window.claude.use);
-async function downloadText(name,text){
-  if(!inClaude()){try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:name.endsWith('.json')?'application/json':'text/plain'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}catch(_){planMsg='파일을 받지 못했어요.';renderPlans()}return}
-  try{const dl=await window.claude.use('downloads');if(!dl){planMsg='이 화면에서는 파일로 받을 수 없어요. 글을 복사해 주세요.';renderPlans();return}await dl.save({filename:name,data:text})}catch(e){if(!(e&&e.code==='declined')){planMsg='파일을 받지 못했어요.';renderPlans()}}}
+function downloadText(name,text){
+  try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:name.endsWith('.json')?'application/json':'text/plain'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}catch(_){planMsg='파일을 받지 못했어요.';renderPlans()}
+}
 // restore a backup file (.json made by "백업 파일 받기")
 function importBackup(file,after){
   if(!file) return; const rd=new FileReader();
@@ -1011,7 +974,7 @@ function renderPlans(){
   const box=$('#plansBox'); if(!box) return;
   window.JEPI_UI.mount('plans',box,{plans:PL.plans.map(p=>({id:p.id,name:p.name,kind:p.kind,dates:p.dates,blocks:p.blocks,updated:p.updated})),
     curPlan:PL.curPlan,delArm,planMsg,renaming:planRenaming,standalone:!!STANDALONE,lastLink:lastLink||'',lastCode:lastCode||'',shareText:showText?planText():null,
-    savedInAccount:!!(rdb&&RS.status==='on')});
+    savedInAccount:false});
 }
 
 // ================= JEPI standalone: AI keys, model router, routes, map, panels =================
@@ -1909,7 +1872,7 @@ async function askAI(){
 let wipeArm=false;
 function wipeAll(){
   ['profile','pack','placed3','custom','kw','meal2','done','fmarks','wish','coach','dice','jp'].forEach(k=>JD.storage.del('gp.'+k));
-  PL.plans.forEach(p=>{TRIP.plans.del(p.id);cloudDelete(p.id)}); PL.plans=[]; PL.curPlan='p'+Date.now().toString(36); savePlans();
+  PL.plans.forEach(p=>TRIP.plans.del(p.id)); PL.plans=[]; PL.curPlan='p'+Date.now().toString(36); savePlans();
   CUR.custom=[]; CUR.placed=[]; CUR.fmarks={}; CUR.wish=[]; CUR.kws=[]; CUR.meals={}; CUR.done={}; chat=[]; undoSnap=null; aiState=null; selected=null; hVibe=null; wipeArm=false;
   loadPack(blankPack()); savePack();
   CUR.profile=clone(PROFILE_EXAMPLE); Object.assign(CUR.profile,{stays:[{name:'숙소',area:'center',checkin:'15:00',checkout:'11:00',from:0,to:3}],events:[],dest:'',pace:'normal',social:'some',breakfast:true,purpose:'',party:{type:'solo',adults:1,kids:0},flightSet:false,staySet:false,dateSet:false,nightsSet:false,dateUnknown:false,startDate:isoPlus(30)}); CUR.profile.stays[0].name='숙소';

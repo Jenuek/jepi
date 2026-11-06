@@ -27,6 +27,7 @@ import * as check from './check';
 import * as traveler from './traveler';
 import * as asks from './asks';
 import * as demoOsaka from './demo-osaka';
+import * as plans from './plans';
 import * as logic from '../logic';
 import * as trips from './trips';
 import { status, syncDocs, syncSoon, syncPush, syncPull, syncNow, connectSync } from './sync';
@@ -75,6 +76,8 @@ export const data = {
   asks,
   /** the built-in Osaka demo trip */
   demoOsaka,
+  /** one plan as a whole: name, contents, list line, 카톡용 글 */
+  plans,
   /** calculations: time text, distances, the day check (app/logic) */
   logic,
   /** 친구와 함께 on the server */
