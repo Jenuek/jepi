@@ -60,9 +60,8 @@ const DEFAULT=[];
 const PROFILE_EXAMPLE={dest:'도쿄',mode:'flight',local:'transit',startDate:'2026-11-07',nights:3,out:{airport:'hnd',dep:'08:15',arr:'10:20',flight:''},back:{airport:'hnd',dep:'19:30',arr:'22:05',flight:''},home:{area:'',min:60,fare:1550,byMin:120},stays:[{name:'시부야 숙소',area:'shibuya',checkin:'15:00',checkout:'11:00',from:0,to:3}],events:[],purpose:'',pace:'slow',social:'some',breakfast:false};
 const clone=o=>JSON.parse(JSON.stringify(o));
 const apName=k=>(AIRPORTS[k]||AIRPORTS[firstGw()]).name;
-const MAX_N=JD.days.MAX_N;
 // dates, tidying 여행 정보 and making the days with their fixed blocks: app/data/days.ts (the days themselves: DY.days …)
-const nightsOf=JD.days.nightsOf, fixProfile=JD.days.fixProfile, buildDays=JD.days.buildDays;
+const fixProfile=JD.days.fixProfile, buildDays=JD.days.buildDays;
 
 // ---------- forms shared by onboarding and the "내 정보" tab ----------
 // What is typed, 처음 설정's steps, the buttons, saving and reading a pasted booking: app/flow/forms.ts. What it still
@@ -74,9 +73,7 @@ FFLOW.connect({partJP:()=>partJP(),partTalk:p=>partTalk(p),partDest:p=>partDest(
   recommendDest:m=>recommendDest(m),genPack:(d,b)=>genPack(d,b),morePlaces:(n,id,f,sig)=>morePlaces(n,id,f,sig),genSeason:(id,sig)=>genSeason(id,sig),autoSave:()=>autoSave(),
   renderMeRows:()=>renderMeRows(),renderTasteStyle:()=>renderTasteStyle(),meSetMsg:m=>meSetMsg(m),meSetBudgetHint:h=>meSetBudgetHint(h),openHelper:s=>openHelper(s),
   needBooking:()=>needBooking(),maybeCoach:()=>maybeCoach(),onbAdvance:()=>onbAdvance(),demoEnter:()=>demoEnter(),krAir:()=>KR_AIR});
-const pasteBox=FFLOW.pasteBox, datesReady=FFLOW.datesReady, needDates=FFLOW.needDates, isoPlus=FFLOW.isoPlus, ONB=FFLOW.ONB, openOnb=FFLOW.openOnb, onbFrame=FFLOW.onbFrame,
-  onbFrameAct=FFLOW.onbFrameAct, renderOnb=FFLOW.renderOnb, commitProfile=FFLOW.commitProfile, finishOnb=FFLOW.finishOnb, renderMe=FFLOW.renderMe, rerenderForm=FFLOW.rerenderForm,
-  formAct=FFLOW.formAct, onPf=FFLOW.onPf;
+const pasteBox=FFLOW.pasteBox, isoPlus=FFLOW.isoPlus, openOnb=FFLOW.openOnb, onbFrame=FFLOW.onbFrame, onbFrameAct=FFLOW.onbFrameAct, renderOnb=FFLOW.renderOnb, commitProfile=FFLOW.commitProfile, finishOnb=FFLOW.finishOnb, renderMe=FFLOW.renderMe, rerenderForm=FFLOW.rerenderForm, formAct=FFLOW.formAct, onPf=FFLOW.onPf;
 // ---------- blocks the viewer makes by hand ----------
 const addCustomToData=PLC.addCustom;   // app/data/places.ts
 let customLast=null;
@@ -167,7 +164,6 @@ function renderMeta(){if(CUR.profile.kind==='day'){dock({helperHidden:true});her
 
 
 // ---------- destination pack: everything that depends on where the trip goes ----------
-const GENERIC_KW=PLC.GENERIC_KW;   // app/data/places.ts
 // The destination's places and the lists made from them (AREAS, PM …), loading one (loadPack) and checking what the AI
 // sends (cleanPack / cleanPlace) live in app/data/places.ts; the open destination is PK.pack.
 PK.pack=null;
@@ -175,61 +171,12 @@ const wipe=o=>{for(const k of Object.keys(o)) delete o[k]};
 const firstArea=PLC.firstArea, firstGw=PLC.firstGw, nearestArea=PLC.nearestArea, addPackPlace=PLC.addPackPlace, loadPack=PLC.loadPack, savePack=PLC.savePack, packFrom=PLC.packFrom, manualPack=PLC.manualPack, cleanPack=PLC.cleanPack, cleanPlace=PLC.cleanPlace;
 // after a destination is loaded: other travelers' 👍 places of that city (070-shared-recs.js)
 PLC.connectPlaces(pk=>{if(RS.status!=='off'){SHARED_IDS.clear();rebuildShared()}});
-const prog={};
-// Status lines and buttons React drew are updated through a handle (app/ui/live.tsx), others the old way.
-const liveEl=id=>{const e=document.getElementById(id);return e&&window.JEPI_UI.live(e)};
-function progStart(stId,label,btnIds,btnLabel){progStop(stId);const t0=Date.now();const old={};[...new Set(btnIds||[])].forEach(id=>{const b=document.getElementById(id);if(!b)return;const L=window.JEPI_UI.live(b);if(L){old[id]=null;L.label(btnLabel)}else{old[id]=b.textContent;b.textContent=btnLabel}});
-  const tick=()=>{const L=liveEl(stId),e=document.getElementById(stId),t=`${label} · ${Math.round((Date.now()-t0)/1000)}초 지났어요`;if(L){L.busy(true);L.text(t)}else if(e){e.classList.add('busy');e.textContent=t}};
-  tick();const e=document.getElementById(stId);if(e&&e.scrollIntoView)e.scrollIntoView({block:'nearest'});prog[stId]={iv:setInterval(tick,1000),old}}
-function progStop(stId){const p=prog[stId];if(!p)return;clearInterval(p.iv);const L=liveEl(stId),e=document.getElementById(stId);if(L)L.busy(false);else if(e)e.classList.remove('busy');
-  Object.entries(p.old).forEach(([id,t])=>{const b=document.getElementById(id);if(!b)return;const BL=window.JEPI_UI.live(b);if(BL)BL.label(null);else if(t!=null)b.textContent=t});delete prog[stId]}
-const setSt=(id,t)=>{progStop(id);const L=liveEl(id),e=document.getElementById(id);if(L)L.text(t);else if(e)e.textContent=t};
-// what went wrong, in words the person can act on (the app already tried again a few times)
-function errText(e,what){const c=e&&e.code;
-  return c==='not_granted'?'AI 키가 맞지 않아서 할 수 없어요.':c==='rate_limited'?'요청이 많아 잠시 쉬어야 해요. 1분쯤 뒤에 다시 해 주세요.'
-    :c==='timeout'?`${what}. AI가 너무 오래 걸렸어요. 다시 해 주세요.`:c==='busy'?`${what}. AI 서버가 지금 바빠요. 조금 뒤에 다시 해 주세요.`
-    :c==='too_long'?`${what}. 답이 너무 길어 잘렸어요. 조건을 줄여 다시 해 주세요.`:c==='invalid_json'?`${what}. AI 답을 읽지 못했어요. 다시 해 주세요.`
-    :`${what}. 다시 시도해 주세요.`}
-async function genPack(dest,btn){
-  if(!UI.sample){setSt('st_pack','AI가 연결되어 있지 않아요. 더보기 → 설정에서 키를 넣어 주세요.');return false}
-  if(FS.onbBusy) return false; FS.onbBusy=true; setBusy(true);
-  const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),120000);
-  progStart('st_pack',`${dest} 정보를 준비하는 중이에요 (보통 20~40초)`,[btn||'genPack','genPack'],'준비하는 중…');
-  try{
-    const pk=await JD.asks.destination(UI.sample,dest,ctl.signal);   // app/data/asks.ts
-    if(!pk){setSt('st_pack','여행지를 찾지 못했어요. 도시 이름을 조금 더 정확히 적어 주세요.');return false}
-    CUR.custom=[]; TRIP.save('custom',CUR.custom); CUR.placed=[]; save(); undoSnap=null;
-    loadPack(pk); savePack();
-    if(FS.draft){FS.draft.dest=pk.city; FS.draft.stays.forEach(s=>{s.area=firstArea();if(/시부야/.test(s.name))s.name='숙소'}); FS.draft.events.forEach(e=>e.area=firstArea()); FS.draft.out.airport=FS.draft.back.airport=firstGw(); if(pk.intl) FS.draft.mode='flight'}
-    if($('#onb').hidden&&FS.draft&&UI.tab==='me')autoSave();setSt('st_pack',`${pk.city} 준비 완료 · 동네 ${pk.areas.length}곳 · 공항·역 ${pk.gateways.length}곳`); return true;
-  }catch(e){setSt('st_pack',e&&e.code==='cancelled'?'2분 안에 답을 받지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.':errText(e,'여행지를 준비하지 못했어요')+(e&&e.code?` (${e.code})`:''));return false}
-  finally{clearTimeout(to);FS.onbBusy=false; setBusy(false)}
-}
-async function morePlaces(n,stId,focus,signal){
-  if(!UI.sample) return 0;
-  progStart(stId,n>15?(CUR.kws.length?'고른 취향에 맞는 장소 후보를 찾는 중이에요 (보통 1~2분)':`${PK.pack.city}에서 가 볼 만한 곳을 골고루 찾는 중이에요 (보통 1~2분)`):'장소를 찾는 중이에요 (보통 30초~1분)',stId==='moreSt'?['moreBtn']:[],'찾는 중…');
-  try{
-    const ids=await JD.asks.morePlaces(UI.sample,n,focus,signal), added=ids.length;   // app/data/asks.ts
-    FRESH.clear(); ids.forEach(id=>FRESH.add(id)); setSt(stId,added?`새 장소 ${added}곳을 찾았어요. 장소 탭 맨 위 "✨ 방금 찾은 곳"에 모아 뒀어요.`:'이미 있는 곳과 겹쳐서 새로 추가할 장소가 없었어요. 찾는 말을 바꿔 보세요 (예: 현지인 맛집, 조용한 카페).'); return added;
-  }catch(e){setSt(stId,e&&e.code==='cancelled'?'멈췄어요. 장소 블록 탭에서 언제든 다시 찾을 수 있어요.':errText(e,'장소를 찾지 못했어요'));return 0}
-}
-function setBusy(b){onbFrame({nextOff:b,prevOff:b||FS.onbStep===0,skipOff:b,exampleOff:b});['genPack','meSave'].forEach(id=>{const e=document.getElementById(id);if(!e)return;const v=b,L=window.JEPI_UI.live(e);if(L)L.disabled(v);else e.disabled=v})}
-async function onbAdvance(){
-  if(FS.onbBusy) return;
-  if(FS.onbStep===0){
-    if(FS.draft.kind==='day'){if(FS.draft.dateSet===false){setSt('st_dates','날짜를 골라 주세요.');return}}else if(!datesReady(FS.draft)){needDates();return}
-    const dest=String(FS.draft.dest||'').trim();
-    if(!dest){setSt('st_pack','여행지를 먼저 적어 주세요.');return}
-    if(norm(dest)!==norm(PK.pack.city)){
-      if(UI.sample){if(!(await genPack(dest,'onbNext')))return}
-      else{CUR.custom=[];TRIP.save('custom',CUR.custom);CUR.placed=[];save();loadPack(manualPack(dest));savePack();FS.draft.stays.forEach(s=>s.area=firstArea());FS.draft.events.forEach(e=>e.area=firstArea());FS.draft.out.airport=FS.draft.back.airport=firstGw()}
-    }
-  }
-  if(FS.onbStep<ONB.length-1){FS.onbStep++;renderOnb()} else await finishOnb();
-}
-// 여행지 (drawn by React: TripForms.tsx Dest). Not decided yet → the finder (OnbFinder.tsx).
-const partDest=p=>p.destMode==='find'?partFinder(p):FORMS.dest(p,!!UI.sample);   // app/view/forms.ts
-
+// status lines ("…하는 중이에요 · 12초 지났어요"), messages and error words: app/ui/status.ts
+const STATUS=window.JEPI_UI.status, progStart=STATUS.progStart, progStop=STATUS.progStop, setSt=STATUS.setSt, errText=STATUS.errText;
+// getting a destination ready, more places, 처음 설정's 다음, 여행지 찾기, 이야기하면서 정하기: app/flow/destination.ts
+const DEST=window.JEPI_UI.flow.destination;
+DEST.connect({fresh:()=>FRESH,clearUndo:()=>{undoSnap=null},autoSave:()=>autoSave(),standalone:()=>!!STANDALONE,keyHelp:()=>KEY_HELP,inClaude:()=>inClaude()});
+const genPack=DEST.genPack, morePlaces=DEST.morePlaces, setBusy=DEST.setBusy, onbAdvance=DEST.onbAdvance, partDest=DEST.partDest, recommendDest=DEST.recommendDest, talkReset=DEST.talkReset, partJP=DEST.partJP, partTalk=DEST.partTalk, talkSend=DEST.talkSend;
 // ---------- demo trip: a generic first-timer's Osaka, 3 nights / 4 days ----------
 // Used only by "데모 둘러보기" (see 381-welcome-demo.js). No personal taste in here on purpose.
 // hours: [open, close] in minutes from midnight · closed: weekdays (0 = Sunday) · cost: [yen per person, note]
@@ -389,89 +336,12 @@ function seasonInfo(){
     stale,canAsk:!!(UI.sample&&!PK.pack.manual)};
 }
 
-// ---------- destination finder: for travelers who have not picked a place yet ----------
-// drawn by React: app/screens/OnbFinder.tsx
-function partFinder(p){
-  return {f:'finder',ai:!!UI.sample,party:p.party.type,reach:p.reach,budget:p.budget,budgetMan:p.budgetMan||'',nights:nightsOf(p),
-    chips:[...new Set([...GENERIC_KW,...CUR.kws])].map(k=>({k,on:CUR.kws.some(x=>norm(x)===norm(k))})),
-    styleRows:STYLE_ROWS,style:clone(p.style||{}),styleOpen:FS.styleOpen,want:p.want||'',recs:FS.destRecs?clone(FS.destRecs):null,asked:clone(FS.destAsked)};
-}
-async function recommendDest(mode){
-  if(!UI.sample||FS.destBusy) return; FS.destBusy=true; mode=mode||{};
-  const prev=(FS.destRecs||[]).map(d=>d.city);
-  const want=(($('#destWant')||{}).value||'').trim(); FS.draft.want=want; if(want&&!FS.draft.purpose) FS.draft.purpose=want.slice(0,80);
-  const stId=mode.ask?'st_ask':mode.more?'st_more':'st_dest';
-  progStart(stId,mode.ask?`${mode.ask}이(가) 맞는지 살펴보는 중이에요 (보통 15~30초)`:'이 조건에 맞는 여행지를 고르는 중이에요 (보통 20~40초)',['destRecBtn','destMoreBtn','destAskBtn'],'고르는 중…');
-  const q=fixProfile(FS.draft);
-  try{
-    const got=await JD.asks.destinations(UI.sample,q,mode,prev,want);   // the question and tidying the answer: app/data/asks.ts
-    if(mode.ask) FS.destAsked=[...got.slice(0,1),...FS.destAsked.filter(d=>!got.some(g=>g.city===d.city))].slice(0,3);
-    else FS.destRecs=mode.more?[...(FS.destRecs||[]),...got.filter(g=>!prev.includes(g.city))].slice(0,15):got;
-    progStop(stId); TRIP.kws.save(CUR.kws); rerenderForm();
-    if(mode.ask){setSt('st_ask',got.length?'아래에 정리했어요.':'정보를 찾지 못했어요. 이름을 조금 더 정확히 적어 주세요.');const c=document.getElementById('asked-0');if(c)c.scrollIntoView({block:'nearest'})}
-    else setSt(stId,(FS.destRecs||[]).length?(mode.more?'아래에 더 추가했어요.':'아래에서 마음에 드는 곳을 골라 주세요.'):'추천을 받지 못했어요. 조건을 바꿔 다시 해 보세요.');
-  }catch(e){setSt(stId,errText(e,'추천을 받지 못했어요'))} finally{FS.destBusy=false}
-}
-
 // ---------- optional travel style (every item defaults to "doesn't matter") ----------
 const STYLE_ROWS=JD.days.STYLE_ROWS;   // app/data/days.ts
 
 // ---------- optional money budget (per person, in 만원) ----------
 const budgetParts=TV.budgetParts;   // app/data/traveler.ts
 const roomCap=TV.roomCap;   // app/data/traveler.ts
-
-// ---------- finding the trip's direction through a short conversation (only the summary is kept) ----------
-const TALK_MAX=5;
-const TALK_OPEN={q:'요즘 어떤 마음이 들어서 여행을 떠올리게 됐어요? 막연해도 괜찮아요.',o:['그냥 답답해서 벗어나고 싶어요','지쳐서 푹 쉬고 싶어요','새로운 자극이 필요해요','생각을 정리하고 싶어요']};
-function talkReset(){FS.talk={msgs:[{role:'a',text:TALK_OPEN.q}],options:TALK_OPEN.o.slice(),n:0,busy:false,summary:null}}
-function partJP(){return {f:'jp',keyBox:!!(STANDALONE&&!UI.sample),keyHelpHTML:KEY_HELP.anthropic,importBox:!inClaude()}}
-// drawn by React: app/screens/OnbTalk.tsx
-function partTalk(p){
-  if(!FS.talk) talkReset();
-  const t=FS.talk, S=t.summary, last=[...t.msgs].reverse().find(m=>m.role==='a'), hist=[];
-  const ok=t.msgs.filter(m=>!m.err);for(let k=0;k<ok.length;k++){const m=ok[k];if(m.role==='u')hist.push([ok[k-1]?ok[k-1].text:'',m.text])}
-  const d=p.direction||{};
-  return {f:'talk',n:t.n,max:TALK_MAX,hist,last:last?last.text:'',busy:!!t.busy,options:t.options.slice(),failed:!!t.failed,
-    done:S?{note:S.note||p.purpose||'',purpose:p.purpose??'',chips:[...new Set([...S.keywords,...CUR.kws])].map(k=>({k,on:CUR.kws.some(x=>norm(x)===norm(k))})),
-      pace:p.pace,solo:p.party.type==='solo',social:p.social,avoid:d.avoid||'',applyLabel:S.dest?`${S.dest}(으)로 이어 가기`:'이 방향으로 여행지 찾으러 가기'}:null};
-}
-async function talkSend(text,opt){
-  opt=opt||{};
-  if(!UI.sample||!FS.talk||FS.talk.busy) return;
-  if(opt.retry){ if(FS.talk.failed&&FS.talk.msgs.length&&FS.talk.msgs[FS.talk.msgs.length-1].err) FS.talk.msgs.pop(); text=FS.talk.lastText; }
-  if(!text) return;
-  const finish=text==='__finish__';
-  if(!opt.retry&&!finish){FS.talk.msgs.push({role:'u',text:String(text).slice(0,300)}); FS.talk.n++;}
-  FS.talk.lastText=text; FS.talk.failed=null; FS.talk.options=[]; FS.talk.busy=true; rerenderForm(); scrollTalk();
-  const force=FS.talk.n>=TALK_MAX||finish;
-  const dates=datesReady(FS.draft)?(FS.draft.dateUnknown?`Dates: not fixed (roughly a month from now), ${nightsOf(FS.draft)} nights.`:`Dates: from ${FS.draft.startDate}, ${nightsOf(FS.draft)} nights.`):'Dates and trip length: not decided yet. Do not assume any; ask about timing and length in the practical question if the user has not said.';
-  let r=null;
-  try{ r=await JD.asks.talkTurn(UI.sample,FS.draft,FS.talk.msgs,dates,force); }   // the question (and rescuing a broken answer): app/data/asks.ts
-  catch(e){
-    if(!r){
-      FS.talk.busy=false; FS.talk.failed={code:e&&e.code};
-      const msg={not_granted:'AI 키가 맞지 않아서 이어 갈 수 없어요. "건너뛰고 직접 고를게요"를 눌러 주세요.',rate_limited:'지금 요청이 많아요. 1분쯤 뒤에 "다시 시도하기"를 눌러 주세요.',refused:'이 내용으로는 이어 가기 어려워요. 표현을 조금 바꿔서 다시 적어 주세요.',session_expired:'로그인이 만료됐어요. 다시 로그인한 뒤 시도해 주세요.'}[e&&e.code]||'답을 정리하다가 끊겼어요. "다시 시도하기"를 눌러 주세요.';
-      FS.talk.msgs.push({role:'a',text:msg,err:true}); rerenderForm(); scrollTalk(); return;
-    }
-  }
-  FS.talk.busy=false;
-  FS.talk.msgs.push({role:'a',text:String((r&&r.reply)||'좋아요, 조금 더 들려주세요.').slice(0,400)});
-  FS.talk.options=(Array.isArray(r&&r.options)?r.options:[]).map(x=>String(x).slice(0,40)).slice(0,4);
-  if(r&&r.done&&r.summary&&typeof r.summary==='object'){const S=r.summary;
-    FS.talk.summary={purpose:String(S.purpose||'').slice(0,80),keywords:(Array.isArray(S.keywords)?S.keywords:[]).map(x=>String(x).slice(0,16)).slice(0,6),note:String(S.note||'').slice(0,160),dest:String(S.dest||'').slice(0,30)};
-    if(FS.talk.summary.purpose) FS.draft.purpose=FS.talk.summary.purpose;
-    if(['slow','normal','full'].includes(S.pace)) FS.draft.pace=S.pace;
-    if(['alone','some','social'].includes(S.social)) FS.draft.social=S.social;
-    if(['solo','couple','friends','family'].includes(S.party)) FS.draft.party.type=S.party;
-    if(['domestic','near','far'].includes(S.reach)) FS.draft.reach=S.reach;
-    if(Number.isInteger(+S.nights)&&+S.nights>=1&&+S.nights<=MAX_N&&S.nights!==null){FS.draft.nights=+S.nights;FS.draft.nightsSet=true}
-    if(/^\d{4}-\d{2}-\d{2}$/.test(String(S.startDate||''))&&String(S.startDate)>=isoPlus(0)){FS.draft.startDate=S.startDate;FS.draft.dateSet=true;FS.draft.dateUnknown=false}
-    FS.draft.direction={purpose:FS.talk.summary.purpose,avoid:String(S.avoid||'').slice(0,80),note:FS.talk.summary.note};
-    TRIP.keywords.addAll(FS.talk.summary.keywords);
-  }
-  rerenderForm(); scrollTalk();
-}
-function scrollTalk(){const c=document.querySelector('.talk2');if(c)c.scrollIntoView({block:'start'});const q=document.getElementById('talkInput');if(q&&!(FS.talk&&FS.talk.busy)&&matchMedia('(min-width:700px)').matches)q.focus({preventScroll:true})}
 
 // ---------- named lodging candidates and route advice (AI knowledge, verify prices via links) ----------
 let hotelRecs={}, routeInfo=null, hrBusy=false;

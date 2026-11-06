@@ -1936,5 +1936,21 @@ module.exports = [
       ok(q.errs.length === 0, 'no page errors ' + q.errs.join(' | '));
       await q.ctx.close();
     }
+  },
+  {
+    name: 'status lines (app/ui/status.ts) and the destination flow (app/flow/destination.ts): counting seconds, a message, error words, talk starts',
+    async run({ b, S, device, ok }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.waitForTimeout(300);
+      await p.evaluate(() => window.JEPI_UI.status.progStart('st_onb', '테스트 중이에요', [], '')); await p.waitForTimeout(1200);
+      const busy = await p.textContent('#st_onb');
+      await p.evaluate(() => window.JEPI_UI.status.setSt('st_onb', '끝났어요')); await p.waitForTimeout(100);
+      const r = await p.evaluate(() => ({ done: document.getElementById('st_onb').textContent, err: window.JEPI_UI.status.errText({ code: 'rate_limited' }, 'x'), other: window.JEPI_UI.status.errText({}, '못 했어요') }));
+      ok(/테스트 중이에요 · \d+초 지났어요/.test(busy) && r.done === '끝났어요', 'counting seconds, then a message: ' + busy);
+      ok(r.err.includes('1분쯤 뒤') && r.other === '못 했어요. 다시 시도해 주세요.', 'error words');
+      const t = await p.evaluate(() => { const D = window.JEPI_UI.flow.destination; D.talkReset(); return window.JEPI_UI.flow.forms.fs.talk });
+      ok(t && t.msgs.length === 1 && t.options.length === 4 && t.n === 0, 'a talk starts with one question and four answers to pick');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];

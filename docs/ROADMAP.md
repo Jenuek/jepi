@@ -75,6 +75,7 @@
   - [x] 예전 코드 정리 5: 🎲·P모드 흐름(굴리기·뭐 먹지·뭐 하지·코스 짜기·이걸로·P모드 보드 주사위와 카드)과 굴린 값(`st`)을 `app/flow/dice.ts`로 옮김. 예전 코드에는 📌 코스 저장(새 계획 만들기, 계획 묶음에서)과 집 출발 칸만 남았어요.
   - [x] 예전 코드 정리 6: 폼이 고치는 값(draft·처음 설정 단계·붙여 넣기 메시지·AI 대화·여행지 추천·열린 줄…)을 `app/flow/forms.ts`의 `fs`로 옮기고(예전 코드는 `FS.draft` …, 323곳), `030-forms.js` 전부(입력·버튼 formAct·처음 설정 단계·저장·예약 붙여 넣기)를 같은 파일로 옮김.
     - 배운 것: 이름 바꾸기를 글자 맞추기로 하면 문자열 속 같은 글자('P', 'quickStart')까지 바뀌어요. 이제 코드 구조를 읽는 도구(이름만 바꿈)로 바꾸고, 옮긴 뒤 **원래 파일과 새 파일의 문자열 목록을 비교**해요. 비교 시나리오가 이걸 잡아서 올리기 전에 고쳤어요.
+  - [x] 예전 코드 정리 7: 여행지 준비(genPack)·장소 더 찾기(morePlaces)·처음 설정의 다음(onbAdvance)·여행지 찾기·이야기하면서 정하기를 `app/flow/destination.ts`로, 안내 줄(progStart·progStop·setSt)과 오류 문구(errText)를 `app/ui/status.ts`로 옮김. `120`·`140` 파일은 지움. 옮기기는 이제 `port.py`(이름만 바꾸고 문자열 목록 비교)로 해요.
   - [ ] 예전 코드 정리 — 남은 `src/js`(약 184KB)를 하는 일별로 묶어 차례로 `app/flow/*.ts`로 옮겨요. 각 묶음은 화면 그리기(render*) → 버튼 흐름(*Act) 순서로.
     1. 일정표 그리기·고치기: `340-render.js`(renderAll·renderTimeline·renderTray…), `350-actions.js`, `380-events.js`(blockAct·gridAct·dropped…), `382-tidy.js`, `389-titles.js`, `389b-memo.js`
     2. 🎲·P모드 흐름: `160`·`170`·`280`·`290`(굴리기·코스 짜기·저장)

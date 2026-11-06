@@ -116,6 +116,8 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 | 일정표에서 누른 것 (블록 시트·빈 시간·날짜 버튼·끌어 놓기·준비하기·AI 상자·키워드), 하루 요약 칩, 날짜 제목, 손글씨 메모 | `app/flow/schedule.ts` |
 | 🎲 시트와 P모드 보드에서 일어나는 일 (굴리기·주변 찾기·코스 짜기·이걸로) | `app/flow/dice.ts` (보이는 값은 `app/view/dice.ts`·`pview.ts`) |
 | 처음 설정·이번 여행·취향 폼에서 일어나는 일 (입력·버튼·단계·저장·예약 붙여 넣기)과 폼이 고치는 값 | `app/flow/forms.ts` (예전 코드는 `FS.draft` …) |
+| 여행지 준비·장소 더 찾기·여행지 추천·이야기하면서 정하기 | `app/flow/destination.ts` |
+| 안내 줄 (…하는 중이에요 · N초), 메시지, 오류 문구 | `app/ui/status.ts` |
 | 화면에 보일 값 만들기 (일정표·장소 탭·블록 시트·예약 도우미·이번 여행 칸·🎲·P모드 보드) | `app/view/day.ts`·`tray.ts`·`sheet.ts`·`helper.ts`·`forms.ts`·`dice.ts`·`pview.ts` (예전 코드는 `JEPI_UI.view`) |
 | 데모(오사카 3박 4일) 데이터 | `app/data/demo-osaka.ts` |
 | 여행지 장소 목록(지역·장소·비용·태그), 여행지 열기, AI 답 확인 | `app/data/places.ts` (도쿄 예시 데이터 `app/data/tokyo.ts`) |
@@ -128,8 +130,8 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 | 알림 (일정별 🔔, 서버로 예약) | 화면 `app/screens/NotifyPanel.tsx` (리액트), 서버·기기·설정 `app/data/alerts.ts`, 언제 알릴지 `app/logic/alerts.ts`, 일정 쪽 연결 `386-notify.js`, 서버 `supabase/functions/jepi-push` |
 | 더보기 메뉴 / 설정 / 사용 안내 | `app/screens/MoreMenu.tsx` (리액트, 숫자는 `220-more-menu.js`) / `app/screens/SettingsScreen.tsx`+`SyncSection`·`MyPlacesSection`·`AiKeysSection` (리액트, 값과 동작은 `230-settings.js`·`310-sync.js`·`270-my-places.js`·`250-phase-strip.js`) / `app/screens/HelpPanel.tsx` (리액트) |
 | 더보기 → 이번 여행 (줄 목록과 입력 폼) | 줄 `app/screens/MeRows.tsx`, 폼 `app/screens/TripForms.tsx` (리액트: 누구와·예약 상태·기간·오가는 길·출발지·숙소·예약한 일정·예산). 폼에 넣을 값은 `030-forms.js`·`130-style-budget.js`의 `part…`, 줄 목록은 `220-more-menu.js`. 여행지·하루 코스 폼도 리액트 |
-| 처음 설정 (#onb 안의 본문) | 화면 `app/screens/OnbBody.tsx`·`OnbTalk.tsx`(이야기하며 정하기, 대화는 `140-direction-chat.js`)·`OnbFinder.tsx`(여행지 추천, AI는 `120-destination-finder.js`) (리액트), 넣을 값 `030-forms.js`의 ONB·`partQuick`·`partJP`, 틀은 `body.html` |
-| 예전 코드가 바꾸는 안내 줄·버튼 (준비하는 중…) | `app/ui/live.tsx` (LiveLine·LiveButton·LiveChip), 예전 쪽 도우미 `060-destination-pack.js`의 setSt·progStart·progStop·setBusy |
+| 처음 설정 (#onb 안의 본문) | 화면 `app/screens/OnbBody.tsx`·`OnbTalk.tsx`(이야기하며 정하기)·`OnbFinder.tsx`(여행지 추천) (리액트), 단계·버튼 `app/flow/forms.ts`(ONB), 여행지 준비·추천·대화 `app/flow/destination.ts`, 가볍게 시작 값 `app/view/pview.ts`, 틀은 `body.html` |
+| 예전 코드가 바꾸는 안내 줄·버튼 (준비하는 중…) | `app/ui/live.tsx` (LiveLine·LiveButton·LiveChip), 예전 쪽 도우미 `app/ui/status.ts`의 setSt·progStart·progStop, setBusy는 `app/flow/destination.ts` |
 | 취향 탭 → 어떤 여행을 원하나요 (속도·아침·여행 스타일 더) | 화면 `app/screens/TasteStyle.tsx` (리액트), 값은 `220-more-menu.js`의 `renderTasteStyle`, 스타일 항목 `130-style-budget.js`(STYLE_ROWS) |
 
 ### 서버 (Supabase)
