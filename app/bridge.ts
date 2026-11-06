@@ -39,6 +39,7 @@ import { Hero, type HeroProps } from './screens/Hero';
 import { HelperFrame, Coach, Banner, OnbFrame, type HelperFrameProps, type CoachProps, type BannerProps, type OnbFrameProps } from './screens/Frames';
 import { connectHost, type AppHost } from './ui/host';
 import * as map from './ui/map';
+import * as drag from './ui/drag';
 import { liveOf, type LiveHandle } from './ui/live';
 
 // Every screen React owns, with the props the old code must pass.
@@ -150,6 +151,8 @@ export interface JepiUI {
   connectHost(h: AppHost): void;
   /** the 지도 tab (Leaflet): app/ui/map.ts */
   map: typeof map;
+  /** drag & drop onto the 일정표: app/ui/drag.ts */
+  drag: typeof drag;
 }
 
 declare global {
@@ -166,6 +169,7 @@ export function installBridge(): void {
     live: liveOf,
     connectHost,
     map,
+    drag,
     mount(name, el, props) {
       let cur = roots.get(el);
       if (!cur || cur.host.parentNode !== el || cur.name !== name) {

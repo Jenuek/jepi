@@ -1,11 +1,11 @@
 // 일정표 본체 (#grid): 시간 줄과 빈칸, 이동 칩, 블록, 같은 권역 띠, 일몰 선. It used to be renderTimeline's HTML (340-render.js).
 // The old code works out every position (px) and text; this draws them and is redrawn fresh (rev) like before.
-// Taps tell the old code through app().grid; drag & drop is still read by the old code (the slot under a dragged card
-// is marked through LiveSlot).
+// Taps tell the old code through app().grid; a block starts its own drag (app/ui/drag.ts marks the slot under it).
 // What other features add to a block (BLOCK_BADGES: 🔔, 👍) is drawn by Extras.tsx.
 import { Fragment, type CSSProperties } from 'react';
 import { LiveSlot } from '../ui/live';
 import { app } from '../ui/host';
+import * as drag from '../ui/drag';
 import { Extras, type Extra } from './Extras';
 
 export interface GridBlock {
@@ -24,7 +24,7 @@ export interface DayGridProps {
 
 function Block({ b }: { b: GridBlock }) {
   return (
-    <button className={b.cls} style={{ top: `${b.top}px`, height: `${b.h}px`, '--cc': b.cc } as CSSProperties} data-uid={b.uid} onClick={() => app().grid('blk', b.uid)} title={b.full} aria-label={b.full} draggable={b.drag ? 'true' : undefined}>
+    <button className={b.cls} style={{ top: `${b.top}px`, height: `${b.h}px`, '--cc': b.cc } as CSSProperties} data-uid={b.uid} onClick={() => app().grid('blk', b.uid)} title={b.full} aria-label={b.full} draggable={b.drag ? 'true' : undefined} onDragStart={b.drag ? e => drag.start(e, { type: 'move', uid: b.uid }) : undefined}>
       <span className="bt">{b.time}</span>
       <span className="bn">{b.bang && <span className="bang" aria-hidden="true">!</span>}<Extras xs={b.badges} />{b.marks && <span className="mks">{b.marks}</span>}{b.marks ? ' ' + b.name : b.name}</span>
       {b.memo && <span className="bmemo hand">{b.memo}</span>}

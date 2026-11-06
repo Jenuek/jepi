@@ -127,24 +127,11 @@ function placeAct(n,v){
   }
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('#sheetBg').hidden)closeSheet();else if(selected){selected=null;renderAll()}}});
-// drag & drop (desktop)
-let drag=null;
-document.addEventListener('dragstart',e=>{
-  const c=e.target.closest('.card'); const b=e.target.closest('.blk');
-  if(c){drag={type:'new',id:c.dataset.id}} else if(b&&b.dataset.uid){drag={type:'move',uid:b.dataset.uid}} else return;
-  try{e.dataTransfer.setData('text/plain','x');e.dataTransfer.effectAllowed='move'}catch(_){}
-});
-// the slot under a dragged card (React draws the slots: marked through a handle)
-const dropMark=(el,on)=>{const L=window.JEPI_UI.live(el);if(L)L.cls('drop',on);else el.classList.toggle('drop',on)};
-document.addEventListener('dragend',()=>{drag=null;document.querySelectorAll('.slot.drop').forEach(s=>dropMark(s,false))});
-const gridEl=$('#grid');
-gridEl.addEventListener('dragover',e=>{if(!drag)return;e.preventDefault();
-  const s=document.elementsFromPoint(e.clientX,e.clientY).find(el=>el.classList&&el.classList.contains('slot'));
-  document.querySelectorAll('.slot.drop').forEach(x=>{if(x!==s)dropMark(x,false)}); if(s&&!s.classList.contains('drop')) dropMark(s,true)});
-gridEl.addEventListener('drop',e=>{if(!drag)return;e.preventDefault();
-  const H=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hour'))||60;
-  const r=gridEl.getBoundingClientRect(); const m=dayStart(day)+Math.floor(((e.clientY-r.top)/H*60)/30)*30;
-  if(drag.type==='new') place(drag.id,m); else {const b=CUR.placed.find(x=>x.uid===drag.uid); if(b){b.start=Math.max(dayStart(day),Math.min(1410,m));save()}}
-  drag=null; selected=null; renderAll()});
+// drag & drop (desktop): app/ui/drag.ts marks the slot and works out the time; putting the card / block there is here
+window.JEPI_UI.drag.connectGrid($('#grid'));
+function dropped(kind,id,m){
+  if(kind==='new') place(id,m); else if(TRIP.blocks.find(id)) TRIP.blocks.change(id,{start:Math.max(dayStart(day),Math.min(1410,m))});
+  selected=null; renderAll();
+}
 matchMedia('(min-width:900px)').addEventListener?.('change',renderTabs);
 

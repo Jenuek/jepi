@@ -925,6 +925,13 @@ module.exports = [
       await fire('dragend', '#grid', 0, 0);
       ok(JSON.stringify(await startOf()) !== JSON.stringify(before) && (await startOf()).includes(1290), 'drop moves the block to that time');
       ok(await p.$$eval('#grid .slot.drop', e => e.length) === 0, 'the highlight clears');
+      // a place card from the 장소 탭 (on a wide screen both are visible): dropped on the 일정표, it becomes a block there
+      await p.setViewportSize({ width: 1280, height: 900 }); await p.waitForTimeout(300);
+      const card = await p.getAttribute('#cards .card >> nth=0', 'data-id'), n1 = (await startOf()).length;
+      const box2 = await p.$eval('#grid .slot[data-t="1320"]', el => { el.scrollIntoView({ block: 'center' }); const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 } });
+      await fire('dragstart', `#cards .card[data-id="${card}"]`, 0, 0); await fire('dragover', '#grid', box2.x, box2.y); await fire('drop', '#grid', box2.x, box2.y); await p.waitForTimeout(300); await fire('dragend', '#grid', 0, 0);
+      ok((await startOf()).length === n1 + 1 && (await startOf()).includes(1320), 'a dragged place card is put in at that time');
+      await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(300);
       await p.click('#grid .blk:not(.fixed) >> nth=0'); await p.waitForTimeout(300);
       await p.fill('#bmIn', '사진!'); await p.click('#bmSave'); await p.waitForTimeout(300); await p.keyboard.press('Escape'); await p.waitForTimeout(300);
       ok((await p.textContent('#grid')).includes('사진!') && await vis(p, '#grid .bmemo'), 'a handwritten memo shows on the block');
