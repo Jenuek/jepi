@@ -30,6 +30,7 @@ import { ChatLog, Nudges, type ChatLogProps, type NudgesProps } from './screens/
 import { Welcome, type WelcomeProps } from './screens/Welcome';
 import { PlanMenu, type PlanMenuProps } from './screens/PlanMenu';
 import { Phase, type PhaseProps } from './screens/Phase';
+import { WxBar } from './screens/Weather';
 import { Notebook, type NotebookProps } from './screens/Notebook';
 import { DayTitleForm, type DayTitleFormProps } from './screens/DayTitleForm';
 import { Dock, type DockProps } from './screens/Dock';
@@ -77,6 +78,7 @@ export interface Screens {
   welcome: WelcomeProps;
   planMenu: PlanMenuProps;
   phase: PhaseProps;
+  wxBar: { iso: string };
   notebook: NotebookProps;
   dayTitle: DayTitleFormProps;
   helperFrame: HelperFrameProps;
@@ -127,6 +129,7 @@ const SCREENS: { [K in keyof Screens]: ComponentType<Screens[K]> } = {
   welcome: Welcome,
   planMenu: PlanMenu,
   phase: Phase,
+  wxBar: WxBar,
   notebook: Notebook,
   dayTitle: DayTitleForm,
   helperFrame: HelperFrame,

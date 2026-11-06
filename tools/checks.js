@@ -1757,5 +1757,73 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  }  ,
+  {
+    name: '날씨: 먼 여행은 평년 · 가까우면 예보 · 눌러서 펼침 · 비 오는 날 표시 · 준비하기 우산',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const range = (a, z) => { const o = [], d = new Date(a + 'T00:00:00'), e = new Date(z + 'T00:00:00'); for (; d <= e; d.setDate(d.getDate() + 1)) o.push(iso(d)); return o };
+      const calls = { forecast: 0, archive: 0, urls: [] };
+      const p = await device(b, S);
+      await p.route(/open-meteo\.com/, r => {
+        const u = new URL(r.request().url()), days = range(u.searchParams.get('start_date'), u.searchParams.get('end_date')); calls.urls.push(r.request().url());
+        const j = body => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+        if (u.hostname.startsWith('archive')) {
+          calls.archive++;   // every year: the 3rd day was rainy
+          return j({ daily: { time: days, weather_code: days.map((_, i) => i === 2 ? 63 : 3), temperature_2m_max: days.map(() => 14), temperature_2m_min: days.map(() => 7), precipitation_sum: days.map((_, i) => i === 2 ? 4 : 0) } });
+        }
+        calls.forecast++;
+        const hours = days.flatMap(d => Array.from({ length: 24 }, (_, h) => `${d}T${String(h).padStart(2, '0')}:00`));
+        return j({ daily: { time: days, weather_code: days.map((_, i) => i === 2 ? 63 : 1), temperature_2m_max: days.map(() => 15), temperature_2m_min: days.map(() => 8), apparent_temperature_max: days.map(() => 13), apparent_temperature_min: days.map(() => 7), precipitation_probability_max: days.map((_, i) => i === 2 ? 80 : 10) },
+          hourly: { time: hours, weather_code: hours.map(() => 1), temperature_2m: hours.map(() => 12), precipitation_probability: hours.map(() => 10) } });
+      });
+      await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(900);
+      // 1) the demo trip starts in 3 weeks: no forecast yet, so "평년" (average of the last 3 years)
+      ok(await p.$$eval('.day-btn .wx-chip.normal', e => e.length) === 4, 'every day button shows an icon and the temperature, dimmed as 평년 (' + await p.$$eval('.day-btn .wx-chip', e => e.length) + ')');
+      ok(calls.archive === 3 && calls.forecast === 0, 'far trip: 3 years of past days asked, no forecast (' + calls.archive + '/' + calls.forecast + ')');
+      ok(calls.urls.every(u => /latitude=3[34]\.\d+&longitude=135\.\d+/.test(u) && !/home|address|name/i.test(u)), 'only the destination coordinates and dates are sent');
+      ok(await vis(p, '#wxBar .wx-head') && (await p.textContent('#wxBar .wx-main')).includes('14° / 7°') && (await p.textContent('#wxBar .wx-tag')) === '평년', 'the open day shows one short line: temperature and the 평년 tag');
+      ok(await p.getAttribute('#wxToggle', 'aria-expanded') === 'false' && !(await vis(p, '#wxDetail')), 'collapsed by default');
+      await p.click('#wxToggle'); await p.waitForTimeout(150);
+      ok(await p.getAttribute('#wxToggle', 'aria-expanded') === 'true' && (await p.textContent('#wxDetail')).includes('지난 3년') && !(await vis(p, '#wxDetail .wx-hours')), 'tapping opens the details (평년 has no hourly part)');
+      await p.click('#wxToggle'); await p.waitForTimeout(150);
+      ok(!(await vis(p, '#wxDetail')), 'tapping again closes it');
+      await p.click('#wxToggle'); await p.waitForTimeout(100); await p.click('.day-btn[data-day="1"]'); await p.waitForTimeout(250);
+      ok(await p.getAttribute('#wxToggle', 'aria-expanded') === 'false', 'another day starts collapsed again');
+      await p.click('.day-btn[data-day="2"]'); await p.waitForTimeout(250);
+      ok((await p.textContent('#wxBar .wx-rain')).includes('비 온 해 3/3') && await p.$eval('.day-btn[data-day="2"] .wx-chip', e => e.classList.contains('rainy')), 'a day with rain in every past year: shown in blue, even when collapsed');
+      // 2) the trip comes closer (browser date moves 12 days on): the real forecast replaces the average
+      await p.clock.setFixedTime(new Date(Date.now() + 12 * 86400e3)); await p.click('.day-btn[data-day="0"]'); await p.waitForTimeout(900);
+      ok(calls.forecast === 1 && await p.$$eval('.day-btn .wx-chip.normal', e => e.length) === 0 && await p.$$eval('.day-btn .wx-chip', e => e.length) === 4, 'within 16 days: forecast asked once, chips are no longer dimmed');
+      await p.click('.day-btn[data-day="2"]'); await p.waitForTimeout(250);
+      ok((await p.textContent('#wxBar .wx-rain')) === '비 80%' && !(await vis(p, '#wxDetail')), 'rain chance shows on the collapsed line');
+      await p.click('#wxToggle'); await p.waitForTimeout(150);
+      ok(await p.$$eval('#wxDetail .wx-hours span', e => e.length) === 5 && (await p.textContent('#wxDetail')).includes('80%') && (await p.textContent('#wxDetail')).includes('체감'), 'opened: 5 times of day, rain chance and feels-like');
+      // 3) 준비하기: umbrella for the rainy day; ticking it is remembered like any other item
+      await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="check"]'); await p.waitForTimeout(300);
+      ok(await vis(p, '#wxChecks') && (await p.textContent('#wxChecks')).includes('접이식 우산'), '준비하기 has a 날씨 part with an umbrella for the rainy day');
+      await p.check('#wxChecks [data-ck="wx_umbrella"]'); await p.waitForTimeout(250);
+      ok(await p.evaluate(() => JSON.parse(localStorage.getItem('gp.done')).wx_umbrella === true) && await p.isChecked('#wxChecks [data-ck="wx_umbrella"]'), 'the tick is saved and stays');
+      // 4) saved on the device: opened again, no new request needed
+      const before = calls.forecast + calls.archive;
+      ok(await p.evaluate(() => { const s = JSON.parse(localStorage.getItem('gp.wx')); return !!s && Object.keys(s.by).length === 4 }), 'weather is kept on the device');
+      await p.click('.tabs [data-tab="timeline"]'); await p.waitForTimeout(300);
+      ok(calls.forecast + calls.archive === before, 'no new request while the saved weather is fresh');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: '날씨: 받지 못해도 일정표는 그대로 (날씨 줄만 없음)',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S);   // open-meteo is answered 503 by default
+      await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(900);
+      ok(await p.$$eval('#days .day-btn', e => e.length) === 4 && await p.$$eval('.day-btn .wx-chip', e => e.length) === 0 && !(await vis(p, '#wxBar .wx-head')), 'no weather: day buttons as before, no weather line');
+      ok(await p.$$eval('#grid .blk', e => e.length) >= 4, 'the schedule still shows');
+      await p.click('.tabs [data-tab="more"]'); await p.click('#moreBox [data-tab="check"]'); await p.waitForTimeout(300);
+      ok(!(await vis(p, '#wxChecks')), '준비하기 has no empty 날씨 part');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];

@@ -1952,7 +1952,9 @@ const analyze=CK.analyze, gapsOf=CK.gapsOf;
 // The day buttons, the budget and the route line are drawn by React: app/screens/DayTop.tsx
 function renderDays(){
   window.JEPI_UI.mount('days',$('#days'),{days:DY.days.map((D,i)=>{const n=analyze(i).items.reduce((a,it)=>a+it.warns.length,0);
-    return {date:`${D.date} ${WD[D.wd]}`,label:`Day ${i+1}${n?` · 경고 ${n}`:''}`,on:i===day}})});
+    return {date:`${D.date} ${WD[D.wd]}`,label:`Day ${i+1}${n?` · 경고 ${n}`:''}`,on:i===day,iso:D.iso}})});
+  // 날씨: 값은 app/data/weather.ts가 받아 와서 화면(Weather.tsx)이 스스로 그려요. 여기서는 날짜만 알려 줘요.
+  JD.weather.want(DY.days.map(D=>D.iso)); window.JEPI_UI.mount('wxBar',$('#wxBar'),{iso:(DY.days[day]||{}).iso||''});
 }
 function setZoom(h,quiet){h=h===100?100:60;document.documentElement.style.setProperty('--hour',h+'px');document.querySelectorAll('[data-zoom]').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.zoom===h)));if(!quiet){store.set('gp.zoom',h);renderTimeline()}}
 let gridRev=0;
@@ -2129,7 +2131,7 @@ function renderChecks(){
   dock({fixHidden:!(warnRows.length&&sample),fixText:`🛠 경고 ${warnRows.length}개 해결`});
   // drawn by React: app/screens/Checks.tsx
   window.JEPI_UI.mount('checks',$('#checks'),{ai:!!sample,warns:warnRows.map(r=>({d:r.d,uid:String(r.uid),t:r.t})),prep:prepRows.map(r=>ckInfo(r.id,r.t,`Day ${r.d+1} · ${r.s}`)),
-    season:seasonInfo(),all:STATIC_CHECKS.map(s=>ckInfo(s.id,s.t)),resetArm:!!resetArm,rev:++checksRev});
+    season:seasonInfo(),all:STATIC_CHECKS.map(s=>ckInfo(s.id,s.t)),wx:{isos:DY.days.map(D=>D.iso),done:{...CUR.done}},resetArm:!!resetArm,rev:++checksRev});
 }
 let checksRev=0;
 function ckInfo(id,t,sub){return {id,t:String(t),sub,on:!!CUR.done[id]}}
