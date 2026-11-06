@@ -68,7 +68,14 @@
   - [x] 이번 여행·처음 설정 칸 값(`app/view/forms.ts`: 날짜·동행·교통·숙소·집·예약한 일정·예산·여행지 칸, 이번 여행 줄, 여행 한 줄 요약). 붙여 넣기 상자 메시지·여행지 찾기·하루 코스·집 상자는 예전 코드가 넘겨줌. 비교·점검 모두 같음.
   - [x] 🎲 시트 값(`app/view/dice.ts`: 뭐 먹지·뭐 하지·여행 빈 시간 탭, 조건 줄, 주사위·카드·코스, 버튼, 빈 시간과 주사위 후보 고르기). 굴린 결과·열린 탭·고른 조건은 예전 코드가 넘겨줌. 비교·점검 모두 같음.
   - [x] P모드 보드 값(`app/view/pview.ts`: 그날 칸·다녀옴 도장·? 칸·닫힌 날·뽑은 카드·주사위 6개, 가볍게 시작 칸). 뽑은 카드와 고른 주사위는 예전 코드가 넘겨줌. 비교·점검 모두 같음.
-  - [ ] 다음: 화면 값 만들기는 끝. 예전 코드 정리(남은 `src/js`는 클릭 흐름·AI 부르기·연결만) — 무엇을 어디로 옮길지 먼저 목록을 만들기.
+  - [x] 예전 코드 정리 1: 아무도 쓰지 않는 이름(옮기고 남은 별칭 약 80개) 지움. 빌드가 이제 **어디에도 정의되지 않은 이름**을 쓰면 멈춰요(`tools/legacy.mjs` checkUndefined, 파일·줄을 알려 줌).
+  - [ ] 예전 코드 정리 — 남은 `src/js`(약 184KB)를 하는 일별로 묶어 차례로 `app/flow/*.ts`로 옮겨요. 각 묶음은 화면 그리기(render*) → 버튼 흐름(*Act) 순서로.
+    1. 일정표 그리기·고치기: `340-render.js`(renderAll·renderTimeline·renderTray…), `350-actions.js`, `380-events.js`(blockAct·gridAct·dropped…), `382-tidy.js`, `389-titles.js`, `389b-memo.js`
+    2. 🎲·P모드 흐름: `160`·`170`·`280`·`290`(굴리기·코스 짜기·저장)
+    3. 처음 설정·이번 여행: `030-forms.js`(formAct·onPf·aiFill·onbAdvance), `060`(genPack·morePlaces·안내 줄), `120`·`140`·`381-welcome-demo.js`
+    4. AI: `050-chat.js`·`260-chat-places.js`·`360-ai.js`·`190-keys-ai-router.js`·`100`·`110`·`150`
+    5. 계획·공유·동기화·설정: `180-plans.js`·`240-share-link.js`·`310-sync.js`·`384-trips.js`·`230-settings.js`·`386-notify.js`·`070-shared-recs.js`
+    6. 나머지 화면: `220`·`250-phase-strip.js`·`300-intro-header.js`·`370-reset-guide.js`·`385-find.js`·`388-dedup.js`·`389a-look.js`·`389c-notebook.js`, 마지막에 `390-boot.js`와 연결점(`001`·`007`)
   - [x] 친구와 함께: 합치기 규칙(`app/data/merge.ts`)과 서버 주고받기(`app/data/trips.ts`: 올리기·받기·공유·초대·참여·나가기·끝내기·가고 싶어요)를 옮김.
     예전 `384-trips.js`에는 화면 쪽만(친구 패널, 열린 계획에 넣기 applyIfOpen, 안내). `TRIPS`는 `JD.trips.state`와 같은 객체.
     합치기 규칙을 경우별로 바로 확인하는 점검 추가(다른 날 고침 둘 다 남음·지운 블록·필드별·추가된 장소·♥는 내 것·같은 것 둘 다 고치면 내 것·이름 붙이기).

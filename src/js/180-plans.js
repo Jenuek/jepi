@@ -1,7 +1,6 @@
 // ---------- my plans: several saved plans, account sync, sharing ----------
 const PLANS=JD.plans;   // a plan's name, contents and text: app/data/plans.ts
 PL.plans=[]; PL.curPlan=''; let planTimer=null, planMsg='', delArm='';
-const PLAN_KEYS=['profile','pack','placed3','custom','meal2','done','fmarks','wish'];
 const planName=PLANS.planName, planData=PLANS.planData, planMeta=PLANS.planMeta;   // app/data/plans.ts
 function savePlans(){TRIP.plans.saveList(PL.plans,PL.curPlan);syncSoon()}
 function snapshotCurrent(){

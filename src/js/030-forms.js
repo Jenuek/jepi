@@ -1,21 +1,15 @@
 // ---------- forms shared by onboarding and the "내 정보" tab ----------
 let draft=null, onbStep=0, onbRev=0;
 const opt=(v,l,sel)=>`<option value="${esc(v)}"${String(v)===String(sel)?' selected':''}>${esc(l)}</option>`;
-const areaOpts=sel=>Object.entries(AREAS).map(([k,v])=>opt(k,v[0],sel)).join('');
-const apOpts=sel=>Object.keys(AIRPORTS).map(k=>opt(k,AIRPORTS[k].name,sel)).join('');
-const inp=(path,val,type='text',extra='')=>`<input type="${type}" data-pf="${path}" value="${esc(val??'')}" ${extra}>`;
 function setPath(o,path,v){const ks=path.split('.');for(let i=0;i<ks.length-1;i++)o=o[ks[i]];o[ks[ks.length-1]]=v}
 // drawn by React: TripForms.tsx PasteBox. The last message stays across redraws (pasteMsg) until another row opens.
 let pasteMsg={};
 const pasteBox=(kind,hint)=>({kind,hint,ai:!!sample,msg:pasteMsg[kind]||''});
-const partFlight=p=>FORMS.flight(p,pasteBox('flight','예약 메일이나 e티켓 내용을 붙여 넣으면 AI가 위 칸을 채워요.'));
-const partStay=p=>FORMS.stay(p,pasteBox('stay','숙소 예약 확인 내용을 붙여 넣으면 이름, 동네, 체크인·체크아웃을 채워요.'));
 const pasteSay=(kind,t)=>{pasteMsg[kind]=t;setSt('st_'+kind,t)};
 // 더보기 → 이번 여행 forms are drawn by React (app/screens/TripForms.tsx): these build what each form shows.
 // what each form part shows: app/view/forms.ts
 const FORMS=window.JEPI_UI.view.forms;
-const optsOf=FORMS.optsOf, datesInfo=FORMS.datesInfo, partParty=FORMS.party, partTrip=FORMS.tripPart, partHome=FORMS.home, partEvents=FORMS.events;
-const radioRow=(path,val,opts)=>`<div class="radio">${opts.map(([v,l])=>`<button type="button" data-radio="${path}" data-val="${v}" aria-pressed="${String(val)===String(v)}">${l}</button>`).join('')}</div>`;
+const optsOf=FORMS.optsOf, datesInfo=FORMS.datesInfo, partParty=FORMS.party;
 function datesReady(p){return p.dateSet!==false&&p.nightsSet!==false}
 function needDates(){setSt('st_dates','여행 날짜와 기간을 먼저 골라 주세요. 모르면 "날짜는 아직 몰라요"를 눌러 주세요.');const d=document.getElementById('datesSec');if(d)d.scrollIntoView({block:'center'})}
 const isoPlus=n=>{const d=new Date();d.setDate(d.getDate()+n);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};

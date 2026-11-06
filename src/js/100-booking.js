@@ -2,8 +2,6 @@
 CUR.wish=[]; let hStep=0, hVibe=null, hBusy=false;
 const isWish=id=>TRIP.wish.has(id), toggleWish=id=>TRIP.wish.toggle(id);   // app/data/trip.ts
 const needBooking=()=>CUR.profile.kind!=='day'&&(CUR.profile.bookedFlight===false||CUR.profile.bookedStay===false);
-const ymd=TV.ymd;   // app/data/traveler.ts
-const guests=TV.guests;   // app/data/traveler.ts
 // the helper's steps (areas to stay, time slots, links): app/view/helper.ts
 const areaScores=()=>window.JEPI_UI.view.helper.areaScores();
 async function resolveWishes(text,stId){

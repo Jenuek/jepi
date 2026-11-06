@@ -1,7 +1,5 @@
 // ---------- destination finder: for travelers who have not picked a place yet ----------
 let destRecs=null, destAsked=[], destBusy=false;
-const BUDGET_EN=TV.BUDGET_EN;   // app/data/traveler.ts
-const REACH_EN=JD.asks.REACH_EN;   // app/data/asks.ts
 // drawn by React: app/screens/OnbFinder.tsx
 function partFinder(p){
   return {f:'finder',ai:!!sample,party:p.party.type,reach:p.reach,budget:p.budget,budgetMan:p.budgetMan||'',nights:nightsOf(p),

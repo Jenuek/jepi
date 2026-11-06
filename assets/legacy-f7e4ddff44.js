@@ -35,12 +35,10 @@ const SYNC_AFTER_PUSH=[], SYNC_AFTER_PULL=[];
 const BLOCK_BADGES=[], CARD_EXTRAS=[], SHEET_EXTRAS=[];
 const extras=(list,...a)=>list.flatMap(f=>{try{const r=f(...a);return r?[].concat(r):[]}catch(_){return []}});
 const WD=['일','월','화','수','목','금','토'];
-const DAY_START=7*60, DAY_END=24*60;
 DY.loc={};
 // the destination's lists (app/data/places.ts — the same objects, filled again when a destination opens; tokyo.ts until then)
 const PLC=JD.places, PK=PLC.state;
-const AIRPORTS=PLC.AIRPORTS, AREAS=PLC.AREAS, AREA_ZONE=PLC.AREA_ZONE, CATS=PLC.CATS, ZONES=PLC.ZONES, ZONE_OF=PLC.ZONE_OF,
-  P=PLC.P, PM=PLC.PM, COST=PLC.COST, TAGS=PLC.TAGS, MUST=PLC.MUST, STATIC_CHECKS=PLC.STATIC_CHECKS;
+const AIRPORTS=PLC.AIRPORTS, AREAS=PLC.AREAS, CATS=PLC.CATS, P=PLC.P, PM=PLC.PM, TAGS=PLC.TAGS, STATIC_CHECKS=PLC.STATIC_CHECKS;
 DY.locArea={};
 DY.locZone={};
 const dayStart=JD.days.dayStart;   // app/data/days.ts
@@ -50,46 +48,30 @@ DY.days=[];
 const costOf=PLC.costOf;
 const DEFAULT_KW=[];
 const tagsOf=PLC.tagsOf;
-const mustOf=PLC.mustOf;
 const norm=JD.logic.places.norm;   // app/logic/places.ts
 const yen=TV.yen;   // app/data/traveler.ts
-const won=TV.won;   // app/data/traveler.ts
-// the fare of a trip, and an airport / station nearby: app/data/check.ts
-const gwNear=x=>JD.check.gwNear(x), fareOf=(a,b,mode)=>JD.check.fareOf(a,b,mode);
 const DEFAULT=[];
 // ---------- profile: trip facts entered by the viewer ----------
 const PROFILE_EXAMPLE={dest:'도쿄',mode:'flight',local:'transit',startDate:'2026-11-07',nights:3,out:{airport:'hnd',dep:'08:15',arr:'10:20',flight:''},back:{airport:'hnd',dep:'19:30',arr:'22:05',flight:''},home:{area:'',min:60,fare:1550,byMin:120},stays:[{name:'시부야 숙소',area:'shibuya',checkin:'15:00',checkout:'11:00',from:0,to:3}],events:[],purpose:'',pace:'slow',social:'some',breakfast:false};
 const clone=o=>JSON.parse(JSON.stringify(o));
 const heads=TV.heads;   // app/data/traveler.ts
-const PARTY_KO=TV.PARTY_KO;   // app/data/traveler.ts
-const partyEn=TV.partyEn;   // app/data/traveler.ts
-const tmin=JD.days.tmin;
 const apName=k=>(AIRPORTS[k]||AIRPORTS[firstGw()]).name;
-const MODE_WORD=JD.days.MODE_WORD;
-const WDE=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const MAX_N=JD.days.MAX_N;
 // dates, tidying 여행 정보 and making the days with their fixed blocks: app/data/days.ts (the days themselves: DY.days …)
-const nightsOf=JD.days.nightsOf, dateOf=JD.days.dateOf, mdOf=JD.days.mdOf, arrEnd=JD.days.arrEnd, fixProfile=JD.days.fixProfile, buildDays=JD.days.buildDays;
-const profileSummary=TV.profileSummary;   // app/data/traveler.ts
+const nightsOf=JD.days.nightsOf, fixProfile=JD.days.fixProfile, buildDays=JD.days.buildDays;
 
 // ---------- forms shared by onboarding and the "내 정보" tab ----------
 let draft=null, onbStep=0, onbRev=0;
 const opt=(v,l,sel)=>`<option value="${esc(v)}"${String(v)===String(sel)?' selected':''}>${esc(l)}</option>`;
-const areaOpts=sel=>Object.entries(AREAS).map(([k,v])=>opt(k,v[0],sel)).join('');
-const apOpts=sel=>Object.keys(AIRPORTS).map(k=>opt(k,AIRPORTS[k].name,sel)).join('');
-const inp=(path,val,type='text',extra='')=>`<input type="${type}" data-pf="${path}" value="${esc(val??'')}" ${extra}>`;
 function setPath(o,path,v){const ks=path.split('.');for(let i=0;i<ks.length-1;i++)o=o[ks[i]];o[ks[ks.length-1]]=v}
 // drawn by React: TripForms.tsx PasteBox. The last message stays across redraws (pasteMsg) until another row opens.
 let pasteMsg={};
 const pasteBox=(kind,hint)=>({kind,hint,ai:!!sample,msg:pasteMsg[kind]||''});
-const partFlight=p=>FORMS.flight(p,pasteBox('flight','예약 메일이나 e티켓 내용을 붙여 넣으면 AI가 위 칸을 채워요.'));
-const partStay=p=>FORMS.stay(p,pasteBox('stay','숙소 예약 확인 내용을 붙여 넣으면 이름, 동네, 체크인·체크아웃을 채워요.'));
 const pasteSay=(kind,t)=>{pasteMsg[kind]=t;setSt('st_'+kind,t)};
 // 더보기 → 이번 여행 forms are drawn by React (app/screens/TripForms.tsx): these build what each form shows.
 // what each form part shows: app/view/forms.ts
 const FORMS=window.JEPI_UI.view.forms;
-const optsOf=FORMS.optsOf, datesInfo=FORMS.datesInfo, partParty=FORMS.party, partTrip=FORMS.tripPart, partHome=FORMS.home, partEvents=FORMS.events;
-const radioRow=(path,val,opts)=>`<div class="radio">${opts.map(([v,l])=>`<button type="button" data-radio="${path}" data-val="${v}" aria-pressed="${String(val)===String(v)}">${l}</button>`).join('')}</div>`;
+const optsOf=FORMS.optsOf, datesInfo=FORMS.datesInfo, partParty=FORMS.party;
 function datesReady(p){return p.dateSet!==false&&p.nightsSet!==false}
 function needDates(){setSt('st_dates','여행 날짜와 기간을 먼저 골라 주세요. 모르면 "날짜는 아직 몰라요"를 눌러 주세요.');const d=document.getElementById('datesSec');if(d)d.scrollIntoView({block:'center'})}
 const isoPlus=n=>{const d=new Date();d.setDate(d.getDate()+n);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
@@ -268,7 +250,6 @@ function renderChat(){setTimeout(chatFoldSync,0);
       check:ops.length&&m.checked&&m.state==='pending'?{warns:(m.warns||[]).map(String)}:null,state:String(m.state||''),undo:!!(undoSnap&&undoSnap.i===i)}})});
   const lg=$('#chatLog'); lg.scrollTop=lg.scrollHeight;
 }
-const validOp=JD.asks.validOp;   // app/data/asks.ts
 async function sendChat(text){
   if(!sample||chatBusy||!text) return;
   chat.push({role:'user',text}); chat.push({role:'busy'}); chatBusy=true; renderChat();
@@ -312,12 +293,9 @@ const GENERIC_KW=['사색·고요함','대자연 풍경','오로라·별','휴�
 // sends (cleanPack / cleanPlace) live in app/data/places.ts; the open destination is PK.pack.
 PK.pack=null;
 const wipe=o=>{for(const k of Object.keys(o)) delete o[k]};
-const firstArea=PLC.firstArea, firstGw=PLC.firstGw, cityLL=PLC.cityLL, nearestArea=PLC.nearestArea, addPackPlace=PLC.addPackPlace,
-  loadPack=PLC.loadPack, savePack=PLC.savePack, packFrom=PLC.packFrom, manualPack=PLC.manualPack, cleanPack=PLC.cleanPack, cleanPlace=PLC.cleanPlace;
+const firstArea=PLC.firstArea, firstGw=PLC.firstGw, nearestArea=PLC.nearestArea, addPackPlace=PLC.addPackPlace, loadPack=PLC.loadPack, savePack=PLC.savePack, packFrom=PLC.packFrom, manualPack=PLC.manualPack, cleanPack=PLC.cleanPack, cleanPlace=PLC.cleanPlace;
 // after a destination is loaded: other travelers' 👍 places of that city (070-shared-recs.js)
 PLC.connectPlaces(pk=>{if(RS.status!=='off'){SHARED_IDS.clear();rebuildShared()}});
-const placeLink=p=>window.JEPI_UI.view.sheet.placeLink(p);   // app/view/sheet.ts
-const rateTxt=()=>window.JEPI_UI.view.day.rateTxt();   // app/view/day.ts
 let onbBusy=false, placeCtl=null;
 const prog={};
 // Status lines and buttons React drew are updated through a handle (app/ui/live.tsx), others the old way.
@@ -386,8 +364,6 @@ const SHARED_IDS=new Set();
 const cityKey=()=>REC.cityKey(PK.pack.city||'');
 const placeKey=p=>REC.placeKey(PK.pack.city||'',p.name);
 function recHash(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(36)}
-const recOf=p=>REC.countOf(placeKey(p));
-const iRec=p=>REC.isMine(placeKey(p));
 function entryOf(p){const h=p.always?null:p.hours;
   return {k:placeKey(p),city:cityKey(),name:p.name,local:p.local||'',cat:p.cat,area:p.area,lat:+p.ll[0]||0,lng:+p.ll[1]||0,dur:p.dur,
     open:h?`${fmt(h[0])}-${fmt(h[1])}`:null,closed:p.closed||[],cost:costOf(p.id)[0]||0,note:String(p.note||'').slice(0,160),tags:tagsOf(p.id).slice(0,6),made:!!p.custom,at:Date.now()}}
@@ -433,8 +409,7 @@ function recsMaybe(){
 }
 // ---------- small to-dos attached to blocks (luggage, waiting lists, pick-ups, rentals, cash, tax refund) ----------
 // marks, their pairs and warnings, and the sheet's 할 일 표시 box: app/data/marks.ts
-const MK=JD.marks, MARKS=MK.MARKS, MARK_EN=MK.MARK_EN, PAIRS=MK.PAIRS, marksOf=MK.marksOf, hasMark=MK.hasMark, markWarnings=MK.warnings;
-const openPairOf=it=>MK.openPairOf(it,day), marksInfo=(it,forceOpen)=>MK.info(it,forceOpen,day);
+const MK=JD.marks, MARKS=MK.MARKS, PAIRS=MK.PAIRS, markWarnings=MK.warnings;
 CUR.fmarks=null;
 const toggleMark=(uid,m)=>TRIP.toggleMark(uid,m);   // app/data/trip.ts
 function makePairBlock(uid,T){
@@ -456,13 +431,11 @@ function makePairBlock(uid,T){
 // The changes themselves (apply, try out on a copy, nudge times) live in app/data/ops.ts; it asks here for the day's warnings.
 const OPS=JD.ops;
 OPS.connectOps({dayStart:d=>dayStart(d),days:()=>DY.days.length,items:d=>analyze(d).items,fresh:id=>FRESH.add(id)});
-const applyOpsCore=OPS.apply, warnSet=OPS.warnings, simulateOps=OPS.simulate, repairOps=OPS.repair;
+const applyOpsCore=OPS.apply, repairOps=OPS.repair;
 // ---------- booking helper: wish list → where to stay → flight times → search links ----------
 CUR.wish=[]; let hStep=0, hVibe=null, hBusy=false;
 const isWish=id=>TRIP.wish.has(id), toggleWish=id=>TRIP.wish.toggle(id);   // app/data/trip.ts
 const needBooking=()=>CUR.profile.kind!=='day'&&(CUR.profile.bookedFlight===false||CUR.profile.bookedStay===false);
-const ymd=TV.ymd;   // app/data/traveler.ts
-const guests=TV.guests;   // app/data/traveler.ts
 // the helper's steps (areas to stay, time slots, links): app/view/helper.ts
 const areaScores=()=>window.JEPI_UI.view.helper.areaScores();
 async function resolveWishes(text,stId){
@@ -522,8 +495,7 @@ function setSlot(a,d){
 
 // ---------- season & time-of-day: what is special on these dates, and when each place is best ----------
 // season facts of this trip and what they mean for places: app/data/season.ts
-const SN=JD.season, BEST_KO=SN.BEST_KO, tripKey=SN.tripKey, seasonOf=SN.seasonOf, sunsetMin=SN.sunsetMin, outOfSeason=SN.outOfSeason, mdTxt=SN.mdTxt, bestTips=SN.bestTips;
-const seasonSummary=TV.seasonSummary;   // app/data/traveler.ts
+const SN=JD.season, tripKey=SN.tripKey, seasonOf=SN.seasonOf;
 async function genSeason(stId,signal){
   if(!sample) return false;
   progStart(stId,'이 시기만의 특징과 행사를 찾는 중이에요 (보통 30초~1분)',['seasonBtn'],'찾는 중…');
@@ -541,8 +513,6 @@ function seasonInfo(){
 
 // ---------- destination finder: for travelers who have not picked a place yet ----------
 let destRecs=null, destAsked=[], destBusy=false;
-const BUDGET_EN=TV.BUDGET_EN;   // app/data/traveler.ts
-const REACH_EN=JD.asks.REACH_EN;   // app/data/asks.ts
 // drawn by React: app/screens/OnbFinder.tsx
 function partFinder(p){
   return {f:'finder',ai:!!sample,party:p.party.type,reach:p.reach,budget:p.budget,budgetMan:p.budgetMan||'',nights:nightsOf(p),
@@ -568,17 +538,13 @@ async function recommendDest(mode){
 
 // ---------- optional travel style (every item defaults to "doesn't matter") ----------
 const STYLE_ROWS=JD.days.STYLE_ROWS;   // app/data/days.ts
-const STY=TV.STY;   // app/data/traveler.ts
-const styleEn=TV.styleEn;   // app/data/traveler.ts
 let styleOpen=false;
-const walkKm=()=>JD.check.walkKm();   // app/data/check.ts
 
 // ---------- optional money budget (per person, in 만원) ----------
 const budgetParts=TV.budgetParts;   // app/data/traveler.ts
 const roomCap=TV.roomCap;   // app/data/traveler.ts
 // 이번 여행 → 예산 (drawn by React: TripForms.tsx Budget). The hint under it follows what is typed (meSetBudgetHint).
-const partBudget=FORMS.budget, budgetHintTxt=FORMS.budgetHint;   // app/view/forms.ts
-const budgetEn=TV.budgetEn;   // app/data/traveler.ts
+const budgetHintTxt=FORMS.budgetHint;   // app/view/forms.ts
 
 // ---------- finding the trip's direction through a short conversation (only the summary is kept) ----------
 const TALK_MAX=5;
@@ -779,7 +745,6 @@ function pPlaceNow(id){
 // ---------- my plans: several saved plans, account sync, sharing ----------
 const PLANS=JD.plans;   // a plan's name, contents and text: app/data/plans.ts
 PL.plans=[]; PL.curPlan=''; let planTimer=null, planMsg='', delArm='';
-const PLAN_KEYS=['profile','pack','placed3','custom','meal2','done','fmarks','wish'];
 const planName=PLANS.planName, planData=PLANS.planData, planMeta=PLANS.planMeta;   // app/data/plans.ts
 function savePlans(){TRIP.plans.saveList(PL.plans,PL.curPlan);syncSoon()}
 function snapshotCurrent(){
@@ -884,7 +849,7 @@ function aiErr(code,msg,text){return JD.appError(code,msg,text)}
 // The AI connection (calling Claude / Gemini, retries, switching to the other AI) lives in app/data/ai.ts.
 let aiWho='AI';
 JD.ai.connectAI({keys:()=>KEYS,models:()=>MODELS,bad:()=>keyBad,who:n=>{aiWho=n}});
-const pickJSON=JD.ai.pickJSON, callClaude=JD.ai.callClaude, callGemini=JD.ai.callGemini, makeSample=JD.ai.makeSample;
+const callClaude=JD.ai.callClaude, callGemini=JD.ai.callGemini, makeSample=JD.ai.makeSample;
 async function testKey(k){
   keyMsg[k]='확인 중…'; renderSettings();
   try{
@@ -918,7 +883,7 @@ const blankPack=PLC.blankPack;   // app/data/places.ts
 // Asking, the queue and the cache live in app/data/routes.ts; Korea checks and "안내 시작" links in app/logic/geo.ts.
 // Here: the names the rest of the old code uses, and when to redraw after routes arrive.
 const inKR=JD.logic.geo.inKorea, navLink=JD.logic.geo.navLink;
-const routeProvider=(a,b)=>JD.routes.provider(a,b), routeGet=(m,a,b)=>JD.routes.get(m,a,b), fetchRoute=j=>JD.routes.fetchRoute(j), routeStats=JD.routes.stats;
+const routeProvider=(a,b)=>JD.routes.provider(a,b), fetchRoute=j=>JD.routes.fetchRoute(j), routeStats=JD.routes.stats;
 JD.routes.connectRoutes({googleKey:()=>KEYS.gmaps||'',googleBad:()=>!!keyBad.gmaps,arrived:()=>routeDirty(),
   keyBroken(){keyBad.google=true;keyMsg.gmaps='✕ 키가 맞지 않거나 이 API가 켜져 있지 않아요'}});
 let rdT=0;
@@ -928,8 +893,7 @@ function routeDirty(){clearTimeout(rdT);rdT=setTimeout(()=>{
   renderAll(); if(mapState.on) drawMap();
 },600)}
 // ---------- map: app/ui/map.ts (Leaflet, loaded only when opened) ----------
-const MAP=window.JEPI_UI.map, mapState=MAP.state, mapTop=MAP.mapTop, mapTopAct=MAP.mapTopAct, openMap=MAP.openMap, mapLegs=MAP.mapLegs,
-  drawMap=MAP.drawMap, renderMapCards=MAP.renderMapCards, locateMe=MAP.locateMe;
+const MAP=window.JEPI_UI.map, mapState=MAP.state, mapTop=MAP.mapTop, mapTopAct=MAP.mapTopAct, openMap=MAP.openMap, drawMap=MAP.drawMap, renderMapCards=MAP.renderMapCards;
 // ---------- 더보기: trip summary, 준비하기 badge, P-mode short menu ----------
 let moreAll=false, meOpen=null, autoT=0;
 const tripSummary=()=>FORMS.tripSummary(DY.days);   // app/view/forms.ts
@@ -1173,13 +1137,13 @@ function cpAct(v){
 JD.kakao.connectKakao(()=>KEYS.kakao||'');
 JD.myplaces.connectMyPlaces({redraw:()=>renderSettings(),syncSoon:()=>syncSoon()});
 const MYP=JD.myplaces.list;   // the same array (changed in place)
-const saveMYP=()=>JD.myplaces.save(), mypOf=id=>JD.myplaces.of(id);
-const getPos=maxAge=>JD.kakao.here(maxAge), kakaoGet=(path,params)=>JD.kakao.get(path,params), addrOf=ll=>JD.kakao.addressAt(ll);
+const mypOf=id=>JD.myplaces.of(id);
+const getPos=maxAge=>JD.kakao.here(maxAge), kakaoGet=(path,params)=>JD.kakao.get(path,params);
 // what the section shows
 function mypView(){const u=JD.myplaces.ui;return {places:MYP.map(x=>({id:x.id,name:x.name,ll:x.ll||null,addr:x.addr||''})),editing:u.edit,msg:u.msg||'',
   hits:u.hits.map(h=>({name:h.name,addr:h.addr})),hasKakao:!!KEYS.kakao}}
 // ================= DICE: 뭐 하지? / 뭐 먹지? =================
-const NB=JD.nearby, EAT_MOODS=NB.EAT_MOODS, MEAL_TXT=NB.MEAL_TXT;   // app/data/nearby.ts: finding and rolling places nearby
+const NB=JD.nearby, EAT_MOODS=NB.EAT_MOODS;   // app/data/nearby.ts: finding and rolling places nearby
 let eat=Object.assign({walk:10,mood:'any'},LS.get('jepi.eat',{}),{base:null,org:null,pick:null,rolls:0,msg:'',busy:false,ll:null,where:'',meal:null,src:''});
 const saveEat=()=>LS.set('jepi.eat',{walk:eat.walk,mood:eat.mood});
 const nowMin=DICEV.nowMin, mealNow=DICEV.mealNow, planUsable=DICEV.planUsable;   // app/view/dice.ts
@@ -1233,9 +1197,6 @@ function openDiceTab(tab,fromT){
 }
 // home-screen shortcut: ./?dice=eat
 function diceFromUrl(){try{const q=new URLSearchParams(location.search).get('dice');if(q==='eat'||q==='do'){history.replaceState(null,'',location.pathname+location.hash);setTimeout(()=>openDiceTab(q),300)}}catch(_){}}
-
-// plan-based meal mood filter
-const eatMoodOk=p=>DICEV.eatMoodOk(p,eat.mood);
 // trip departure from 집 (내 장소)
 const KR_AIR={gmp:['김포공항 국제선',37.5583,126.7906],icn1:['인천공항 T1',37.4492,126.4510],icn2:['인천공항 T2',37.4602,126.4407]};
 let homeMsg='';
@@ -1243,7 +1204,6 @@ let homeMsg='';
 function partHomeBox(p){if(p.mode==='car')return null;const h=mypOf('home');
   return {f:'homeBox',hasHome:!!(h&&h.ll),addr:(h&&h.addr)||'',using:!!p.home.ll,kakao:KEYS.kakao?Object.entries(KR_AIR).map(([k,a])=>[k,a[0]]):[],msg:homeMsg}}
 // ================= 뭐 하지? — anywhere, any area, one place or a whole course =================
-const DO_MOODS=NB.DO_MOODS, TYPE_ICON=NB.TYPE_ICON;   // app/data/nearby.ts
 let doS={base:null,org:'gps',area:null,when:'now',at:'18:00',clen:'short',mood:'any',pick:null,rolls:0,course:null,busy:false,msg:'',origin:null,where:'',src:'',hits:[],chosen:null,cond:false};
 Object.assign(doS,LS.get('jepi.do',{}),{base:null,pick:null,course:null,busy:false,msg:'',hits:[],chosen:null,cond:false});
 const saveDo=()=>LS.set('jepi.do',{mood:doS.mood,clen:doS.clen,area:doS.area,at:doS.at});
@@ -1432,32 +1392,17 @@ function fabDodge(){
   const pv=document.getElementById('pview'); if(pv&&window.MutationObserver) new MutationObserver(later).observe(pv,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden']});
 })();
 // ================= 기기 간 동기화 (Supabase, 본인 계정 데이터만) =================
-// The server conversation (login, session, tables) is in app/data/server.ts, key encryption in app/data/vault.ts.
-// SYNC is the same object as JD.server.SYNC: the sync settings, saved as jepi.sync.
-const SB_DEFAULT=JD.server.SB_DEFAULT;
 const SYNC=JD.server.SYNC;
 const saveSync=JD.server.saveSync;
 // which part of the 동기화 section shows and the last error live in app/data/account.ts (ACC.state)
 const ACC=JD.account;
 const syncOn=JD.server.syncOn;
-function hashStr(s){return JD.hashStr(s)}
-function sbAuth(path,body){return JD.server.sbAuth(path,body)}
 function keepSess(j){JD.server.keepSess(j)}
-function sbToken(){return JD.server.sbToken()}
-function sbRest(method,q,body,prefer){return JD.server.sbRest(method,q,body,prefer)}
 // any table (or rpc/<name>) in the project, as the logged-in person; rows are limited by RLS on the server
 function sbTable(table,method,q,body,prefer){return JD.server.sbTable(table,method,q,body,prefer)}
-// AI·지도 키: 비밀번호에서 만든 열쇠로 암호화해서만 서버에 올려요 (열쇠는 이 기기에만)
-const b64e=JD.vault.b64e, b64d=JD.vault.b64d;
-function vaultMake(email,pw){return JD.vault.vaultMake(email,pw)}
-function vaultKey(){return JD.vault.vaultKey()}
-function vaultSeal(obj){return JD.vault.vaultSeal(obj)}
-function vaultOpen(d){return JD.vault.vaultOpen(d)}
 // What to send and how to merge what comes back: app/data/sync.ts. Here: our values, and redrawing after.
 const SYNC_STATUS=JD.sync.status; // .busy (sending or receiving), .keysLocked (server keys locked with another password)
 function syncSoon(ms){JD.sync.syncSoon(ms)}
-function syncPush(){return JD.sync.syncPush()}
-function syncPull(){return JD.sync.syncPull()}
 function syncNow(){return JD.sync.syncNow()}
 JD.sync.connectSync({
   plans:()=>PL.plans, setPlans(p){PL.plans=p}, curPlan:()=>PL.curPlan,
@@ -1516,7 +1461,6 @@ CUR.fmarks=TRIP.load('fmarks',{}); diceLog=store.get('gp.dice',[]); if(!Array.is
 CUR.done=TRIP.load('done',{});
 DY.homeMin=60;
 CUR.kws=TRIP.kws.load(); if(!Array.isArray(CUR.kws)) CUR.kws=DEFAULT_KW.slice();
-const matchKw=id=>window.JEPI_UI.view.tray.matchKw(id);   // the traveler's keywords a place carries (app/view/tray.ts)
 CUR.meals=TRIP.load('meals',{}); if(!CUR.meals||typeof CUR.meals!=='object') CUR.meals={};
 const mealOf=JD.check.mealOf;   // app/data/check.ts
 let day=0, tab='timeline', cat='all', selected=null, aiState=null, sample=null, group='zone', zoneOpen={}, resetArm=false;
@@ -1530,9 +1474,8 @@ const $=s=>document.querySelector(s);
 // time text, distances and the day check live in app/logic (JD.logic)
 const fmt=JD.logic.time.fmt, parse=JD.logic.time.parse;
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const km=JD.logic.geo.km;
 // travel between places, opening hours and the day check: app/data/check.ts
-const CK=JD.check, travelEst=CK.travelEst, travel=CK.travel, hoursFor=CK.hoursFor, closedOn=CK.closedOn;
+const CK=JD.check, travel=CK.travel;
 
 const dayItems=JD.days.dayItems;   // app/data/days.ts: fixed blocks + my blocks of a day
 const analyze=CK.analyze, gapsOf=CK.gapsOf;
@@ -1558,7 +1501,6 @@ function renderTimeline(){
 }
 const dayCost=JD.check.dayCost;   // app/data/check.ts
 function renderBudget(){const B=VIEW.day.budget(day);window.JEPI_UI.mount('budgetSum',$('#budgetSum'),B.sum);window.JEPI_UI.mount('budget',$('#budget'),B.box)}
-const segs=VIEW.day.segs;   // a line of text with bold / coloured parts (DayTop.tsx Line)
 // the top of the 장소 tab is drawn by React (app/screens/Tops.tsx); #filters and #cards inside it get their own screens
 function drawTrayTop(){window.JEPI_UI.mount('trayTop',$('#trayTopMount'),{moreHidden:!sample||!!PK.pack.manual,rec:REC.statusText(PK.pack.city||''),group})}
 // pressed in the 장소 tab's top
@@ -1919,11 +1861,9 @@ JD.hours.connectHours({placesOnSchedule:()=>[...new Set(CUR.placed.map(b=>b.id))
 // and app/data/merge.ts. Here: the screen side. TRIPS is the same object as JD.trips.state (base, members, marks)
 // plus what the friends panel shows (invite, msg, busy, stopArm).
 var TRIPS=Object.assign(JD.trips.state,{invite:null,msg:'',busy:false,stopArm:false});
-const saveTripBase=()=>JD.trips.saveBase();
 const myName=()=>LS.get('jepi.myName','')||String((SYNC.sess&&SYNC.sess.email)||SYNC.email||'나').split('@')[0];
 const planOf=id=>PL.plans.find(p=>p.id===id);
 const curShared=()=>{const p=planOf(PL.curPlan);return p&&p.shared?p:null};
-const JS=x=>x===undefined?'∅':JSON.stringify(x);
 // a new version of the open plan: put it in, unless the person is typing or has a sheet open (then the next pull tries again)
 function applyIfOpen(id,data,who){
   if(id!==PL.curPlan) return true;

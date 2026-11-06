@@ -4,12 +4,9 @@ const GENERIC_KW=['사색·고요함','대자연 풍경','오로라·별','휴�
 // sends (cleanPack / cleanPlace) live in app/data/places.ts; the open destination is PK.pack.
 PK.pack=null;
 const wipe=o=>{for(const k of Object.keys(o)) delete o[k]};
-const firstArea=PLC.firstArea, firstGw=PLC.firstGw, cityLL=PLC.cityLL, nearestArea=PLC.nearestArea, addPackPlace=PLC.addPackPlace,
-  loadPack=PLC.loadPack, savePack=PLC.savePack, packFrom=PLC.packFrom, manualPack=PLC.manualPack, cleanPack=PLC.cleanPack, cleanPlace=PLC.cleanPlace;
+const firstArea=PLC.firstArea, firstGw=PLC.firstGw, nearestArea=PLC.nearestArea, addPackPlace=PLC.addPackPlace, loadPack=PLC.loadPack, savePack=PLC.savePack, packFrom=PLC.packFrom, manualPack=PLC.manualPack, cleanPack=PLC.cleanPack, cleanPlace=PLC.cleanPlace;
 // after a destination is loaded: other travelers' 👍 places of that city (070-shared-recs.js)
 PLC.connectPlaces(pk=>{if(RS.status!=='off'){SHARED_IDS.clear();rebuildShared()}});
-const placeLink=p=>window.JEPI_UI.view.sheet.placeLink(p);   // app/view/sheet.ts
-const rateTxt=()=>window.JEPI_UI.view.day.rateTxt();   // app/view/day.ts
 let onbBusy=false, placeCtl=null;
 const prog={};
 // Status lines and buttons React drew are updated through a handle (app/ui/live.tsx), others the old way.

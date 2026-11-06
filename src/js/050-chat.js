@@ -26,7 +26,6 @@ function renderChat(){setTimeout(chatFoldSync,0);
       check:ops.length&&m.checked&&m.state==='pending'?{warns:(m.warns||[]).map(String)}:null,state:String(m.state||''),undo:!!(undoSnap&&undoSnap.i===i)}})});
   const lg=$('#chatLog'); lg.scrollTop=lg.scrollHeight;
 }
-const validOp=JD.asks.validOp;   // app/data/asks.ts
 async function sendChat(text){
   if(!sample||chatBusy||!text) return;
   chat.push({role:'user',text}); chat.push({role:'busy'}); chatBusy=true; renderChat();

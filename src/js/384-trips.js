@@ -8,11 +8,9 @@
 // and app/data/merge.ts. Here: the screen side. TRIPS is the same object as JD.trips.state (base, members, marks)
 // plus what the friends panel shows (invite, msg, busy, stopArm).
 var TRIPS=Object.assign(JD.trips.state,{invite:null,msg:'',busy:false,stopArm:false});
-const saveTripBase=()=>JD.trips.saveBase();
 const myName=()=>LS.get('jepi.myName','')||String((SYNC.sess&&SYNC.sess.email)||SYNC.email||'나').split('@')[0];
 const planOf=id=>PL.plans.find(p=>p.id===id);
 const curShared=()=>{const p=planOf(PL.curPlan);return p&&p.shared?p:null};
-const JS=x=>x===undefined?'∅':JSON.stringify(x);
 // a new version of the open plan: put it in, unless the person is typing or has a sheet open (then the next pull tries again)
 function applyIfOpen(id,data,who){
   if(id!==PL.curPlan) return true;

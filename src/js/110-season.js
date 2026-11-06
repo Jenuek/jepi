@@ -1,7 +1,6 @@
 // ---------- season & time-of-day: what is special on these dates, and when each place is best ----------
 // season facts of this trip and what they mean for places: app/data/season.ts
-const SN=JD.season, BEST_KO=SN.BEST_KO, tripKey=SN.tripKey, seasonOf=SN.seasonOf, sunsetMin=SN.sunsetMin, outOfSeason=SN.outOfSeason, mdTxt=SN.mdTxt, bestTips=SN.bestTips;
-const seasonSummary=TV.seasonSummary;   // app/data/traveler.ts
+const SN=JD.season, tripKey=SN.tripKey, seasonOf=SN.seasonOf;
 async function genSeason(stId,signal){
   if(!sample) return false;
   progStart(stId,'이 시기만의 특징과 행사를 찾는 중이에요 (보통 30초~1분)',['seasonBtn'],'찾는 중…');

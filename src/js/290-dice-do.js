@@ -1,5 +1,4 @@
 // ================= 뭐 하지? — anywhere, any area, one place or a whole course =================
-const DO_MOODS=NB.DO_MOODS, TYPE_ICON=NB.TYPE_ICON;   // app/data/nearby.ts
 let doS={base:null,org:'gps',area:null,when:'now',at:'18:00',clen:'short',mood:'any',pick:null,rolls:0,course:null,busy:false,msg:'',origin:null,where:'',src:'',hits:[],chosen:null,cond:false};
 Object.assign(doS,LS.get('jepi.do',{}),{base:null,pick:null,course:null,busy:false,msg:'',hits:[],chosen:null,cond:false});
 const saveDo=()=>LS.set('jepi.do',{mood:doS.mood,clen:doS.clen,area:doS.area,at:doS.at});

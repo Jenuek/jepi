@@ -19,7 +19,6 @@ function renderTimeline(){
 }
 const dayCost=JD.check.dayCost;   // app/data/check.ts
 function renderBudget(){const B=VIEW.day.budget(day);window.JEPI_UI.mount('budgetSum',$('#budgetSum'),B.sum);window.JEPI_UI.mount('budget',$('#budget'),B.box)}
-const segs=VIEW.day.segs;   // a line of text with bold / coloured parts (DayTop.tsx Line)
 // the top of the 장소 tab is drawn by React (app/screens/Tops.tsx); #filters and #cards inside it get their own screens
 function drawTrayTop(){window.JEPI_UI.mount('trayTop',$('#trayTopMount'),{moreHidden:!sample||!!PK.pack.manual,rec:REC.statusText(PK.pack.city||''),group})}
 // pressed in the 장소 tab's top

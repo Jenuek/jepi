@@ -16,7 +16,7 @@ function aiErr(code,msg,text){return JD.appError(code,msg,text)}
 // The AI connection (calling Claude / Gemini, retries, switching to the other AI) lives in app/data/ai.ts.
 let aiWho='AI';
 JD.ai.connectAI({keys:()=>KEYS,models:()=>MODELS,bad:()=>keyBad,who:n=>{aiWho=n}});
-const pickJSON=JD.ai.pickJSON, callClaude=JD.ai.callClaude, callGemini=JD.ai.callGemini, makeSample=JD.ai.makeSample;
+const callClaude=JD.ai.callClaude, callGemini=JD.ai.callGemini, makeSample=JD.ai.makeSample;
 async function testKey(k){
   keyMsg[k]='확인 중…'; renderSettings();
   try{
