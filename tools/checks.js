@@ -1784,5 +1784,32 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'view: 🎲 sheet values (app/view/dice.ts): free gaps, places the dice can land on, 뭐 먹지 / 뭐 하지 / 여행 tabs',
+    async run({ b, S, device, ok, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      const r = await p.evaluate(() => {
+        const V = window.JEPI_UI.view.dice;
+        const dice = { mood: 'any', lunch: false, walk: 10, gapI: 0, rolls: 0, pick: null, rolling: false, msg: '', force: null };
+        const eat = { walk: 10, mood: 'any', base: 'near', org: 'gps', pick: null, rolls: 0, msg: '', busy: false, meal: 'lunch', cond: false };
+        const doS = { base: 'near', org: 'gps', area: null, when: 'now', at: '18:00', clen: 'short', mood: 'any', pick: null, rolls: 0, course: null, busy: false, msg: '', hits: [] };
+        const St = { dice, eat, doS, diceLog: [], recentAreas: [], day: 1, ai: false };
+        let gi = -1, gs = []; for (let d = 0; d < 4 && gi < 0; d++) { gs = V.diceGaps(d); if (gs.length) { gi = d } }
+        St.day = gi; const cs = gs.length ? V.diceCands(gs[0], St) : [];
+        const pl = V.plan(St, { tabs: 'do', bases: V.doBases(St) }), e = V.eatTab(St), n = V.doNear(St);
+        dice.pick = cs[0] || null; const picked = V.plan(St, { tabs: 'do' });
+        return { gaps: gs.length, cands: cs.length, okC: cs.every(c => c.dur >= 30 && c.arr >= gs[0].s), plGo: pl.acts.map(a => a.id).join(','), bases: pl.bases.map(x => x.v).join(','),
+          eatGo: e.acts.map(a => a.label).join(','), eatBases: e.bases.map(x => x.v).join(','), eatCond: e.cond.txt, nearActs: n.acts.length, nearCond: n.cond.txt,
+          pickActs: picked.acts.map(a => a.id).join(','), stage: picked.stage.s };
+      });
+      ok(r.gaps > 0 && r.cands > 0 && r.okC, 'a free gap and places that fit it ' + JSON.stringify(r));
+      ok(r.plGo === 'diceGo' && r.bases === 'near,area,plan', '여행 tab: 굴리기, bases 내 주변 / 동네 / 여행');
+      ok(r.eatGo.includes('굴리기') && r.eatBases === 'near,plan' && r.eatCond.startsWith('걸어서 10분'), '뭐 먹지: 굴리기 and its condition line');
+      ok(r.nearActs === 2 && r.nearCond.startsWith('지금'), '뭐 하지: 하나 굴리기 · 코스 짜기');
+      ok(r.stage === 'planCard' && r.pickActs.startsWith('diceFix'), 'a picked place shows its card and 이걸로 할래요');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];
