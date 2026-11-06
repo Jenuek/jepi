@@ -39,6 +39,24 @@ import { Tabs, MiniBar, type TabsProps, type MiniBarProps } from './screens/Bars
 import { Hero, type HeroProps } from './screens/Hero';
 import { HelperFrame, Coach, Banner, OnbFrame, type HelperFrameProps, type CoachProps, type BannerProps, type OnbFrameProps } from './screens/Frames';
 import { connectHost, type AppHost } from './ui/host';
+import * as map from './ui/map';
+import { ui } from './ui/state';
+import * as drag from './ui/drag';
+import * as dayView from './view/day';
+import * as trayView from './view/tray';
+import * as formsView from './view/forms';
+import * as diceView from './view/dice';
+import * as pviewView from './view/pview';
+import * as render from './flow/render';
+import * as schedule from './flow/schedule';
+import * as diceFlow from './flow/dice';
+import * as formsFlow from './flow/forms';
+import * as destFlow from './flow/destination';
+import * as chatFlow from './flow/chat';
+import * as helperFlow from './flow/helper';
+import * as status from './ui/status';
+import * as sheetView from './view/sheet';
+import * as helperView from './view/helper';
 import { liveOf, type LiveHandle } from './ui/live';
 
 // Every screen React owns, with the props the old code must pass.
@@ -150,6 +168,18 @@ export interface JepiUI {
   live(el: Element | null): LiveHandle | null;
   /** the old code tells React screens how to redraw / close the sheet / show a message (app/ui/host.ts) */
   connectHost(h: AppHost): void;
+  /** the 지도 tab (Leaflet): app/ui/map.ts */
+  map: typeof map;
+  /** where the person is in the app: the open day, tab, picked place … (app/ui/state.ts) */
+  ui: typeof ui;
+  /** drag & drop onto the 일정표: app/ui/drag.ts */
+  drag: typeof drag;
+  /** what each screen shows, worked out from the trip (app/view/*.ts) */
+  view: { day: typeof dayView; tray: typeof trayView; sheet: typeof sheetView; helper: typeof helperView; forms: typeof formsView; dice: typeof diceView; pview: typeof pviewView };
+  /** what happens in the app, moved out of the old code (app/flow/*.ts) */
+  flow: { render: typeof render; schedule: typeof schedule; dice: typeof diceFlow; forms: typeof formsFlow; destination: typeof destFlow; chat: typeof chatFlow; helper: typeof helperFlow };
+  /** status lines and busy buttons, error words (app/ui/status.ts) */
+  status: typeof status;
 }
 
 declare global {
@@ -165,6 +195,12 @@ export function installBridge(): void {
   window.JEPI_UI = {
     live: liveOf,
     connectHost,
+    map,
+    ui,
+    drag,
+    view: { day: dayView, tray: trayView, sheet: sheetView, helper: helperView, forms: formsView, dice: diceView, pview: pviewView },
+    flow: { render, schedule, dice: diceFlow, forms: formsFlow, destination: destFlow, chat: chatFlow, helper: helperFlow },
+    status,
     mount(name, el, props) {
       let cur = roots.get(el);
       if (!cur || cur.host.parentNode !== el || cur.name !== name) {

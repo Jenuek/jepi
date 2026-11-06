@@ -16,7 +16,7 @@ function aiErr(code,msg,text){return JD.appError(code,msg,text)}
 // The AI connection (calling Claude / Gemini, retries, switching to the other AI) lives in app/data/ai.ts.
 let aiWho='AI';
 JD.ai.connectAI({keys:()=>KEYS,models:()=>MODELS,bad:()=>keyBad,who:n=>{aiWho=n}});
-const pickJSON=JD.ai.pickJSON, callClaude=JD.ai.callClaude, callGemini=JD.ai.callGemini, makeSample=JD.ai.makeSample;
+const callClaude=JD.ai.callClaude, callGemini=JD.ai.callGemini, makeSample=JD.ai.makeSample;
 async function testKey(k){
   keyMsg[k]='확인 중…'; renderSettings();
   try{
@@ -43,6 +43,6 @@ async function kakaoDiag(){
   if(!r.ok)return `✕ 카카오 오류 (HTTP ${r.status})${c} ${j.msg||j.message||''}`.trim();
   return '✓ 장소·주소 검색 연결됨 · 국내 이동 시간은 거리로 어림하고, "안내 시작"은 카카오맵으로 열어요';
 }
-function keysChanged(){saveKeys();keyBad={};if(STANDALONE){sample=makeSample()}renderAll();renderSettings();if(!$('#onb').hidden)renderOnb()}
+function keysChanged(){saveKeys();keyBad={};if(STANDALONE){UI.sample=makeSample()}renderAll();renderSettings();if(!$('#onb').hidden)renderOnb()}
 
 const blankPack=PLC.blankPack;   // app/data/places.ts

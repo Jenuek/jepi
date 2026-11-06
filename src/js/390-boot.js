@@ -1,5 +1,5 @@
 // ---------- start-up: runs after every file above has defined its variables ----------
-if(STANDALONE) sample=makeSample();
+if(STANDALONE) UI.sample=makeSample();
 hero({}); onbFrame({}); tabs({}); miniBar({}); dock({}); drawTrayTop(); mapTop({}); drawHelperFrame(); drawCoach(); drawBanner();   // the fixed frames (React)
 PL.plans=TRIP.plans.list()||[]; if(!Array.isArray(PL.plans)) PL.plans=[]; PL.curPlan=TRIP.plans.current()||''; if(!PL.curPlan){PL.curPlan='p'+Date.now().toString(36);savePlans()}
 setZoom(store.get('gp.zoom',60),true);
@@ -20,6 +20,6 @@ window.addEventListener('error',e=>showErr(e.message||'알 수 없는 오류'));
 window.addEventListener('unhandledrejection',e=>{const r=e.reason;if(r&&r.code==='cancelled')return;showErr((r&&(r.message||r.code))||r)});
 initRecs(); heroWatch();
 if('serviceWorker' in navigator&&location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
-(async()=>{try{ if(window.claude&&window.claude.use){ const s=await window.claude.use('sample'); if(s){sample=s; renderAI(); renderChat(); renderTray(); if(!$('#onb').hidden) renderOnb(); else if(tab==='me') renderMe()} } }catch(_){} })();
+(async()=>{try{ if(window.claude&&window.claude.use){ const s=await window.claude.use('sample'); if(s){UI.sample=s; renderAI(); renderChat(); renderTray(); if(!$('#onb').hidden) renderOnb(); else if(UI.tab==='me') renderMe()} } }catch(_){} })();
 // iOS Safari only shows :active (press feedback) once the page listens for touches
 document.addEventListener('touchstart',()=>{},{passive:true});

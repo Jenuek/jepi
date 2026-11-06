@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import crypto from 'node:crypto';
+import ts from 'typescript';
 
 export const ROOT = path.dirname(path.dirname(new URL(import.meta.url).pathname));
 const SRC = path.join(ROOT, 'src');
@@ -51,12 +52,29 @@ function checkNames(files) {
   return notes;
 }
 
+// a name used but defined nowhere (a removed alias, a typo) only breaks when that code runs: stop the build instead.
+// TypeScript reads the joined files as one script (with the browser's own names) and reports names it cannot find.
+function checkUndefined(jsFiles, js) {
+  const name = '/legacy/legacy.js', opts = { allowJs: true, checkJs: true, noEmit: true, target: ts.ScriptTarget.ES2022, lib: ['lib.es2022.d.ts', 'lib.dom.d.ts'], types: [] };
+  const host = ts.createCompilerHost(opts), gs = host.getSourceFile.bind(host), fe = host.fileExists.bind(host), rf = host.readFile.bind(host);
+  host.getSourceFile = (f, l, ...r) => f === name ? ts.createSourceFile(f, js, l, true, ts.ScriptKind.JS) : gs(f, l, ...r);
+  host.fileExists = f => f === name || fe(f); host.readFile = f => f === name ? js : rf(f);
+  const prog = ts.createProgram([name], opts, host), sf = prog.getSourceFile(name);
+  const bad = prog.getSemanticDiagnostics(sf).filter(d => d.code === 2304 || d.code === 2552);
+  if (!bad.length) return;
+  // which file each line came from
+  const starts = []; let at = 1; for (const f of jsFiles) { starts.push([at, f]); at += read(f).split('\n').length - 1 }
+  const where = d => { const l = sf.getLineAndCharacterOfPosition(d.start).line; let f = starts[0]; for (const s of starts) if (s[0] <= l) f = s; return `${path.basename(f[1])}:${l - f[0] + 1}` };
+  throw new Error('build stopped: src/js uses a name that is defined nowhere\n' + bad.slice(0, 10).map(d => `  ${where(d)}  ${ts.flattenDiagnosticMessageText(d.messageText, ' ')}`).join('\n'));
+}
+
 export function legacy() {
   const jsFiles = parts('js', 'js');
   const notes = checkNames(jsFiles);
   const js = '\n' + jsFiles.map(read).join('');
   try { new vm.Script(js, { filename: 'legacy.js' }) }
   catch (e) { throw new Error('build stopped: syntax error in src/js\n' + (e.stack || e.message).split('\n').slice(0, 6).join('\n')) }
+  checkUndefined(jsFiles, js);
   const css = parts('css', 'css').map(f => read(f).replace(/\n$/, '')).join('\n');
   const head = read(path.join(SRC, 'html', 'head.html'));
   const body = read(path.join(SRC, 'html', 'body.html'));

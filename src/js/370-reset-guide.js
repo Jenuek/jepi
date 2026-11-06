@@ -2,11 +2,11 @@
 let wipeArm=false;
 function wipeAll(){
   ['profile','pack','placed3','custom','kw','meal2','done','fmarks','wish','coach','dice','jp'].forEach(k=>JD.storage.del('gp.'+k));
-  PL.plans.forEach(p=>{TRIP.plans.del(p.id);cloudDelete(p.id)}); PL.plans=[]; PL.curPlan='p'+Date.now().toString(36); savePlans();
-  CUR.custom=[]; CUR.placed=[]; CUR.fmarks={}; CUR.wish=[]; CUR.kws=[]; CUR.meals={}; CUR.done={}; chat=[]; undoSnap=null; aiState=null; selected=null; hVibe=null; wipeArm=false;
+  PL.plans.forEach(p=>TRIP.plans.del(p.id)); PL.plans=[]; PL.curPlan='p'+Date.now().toString(36); savePlans();
+  CUR.custom=[]; CUR.placed=[]; CUR.fmarks={}; CUR.wish=[]; CUR.kws=[]; CUR.meals={}; CUR.done={}; CS.chat=[]; CS.undoSnap=null; UI.aiState=null; UI.selected=null; HS.vibe=null; wipeArm=false;
   loadPack(blankPack()); savePack();
   CUR.profile=clone(PROFILE_EXAMPLE); Object.assign(CUR.profile,{stays:[{name:'숙소',area:'center',checkin:'15:00',checkout:'11:00',from:0,to:3}],events:[],dest:'',pace:'normal',social:'some',breakfast:true,purpose:'',party:{type:'solo',adults:1,kids:0},flightSet:false,staySet:false,dateSet:false,nightsSet:false,dateUnknown:false,startDate:isoPlus(30)}); CUR.profile.stays[0].name='숙소';
-  buildDays(); day=0; tab='timeline'; helperShow(false); closeSheet(); renderAll(); openOnb();
+  buildDays(); UI.day=0; UI.tab='timeline'; helperShow(false); closeSheet(); renderAll(); openOnb();
 }
 // ---------- first-use guide ----------
 // first-use guide: four steps only; everything else is in 더보기 → 사용 안내 (387-help.js)
@@ -21,8 +21,8 @@ function coachAct(n){if(n==='next')showCoach(+coachView.i+1);else if(n==='skip')
 function showCoach(i){
   document.querySelectorAll('.coach-hl').forEach(e=>e.classList.remove('coach-hl'));
   if(i>=COACH.length){coachView={...coachView,open:false};drawCoach();store.set('gp.coach',1);return}
-  if(!matchMedia('(min-width:900px)').matches&&tab!=='timeline'){tab='timeline';renderTabs()}
-  let el=document.querySelector(COACH[i].sel); if(COACH[i].sel==='#grid'&&jp==='P') el=document.querySelector('#pview'); if(COACH[i].sel==='#grid .blk'&&jp==='P') el=document.querySelector('#pview .sq'); if(!el||!el.offsetParent){showCoach(i+1);return}
+  if(!matchMedia('(min-width:900px)').matches&&UI.tab!=='timeline'){UI.tab='timeline';renderTabs()}
+  let el=document.querySelector(COACH[i].sel); if(COACH[i].sel==='#grid'&&UI.jp==='P') el=document.querySelector('#pview'); if(COACH[i].sel==='#grid .blk'&&UI.jp==='P') el=document.querySelector('#pview .sq'); if(!el||!el.offsetParent){showCoach(i+1);return}
   if(el){el.classList.add('coach-hl');el.scrollIntoView({block:i===0?'start':'center'})}
   coachView={open:true,i,text:COACH[i].t,step:`${i+1} / ${COACH.length}`,last:i===COACH.length-1}; drawCoach();
 }

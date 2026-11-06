@@ -24,7 +24,7 @@ document.addEventListener('click',e=>{
 function planMenuAct(n,v){planMenu(false);
   if(n==='open'){if(v!==PL.curPlan){openPlan(v);showToast('계획을 바꿨어요')}return}
   if(n==='new'){newPlan();return}
-  tab='plans';snapshotCurrent();showText=false;renderPlans();renderTabs()}
+  UI.tab='plans';snapshotCurrent();showText=false;renderPlans();renderTabs()}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){const m=document.getElementById('planMenu');if(m&&!m.hidden){planMenu(false);document.getElementById('planBtn').focus()}}});
 
 // ---------- DICE motion: rolls while the page scrolls, opens out of the die ----------
