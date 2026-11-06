@@ -8,7 +8,7 @@ const firstArea=PLC.firstArea, firstGw=PLC.firstGw, cityLL=PLC.cityLL, nearestAr
   loadPack=PLC.loadPack, savePack=PLC.savePack, packFrom=PLC.packFrom, manualPack=PLC.manualPack, cleanPack=PLC.cleanPack, cleanPlace=PLC.cleanPlace;
 // after a destination is loaded: other travelers' 👍 places of that city (070-shared-recs.js)
 PLC.connectPlaces(pk=>{if(RS.status!=='off'){SHARED_IDS.clear();rebuildShared()}});
-const placeLink=p=>`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((p.local||p.name)+' '+(PK.pack.city||''))}`;
+const placeLink=p=>window.JEPI_UI.view.sheet.placeLink(p);   // app/view/sheet.ts
 const rateTxt=()=>window.JEPI_UI.view.day.rateTxt();   // app/view/day.ts
 let onbBusy=false, placeCtl=null;
 const prog={};
