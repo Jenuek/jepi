@@ -1,12 +1,13 @@
 // 장소 탭: the filter chips (#filters) and the place cards (#cards). They used to be renderTray / cardHTML / dupHTML
 // in src/js (340-render.js, 388-dedup.js). The old code works out every card (tags, distance, hours) and redraws
 // the whole list fresh (rev) after anything changes, like before. Buttons (♥ 👍 넣기 묶기, filters) say what was pressed
-// through app().place(name, value); dragging a card onto the 일정표 is still read by the old code.
+// through app().place(name, value); dragging a card onto the 일정표 starts here (app/ui/drag.ts).
 // What other features add to a card (CARD_EXTRAS, e.g. 친구와 함께 "가고 싶어요") is drawn by Extras.tsx.
 import { Fragment, type CSSProperties } from 'react';
 import { Extras, type Extra } from './Extras';
 import { LiveLine } from '../ui/live';
 import { app } from '../ui/host';
+import * as drag from '../ui/drag';
 
 const go = (name: string, value: string) => app().place(name, value);
 
@@ -57,7 +58,7 @@ const T = ({ x }: { x: Tag }) => <span className={x.c}>{x.t}</span>;
 
 function Card({ p, pm }: { p: PlaceCard; pm: boolean }) {
   return (
-    <div className={'card' + (p.sel ? ' sel' : '') + (p.off ? ' off' : '') + (pm && p.wish ? ' mine' : '')} style={{ '--cc': `var(--c-${p.cat})` } as CSSProperties} draggable="true" data-id={p.id}>
+    <div className={'card' + (p.sel ? ' sel' : '') + (p.off ? ' off' : '') + (pm && p.wish ? ' mine' : '')} style={{ '--cc': `var(--c-${p.cat})` } as CSSProperties} draggable="true" data-id={p.id} onDragStart={e => drag.start(e, { type: 'new', id: p.id })}>
       <div className="nm">{p.name}</div>
       {pm
         ? <button className={p.wish ? 'small-btn wish-go on' : 'small-btn primary wish-go'} data-wish={p.id} aria-pressed={p.wish} onClick={() => go('wish', p.id)}>{p.wish ? '담았어요 ✓' : '♥ 담기'}</button>

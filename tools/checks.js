@@ -925,6 +925,13 @@ module.exports = [
       await fire('dragend', '#grid', 0, 0);
       ok(JSON.stringify(await startOf()) !== JSON.stringify(before) && (await startOf()).includes(1290), 'drop moves the block to that time');
       ok(await p.$$eval('#grid .slot.drop', e => e.length) === 0, 'the highlight clears');
+      // a place card from the 장소 탭 (on a wide screen both are visible): dropped on the 일정표, it becomes a block there
+      await p.setViewportSize({ width: 1280, height: 900 }); await p.waitForTimeout(300);
+      const card = await p.getAttribute('#cards .card >> nth=0', 'data-id'), n1 = (await startOf()).length;
+      const box2 = await p.$eval('#grid .slot[data-t="1320"]', el => { el.scrollIntoView({ block: 'center' }); const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 } });
+      await fire('dragstart', `#cards .card[data-id="${card}"]`, 0, 0); await fire('dragover', '#grid', box2.x, box2.y); await fire('drop', '#grid', box2.x, box2.y); await p.waitForTimeout(300); await fire('dragend', '#grid', 0, 0);
+      ok((await startOf()).length === n1 + 1 && (await startOf()).includes(1320), 'a dragged place card is put in at that time');
+      await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(300);
       await p.click('#grid .blk:not(.fixed) >> nth=0'); await p.waitForTimeout(300);
       await p.fill('#bmIn', '사진!'); await p.click('#bmSave'); await p.waitForTimeout(300); await p.keyboard.press('Escape'); await p.waitForTimeout(300);
       ok((await p.textContent('#grid')).includes('사진!') && await vis(p, '#grid .bmemo'), 'a handwritten memo shows on the block');
@@ -1754,6 +1761,232 @@ module.exports = [
       ok(await vis(p, '#sheetBg') && await vis(p, '#lookForm'), '🎨 opens 여행 꾸미기');
       await p.fill('#lkTag', '둘이서'); await p.click('#lookForm [type="submit"]'); await p.waitForTimeout(400);
       ok((await p.textContent('#heroTag')) === '둘이서' && await vis(p, '#heroTag'), 'the tagline shows in the header');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'view: 이번 여행 form values (app/view/forms.ts): rows, 예산 hint, trip line, 숙소 nights',
+    async run({ b, S, device, ok, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      const r = await p.evaluate(() => {
+        const F = window.JEPI_UI.view.forms, pr = JSON.parse(JSON.stringify(window.JEPI_DATA.trip.cur.profile));
+        pr.budgetMan = 100; pr.party = { type: 'friends', adults: 3, kids: 0 };
+        const X = { dest: () => ({ f: 'dest' }), day: () => [{ f: 'day' }], homeBox: () => null, paste: (kind, hint) => ({ kind, hint }) };
+        const rows = F.meRows(pr, X), way = rows.find(x => x[0] === 'way')[3](), st = rows.find(x => x[0] === 'stay')[3]()[0];
+        return { ids: rows.map(x => x[0]).join(','), who: rows.find(x => x[0] === 'who')[2], bud: rows.find(x => x[0] === 'bud')[2], way: way.map(x => x.f).join(','),
+          paste: way[0].paste.kind, nights: st.nights.length, hint: F.budgetHint(pr), none: F.budgetHint({ ...pr, budgetMan: 0 }), sum: F.tripSummary(window.JEPI_DATA.days.state.days) };
+      });
+      ok(r.ids === 'when,who,way,stay,bud,ev' && r.who === '친구 3명' && r.bud.startsWith('1인 100만원'), 'rows: ids, 누구와, 예산 ' + JSON.stringify(r));
+      ok(r.way === 'flight,home' && r.paste === 'flight' && r.nights >= 1, '오가는 길 parts (empty 집 box left out), the paste box comes from the old code, a night per row');
+      ok(r.hint.includes('교통·숙박 약') && r.none.startsWith('총예산만 넣으면'), '예산 hint with and without a total');
+      ok(r.sum.city === '오사카' && /박 · /.test(r.sum.line), 'trip line: ' + JSON.stringify(r.sum));
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'view: 🎲 sheet values (app/view/dice.ts): free gaps, places the dice can land on, 뭐 먹지 / 뭐 하지 / 여행 tabs',
+    async run({ b, S, device, ok, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      const r = await p.evaluate(() => {
+        const V = window.JEPI_UI.view.dice;
+        const dice = { mood: 'any', lunch: false, walk: 10, gapI: 0, rolls: 0, pick: null, rolling: false, msg: '', force: null };
+        const eat = { walk: 10, mood: 'any', base: 'near', org: 'gps', pick: null, rolls: 0, msg: '', busy: false, meal: 'lunch', cond: false };
+        const doS = { base: 'near', org: 'gps', area: null, when: 'now', at: '18:00', clen: 'short', mood: 'any', pick: null, rolls: 0, course: null, busy: false, msg: '', hits: [] };
+        const St = { dice, eat, doS, diceLog: [], recentAreas: [], day: 1, ai: false };
+        let gi = -1, gs = []; for (let d = 0; d < 4 && gi < 0; d++) { gs = V.diceGaps(d); if (gs.length) { gi = d } }
+        St.day = gi; const cs = gs.length ? V.diceCands(gs[0], St) : [];
+        const pl = V.plan(St, { tabs: 'do', bases: V.doBases(St) }), e = V.eatTab(St), n = V.doNear(St);
+        dice.pick = cs[0] || null; const picked = V.plan(St, { tabs: 'do' });
+        return { gaps: gs.length, cands: cs.length, okC: cs.every(c => c.dur >= 30 && c.arr >= gs[0].s), plGo: pl.acts.map(a => a.id).join(','), bases: pl.bases.map(x => x.v).join(','),
+          eatGo: e.acts.map(a => a.label).join(','), eatBases: e.bases.map(x => x.v).join(','), eatCond: e.cond.txt, nearActs: n.acts.length, nearCond: n.cond.txt,
+          pickActs: picked.acts.map(a => a.id).join(','), stage: picked.stage.s };
+      });
+      ok(r.gaps > 0 && r.cands > 0 && r.okC, 'a free gap and places that fit it ' + JSON.stringify(r));
+      ok(r.plGo === 'diceGo' && r.bases === 'near,area,plan', '여행 tab: 굴리기, bases 내 주변 / 동네 / 여행');
+      ok(r.eatGo.includes('굴리기') && r.eatBases === 'near,plan' && r.eatCond.startsWith('걸어서 10분'), '뭐 먹지: 굴리기 and its condition line');
+      ok(r.nearActs === 2 && r.nearCond.startsWith('지금'), '뭐 하지: 하나 굴리기 · 코스 짜기');
+      ok(r.stage === 'planCard' && r.pickActs.startsWith('diceFix'), 'a picked place shows its card and 이걸로 할래요');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'view: P모드 board values (app/view/pview.ts): closed before its day, the board with ? squares, a drawn card, 가볍게 시작 form',
+    async run({ b, S, device, ok, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      const r = await p.evaluate(() => {
+        const V = window.JEPI_UI.view.pview, days = window.JEPI_DATA.days.state.days, t = new Date(), today = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+        const d = days.findIndex(x => x.iso > today), pSt = { mood: 'calm', draw: null };
+        const shut = V.board(d, pSt, { ahead: false, demo: false, ai: false }), open = V.board(d, pSt, { ahead: true, demo: false, ai: false });
+        const g = V.pGaps(d)[0], cand = { p: { id: 'x', cat: 'walk', name: '산책길', note: '' }, arr: 600, dur: 60, tm: 8, mode: '도보' };
+        const drawn = V.board(d, { mood: 'calm', draw: { day: d, gi: 0, g, mood: 'calm', seen: [], cand, left: 2, rolling: false } }, { ahead: true, demo: false, ai: false });
+        const pr = { dest: '부산', party: { type: 'solo' } }, q = V.partQuick(pr, true);
+        return { d, shut: shut.mode, until: shut.closed && shut.closed.until, open: open.mode, ends: open.squares.length ? open.squares[open.squares.length - 1].k : '', q: open.squares.filter(x => x.k === 'q').length,
+          canRoll: open.canRoll, calm: open.dice.find(x => x.on).k, drawn: drawn.mode, card: drawn.draw.card && drawn.draw.card.when, die: drawn.draw.n, qf: q.f, qlen: q.len, set: !!pr.q, slots: q.slots.length };
+      });
+      ok(r.d >= 0 && r.shut === 'closed' && r.until > 0, 'a future day is closed until its morning ' + JSON.stringify(r));
+      ok(r.open === 'board' && r.ends === 'end' && r.q > 0 && r.canRoll && r.calm === 'calm', '미리 열기: the board ends with 하루 끝, has ? squares, the chosen die is on');
+      ok(r.drawn === 'draw' && r.card === '10시쯤 도착' && r.die === 3, 'a drawn card: its time and the die face');
+      ok(r.qf === 'quick' && r.qlen === '0' && r.set && r.slots === 4, '가볍게 시작 (하루 코스): length 0, four start times');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'ui state (app/ui/state.ts): the old code and React share the open day, tab, picked place and J/P',
+    async run({ b, S, device, ok, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      const U = () => p.evaluate(() => { const u = window.JEPI_UI.ui; return { day: u.day, tab: u.tab, jp: u.jp, selected: u.selected, ai: !!u.sample } });
+      ok(JSON.stringify(await U()) === JSON.stringify({ day: 0, tab: 'timeline', jp: 'J', selected: null, ai: false }), 'starts on Day 1, 일정표, J, nothing picked, no AI');
+      await p.click('#days [data-day="1"]'); await p.waitForTimeout(300);
+      ok((await U()).day === 1, 'tapping Day 2 sets UI.day');
+      await p.click('[data-jp="P"]'); await p.waitForTimeout(300);
+      ok((await U()).jp === 'P' && await p.evaluate(() => document.body.classList.contains('mode-p')), 'P모드 sets UI.jp');
+      await p.click('[data-jp="J"]'); await p.waitForTimeout(300);
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'flow: drawing the trip (app/flow/render.ts): time spacing redraws the grid, a place goes in, the sheet opens and closes, tabs follow UI.tab',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      const h60 = await p.$eval('#grid', e => e.offsetHeight);
+      await p.evaluate(() => window.JEPI_UI.flow.render.setZoom(100)); await p.waitForTimeout(200);
+      const h100 = await p.$eval('#grid', e => e.offsetHeight);
+      ok(h100 > h60 && await p.evaluate(() => localStorage.getItem('gp.zoom')) === '100', `100px an hour: the grid grows (${h60} → ${h100}) and it is remembered`);
+      await p.evaluate(() => window.JEPI_UI.flow.render.setZoom(60));
+      const n0 = await p.$$eval('#grid .blk', e => e.length);
+      const uid = await p.evaluate(() => { const R = window.JEPI_UI.flow.render, T = window.JEPI_DATA.trip, used = new Set(T.cur.placed.map(b => b.id));
+        const id = window.JEPI_DATA.places.P.find(x => !used.has(x.id) && !x.drop && x.cat !== 'trip').id; R.place(id, 1200); R.renderAll(); return T.cur.placed.find(b => b.id === id && b.start === 1200 && b.day === 0).uid });
+      ok((await p.$$eval('#grid .blk', e => e.length)) === n0 + 1, 'place() then renderAll(): one more block on the grid');
+      await p.evaluate(u => window.JEPI_UI.flow.render.openSheet(u), uid); await p.waitForTimeout(200);
+      ok(await vis(p, '#sheetBg') && await p.$eval('#sheet', e => e.dataset.uid) === uid, 'openSheet shows that block');
+      await p.evaluate(() => window.JEPI_UI.flow.render.closeSheet()); await p.waitForTimeout(300);
+      ok(!(await vis(p, '#sheetBg')), 'closeSheet hides it');
+      await p.evaluate(() => { window.JEPI_UI.ui.tab = 'check'; window.JEPI_UI.flow.render.renderTabs() }); await p.waitForTimeout(200);
+      ok(await p.evaluate(() => document.body.dataset.tab) === 'more' && await vis(p, '#side-check'), 'UI.tab = check: 더보기 group, 준비하기 panel shown');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'flow: presses on the 일정표 (app/flow/schedule.ts): move a block, 준비하기 tick, the summary chip, a keyword, a day title',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      const r = await p.evaluate(() => {
+        const F = window.JEPI_UI.flow, T = window.JEPI_DATA.trip, R = F.render, X = F.schedule;
+        const b0 = T.cur.placed.find(b => b.day === 0 && b.start < 1300); R.openSheet(b0.uid); const s0 = b0.start;
+        X.blockAct('mv', '30'); const moved = T.cur.placed.find(b => b.uid === b0.uid).start - s0;
+        X.blockAct('du', '30'); const longer = T.cur.placed.find(b => b.uid === b0.uid).dur;
+        X.checksAct('ck', 'test-tick', true); const ticked = T.cur.done['test-tick'] === true;
+        const on = X.kwAct('toggle', '테스트키워드'), has = T.cur.kws.includes('테스트키워드'); X.kwAct('toggle', '테스트키워드');
+        X.sumAct('chip', 'route'); const open = document.querySelector('#panel-timeline').classList.contains('sum-route'); X.sumAct('chip', 'route');
+        X.gridAct('day', '1'); const d1 = window.JEPI_UI.ui.day; X.gridAct('day', '0');
+        return { moved, longer: longer >= 60, ticked, on, has, after: T.cur.kws.includes('테스트키워드'), open, closed: !document.querySelector('#panel-timeline').classList.contains('sum-route'), d1, title: X.dayTitleOf(0) };
+      });
+      ok(r.moved === 30 && r.longer, '30분 뒤로 · 30분 더 ' + JSON.stringify(r));
+      ok(r.ticked, '준비하기 tick saved');
+      ok(r.on === true && r.has && !r.after, 'a keyword on, then off again');
+      ok(r.open && r.closed, 'the 이동 chip opens the route line, again closes it');
+      ok(r.d1 === 1 && r.title.length > 0, 'Day 2 button sets the day; Day 1 has a title');
+      await p.evaluate(() => window.JEPI_UI.flow.schedule.titleEditing(true)); await p.waitForTimeout(200);
+      ok(await vis(p, '#dayTitleForm'), '✎: the day title form opens');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'flow: 🎲 and the P board (app/flow/dice.ts): roll in free time → 이걸로 → in the schedule, remembered; the board draws a card',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      const n0 = await p.evaluate(() => window.JEPI_DATA.trip.cur.placed.length);
+      await p.evaluate(() => { const F = window.JEPI_UI.flow.dice; F.openDiceTab('do', null); F.diceAct('dobase', 'plan') }); await p.waitForTimeout(200);
+      ok(await vis(p, '#sheetBg') && await p.$eval('#sheet', e => e.dataset.uid) === 'dice', 'the 🎲 sheet opens');
+      await p.evaluate(() => window.JEPI_UI.flow.dice.diceAct('diceGo')); await p.waitForTimeout(900);
+      const pick = await p.evaluate(() => { const d = window.JEPI_UI.flow.dice.st.dice; return d.pick && d.pick.p.name });
+      ok(!!pick, 'rolled: ' + pick);
+      await p.evaluate(() => window.JEPI_UI.flow.dice.diceAct('diceFix')); await p.waitForTimeout(300);
+      const r = await p.evaluate(() => ({ n: window.JEPI_DATA.trip.cur.placed.length, log: JSON.parse(localStorage.getItem('gp.dice') || '[]').map(x => x.n) }));
+      ok((r.n === n0 + 1 && r.log.includes(pick)) || (await p.evaluate(() => !!window.JEPI_UI.flow.dice.st.dice.force)), '이걸로: in the schedule and remembered (or it asks first because of a warning)');
+      await p.evaluate(() => { window.JEPI_UI.ui.jp = 'P'; localStorage.setItem('gp.pAhead', 'true'); window.JEPI_UI.flow.dice.renderPView(); window.JEPI_UI.flow.dice.pviewAct('roll', '0') }); await p.waitForTimeout(1400);
+      const draw = await p.evaluate(() => { const d = window.JEPI_UI.flow.dice.st.pSt.draw; return d ? { card: !!d.cand, rolling: d.rolling } : null });
+      ok(draw && draw.rolling === false, 'the board: a die rolled and settled ' + JSON.stringify(draw));
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'flow: forms (app/flow/forms.ts): 처음 설정 J/P → the right start, typing fills the draft, saving keeps it, a booked event row',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.waitForTimeout(300);
+      await p.click('#onbBody [data-pickjp="P"]'); await p.waitForTimeout(250);
+      ok(await p.evaluate(() => window.JEPI_UI.flow.forms.fs.draft.startMode) === 'pq' && await vis(p, '#onbBody [data-q="when"]'), 'P: the quick start form (가볍게 시작)');
+      await p.click('#onbPrev').catch(() => {}); await p.ctx.close();
+      const q = await device(b, S); await q.click('[data-w="new"]'); await q.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(q); await q.waitForTimeout(300);
+      await q.click('.tabs [data-tab="more"]'); await q.click('#moreBox [data-tab="me"]'); await q.waitForTimeout(250);
+      await q.click('[data-meopen="ev"]'); await q.waitForTimeout(200);
+      const n0 = await q.evaluate(() => window.JEPI_UI.flow.forms.fs.draft.events.length);
+      await q.evaluate(() => window.JEPI_UI.flow.forms.formAct('addev')); await q.waitForTimeout(200);
+      ok(await q.evaluate(() => window.JEPI_UI.flow.forms.fs.draft.events.length) === n0 + 1, 'formAct addev: one more booked event in the draft');
+      await q.evaluate(() => window.JEPI_UI.flow.forms.formAct('meSave')); await q.waitForTimeout(300);
+      ok(await q.evaluate(() => window.JEPI_DATA.trip.cur.profile.events.length) === n0 + 1, '저장: the trip has it');
+      ok(q.errs.length === 0, 'no page errors ' + q.errs.join(' | '));
+      await q.ctx.close();
+    }
+  },
+  {
+    name: 'status lines (app/ui/status.ts) and the destination flow (app/flow/destination.ts): counting seconds, a message, error words, talk starts',
+    async run({ b, S, device, ok }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.waitForTimeout(300);
+      await p.evaluate(() => window.JEPI_UI.status.progStart('st_onb', '테스트 중이에요', [], '')); await p.waitForTimeout(1200);
+      const busy = await p.textContent('#st_onb');
+      await p.evaluate(() => window.JEPI_UI.status.setSt('st_onb', '끝났어요')); await p.waitForTimeout(100);
+      const r = await p.evaluate(() => ({ done: document.getElementById('st_onb').textContent, err: window.JEPI_UI.status.errText({ code: 'rate_limited' }, 'x'), other: window.JEPI_UI.status.errText({}, '못 했어요') }));
+      ok(/테스트 중이에요 · \d+초 지났어요/.test(busy) && r.done === '끝났어요', 'counting seconds, then a message: ' + busy);
+      ok(r.err.includes('1분쯤 뒤') && r.other === '못 했어요. 다시 시도해 주세요.', 'error words');
+      const t = await p.evaluate(() => { const D = window.JEPI_UI.flow.destination; D.talkReset(); return window.JEPI_UI.flow.forms.fs.talk });
+      ok(t && t.msgs.length === 1 && t.options.length === 4 && t.n === 0, 'a talk starts with one question and four answers to pick');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'flow: AI chat (app/flow/chat.ts): a reply with a change → 적용 → 되돌리기 puts it back; the chat folds',
+    async run({ b, S, device, ok, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      const r = await p.evaluate(() => {
+        const C = window.JEPI_UI.flow.chat, T = window.JEPI_DATA.trip, b0 = T.cur.placed.find(x => x.day === 0 && x.start < 1300);
+        C.cs.chat.push({ role: 'user', text: '30분 늦춰 줘' }, { role: 'a', text: '이렇게 바꿔 볼게요.', ops: [{ op: 'move', uid: b0.uid, day: 0, start: String(Math.floor((b0.start + 30) / 60)).padStart(2, '0') + ':' + String((b0.start + 30) % 60).padStart(2, '0') }], warns: [], checked: true, state: 'pending' });
+        C.renderChat(); const before = b0.start;
+        C.chatAct('apply', '1'); const after = T.cur.placed.find(x => x.uid === b0.uid).start;
+        const undoShown = !!document.querySelector('#chatLog [data-chundo], #chatLog button');
+        C.chatAct('undo', '1'); const back = T.cur.placed.find(x => x.uid === b0.uid).start;
+        C.dockAct('fold'); const folded = C.cs.folded;
+        return { before, after, back, state: C.cs.chat[1].state, folded, undoShown };
+      });
+      ok(r.after === r.before + 30, '적용: the block moved 30 minutes ' + JSON.stringify(r));
+      ok(r.back === r.before && r.state === 'cancelled', '되돌리기: back where it was');
+      ok(r.folded === true, 'the chat folds');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'flow: 예약 도우미 (app/flow/helper.ts): opens on a step, 다음 / 이전, a time slot sets the flight times, closes',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      await p.evaluate(() => window.JEPI_UI.flow.helper.openHelper(1)); await p.waitForTimeout(200);
+      const H = () => p.evaluate(() => window.JEPI_UI.flow.helper.hs.step);
+      ok(await vis(p, '#helper') && await H() === 1, 'opens on ② 숙소 동네');
+      await p.evaluate(() => window.JEPI_UI.flow.helper.helperFrameAct('next')); ok(await H() === 2, '다음 → ③');
+      await p.evaluate(() => window.JEPI_UI.flow.helper.helperFrameAct('prev')); ok(await H() === 1, '이전 → ②');
+      const r = await p.evaluate(() => { const F = window.JEPI_UI.flow.helper; F.setSlot(600, 1080); const pr = window.JEPI_DATA.trip.cur.profile; return { arr: pr.out.arr, dep: pr.back.dep, picked: F.hs.slotPicked } });
+      ok(r.arr === '10:00' && r.dep === '18:00' && r.picked === '600,1080', 'a time slot: arrive 10:00, leave 18:00 ' + JSON.stringify(r));
+      await p.evaluate(() => window.JEPI_UI.flow.helper.closeHelper()); await p.waitForTimeout(300);
+      ok(!(await vis(p, '#helper')), 'closes');
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }

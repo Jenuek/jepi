@@ -5,8 +5,6 @@ const SHARED_IDS=new Set();
 const cityKey=()=>REC.cityKey(PK.pack.city||'');
 const placeKey=p=>REC.placeKey(PK.pack.city||'',p.name);
 function recHash(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(36)}
-const recOf=p=>REC.countOf(placeKey(p));
-const iRec=p=>REC.isMine(placeKey(p));
 function entryOf(p){const h=p.always?null:p.hours;
   return {k:placeKey(p),city:cityKey(),name:p.name,local:p.local||'',cat:p.cat,area:p.area,lat:+p.ll[0]||0,lng:+p.ll[1]||0,dur:p.dur,
     open:h?`${fmt(h[0])}-${fmt(h[1])}`:null,closed:p.closed||[],cost:costOf(p.id)[0]||0,note:String(p.note||'').slice(0,160),tags:tagsOf(p.id).slice(0,6),made:!!p.custom,at:Date.now()}}

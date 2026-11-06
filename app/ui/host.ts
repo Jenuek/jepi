@@ -68,6 +68,8 @@ export interface AppHost {
   more(id: string): void;
   /** a card under the map was tapped (its stop) */
   mapCard(i: number): void;
+  /** something was dropped on the 일정표 (drag & drop): a new place (id) or a block (uid), at this minute */
+  dropped(kind: 'new' | 'move', id: string, minute: number): void;
   /** the 예약 도우미 frame: prev, next, close */
   helperFrame(name: string): void;
   /** the 처음 안내 bubble: next, skip */
