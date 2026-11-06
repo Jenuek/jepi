@@ -1952,5 +1952,43 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'flow: AI chat (app/flow/chat.ts): a reply with a change → 적용 → 되돌리기 puts it back; the chat folds',
+    async run({ b, S, device, ok, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      const r = await p.evaluate(() => {
+        const C = window.JEPI_UI.flow.chat, T = window.JEPI_DATA.trip, b0 = T.cur.placed.find(x => x.day === 0 && x.start < 1300);
+        C.cs.chat.push({ role: 'user', text: '30분 늦춰 줘' }, { role: 'a', text: '이렇게 바꿔 볼게요.', ops: [{ op: 'move', uid: b0.uid, day: 0, start: String(Math.floor((b0.start + 30) / 60)).padStart(2, '0') + ':' + String((b0.start + 30) % 60).padStart(2, '0') }], warns: [], checked: true, state: 'pending' });
+        C.renderChat(); const before = b0.start;
+        C.chatAct('apply', '1'); const after = T.cur.placed.find(x => x.uid === b0.uid).start;
+        const undoShown = !!document.querySelector('#chatLog [data-chundo], #chatLog button');
+        C.chatAct('undo', '1'); const back = T.cur.placed.find(x => x.uid === b0.uid).start;
+        C.dockAct('fold'); const folded = C.cs.folded;
+        return { before, after, back, state: C.cs.chat[1].state, folded, undoShown };
+      });
+      ok(r.after === r.before + 30, '적용: the block moved 30 minutes ' + JSON.stringify(r));
+      ok(r.back === r.before && r.state === 'cancelled', '되돌리기: back where it was');
+      ok(r.folded === true, 'the chat folds');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'flow: 예약 도우미 (app/flow/helper.ts): opens on a step, 다음 / 이전, a time slot sets the flight times, closes',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      await p.evaluate(() => window.JEPI_UI.flow.helper.openHelper(1)); await p.waitForTimeout(200);
+      const H = () => p.evaluate(() => window.JEPI_UI.flow.helper.hs.step);
+      ok(await vis(p, '#helper') && await H() === 1, 'opens on ② 숙소 동네');
+      await p.evaluate(() => window.JEPI_UI.flow.helper.helperFrameAct('next')); ok(await H() === 2, '다음 → ③');
+      await p.evaluate(() => window.JEPI_UI.flow.helper.helperFrameAct('prev')); ok(await H() === 1, '이전 → ②');
+      const r = await p.evaluate(() => { const F = window.JEPI_UI.flow.helper; F.setSlot(600, 1080); const pr = window.JEPI_DATA.trip.cur.profile; return { arr: pr.out.arr, dep: pr.back.dep, picked: F.hs.slotPicked } });
+      ok(r.arr === '10:00' && r.dep === '18:00' && r.picked === '600,1080', 'a time slot: arrive 10:00, leave 18:00 ' + JSON.stringify(r));
+      await p.evaluate(() => window.JEPI_UI.flow.helper.closeHelper()); await p.waitForTimeout(300);
+      ok(!(await vis(p, '#helper')), 'closes');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];

@@ -22,6 +22,10 @@ const TV=JD.traveler;
 const UI=window.JEPI_UI.ui;
 // what the forms are editing (app/flow/forms.ts): FS.draft, FS.onbStep, FS.talk, FS.destRecs, FS.meOpen …
 const FS=window.JEPI_UI.flow.forms.fs;
+// the AI chat's state (app/flow/chat.ts): CS.chat, CS.busy, CS.undoSnap, CS.ctl, CS.folded
+const CS=window.JEPI_UI.flow.chat.cs;
+// 예약 도우미's state (app/flow/helper.ts): HS.step, HS.vibe, HS.hotelRecs, HS.routeInfo, HS.slotPicked …
+const HS=window.JEPI_UI.flow.helper.hs;
 // ---------- demo sandbox ----------
 // The sandbox itself (copy aside on entering, put back on leaving or on the next launch) is in app/data/demo.ts
 // and has already run before this script. DEMO.on is true while the demo is open.
@@ -43,7 +47,7 @@ const WD=['일','월','화','수','목','금','토'];
 DY.loc={};
 // the destination's lists (app/data/places.ts — the same objects, filled again when a destination opens; tokyo.ts until then)
 const PLC=JD.places, PK=PLC.state;
-const AIRPORTS=PLC.AIRPORTS, AREAS=PLC.AREAS, CATS=PLC.CATS, P=PLC.P, PM=PLC.PM;
+const AREAS=PLC.AREAS, CATS=PLC.CATS, P=PLC.P, PM=PLC.PM;
 DY.locArea={};
 DY.locZone={};
 const dayStart=JD.days.dayStart;   // app/data/days.ts
@@ -59,7 +63,6 @@ const DEFAULT=[];
 // ---------- profile: trip facts entered by the viewer ----------
 const PROFILE_EXAMPLE={dest:'도쿄',mode:'flight',local:'transit',startDate:'2026-11-07',nights:3,out:{airport:'hnd',dep:'08:15',arr:'10:20',flight:''},back:{airport:'hnd',dep:'19:30',arr:'22:05',flight:''},home:{area:'',min:60,fare:1550,byMin:120},stays:[{name:'시부야 숙소',area:'shibuya',checkin:'15:00',checkout:'11:00',from:0,to:3}],events:[],purpose:'',pace:'slow',social:'some',breakfast:false};
 const clone=o=>JSON.parse(JSON.stringify(o));
-const apName=k=>(AIRPORTS[k]||AIRPORTS[firstGw()]).name;
 // dates, tidying 여행 정보 and making the days with their fixed blocks: app/data/days.ts (the days themselves: DY.days …)
 const fixProfile=JD.days.fixProfile, buildDays=JD.days.buildDays;
 
@@ -99,83 +102,25 @@ function saveCustomForm(f){
 }
 
 // ---------- talk to Claude to change the schedule ----------
-let chat=[], chatBusy=false, undoSnap=null, chatCtl=null;
-const opText=JD.asks.opText;   // one proposed change in words: app/data/asks.ts
-let chatRev=0;
-// the dock under the schedule is drawn by React (app/screens/Dock.tsx) from dockView; dock({…}) changes some of it and draws again
-let dockView={folded:false,foldHidden:true,foldText:'',expanded:undefined,aiHidden:true,aiOff:false,fixHidden:true,fixText:'',helperHidden:true,note:'',inputOff:false,sendOff:false,placeholder:'AI에게 말로 부탁하기'};
-function dock(p){dockView={...dockView,...p};window.JEPI_UI.mount('dock',$('#chatMount'),dockView)}
-// a button / the message was sent in the dock
-function dockAct(n,v){
-  if(n==='fold'){chatFolded=!chatFolded;chatFoldSync()}
-  else if(n==='ai')openFind({when:'gap',into:'sched'});
-  else if(n==='fix')fixWarns();
-  else if(n==='helper')openHelper(0);
-  else if(n==='custom')openCustom(null,null);
-  else if(n==='send'){chatFolded=false;if(v)sendChat(v)}
-}
-function renderChat(){setTimeout(chatFoldSync,0);
-  dock({note:UI.sample?'':'AI 기능은 더보기 → 설정에서 키를 연결하면 쓸 수 있어요',inputOff:!UI.sample||chatBusy,sendOff:!UI.sample||chatBusy});
-  const start=Math.max(0,chat.length-8);
-  // drawn by React: app/screens/ChatLog.tsx
-  window.JEPI_UI.mount('chat',$('#chatLog'),{rev:++chatRev,msgs:chat.slice(start).map((m,k)=>{const i=start+k;
-    if(m.role==='user') return {r:'u',text:String(m.text)};
-    if(m.role==='busy') return {r:'busy',note:m.note?String(m.note):'일정을 살펴보고 있어요. 보통 10~40초 걸려요.'};
-    const allOps=m.ops||[], ops=allOps.filter(o=>o.op!=='add_place');
-    return {r:'a',i,text:String(m.text),places:allOps.some(o=>o.op==='add_place')?placeRows(m):null,ops:ops.map(o=>opText(o)),
-      check:ops.length&&m.checked&&m.state==='pending'?{warns:(m.warns||[]).map(String)}:null,state:String(m.state||''),undo:!!(undoSnap&&undoSnap.i===i)}})});
-  const lg=$('#chatLog'); lg.scrollTop=lg.scrollHeight;
-}
-async function sendChat(text){
-  if(!UI.sample||chatBusy||!text) return;
-  chat.push({role:'user',text}); chat.push({role:'busy'}); chatBusy=true; renderChat();
-  chatCtl=new AbortController();
-  try{
-    // the question, checking the changes and asking once more when they bring warnings: app/data/asks.ts
-    const ans=await JD.asks.chatAnswer(UI.sample,text,chat.filter(m=>m.role==='user'||m.role==='a').slice(-7,-1),
-      ()=>{chat[chat.length-1].note='바꿀 내용을 검사했더니 경고가 생겨서 다시 고치는 중이에요.';renderChat()},chatCtl.signal);
-    const r={reply:ans.reply}, ops=ans.ops, chk={warns:ans.warns};
-    chat.pop(); chat.push({role:'a',text:String((r&&r.reply)||(ops.length?'이렇게 바꿔 볼게요.':'바꿀 내용을 찾지 못했어요.')).slice(0,600),ops,warns:chk.warns,checked:ops.length>0,state:ops.length?'pending':'none'});
-  }catch(e){
-    chat.pop();
-    const msg=e&&e.code==='cancelled'?'멈췄어요.':e&&e.code==='not_granted'?'AI 키가 맞지 않아서 답하지 못했어요.':e&&e.code==='rate_limited'?'요청이 많아 잠시 쉬어야 해요. 조금 뒤에 다시 보내 주세요.':'답을 받지 못했어요. 다시 보내 주세요.';
-    chat.push({role:'a',text:msg,ops:[],state:'none'});
-  }finally{chatBusy=false;renderChat()}
-}
-function applyChat(i){const m=chat[i]; if(!m||m.state!=='pending') return;
-  undoSnap={i,placed:clone(CUR.placed),custom:clone(CUR.custom),fmarks:clone(CUR.fmarks)};
-  applyOpsCore(m.ops.filter(o=>o.op!=='add_place')); TRIP.save('fmarks',CUR.fmarks);
-  TRIP.save('custom',CUR.custom); m.state='applied'; save(); renderAll();
-}
-function undoChat(i){if(!undoSnap||undoSnap.i!==i) return; CUR.placed=undoSnap.placed; CUR.custom=undoSnap.custom; CUR.fmarks=undoSnap.fmarks||CUR.fmarks; TRIP.save('fmarks',CUR.fmarks); CUR.custom.forEach(addCustomToData); TRIP.save('custom',CUR.custom); undoSnap=null; chat[i].state='cancelled'; chat[i].text+=' (되돌렸어요)'; save(); renderAll()}
-function renderNudges(){
-  const off=CUR.profile.nudgeOff||{}, C=[];
-  if(CUR.profile.kind!=='day'&&!CUR.profile.flightSet&&CUR.profile.bookedFlight!==false&&!off.flight) C.push(['flight','✈️','교통편 시간을 알려 주세요','첫날 출발과 마지막 날 귀국 시간이 정확해져요.',[['nudgeFlightIn','시간 넣기',1],['nudgeFlightNo','아직 예약 전이에요']]]);
-  if(CUR.profile.kind!=='day'&&!CUR.profile.staySet&&CUR.profile.bookedStay!==false&&!off.stay) C.push(['stay','🏨','숙소를 알려 주세요','체크인·체크아웃과 짐 들고 다니는 시간이 계산돼요.',[['nudgeStayIn','숙소 넣기',1],['nudgeStayNo','아직 예약 전이에요']]]);
-  if(CUR.profile.dateUnknown&&!off.date) C.push(['date','📅','여행 날짜를 알려 주세요','지금은 대략 한 달 뒤로 계산하고 있어요.',[['nudgeDate','날짜 넣기',1]]]);
-  if(!CUR.kws.length&&!off.taste) C.push(['taste','💡','취향을 알려 주세요','고른 키워드에 맞는 장소부터 추천해요.',[['nudgeTaste','취향 고르기',1]]]);
-  // drawn by React: app/screens/ChatLog.tsx Nudges
-  window.JEPI_UI.mount('nudges',$('#nudges'),{dir:CUR.profile.direction&&(CUR.profile.purpose||CUR.profile.direction.purpose)?String(CUR.profile.purpose||CUR.profile.direction.purpose):'',
-    rows:C.map(([k,ic,t,d,bs])=>({k,ic,title:d,aria:`${t} 나중에`,label:t.replace(' 알려 주세요','').replace('을','').replace('를',''),
-      btns:bs.map(([id,l,pr])=>({id,primary:!!pr,label:pr?l.replace(/ .*/,'')==='시간'?'넣기':l.split(' ')[0]==='숙소'?'넣기':'고르기':'예약 전'}))}))});
-}
-function goMe(h){UI.tab='me';FS.draft=clone(CUR.profile);renderMe();renderTabs();setTimeout(()=>{const el=[...document.querySelectorAll('#meBox h3')].find(x=>x.textContent.includes(h));if(el)el.scrollIntoView({block:'start'})},0)}
-function renderMeta(){if(CUR.profile.kind==='day'){dock({helperHidden:true});hero({meta:`${PK.pack.city} · ${(DY.days[0].iso||'').slice(5).replace('-','/')} 하루 코스 · ${CUR.profile.meet.time}–${CUR.profile.meet.end}`});return}if(CUR.profile.dateUnknown){const n=DY.days.length-1;dock({helperHidden:!needBooking()});hero({meta:`${PK.pack.city} · 날짜 미정 (대략 ${(DY.days[0].iso||'').slice(5).replace('-','/')}부터) · ${n}박 ${n+1}일`});return}dock({helperHidden:!needBooking()});const n=DY.days.length-1;hero({meta:`${PK.pack.city} · ${(DY.days[0].iso||'').replace(/-/g,'.')} – ${(DY.days[n].iso||'').slice(5).replace('-','.')} · ${n}박 ${n+1}일 · ${apName(CUR.profile.out.airport)}`})}
-
-
+// the chat, the dock, the nudges, the header's trip line and ✨ 빈 시간 채우기: app/flow/chat.ts
+const CHAT=window.JEPI_UI.flow.chat;
+CHAT.connect({openFind:o=>openFind(o),fixWarns:()=>fixWarns(),openHelper:s=>openHelper(s),openCustom:(id,st)=>openCustom(id,st),addCustomToData:c=>addCustomToData(c),
+  hero:p=>hero(p),renderMe:()=>renderMe(),needBooking:()=>needBooking(),dupOf:p=>dupOf(p),renderExt:()=>renderExt()});
+const dock=CHAT.dock, dockAct=CHAT.dockAct, renderChat=CHAT.renderChat, sendChat=CHAT.sendChat, renderNudges=CHAT.renderNudges, goMe=CHAT.goMe, renderMeta=CHAT.renderMeta,
+  chatFoldSync=CHAT.chatFoldSync, chatAct=CHAT.chatAct, askAI=CHAT.askAI;
 // ---------- destination pack: everything that depends on where the trip goes ----------
 // The destination's places and the lists made from them (AREAS, PM …), loading one (loadPack) and checking what the AI
 // sends (cleanPack / cleanPlace) live in app/data/places.ts; the open destination is PK.pack.
 PK.pack=null;
 const wipe=o=>{for(const k of Object.keys(o)) delete o[k]};
-const firstArea=PLC.firstArea, firstGw=PLC.firstGw, nearestArea=PLC.nearestArea, addPackPlace=PLC.addPackPlace, loadPack=PLC.loadPack, savePack=PLC.savePack, packFrom=PLC.packFrom, manualPack=PLC.manualPack, cleanPack=PLC.cleanPack, cleanPlace=PLC.cleanPlace;
+const firstArea=PLC.firstArea, nearestArea=PLC.nearestArea, addPackPlace=PLC.addPackPlace, loadPack=PLC.loadPack, savePack=PLC.savePack, packFrom=PLC.packFrom, manualPack=PLC.manualPack, cleanPack=PLC.cleanPack, cleanPlace=PLC.cleanPlace;
 // after a destination is loaded: other travelers' 👍 places of that city (070-shared-recs.js)
 PLC.connectPlaces(pk=>{if(RS.status!=='off'){SHARED_IDS.clear();rebuildShared()}});
 // status lines ("…하는 중이에요 · 12초 지났어요"), messages and error words: app/ui/status.ts
 const STATUS=window.JEPI_UI.status, progStart=STATUS.progStart, progStop=STATUS.progStop, setSt=STATUS.setSt, errText=STATUS.errText;
 // getting a destination ready, more places, 처음 설정's 다음, 여행지 찾기, 이야기하면서 정하기: app/flow/destination.ts
 const DEST=window.JEPI_UI.flow.destination;
-DEST.connect({fresh:()=>FRESH,clearUndo:()=>{undoSnap=null},autoSave:()=>autoSave(),standalone:()=>!!STANDALONE,keyHelp:()=>KEY_HELP,inClaude:()=>inClaude()});
+DEST.connect({fresh:()=>FRESH,clearUndo:()=>{CS.undoSnap=null},autoSave:()=>autoSave(),standalone:()=>!!STANDALONE,keyHelp:()=>KEY_HELP,inClaude:()=>inClaude()});
 const genPack=DEST.genPack, morePlaces=DEST.morePlaces, setBusy=DEST.setBusy, onbAdvance=DEST.onbAdvance, partDest=DEST.partDest, recommendDest=DEST.recommendDest, talkReset=DEST.talkReset, partJP=DEST.partJP, partTalk=DEST.partTalk, talkSend=DEST.talkSend;
 // ---------- demo trip: a generic first-timer's Osaka, 3 nights / 4 days ----------
 // Used only by "데모 둘러보기" (see 381-welcome-demo.js). No personal taste in here on purpose.
@@ -258,111 +203,19 @@ const OPS=JD.ops;
 OPS.connectOps({dayStart:d=>dayStart(d),days:()=>DY.days.length,items:d=>analyze(d).items,fresh:id=>FRESH.add(id)});
 const applyOpsCore=OPS.apply, repairOps=OPS.repair;
 // ---------- booking helper: wish list → where to stay → flight times → search links ----------
-CUR.wish=[]; let hStep=0, hVibe=null, hBusy=false;
+CUR.wish=[];
 const isWish=id=>TRIP.wish.has(id), toggleWish=id=>TRIP.wish.toggle(id);   // app/data/trip.ts
-const needBooking=()=>CUR.profile.kind!=='day'&&(CUR.profile.bookedFlight===false||CUR.profile.bookedStay===false);
-// the helper's steps (areas to stay, time slots, links): app/view/helper.ts
-const areaScores=()=>window.JEPI_UI.view.helper.areaScores();
-async function resolveWishes(text,stId){
-  if(!UI.sample||!text.trim()) return;
-  progStart(stId,'목록의 장소를 찾는 중이에요 (보통 30초~1분)',['wishPasteBtn'],'찾는 중…');
-  try{
-    const {n,added}=await JD.asks.wishesFromList(UI.sample,text); progStop(stId); renderHelper(); renderTray(); setSt(stId,n?`${n}곳에 ♥를 붙였어요${added?` (새로 찾은 곳 ${added}곳)`:''}.`:'목록에서 장소를 찾지 못했어요.');
-  }catch(e){setSt(stId,errText(e,'장소를 찾지 못했어요'))}
-}
-async function askVibes(){
-  if(!UI.sample||hBusy) return; hBusy=true; const top=areaScores().slice(0,3);
-  progStart('st_vibe','동네 분위기를 정리하는 중이에요 (보통 15~30초)',['vibeBtn'],'정리하는 중…');
-  try{hVibe=await JD.asks.vibes(UI.sample,top); progStop('st_vibe');
-  }catch(e){setSt('st_vibe',errText(e,'정리하지 못했어요'))} finally{hBusy=false;renderHelper()}
-}
-// What was pressed inside the 예약 도우미 (HelperBody.tsx tells: its name and value)
-function helperAct(n,v,v2){
-  switch(n){
-  case 'paste': resolveWishes(v||'','st_wish');return;   // ① the pasted list of names
-  case 'vibe': askVibes();return;
-  case 'hotels': askHotels(v);return;
-  case 'route': askRoutes();return;
-  case 'setarea': {const k=v;CUR.profile.stayPicked=k;CUR.profile.stays.forEach((st,i)=>{if(i===0||CUR.profile.bookedStay===false){st.area=k;if(CUR.profile.bookedStay===false)st.name=`숙소 (미정 · ${AREAS[k][0]})`}});TRIP.save('profile',CUR.profile);buildDays();renderHelper();return}
-  case 'slot': {const [a,d]=String(v).split(',').map(Number);setSlot(a,d);return}
-  case 'radio': CUR.profile[v]=v2==='true';TRIP.save('profile',CUR.profile);renderHelper();return;   // ④ 예약 상태
-  case 'toMe': closeHelper();UI.tab='me';FS.draft=clone(CUR.profile);renderMe();renderTabs();return;
-  }
-}
-// the frame (drawn by React: app/screens/Frames.tsx) shows what helperView says; the step itself goes into #helperBody
-let helperView={open:false,step:'',title:'',prevOff:false,nextLabel:'다음'};
-function drawHelperFrame(){window.JEPI_UI.mount('helperFrame',$('#helperMount'),helperView)}
-function helperOpen(){return helperView.open}
-function helperShow(on){helperView={...helperView,open:on};drawHelperFrame()}
-// prev / next / close were pressed in the frame
-function helperFrameAct(n){
-  if(n==='prev'){if(hStep>0){hStep--;renderHelper();$('#helper').scrollTop=0}return}
-  if(n==='next'){if(hStep<H_STEPS.length-1){hStep++;renderHelper();$('#helper').scrollTop=0}else closeHelper();return}
-  if(n==='close')closeHelper()
-}
-function openHelper(step){hStep=step||0;slotPicked=null;$('#meBox').innerHTML='';helperShow(true);renderHelper()}
-function closeHelper(){helperShow(false);renderAll();maybeCoach();if(UI.tab==='me'){FS.draft=clone(CUR.profile);renderMe()}}
-const H_STEPS=['가고 싶은 곳 고르기','숙소 동네 정하기','교통편 시간대 정하기','예약하고 일정에 넣기'];
-function renderHelper(){
-  if(!helperView.open) return;
-  helperView={...helperView,step:`${hStep+1} / ${H_STEPS.length}`,title:H_STEPS[hStep],prevOff:hStep===0,nextLabel:hStep===H_STEPS.length-1?'일정표로 가기':'다음'}; drawHelperFrame();
-  const el=$('#helperBody'); if(!el) return;
-  // drawn by React: app/screens/HelperBody.tsx
-  const st=window.JEPI_UI.view.helper.step(hStep,{vibe:hVibe,hotelRecs,routeInfo,slotPicked,ai:!!UI.sample});
-  window.JEPI_UI.mount('helper',el,{step:st,ai:!!UI.sample,rev:++helperRev});
-}
-let helperRev=0, slotPicked=null;
-function setSlot(a,d){
-  const M=CUR.profile.mode, dur=PK.pack.intl?150:70;
-  CUR.profile.out.arr=fmt(a); CUR.profile.out.dep=fmt(Math.max(0,a-dur)); CUR.profile.back.dep=fmt(d); CUR.profile.back.arr=fmt(Math.min(1439,d+dur));
-  TRIP.save('profile',CUR.profile); buildDays(); slotPicked=`${a},${d}`; renderHelper();
-}
-
-// ---------- season & time-of-day: what is special on these dates, and when each place is best ----------
-// season facts of this trip and what they mean for places: app/data/season.ts
-const SN=JD.season, tripKey=SN.tripKey, seasonOf=SN.seasonOf;
-async function genSeason(stId,signal){
-  if(!UI.sample) return false;
-  progStart(stId,'이 시기만의 특징과 행사를 찾는 중이에요 (보통 30초~1분)',['seasonBtn'],'찾는 중…');
-  try{
-    const n=await JD.asks.seasonInfo(UI.sample,signal);   // app/data/asks.ts
-    progStop(stId); renderAll(); setSt(stId,`이 시기 정보를 받았어요${n?` · 시즌 장소 ${n}곳 추가`:''}.`); return true;
-  }catch(e){setSt(stId,e&&e.code==='cancelled'?'멈췄어요. "확인할 것" 탭에서 다시 받을 수 있어요.':errText(e,'시즌 정보를 받지 못했어요'));return false}
-}
-// 준비하기 → 이 시기 여행 팁 (drawn by React: Checks.tsx)
-function seasonInfo(){
-  const s=seasonOf(), stale=!!(PK.pack.season&&!s);
-  return {got:s?{sun:`${s.sunrise?`🌅 일출 약 ${s.sunrise} · `:''}${s.sunset?`🌇 일몰 약 ${s.sunset}`:''}`,weather:s.weather||'',notes:(s.notes||[]).map((t,i)=>ckInfo('sn'+i+'_'+tripKey(),t))}:null,
-    stale,canAsk:!!(UI.sample&&!PK.pack.manual)};
-}
-
+// the 예약 도우미 (frame, steps, AI answers in it): app/flow/helper.ts — its state is HS (app/flow/helper.ts hs)
+const HELP=window.JEPI_UI.flow.helper;
+HELP.connect({maybeCoach:()=>maybeCoach(),renderMe:()=>renderMe()});
+const needBooking=HELP.needBooking, helperAct=HELP.helperAct, helperOpen=HELP.helperOpen, helperFrameAct=HELP.helperFrameAct, openHelper=HELP.openHelper,
+  closeHelper=HELP.closeHelper, renderHelper=HELP.renderHelper, genSeason=HELP.genSeason, seasonInfo=HELP.seasonInfo, helperShow=HELP.helperShow, drawHelperFrame=HELP.drawHelperFrame;
 // ---------- optional travel style (every item defaults to "doesn't matter") ----------
 const STYLE_ROWS=JD.days.STYLE_ROWS;   // app/data/days.ts
 
 // ---------- optional money budget (per person, in 만원) ----------
 const budgetParts=TV.budgetParts;   // app/data/traveler.ts
-const roomCap=TV.roomCap;   // app/data/traveler.ts
 
-// ---------- named lodging candidates and route advice (AI knowledge, verify prices via links) ----------
-let hotelRecs={}, routeInfo=null, hrBusy=false;
-async function askHotels(k){
-  if(!UI.sample||hrBusy||!AREAS[k]) return; hrBusy=true; const area=AREAS[k][0], st='st_hotel_'+k;
-  progStart(st,`${area} 숙소 후보를 고르는 중이에요 (보통 20~40초)`,['hotelBtn_'+k],'고르는 중…');
-  const cap=roomCap();
-  try{
-    hotelRecs[k]=await JD.asks.hotels(UI.sample,k,cap);
-    progStop(st); renderHelper(); setSt(st,hotelRecs[k].length?'가격과 빈방은 링크에서 꼭 확인하세요.':'후보를 찾지 못했어요.');
-  }catch(e){setSt(st,errText(e,'숙소 후보를 받지 못했어요'))} finally{hrBusy=false}
-}
-// named stays for one area (drawn by React: HelperBody.tsx)
-async function askRoutes(){
-  if(!UI.sample||hrBusy) return; hrBusy=true;
-  progStart('st_route','다니는 노선과 항공사를 정리하는 중이에요 (보통 20~40초)',['routeBtn'],'정리하는 중…');
-  try{
-    routeInfo=await JD.asks.routes(UI.sample);
-    progStop('st_route'); renderHelper(); setSt('st_route','시간표와 가격은 아래 검색 링크에서 확인하세요.');
-  }catch(e){setSt('st_route',errText(e,'노선 정보를 받지 못했어요'))} finally{hrBusy=false}
-}
 // ---------- J / P modes ----------
 function setJP(m,quiet){UI.jp=m==='P'?'P':'J';dock({placeholder:UI.jp==='P'?'뭐 하고 싶어요? 말로 해도 돼요':'AI에게 말로 부탁하기'});document.body.classList.toggle('mode-p',UI.jp==='P');hero({jp:UI.jp});if(!quiet)store.set('gp.jp',UI.jp)}
 
@@ -421,7 +274,7 @@ function applyPlanData(d){
   CUR.placed=(Array.isArray(d.placed)?d.placed:[]).filter(b=>PM[b.id]).map(b=>({uid:TRIP.uids.next(),id:b.id,day:b.day,start:b.start,dur:b.dur||PM[b.id].dur,mk:Array.isArray(b.mk)?b.mk.filter(m=>MARKS[m]):undefined}));
   CUR.fmarks=d.fmarks&&typeof d.fmarks==='object'?d.fmarks:{}; CUR.wish=Array.isArray(d.wish)?d.wish:[]; CUR.meals=d.meals&&typeof d.meals==='object'?d.meals:{}; CUR.done=d.done&&typeof d.done==='object'?d.done:{};
   TRIP.save('profile',CUR.profile); savePack(); TRIP.save('custom',CUR.custom); TRIP.save('fmarks',CUR.fmarks); TRIP.save('wish',CUR.wish); TRIP.save('meals',CUR.meals); TRIP.save('done',CUR.done);
-  chat=[]; undoSnap=null; UI.aiState=null; UI.selected=null; pSt.draw=null; hVibe=null; hotelRecs={}; routeInfo=null; FS.destRecs=null; FS.destAsked=[];
+  CS.chat=[]; CS.undoSnap=null; UI.aiState=null; UI.selected=null; pSt.draw=null; HS.vibe=null; HS.hotelRecs={}; HS.routeInfo=null; FS.destRecs=null; FS.destAsked=[];
   buildDays(); UI.day=0; save(); renderAll();
 }
 function openPlan(id){
@@ -749,47 +602,8 @@ setInterval(()=>{try{const el=document.getElementById('aiSec');if(!el)return;con
   if(!UI.aiState.t0)UI.aiState.t0=Date.now();put(`${aiWho} · ${Math.round((Date.now()-UI.aiState.t0)/1000)}초째`)}catch(_){}},1000);
 
 // ---------- AI-found places, chat folding ----------
-const FRESH=new Set();
-let chatFolded=false;
-function chatFoldSync(){
-  const n=chat.filter(m=>m.role==='user').length;
-  dock({foldHidden:!chat.length,folded:chatFolded&&chat.length>0,expanded:!chatFolded,foldText:chatFolded?`대화 펼치기 (${n})`:'대화 접기 ▾'})}
-document.addEventListener('focusin',e=>{if(e.target&&e.target.id==='chatInput'&&chatFolded&&chatBusy){chatFolded=false;chatFoldSync()}});
-
-// ---------- chat place suggestions: choose per place ----------
-function cpSlot(o){const d=+o.day,st=parse(o.start);return Number.isInteger(d)&&d>=0&&d<DY.days.length&&st!=null?{d,st}:null}
-// place suggestions in a chat message (drawn by React: ChatLog.tsx)
-function placeRows(m){
-  return (m.ops||[]).map((o,k)=>{if(o.op!=='add_place')return null;const sl=cpSlot(o);
-    const meta=[AREAS[o.area]?AREAS[o.area][0]:'',CATS[o.category]||'',o.open?String(o.open):''].filter(Boolean).join(' · ');
-    const done=o._c==='sched'||o._c==='list'||o._c==='skip'||o._c==='pick';
-    return {k,name:String(o.name),meta,note:o.note?String(o.note):'',off:o._c==='skip',done:done?String(o._txt||''):null,schedLabel:sl?`일정에 넣기 · Day ${sl.d+1} ${fmt(sl.st)}`:'일정에 넣기 · 시간 고르기'}}).filter(Boolean);
-}
-function cpEnsure(o){if(o._id&&PM[o._id])return o._id;
-  const pl=cleanPlace({name:o.name,local:o.local,area:o.area,cat:o.category,lat:o.lat,lng:o.lng,dur:o.dur,open:o.open,closed:o.closed,cost:o.cost,costNote:o.costNote,tags:o.tags,note:o.note});
-  if(!pl)return null; const ex=P.find(p=>norm(p.name)===norm(pl.name))||dupOf(pl); if(ex){o._id=ex.id;o._dup=ex.name;return ex.id}
-  PK.pack.places.push(pl);addPackPlace(pl);FRESH.add(pl.id);savePack();o._id=pl.id;return pl.id}
-// What was pressed in a chat message (ChatLog.tsx tells: its name and value)
-function chatAct(n,v){
-  if(n==='stop'){chatCtl&&chatCtl.abort();return}
-  if(n==='apply'){applyChat(+v);return}
-  if(n==='cancel'){const m=chat[+v];if(m){m.state='cancelled';renderChat()}return}
-  if(n==='undo'){undoChat(+v);return}
-  if(n==='cp') cpAct(v);
-}
-// one suggested place: "message:place:sched|list|skip"
-function cpAct(v){
-  const [i,k,act]=String(v).split(':'), m=chat[+i], o=m&&m.ops&&m.ops[+k]; if(!o)return;
-  if(act==='skip'){o._c='skip';o._txt='넣지 않았어요';renderChat();return}
-  const id=cpEnsure(o); if(!id){o._c='skip';o._txt='장소 정보를 읽지 못했어요';renderChat();return}
-  if(act==='list'){o._c='list';o._txt=o._dup?`이미 있는 "${o._dup}"와 같은 곳이라 새로 만들지 않았어요`:'장소 목록에 넣었어요 · 장소 탭 맨 위';renderChat();renderTray();renderExt();return}
-  const sl=cpSlot(o);
-  if(sl&&!CUR.placed.some(b=>b.id===id)){const r=repairOps([{op:'add',day:sl.d,id,start:fmt(sl.st),dur:PM[id].dur}]);
-    applyOpsCore(r.ops);save();o._c='sched';o._txt=`Day ${sl.d+1} ${r.ops[0].start}에 넣었어요${r.warns.length?` · 경고 ${r.warns.length}개`:''}`;UI.day=sl.d;renderAll();renderChat();return}
-  UI.selected=id;o._c='pick';o._txt='일정표에서 넣을 시간을 탭하세요';UI.tab='timeline';chatFolded=true;renderAll();renderChat();
-  const g=document.getElementById('grid');if(g)g.scrollIntoView({block:'start',behavior:'smooth'});
-}
-
+// the places the AI just found (✨ 방금 찾은 곳), folding the chat, the places a chat message suggests: app/flow/chat.ts
+const FRESH=CHAT.fresh;
 // ================= 내 장소 (집·회사·…) — on this device and the account, never in share links =================
 // The list, saving, location and address search live in app/data/myplaces.ts and app/data/kakao.ts; the section in 설정
 // handles its own buttons (app/screens/MyPlacesSection.tsx). Here: the names the rest of the old code uses.
@@ -1000,35 +814,16 @@ RENDER.connect({
   fabDodge:()=>fabDodge(), panels:()=>Object.keys(PANELS), diceCloseAnim:()=>diceCloseAnim(),
   touchPlan:()=>touchPlan(), renderMeta:()=>renderMeta(), renderNudges:()=>renderNudges(), renderChat:()=>renderChat(), renderExt:()=>renderExt(), renderLook:()=>renderLook(),
 });
-const setZoom=RENDER.setZoom, drawTrayTop=RENDER.drawTrayTop, trayAct=RENDER.trayAct, renderTray=RENDER.renderTray, ckInfo=RENDER.ckInfo, tabs=RENDER.tabs, renderTabs=RENDER.renderTabs, drawBanner=RENDER.drawBanner, renderAI=RENDER.renderAI, renderPref=RENDER.renderPref, saveKw=RENDER.saveKw, renderAll=RENDER.renderAll;
+const setZoom=RENDER.setZoom, drawTrayTop=RENDER.drawTrayTop, trayAct=RENDER.trayAct, renderTray=RENDER.renderTray, tabs=RENDER.tabs, renderTabs=RENDER.renderTabs, drawBanner=RENDER.drawBanner, renderAI=RENDER.renderAI, renderPref=RENDER.renderPref, saveKw=RENDER.saveKw, renderAll=RENDER.renderAll;
 // ---------- actions ----------
 // putting a place in the 일정표, and the block sheet: app/flow/render.ts
 const place=RENDER.place, openSheet=RENDER.openSheet, closeSheet=RENDER.closeSheet;
-// ---------- AI ----------
-async function askAI(){
-  if(!UI.sample) return;
-  const gaps=gapsOf(UI.day);
-  if(!gaps.length){UI.aiState={day:UI.day,status:'error',msg:'이 날은 90분 이상 빈 시간이 없어요. 블록을 조금 빼거나 옮겨 보세요.'};renderAI();return}
-  const ctl=new AbortController();
-  UI.aiState={day:UI.day,status:'loading',ctl}; renderAI(); dock({aiOff:true});
-  try{
-    const {items:kept,dropped}=await JD.asks.fillDay(UI.sample,UI.day,ctl.signal);   // the question and its checks: app/data/asks.ts
-    UI.aiState={day:UI.day,status:'done',items:kept,dropped};
-  }catch(e){
-    if(e&&e.code==='cancelled'){UI.aiState=null}
-    else if(e&&(e.code==='not_granted'||e.code==='sampling_disabled'||e.code==='not_declared'||e.code==='capability_disabled')){UI.sample=null;UI.aiState={day:UI.day,status:'error',msg:'이 화면에서는 AI 추천을 쓸 수 없어요. 블록은 직접 넣을 수 있어요.'}}
-    else if(e&&e.code==='rate_limited'){UI.aiState={day:UI.day,status:'error',msg:'요청이 많아 잠시 쉬어야 해요. 조금 뒤에 다시 눌러 주세요.'}}
-    else if(e&&e.code==='invalid_json'){UI.aiState={day:UI.day,status:'error',msg:'추천 형식을 읽지 못했어요. 한 번 더 눌러 주세요.'}}
-    else {UI.aiState={day:UI.day,status:'error',msg:(e&&e.message&&e.code!=='upstream_error'||e&&e.code==='upstream_error'&&e.message?e.message+' · ':'연결이 잠시 끊겼어요. ')+'다시 눌러 주세요.'}}
-  }finally{dock({aiOff:false}); renderAll()}
-}
-
 // ---------- start over: wipe everything this browser keeps for the page ----------
 let wipeArm=false;
 function wipeAll(){
   ['profile','pack','placed3','custom','kw','meal2','done','fmarks','wish','coach','dice','jp'].forEach(k=>JD.storage.del('gp.'+k));
   PL.plans.forEach(p=>TRIP.plans.del(p.id)); PL.plans=[]; PL.curPlan='p'+Date.now().toString(36); savePlans();
-  CUR.custom=[]; CUR.placed=[]; CUR.fmarks={}; CUR.wish=[]; CUR.kws=[]; CUR.meals={}; CUR.done={}; chat=[]; undoSnap=null; UI.aiState=null; UI.selected=null; hVibe=null; wipeArm=false;
+  CUR.custom=[]; CUR.placed=[]; CUR.fmarks={}; CUR.wish=[]; CUR.kws=[]; CUR.meals={}; CUR.done={}; CS.chat=[]; CS.undoSnap=null; UI.aiState=null; UI.selected=null; HS.vibe=null; wipeArm=false;
   loadPack(blankPack()); savePack();
   CUR.profile=clone(PROFILE_EXAMPLE); Object.assign(CUR.profile,{stays:[{name:'숙소',area:'center',checkin:'15:00',checkout:'11:00',from:0,to:3}],events:[],dest:'',pace:'normal',social:'some',breakfast:true,purpose:'',party:{type:'solo',adults:1,kids:0},flightSet:false,staySet:false,dateSet:false,nightsSet:false,dateUnknown:false,startDate:isoPlus(30)}); CUR.profile.stays[0].name='숙소';
   buildDays(); UI.day=0; UI.tab='timeline'; helperShow(false); closeSheet(); renderAll(); openOnb();

@@ -17,7 +17,7 @@ function applyPlanData(d){
   CUR.placed=(Array.isArray(d.placed)?d.placed:[]).filter(b=>PM[b.id]).map(b=>({uid:TRIP.uids.next(),id:b.id,day:b.day,start:b.start,dur:b.dur||PM[b.id].dur,mk:Array.isArray(b.mk)?b.mk.filter(m=>MARKS[m]):undefined}));
   CUR.fmarks=d.fmarks&&typeof d.fmarks==='object'?d.fmarks:{}; CUR.wish=Array.isArray(d.wish)?d.wish:[]; CUR.meals=d.meals&&typeof d.meals==='object'?d.meals:{}; CUR.done=d.done&&typeof d.done==='object'?d.done:{};
   TRIP.save('profile',CUR.profile); savePack(); TRIP.save('custom',CUR.custom); TRIP.save('fmarks',CUR.fmarks); TRIP.save('wish',CUR.wish); TRIP.save('meals',CUR.meals); TRIP.save('done',CUR.done);
-  chat=[]; undoSnap=null; UI.aiState=null; UI.selected=null; pSt.draw=null; hVibe=null; hotelRecs={}; routeInfo=null; FS.destRecs=null; FS.destAsked=[];
+  CS.chat=[]; CS.undoSnap=null; UI.aiState=null; UI.selected=null; pSt.draw=null; HS.vibe=null; HS.hotelRecs={}; HS.routeInfo=null; FS.destRecs=null; FS.destAsked=[];
   buildDays(); UI.day=0; save(); renderAll();
 }
 function openPlan(id){
