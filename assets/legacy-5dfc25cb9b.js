@@ -20,6 +20,8 @@ const TV=JD.traveler;
 
 // where the person is in the app (app/ui/state.ts): UI.day, UI.tab, UI.cat, UI.group, UI.zoneOpen, UI.selected, UI.aiState, UI.sample, UI.jp, UI.resetArm
 const UI=window.JEPI_UI.ui;
+// what the forms are editing (app/flow/forms.ts): FS.draft, FS.onbStep, FS.talk, FS.destRecs, FS.meOpen …
+const FS=window.JEPI_UI.flow.forms.fs;
 // ---------- demo sandbox ----------
 // The sandbox itself (copy aside on entering, put back on leaving or on the next launch) is in app/data/demo.ts
 // and has already run before this script. DEMO.on is true while the demo is open.
@@ -63,143 +65,18 @@ const MAX_N=JD.days.MAX_N;
 const nightsOf=JD.days.nightsOf, fixProfile=JD.days.fixProfile, buildDays=JD.days.buildDays;
 
 // ---------- forms shared by onboarding and the "내 정보" tab ----------
-let draft=null, onbStep=0, onbRev=0;
-const opt=(v,l,sel)=>`<option value="${esc(v)}"${String(v)===String(sel)?' selected':''}>${esc(l)}</option>`;
-function setPath(o,path,v){const ks=path.split('.');for(let i=0;i<ks.length-1;i++)o=o[ks[i]];o[ks[ks.length-1]]=v}
-// drawn by React: TripForms.tsx PasteBox. The last message stays across redraws (pasteMsg) until another row opens.
-let pasteMsg={};
-const pasteBox=(kind,hint)=>({kind,hint,ai:!!UI.sample,msg:pasteMsg[kind]||''});
-const pasteSay=(kind,t)=>{pasteMsg[kind]=t;setSt('st_'+kind,t)};
-// 더보기 → 이번 여행 forms are drawn by React (app/screens/TripForms.tsx): these build what each form shows.
-// what each form part shows: app/view/forms.ts
-const FORMS=window.JEPI_UI.view.forms;
-const optsOf=FORMS.optsOf, datesInfo=FORMS.datesInfo, partParty=FORMS.party;
-function datesReady(p){return p.dateSet!==false&&p.nightsSet!==false}
-function needDates(){setSt('st_dates','여행 날짜와 기간을 먼저 골라 주세요. 모르면 "날짜는 아직 몰라요"를 눌러 주세요.');const d=document.getElementById('datesSec');if(d)d.scrollIntoView({block:'center'})}
-const isoPlus=n=>{const d=new Date();d.setDate(d.getDate()+n);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
-const ONB=[
-  {t:'어디로, 언제, 누구와 떠나나요?',s:'세 가지만 알려 주면 바로 일정표를 만들어요. 교통편, 숙소, 취향은 필요할 때 물어볼게요.',f:p=>!p.jpPicked?[partJP()]:!p.startMode?[{f:'chooser',ai:!!UI.sample}]:p.startMode==='pq'?[partQuick(p,false)]:p.startMode==='talk'?[partTalk(p)]:p.startMode==='day'?[partQuick(p,true)]
-    :p.destMode==='find'?[...(p.fromTalk?[partBanner(p,'날짜·기간·예산을 확인하고 아래 "AI로 여행지 추천받기"를 눌러 주세요.')]:[]),{f:'dates',dates:datesInfo(p)},partDest(p)]
-    :[...(p.fromTalk?[partBanner(p,'날짜와 동행을 확인하고 "AI로 여행지 준비하기"를 눌러 주세요.')]:[]),partDest(p),{f:'dates',dates:datesInfo(p)},partParty(p)]}
-];
-function openOnb(){draft=clone(CUR.profile);draft.startMode=undefined;draft.jpPicked=false;draft.q=null;draft.destMode='';draft.fromTalk=false;draft.dateSet=false;draft.nightsSet=false;draft.dateUnknown=false;talk=null;onbStep=0;$('#meBox').innerHTML='';onbFrame({open:true});renderOnb()}
-// the frame (title, 이전/다음/건너뛰기) is drawn by React (app/screens/Frames.tsx) from onbView; onbFrame({…}) changes some of it and draws again
-let onbView={open:false,step:'',title:'',sub:'',prevOff:false,prevHidden:false,nextLabel:'다음',nextOff:false,nextHidden:false,skipLabel:'건너뛰기',skipOff:false,skipHidden:false,exampleOff:false};
-function onbFrame(p){onbView={...onbView,...p};window.JEPI_UI.mount('onbFrame',$('#onbMount'),onbView)}
-// pressed in the frame
-function onbFrameAct(n){
-  if(n==='prev'){if(onbStep>0){onbStep--;renderOnb()}}
-  else if(n==='skip'&&placeCtl)placeCtl.abort();
-  else if(n==='next'||n==='skip')onbAdvance();
-  else if(n==='example'){if(onbBusy)return;demoEnter()}
-}
-function renderOnb(){const st=ONB[onbStep];
-  const md=draft&&draft.startMode;
-  onbFrame({step:ONB.length>1?`${onbStep+1} / ${ONB.length}`:'',
-    title:!draft.jpPicked?'어떤 여행자예요?':md==='pq'?'가볍게 시작해요':!md?'어떻게 시작할까요?':md==='talk'?'이번 여행, 어떤 여행이면 좋을까요?':md==='day'?'오늘 어디서 놀아요?':st.t,
-    sub:!draft.jpPicked?'고르는 쪽에 맞춰 화면과 시작 방법이 달라져요.':md==='pq'?'네 가지만 누르면 바로 굴릴 수 있어요.':!md?'편한 방법을 골라 주세요. 언제든 바꿀 수 있어요.':md==='talk'?'정답은 없어요. 떠오르는 대로 답하면 방향을 정리해 드릴게요.':md==='day'?'동네와 시간만 정하면 하루 코스를 바로 짤 수 있어요.':st.s,
-    prevOff:onbStep===0,prevHidden:ONB.length===1,nextLabel:onbStep===ONB.length-1?'일정표 만들기':'다음',skipHidden:onbStep===ONB.length-1,nextHidden:!draft.jpPicked||!md||['talk','pq','day'].includes(md)});
-  window.JEPI_UI.mount('onb',$('#onbBody'),{parts:st.f(fixProfile(draft)),rev:++onbRev});$('#onb').scrollTop=0}
-function commitProfile(p){CUR.profile=fixProfile(clone(p));TRIP.save('profile',CUR.profile);TRIP.kws.save(CUR.kws);buildDays();CUR.placed=CUR.placed.filter(b=>b.day<DY.days.length);save();if(UI.day>=DY.days.length)UI.day=0}
-async function finishOnb(){commitProfile(draft);UI.day=0;
-  if(UI.sample&&!PK.pack.example&&!PK.pack.manual&&P.length<8){onbBusy=true;setBusy(true);placeCtl=new AbortController();
-    onbFrame({nextLabel:'장소 찾는 중…',skipHidden:false,skipOff:false,skipLabel:'기다리지 않고 시작'});
-    const st=$('#st_onb'); if(st) st.scrollIntoView({block:'nearest'});
-    await morePlaces(24,'st_onb','',placeCtl.signal); if(placeCtl&&!placeCtl.signal.aborted) await genSeason('st_onb',placeCtl.signal); placeCtl=null; onbBusy=false; setBusy(false)}
-  onbFrame({open:false});renderAll();if(UI.tab==='me'){draft=clone(CUR.profile);renderMe()}
-  if(needBooking()) openHelper(0); else maybeCoach()}
-function renderMe(){renderMeRows()}
-function rerenderForm(){
-  const ob=$('#onb'), sd=$('#panel-side'), wy=window.scrollY, oy=ob.scrollTop, sy=sd.scrollTop;
-  if(!ob.hidden) renderOnb(); else {if(UI.tab==='me'||matchMedia('(min-width:900px)').matches) renderMe(); if(UI.tab==='pref') renderTasteStyle();}
-  ob.scrollTop=oy; sd.scrollTop=sy; window.scrollTo(0,wy);
-}
-// What was pressed in 처음 설정 / 이번 여행 / 취향 (OnbBody, OnbTalk, OnbFinder, TripForms, MeRows, TasteStyle tell:
-// its name, its value and a few extras). The forms change `draft`; rerenderForm draws them again.
-async function formAct(n,v,o){
-  o=o||{};
-  // 이번 여행 / 취향: these save themselves a moment later (autoSave does nothing while 처음 설정 is open)
-  if(['radio','addstay','delstay','addev','delev'].includes(n)) setTimeout(autoSave,0);
-  switch(n){
-  // 처음 설정
-  case 'onbkey': {const key=String(o.key||'').trim().replace(/\s+/g,'');if(!key)return;KEYS[v]=key;keysChanged();return}
-  case 'pickjp': if(!draft)return;draft.jpPicked=true;setJP(v);if(v==='P'){draft.startMode='pq';draft.q={when:'',len:'',slot:'noon'}}renderOnb();return;
-  case 'q': {if(!draft)return;const q=draft.q||(draft.q={}),k=o.q;if(k==='party'){draft.party.type=v;if(v==='friends'&&draft.party.adults<2)draft.party.adults=3;if(v==='couple')draft.party.adults=2;if(v==='family'&&draft.party.adults<2)draft.party.adults=2}else q[k]=v;if(k==='when'&&v!=='pick')draft.dateSet=true;if(k==='when'&&v==='pick')draft.dateSet=false;rerenderForm();return}
-  case 'quickStart': quickStart();return;
-  case 'startmode': if(!draft)return;draft.startMode=v;draft.kind=draft.startMode==='day'?'day':'trip';if(draft.kind==='day'){draft.nightsSet=true;draft.bookedFlight=true;draft.bookedStay=true;draft.flightSet=true;draft.staySet=true;draft.q={when:'',len:'0',slot:'noon'}}if(o.destmode!=null)draft.destMode=o.destmode;else if(v==='quick'&&!o.inChoose)draft.destMode=draft.dest?'':'find';if(draft.startMode==='talk'&&!talk)talkReset();renderOnb();return;
-  // 이야기하면서 정하기
-  case 'talkopt': if(talk)talkSend(talk.options[+v]);return;
-  case 'talkSend': {const x=String(v||'').trim();if(x)talkSend(x);return}
-  case 'talkFinish': talkSend('__finish__');return;
-  case 'talkRetry': talkSend(null,{retry:true});return;
-  case 'talkRedo': talkReset();rerenderForm();return;
-  case 'talkApply': if(talk&&talk.summary){const S=talk.summary;draft.startMode='quick';
-    if(S.dest){draft.dest=S.dest;draft.destMode='';draft.fromTalk=true;renderOnb()}
-    else{draft.destMode='find';draft.want=draft.purpose||'';draft.fromTalk=true;renderOnb()}}
-    return;
-  // 여행지 찾기
-  case 'destmode': if(!draft)return;draft.destMode=v;rerenderForm();return;
-  case 'destRec': if(!datesReady(draft)){needDates();return}recommendDest();return;
-  case 'destMore': recommendDest({more:true});return;
-  case 'destAsk': {const x=String(v||'').trim();if(x)recommendDest({ask:x});else setSt('st_ask','궁금한 여행지를 적어 주세요.');return}
-  case 'pickdest': case 'pickask': {if(!draft||(n==='pickdest'&&!destRecs))return;const dd=n==='pickask'?destAsked[+v]:destRecs[+v];if(!dd)return;draft.dest=dd.city;draft.destMode='';draft.bookedFlight=false;draft.bookedStay=false;draft.mode=dd.country&&dd.country!=='대한민국'&&dd.country!=='한국'?'flight':draft.mode;rerenderForm();
-    setTimeout(()=>{if(UI.sample)formAct('genPack')},0);return}
-  case 'genPack': {
-    const dest=String((draft&&draft.dest)||($('[data-pf="dest"]')||{}).value||'').trim();
-    if(!dest){setSt('st_pack','여행지를 먼저 적어 주세요.');return}
-    if(draft) draft.dest=dest;
-    if(onbBusy){setSt('st_pack','이미 준비하는 중이에요. 잠시만 기다려 주세요.');return}
-    setSt('st_pack','요청을 보내는 중이에요…');
-    const btn=()=>$('#onb').hidden?$('#genPack'):$('#onb #genPack');
-    (async()=>{const inOnb=!$('#onb').hidden;if(await genPack(dest)){if(inOnb)renderOnb();else{commitProfile(draft);renderAll();renderMe();await morePlaces(24,'st_pack','');renderAll()}}})()
-      .catch(err=>{onbBusy=false;setBusy(false);{const L=window.JEPI_UI.live(btn());if(L)L.label(null)}setSt('st_pack','문제가 생겼어요: '+((err&&(err.message||err.code))||err)+' · 다시 눌러 주세요.')});
-    return}
-  // 고르기 (Radio): style.* opens the style box
-  case 'radio': {const path=v;if(path.startsWith('style.'))styleOpen=true;let x=o.val;if(x==='true')x=true;else if(x==='false')x=false;if(draft){setPath(draft,path,x);if(path==='mode')draft.local=x==='car'?'car':'transit';if(path==='party.type'){const q=draft.party;if(x==='couple')q.adults=2;if(x==='friends'&&q.adults<2)q.adults=3;if(x==='family'){if(q.adults<2)q.adults=2;if(!q.kids)q.kids=1;draft.pace='slow'}fixProfile(draft)}rerenderForm()}return}
-  // 이번 여행
-  case 'addstay': if(!draft)return;{const nn=nightsOf(draft);draft.stays.push({name:'숙소 '+(draft.stays.length+1),area:firstArea(),checkin:'15:00',checkout:'11:00',from:Math.max(0,nn-1),to:nn})}rerenderForm();return;
-  case 'delstay': if(!draft)return;draft.stays.splice(+v,1);rerenderForm();return;
-  case 'addev': if(!draft)return;draft.events.push({name:'',day:0,start:'19:00',end:'21:00',area:firstArea()});rerenderForm();return;
-  case 'delev': if(!draft)return;draft.events.splice(+v,1);rerenderForm();return;
-  case 'aifill': aiFill(v);return;
-  case 'meSave': commitProfile(draft);draft=clone(CUR.profile);renderAll();renderMe();meSetMsg('저장했어요. 고정 블록을 다시 만들었어요.');return;
-  case 'meOnb': openOnb();return;
-  case 'meHelper': openHelper(0);return;
-  case 'meopen': meOpen=meOpen===v?null:v;autoMsg='';pasteMsg={};renderMeRows();return;
-  case 'homeUse': {if(!draft)return;const h=mypOf('home');if(!h||!h.ll)return;draft.home.ll=h.ll;draft.home.area='집';homeMsg='출발지를 집으로 바꿨어요.';autoSave();renderMeRows();return}
-  case 'homeair': {if(!draft)return;const h=mypOf('home'),a=KR_AIR[v];if(!h||!h.ll)return;homeMsg='경로를 계산하는 중…';renderMeRows();
-    try{const r=await fetchRoute({m:'transit',a:h.ll,b:[a[1],a[2]],pv:'kakao'});if(!r)throw new Error('경로를 찾지 못했어요');
-      draft.home.ll=h.ll;draft.home.area='집';draft.home.min=Math.min(240,Math.max(10,Math.ceil(r.min/5)*5));homeMsg=`집 → ${a[0]}: ${r.label} 약 ${r.min}분${r.lines?` (${r.lines})`:''}으로 넣었어요.`;autoSave()}
-    catch(err){homeMsg=(err&&err.message)||'계산하지 못했어요'}renderMeRows();return}
-  }
-}
-function onPf(e){const el=e.target;if(el&&el.dataset&&el.dataset.pk&&e.type==='change'){const v=+el.value;if(v>0){PK.pack[el.dataset.pk]=v;savePack();renderBudget()}return}
-  if(!el||!el.dataset||!el.dataset.pf||!draft) return;let v=el.value;if(el.dataset.type==='num') v=+v;setPath(draft,el.dataset.pf,v);
-  if(el.dataset.pf==='startDate'&&el.value){draft.dateSet=true;draft.dateUnknown=false} if(el.dataset.pf==='nights') draft.nightsSet=true;
-  if(/^(out|back)\./.test(el.dataset.pf)) draft.flightSet=true; if(/^stays\./.test(el.dataset.pf)) draft.staySet=true;
-  if(e.type==='change'&&['nights','startDate','party.adults','party.kids'].includes(el.dataset.pf)) rerenderForm()
-  if(['budgetMan','tripMan','localMan'].includes(el.dataset.pf))meSetBudgetHint(budgetHintTxt(draft))}
-async function aiFill(kind){
-  const ta=$('#paste_'+kind), st=$('#st_'+kind), text=(ta&&ta.value||'').trim();
-  if(!st) return; if(!text){pasteSay(kind,'붙여 넣은 내용이 없어요.');return} if(!UI.sample) return;
-  pasteMsg[kind]='';progStart('st_'+kind,'예약 내용을 읽는 중이에요 (보통 10~20초)',[],'');
-  try{
-    const r=await JD.asks.readBooking(UI.sample,kind,text);   // app/data/asks.ts progStop('st_'+kind);
-    if(kind==='flight'){
-      if(r.startDate&&!isNaN(new Date(r.startDate))) draft.startDate=r.startDate;
-      if(r.startDate&&r.endDate){const n=Math.round((new Date(r.endDate)-new Date(r.startDate))/864e5);if(n>=1&&n<=MAX_N) draft.nights=n}
-      if(['flight','train','bus'].includes(r.mode)) draft.mode=r.mode;
-      ['out','back'].forEach(k=>{const o=r[k]||{};if(AIRPORTS[o.airport]) draft[k].airport=o.airport;if(parse(o.dep)!=null) draft[k].dep=o.dep;if(parse(o.arr)!=null) draft[k].arr=o.arr;if(o.flight) draft[k].flight=String(o.flight).slice(0,12)});
-    }else{
-      const base=new Date(draft.startDate+'T00:00:00');const idx=ds=>{if(!ds)return null;const v=Math.round((new Date(ds+'T00:00:00')-base)/864e5);return isNaN(v)?null:v};
-      const ss=(Array.isArray(r.stays)?r.stays:[]).slice(0,4).map(s=>({name:String(s.name||'숙소').slice(0,30),area:AREAS[s.area]?s.area:firstArea(),checkin:parse(s.checkin)!=null?s.checkin:'15:00',checkout:parse(s.checkout)!=null?s.checkout:'11:00',from:idx(s.checkinDate)??0,to:idx(s.checkoutDate)??nightsOf(draft)}));
-      if(ss.length) draft.stays=ss;
-    }
-    if(kind==='flight') draft.flightSet=true; else draft.staySet=true;
-    pasteMsg[kind]='채웠어요. 틀린 칸이 있으면 직접 고쳐 주세요.'; rerenderForm(); setSt('st_'+kind,pasteMsg[kind]);
-  }catch(e){pasteSay(kind,e&&e.code==='not_granted'?'AI 키가 맞지 않아서 채우지 못했어요. 직접 입력해 주세요.':'읽지 못했어요. 직접 입력하거나 다시 시도해 주세요.')}
-}
-
+// What is typed, 처음 설정's steps, the buttons, saving and reading a pasted booking: app/flow/forms.ts. What it still
+// needs from the old code is connected here (each one looked up when it runs).
+const FORMS=window.JEPI_UI.view.forms, FFLOW=window.JEPI_UI.flow.forms;
+const optsOf=FORMS.optsOf, partParty=FORMS.party;
+FFLOW.connect({partJP:()=>partJP(),partTalk:p=>partTalk(p),partDest:p=>partDest(p),setSt:(id,t)=>setSt(id,t),progStart:(id,t,b,l)=>progStart(id,t,b,l),progStop:id=>progStop(id),
+  setBusy:on=>setBusy(on),keysChanged:()=>keysChanged(),setJP:(m,q)=>setJP(m,q),quickStart:()=>quickStart(),talkSend:(t,o)=>talkSend(t,o),talkReset:()=>talkReset(),
+  recommendDest:m=>recommendDest(m),genPack:(d,b)=>genPack(d,b),morePlaces:(n,id,f,sig)=>morePlaces(n,id,f,sig),genSeason:(id,sig)=>genSeason(id,sig),autoSave:()=>autoSave(),
+  renderMeRows:()=>renderMeRows(),renderTasteStyle:()=>renderTasteStyle(),meSetMsg:m=>meSetMsg(m),meSetBudgetHint:h=>meSetBudgetHint(h),openHelper:s=>openHelper(s),
+  needBooking:()=>needBooking(),maybeCoach:()=>maybeCoach(),onbAdvance:()=>onbAdvance(),demoEnter:()=>demoEnter(),krAir:()=>KR_AIR});
+const pasteBox=FFLOW.pasteBox, datesReady=FFLOW.datesReady, needDates=FFLOW.needDates, isoPlus=FFLOW.isoPlus, ONB=FFLOW.ONB, openOnb=FFLOW.openOnb, onbFrame=FFLOW.onbFrame,
+  onbFrameAct=FFLOW.onbFrameAct, renderOnb=FFLOW.renderOnb, commitProfile=FFLOW.commitProfile, finishOnb=FFLOW.finishOnb, renderMe=FFLOW.renderMe, rerenderForm=FFLOW.rerenderForm,
+  formAct=FFLOW.formAct, onPf=FFLOW.onPf;
 // ---------- blocks the viewer makes by hand ----------
 const addCustomToData=PLC.addCustom;   // app/data/places.ts
 let customLast=null;
@@ -285,7 +162,7 @@ function renderNudges(){
     rows:C.map(([k,ic,t,d,bs])=>({k,ic,title:d,aria:`${t} 나중에`,label:t.replace(' 알려 주세요','').replace('을','').replace('를',''),
       btns:bs.map(([id,l,pr])=>({id,primary:!!pr,label:pr?l.replace(/ .*/,'')==='시간'?'넣기':l.split(' ')[0]==='숙소'?'넣기':'고르기':'예약 전'}))}))});
 }
-function goMe(h){UI.tab='me';draft=clone(CUR.profile);renderMe();renderTabs();setTimeout(()=>{const el=[...document.querySelectorAll('#meBox h3')].find(x=>x.textContent.includes(h));if(el)el.scrollIntoView({block:'start'})},0)}
+function goMe(h){UI.tab='me';FS.draft=clone(CUR.profile);renderMe();renderTabs();setTimeout(()=>{const el=[...document.querySelectorAll('#meBox h3')].find(x=>x.textContent.includes(h));if(el)el.scrollIntoView({block:'start'})},0)}
 function renderMeta(){if(CUR.profile.kind==='day'){dock({helperHidden:true});hero({meta:`${PK.pack.city} · ${(DY.days[0].iso||'').slice(5).replace('-','/')} 하루 코스 · ${CUR.profile.meet.time}–${CUR.profile.meet.end}`});return}if(CUR.profile.dateUnknown){const n=DY.days.length-1;dock({helperHidden:!needBooking()});hero({meta:`${PK.pack.city} · 날짜 미정 (대략 ${(DY.days[0].iso||'').slice(5).replace('-','/')}부터) · ${n}박 ${n+1}일`});return}dock({helperHidden:!needBooking()});const n=DY.days.length-1;hero({meta:`${PK.pack.city} · ${(DY.days[0].iso||'').replace(/-/g,'.')} – ${(DY.days[n].iso||'').slice(5).replace('-','.')} · ${n}박 ${n+1}일 · ${apName(CUR.profile.out.airport)}`})}
 
 
@@ -298,7 +175,6 @@ const wipe=o=>{for(const k of Object.keys(o)) delete o[k]};
 const firstArea=PLC.firstArea, firstGw=PLC.firstGw, nearestArea=PLC.nearestArea, addPackPlace=PLC.addPackPlace, loadPack=PLC.loadPack, savePack=PLC.savePack, packFrom=PLC.packFrom, manualPack=PLC.manualPack, cleanPack=PLC.cleanPack, cleanPlace=PLC.cleanPlace;
 // after a destination is loaded: other travelers' 👍 places of that city (070-shared-recs.js)
 PLC.connectPlaces(pk=>{if(RS.status!=='off'){SHARED_IDS.clear();rebuildShared()}});
-let onbBusy=false, placeCtl=null;
 const prog={};
 // Status lines and buttons React drew are updated through a handle (app/ui/live.tsx), others the old way.
 const liveEl=id=>{const e=document.getElementById(id);return e&&window.JEPI_UI.live(e)};
@@ -316,7 +192,7 @@ function errText(e,what){const c=e&&e.code;
     :`${what}. 다시 시도해 주세요.`}
 async function genPack(dest,btn){
   if(!UI.sample){setSt('st_pack','AI가 연결되어 있지 않아요. 더보기 → 설정에서 키를 넣어 주세요.');return false}
-  if(onbBusy) return false; onbBusy=true; setBusy(true);
+  if(FS.onbBusy) return false; FS.onbBusy=true; setBusy(true);
   const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),120000);
   progStart('st_pack',`${dest} 정보를 준비하는 중이에요 (보통 20~40초)`,[btn||'genPack','genPack'],'준비하는 중…');
   try{
@@ -324,10 +200,10 @@ async function genPack(dest,btn){
     if(!pk){setSt('st_pack','여행지를 찾지 못했어요. 도시 이름을 조금 더 정확히 적어 주세요.');return false}
     CUR.custom=[]; TRIP.save('custom',CUR.custom); CUR.placed=[]; save(); undoSnap=null;
     loadPack(pk); savePack();
-    if(draft){draft.dest=pk.city; draft.stays.forEach(s=>{s.area=firstArea();if(/시부야/.test(s.name))s.name='숙소'}); draft.events.forEach(e=>e.area=firstArea()); draft.out.airport=draft.back.airport=firstGw(); if(pk.intl) draft.mode='flight'}
-    if($('#onb').hidden&&draft&&UI.tab==='me')autoSave();setSt('st_pack',`${pk.city} 준비 완료 · 동네 ${pk.areas.length}곳 · 공항·역 ${pk.gateways.length}곳`); return true;
+    if(FS.draft){FS.draft.dest=pk.city; FS.draft.stays.forEach(s=>{s.area=firstArea();if(/시부야/.test(s.name))s.name='숙소'}); FS.draft.events.forEach(e=>e.area=firstArea()); FS.draft.out.airport=FS.draft.back.airport=firstGw(); if(pk.intl) FS.draft.mode='flight'}
+    if($('#onb').hidden&&FS.draft&&UI.tab==='me')autoSave();setSt('st_pack',`${pk.city} 준비 완료 · 동네 ${pk.areas.length}곳 · 공항·역 ${pk.gateways.length}곳`); return true;
   }catch(e){setSt('st_pack',e&&e.code==='cancelled'?'2분 안에 답을 받지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.':errText(e,'여행지를 준비하지 못했어요')+(e&&e.code?` (${e.code})`:''));return false}
-  finally{clearTimeout(to);onbBusy=false; setBusy(false)}
+  finally{clearTimeout(to);FS.onbBusy=false; setBusy(false)}
 }
 async function morePlaces(n,stId,focus,signal){
   if(!UI.sample) return 0;
@@ -337,19 +213,19 @@ async function morePlaces(n,stId,focus,signal){
     FRESH.clear(); ids.forEach(id=>FRESH.add(id)); setSt(stId,added?`새 장소 ${added}곳을 찾았어요. 장소 탭 맨 위 "✨ 방금 찾은 곳"에 모아 뒀어요.`:'이미 있는 곳과 겹쳐서 새로 추가할 장소가 없었어요. 찾는 말을 바꿔 보세요 (예: 현지인 맛집, 조용한 카페).'); return added;
   }catch(e){setSt(stId,e&&e.code==='cancelled'?'멈췄어요. 장소 블록 탭에서 언제든 다시 찾을 수 있어요.':errText(e,'장소를 찾지 못했어요'));return 0}
 }
-function setBusy(b){onbFrame({nextOff:b,prevOff:b||onbStep===0,skipOff:b,exampleOff:b});['genPack','meSave'].forEach(id=>{const e=document.getElementById(id);if(!e)return;const v=b,L=window.JEPI_UI.live(e);if(L)L.disabled(v);else e.disabled=v})}
+function setBusy(b){onbFrame({nextOff:b,prevOff:b||FS.onbStep===0,skipOff:b,exampleOff:b});['genPack','meSave'].forEach(id=>{const e=document.getElementById(id);if(!e)return;const v=b,L=window.JEPI_UI.live(e);if(L)L.disabled(v);else e.disabled=v})}
 async function onbAdvance(){
-  if(onbBusy) return;
-  if(onbStep===0){
-    if(draft.kind==='day'){if(draft.dateSet===false){setSt('st_dates','날짜를 골라 주세요.');return}}else if(!datesReady(draft)){needDates();return}
-    const dest=String(draft.dest||'').trim();
+  if(FS.onbBusy) return;
+  if(FS.onbStep===0){
+    if(FS.draft.kind==='day'){if(FS.draft.dateSet===false){setSt('st_dates','날짜를 골라 주세요.');return}}else if(!datesReady(FS.draft)){needDates();return}
+    const dest=String(FS.draft.dest||'').trim();
     if(!dest){setSt('st_pack','여행지를 먼저 적어 주세요.');return}
     if(norm(dest)!==norm(PK.pack.city)){
       if(UI.sample){if(!(await genPack(dest,'onbNext')))return}
-      else{CUR.custom=[];TRIP.save('custom',CUR.custom);CUR.placed=[];save();loadPack(manualPack(dest));savePack();draft.stays.forEach(s=>s.area=firstArea());draft.events.forEach(e=>e.area=firstArea());draft.out.airport=draft.back.airport=firstGw()}
+      else{CUR.custom=[];TRIP.save('custom',CUR.custom);CUR.placed=[];save();loadPack(manualPack(dest));savePack();FS.draft.stays.forEach(s=>s.area=firstArea());FS.draft.events.forEach(e=>e.area=firstArea());FS.draft.out.airport=FS.draft.back.airport=firstGw()}
     }
   }
-  if(onbStep<ONB.length-1){onbStep++;renderOnb()} else await finishOnb();
+  if(FS.onbStep<ONB.length-1){FS.onbStep++;renderOnb()} else await finishOnb();
 }
 // 여행지 (drawn by React: TripForms.tsx Dest). Not decided yet → the finder (OnbFinder.tsx).
 const partDest=p=>p.destMode==='find'?partFinder(p):FORMS.dest(p,!!UI.sample);   // app/view/forms.ts
@@ -463,7 +339,7 @@ function helperAct(n,v,v2){
   case 'setarea': {const k=v;CUR.profile.stayPicked=k;CUR.profile.stays.forEach((st,i)=>{if(i===0||CUR.profile.bookedStay===false){st.area=k;if(CUR.profile.bookedStay===false)st.name=`숙소 (미정 · ${AREAS[k][0]})`}});TRIP.save('profile',CUR.profile);buildDays();renderHelper();return}
   case 'slot': {const [a,d]=String(v).split(',').map(Number);setSlot(a,d);return}
   case 'radio': CUR.profile[v]=v2==='true';TRIP.save('profile',CUR.profile);renderHelper();return;   // ④ 예약 상태
-  case 'toMe': closeHelper();UI.tab='me';draft=clone(CUR.profile);renderMe();renderTabs();return;
+  case 'toMe': closeHelper();UI.tab='me';FS.draft=clone(CUR.profile);renderMe();renderTabs();return;
   }
 }
 // the frame (drawn by React: app/screens/Frames.tsx) shows what helperView says; the step itself goes into #helperBody
@@ -478,7 +354,7 @@ function helperFrameAct(n){
   if(n==='close')closeHelper()
 }
 function openHelper(step){hStep=step||0;slotPicked=null;$('#meBox').innerHTML='';helperShow(true);renderHelper()}
-function closeHelper(){helperShow(false);renderAll();maybeCoach();if(UI.tab==='me'){draft=clone(CUR.profile);renderMe()}}
+function closeHelper(){helperShow(false);renderAll();maybeCoach();if(UI.tab==='me'){FS.draft=clone(CUR.profile);renderMe()}}
 const H_STEPS=['가고 싶은 곳 고르기','숙소 동네 정하기','교통편 시간대 정하기','예약하고 일정에 넣기'];
 function renderHelper(){
   if(!helperView.open) return;
@@ -514,52 +390,45 @@ function seasonInfo(){
 }
 
 // ---------- destination finder: for travelers who have not picked a place yet ----------
-let destRecs=null, destAsked=[], destBusy=false;
 // drawn by React: app/screens/OnbFinder.tsx
 function partFinder(p){
   return {f:'finder',ai:!!UI.sample,party:p.party.type,reach:p.reach,budget:p.budget,budgetMan:p.budgetMan||'',nights:nightsOf(p),
     chips:[...new Set([...GENERIC_KW,...CUR.kws])].map(k=>({k,on:CUR.kws.some(x=>norm(x)===norm(k))})),
-    styleRows:STYLE_ROWS,style:clone(p.style||{}),styleOpen,want:p.want||'',recs:destRecs?clone(destRecs):null,asked:clone(destAsked)};
+    styleRows:STYLE_ROWS,style:clone(p.style||{}),styleOpen:FS.styleOpen,want:p.want||'',recs:FS.destRecs?clone(FS.destRecs):null,asked:clone(FS.destAsked)};
 }
 async function recommendDest(mode){
-  if(!UI.sample||destBusy) return; destBusy=true; mode=mode||{};
-  const prev=(destRecs||[]).map(d=>d.city);
-  const want=(($('#destWant')||{}).value||'').trim(); draft.want=want; if(want&&!draft.purpose) draft.purpose=want.slice(0,80);
+  if(!UI.sample||FS.destBusy) return; FS.destBusy=true; mode=mode||{};
+  const prev=(FS.destRecs||[]).map(d=>d.city);
+  const want=(($('#destWant')||{}).value||'').trim(); FS.draft.want=want; if(want&&!FS.draft.purpose) FS.draft.purpose=want.slice(0,80);
   const stId=mode.ask?'st_ask':mode.more?'st_more':'st_dest';
   progStart(stId,mode.ask?`${mode.ask}이(가) 맞는지 살펴보는 중이에요 (보통 15~30초)`:'이 조건에 맞는 여행지를 고르는 중이에요 (보통 20~40초)',['destRecBtn','destMoreBtn','destAskBtn'],'고르는 중…');
-  const q=fixProfile(draft);
+  const q=fixProfile(FS.draft);
   try{
     const got=await JD.asks.destinations(UI.sample,q,mode,prev,want);   // the question and tidying the answer: app/data/asks.ts
-    if(mode.ask) destAsked=[...got.slice(0,1),...destAsked.filter(d=>!got.some(g=>g.city===d.city))].slice(0,3);
-    else destRecs=mode.more?[...(destRecs||[]),...got.filter(g=>!prev.includes(g.city))].slice(0,15):got;
+    if(mode.ask) FS.destAsked=[...got.slice(0,1),...FS.destAsked.filter(d=>!got.some(g=>g.city===d.city))].slice(0,3);
+    else FS.destRecs=mode.more?[...(FS.destRecs||[]),...got.filter(g=>!prev.includes(g.city))].slice(0,15):got;
     progStop(stId); TRIP.kws.save(CUR.kws); rerenderForm();
     if(mode.ask){setSt('st_ask',got.length?'아래에 정리했어요.':'정보를 찾지 못했어요. 이름을 조금 더 정확히 적어 주세요.');const c=document.getElementById('asked-0');if(c)c.scrollIntoView({block:'nearest'})}
-    else setSt(stId,(destRecs||[]).length?(mode.more?'아래에 더 추가했어요.':'아래에서 마음에 드는 곳을 골라 주세요.'):'추천을 받지 못했어요. 조건을 바꿔 다시 해 보세요.');
-  }catch(e){setSt(stId,errText(e,'추천을 받지 못했어요'))} finally{destBusy=false}
+    else setSt(stId,(FS.destRecs||[]).length?(mode.more?'아래에 더 추가했어요.':'아래에서 마음에 드는 곳을 골라 주세요.'):'추천을 받지 못했어요. 조건을 바꿔 다시 해 보세요.');
+  }catch(e){setSt(stId,errText(e,'추천을 받지 못했어요'))} finally{FS.destBusy=false}
 }
 
 // ---------- optional travel style (every item defaults to "doesn't matter") ----------
 const STYLE_ROWS=JD.days.STYLE_ROWS;   // app/data/days.ts
-let styleOpen=false;
 
 // ---------- optional money budget (per person, in 만원) ----------
 const budgetParts=TV.budgetParts;   // app/data/traveler.ts
 const roomCap=TV.roomCap;   // app/data/traveler.ts
-// 이번 여행 → 예산 (drawn by React: TripForms.tsx Budget). The hint under it follows what is typed (meSetBudgetHint).
-const budgetHintTxt=FORMS.budgetHint;   // app/view/forms.ts
 
 // ---------- finding the trip's direction through a short conversation (only the summary is kept) ----------
 const TALK_MAX=5;
 const TALK_OPEN={q:'요즘 어떤 마음이 들어서 여행을 떠올리게 됐어요? 막연해도 괜찮아요.',o:['그냥 답답해서 벗어나고 싶어요','지쳐서 푹 쉬고 싶어요','새로운 자극이 필요해요','생각을 정리하고 싶어요']};
-let talk=null;
-function talkReset(){talk={msgs:[{role:'a',text:TALK_OPEN.q}],options:TALK_OPEN.o.slice(),n:0,busy:false,summary:null}}
-// 처음 설정 parts drawn by React (app/screens/OnbBody.tsx)
-const partBanner=FORMS.banner;   // app/view/forms.ts
+function talkReset(){FS.talk={msgs:[{role:'a',text:TALK_OPEN.q}],options:TALK_OPEN.o.slice(),n:0,busy:false,summary:null}}
 function partJP(){return {f:'jp',keyBox:!!(STANDALONE&&!UI.sample),keyHelpHTML:KEY_HELP.anthropic,importBox:!inClaude()}}
 // drawn by React: app/screens/OnbTalk.tsx
 function partTalk(p){
-  if(!talk) talkReset();
-  const t=talk, S=t.summary, last=[...t.msgs].reverse().find(m=>m.role==='a'), hist=[];
+  if(!FS.talk) talkReset();
+  const t=FS.talk, S=t.summary, last=[...t.msgs].reverse().find(m=>m.role==='a'), hist=[];
   const ok=t.msgs.filter(m=>!m.err);for(let k=0;k<ok.length;k++){const m=ok[k];if(m.role==='u')hist.push([ok[k-1]?ok[k-1].text:'',m.text])}
   const d=p.direction||{};
   return {f:'talk',n:t.n,max:TALK_MAX,hist,last:last?last.text:'',busy:!!t.busy,options:t.options.slice(),failed:!!t.failed,
@@ -568,41 +437,41 @@ function partTalk(p){
 }
 async function talkSend(text,opt){
   opt=opt||{};
-  if(!UI.sample||!talk||talk.busy) return;
-  if(opt.retry){ if(talk.failed&&talk.msgs.length&&talk.msgs[talk.msgs.length-1].err) talk.msgs.pop(); text=talk.lastText; }
+  if(!UI.sample||!FS.talk||FS.talk.busy) return;
+  if(opt.retry){ if(FS.talk.failed&&FS.talk.msgs.length&&FS.talk.msgs[FS.talk.msgs.length-1].err) FS.talk.msgs.pop(); text=FS.talk.lastText; }
   if(!text) return;
   const finish=text==='__finish__';
-  if(!opt.retry&&!finish){talk.msgs.push({role:'u',text:String(text).slice(0,300)}); talk.n++;}
-  talk.lastText=text; talk.failed=null; talk.options=[]; talk.busy=true; rerenderForm(); scrollTalk();
-  const force=talk.n>=TALK_MAX||finish;
-  const dates=datesReady(draft)?(draft.dateUnknown?`Dates: not fixed (roughly a month from now), ${nightsOf(draft)} nights.`:`Dates: from ${draft.startDate}, ${nightsOf(draft)} nights.`):'Dates and trip length: not decided yet. Do not assume any; ask about timing and length in the practical question if the user has not said.';
+  if(!opt.retry&&!finish){FS.talk.msgs.push({role:'u',text:String(text).slice(0,300)}); FS.talk.n++;}
+  FS.talk.lastText=text; FS.talk.failed=null; FS.talk.options=[]; FS.talk.busy=true; rerenderForm(); scrollTalk();
+  const force=FS.talk.n>=TALK_MAX||finish;
+  const dates=datesReady(FS.draft)?(FS.draft.dateUnknown?`Dates: not fixed (roughly a month from now), ${nightsOf(FS.draft)} nights.`:`Dates: from ${FS.draft.startDate}, ${nightsOf(FS.draft)} nights.`):'Dates and trip length: not decided yet. Do not assume any; ask about timing and length in the practical question if the user has not said.';
   let r=null;
-  try{ r=await JD.asks.talkTurn(UI.sample,draft,talk.msgs,dates,force); }   // the question (and rescuing a broken answer): app/data/asks.ts
+  try{ r=await JD.asks.talkTurn(UI.sample,FS.draft,FS.talk.msgs,dates,force); }   // the question (and rescuing a broken answer): app/data/asks.ts
   catch(e){
     if(!r){
-      talk.busy=false; talk.failed={code:e&&e.code};
+      FS.talk.busy=false; FS.talk.failed={code:e&&e.code};
       const msg={not_granted:'AI 키가 맞지 않아서 이어 갈 수 없어요. "건너뛰고 직접 고를게요"를 눌러 주세요.',rate_limited:'지금 요청이 많아요. 1분쯤 뒤에 "다시 시도하기"를 눌러 주세요.',refused:'이 내용으로는 이어 가기 어려워요. 표현을 조금 바꿔서 다시 적어 주세요.',session_expired:'로그인이 만료됐어요. 다시 로그인한 뒤 시도해 주세요.'}[e&&e.code]||'답을 정리하다가 끊겼어요. "다시 시도하기"를 눌러 주세요.';
-      talk.msgs.push({role:'a',text:msg,err:true}); rerenderForm(); scrollTalk(); return;
+      FS.talk.msgs.push({role:'a',text:msg,err:true}); rerenderForm(); scrollTalk(); return;
     }
   }
-  talk.busy=false;
-  talk.msgs.push({role:'a',text:String((r&&r.reply)||'좋아요, 조금 더 들려주세요.').slice(0,400)});
-  talk.options=(Array.isArray(r&&r.options)?r.options:[]).map(x=>String(x).slice(0,40)).slice(0,4);
+  FS.talk.busy=false;
+  FS.talk.msgs.push({role:'a',text:String((r&&r.reply)||'좋아요, 조금 더 들려주세요.').slice(0,400)});
+  FS.talk.options=(Array.isArray(r&&r.options)?r.options:[]).map(x=>String(x).slice(0,40)).slice(0,4);
   if(r&&r.done&&r.summary&&typeof r.summary==='object'){const S=r.summary;
-    talk.summary={purpose:String(S.purpose||'').slice(0,80),keywords:(Array.isArray(S.keywords)?S.keywords:[]).map(x=>String(x).slice(0,16)).slice(0,6),note:String(S.note||'').slice(0,160),dest:String(S.dest||'').slice(0,30)};
-    if(talk.summary.purpose) draft.purpose=talk.summary.purpose;
-    if(['slow','normal','full'].includes(S.pace)) draft.pace=S.pace;
-    if(['alone','some','social'].includes(S.social)) draft.social=S.social;
-    if(['solo','couple','friends','family'].includes(S.party)) draft.party.type=S.party;
-    if(['domestic','near','far'].includes(S.reach)) draft.reach=S.reach;
-    if(Number.isInteger(+S.nights)&&+S.nights>=1&&+S.nights<=MAX_N&&S.nights!==null){draft.nights=+S.nights;draft.nightsSet=true}
-    if(/^\d{4}-\d{2}-\d{2}$/.test(String(S.startDate||''))&&String(S.startDate)>=isoPlus(0)){draft.startDate=S.startDate;draft.dateSet=true;draft.dateUnknown=false}
-    draft.direction={purpose:talk.summary.purpose,avoid:String(S.avoid||'').slice(0,80),note:talk.summary.note};
-    TRIP.keywords.addAll(talk.summary.keywords);
+    FS.talk.summary={purpose:String(S.purpose||'').slice(0,80),keywords:(Array.isArray(S.keywords)?S.keywords:[]).map(x=>String(x).slice(0,16)).slice(0,6),note:String(S.note||'').slice(0,160),dest:String(S.dest||'').slice(0,30)};
+    if(FS.talk.summary.purpose) FS.draft.purpose=FS.talk.summary.purpose;
+    if(['slow','normal','full'].includes(S.pace)) FS.draft.pace=S.pace;
+    if(['alone','some','social'].includes(S.social)) FS.draft.social=S.social;
+    if(['solo','couple','friends','family'].includes(S.party)) FS.draft.party.type=S.party;
+    if(['domestic','near','far'].includes(S.reach)) FS.draft.reach=S.reach;
+    if(Number.isInteger(+S.nights)&&+S.nights>=1&&+S.nights<=MAX_N&&S.nights!==null){FS.draft.nights=+S.nights;FS.draft.nightsSet=true}
+    if(/^\d{4}-\d{2}-\d{2}$/.test(String(S.startDate||''))&&String(S.startDate)>=isoPlus(0)){FS.draft.startDate=S.startDate;FS.draft.dateSet=true;FS.draft.dateUnknown=false}
+    FS.draft.direction={purpose:FS.talk.summary.purpose,avoid:String(S.avoid||'').slice(0,80),note:FS.talk.summary.note};
+    TRIP.keywords.addAll(FS.talk.summary.keywords);
   }
   rerenderForm(); scrollTalk();
 }
-function scrollTalk(){const c=document.querySelector('.talk2');if(c)c.scrollIntoView({block:'start'});const q=document.getElementById('talkInput');if(q&&!(talk&&talk.busy)&&matchMedia('(min-width:700px)').matches)q.focus({preventScroll:true})}
+function scrollTalk(){const c=document.querySelector('.talk2');if(c)c.scrollIntoView({block:'start'});const q=document.getElementById('talkInput');if(q&&!(FS.talk&&FS.talk.busy)&&matchMedia('(min-width:700px)').matches)q.focus({preventScroll:true})}
 
 // ---------- named lodging candidates and route advice (AI knowledge, verify prices via links) ----------
 let hotelRecs={}, routeInfo=null, hrBusy=false;
@@ -643,23 +512,23 @@ const openDiceTab=DFLOW.openDiceTab, diceFromUrl=DFLOW.diceFromUrl, diceAct=DFLO
 // ---------- quick start (P, and any one-day course): a few taps ----------
 const nextSat=()=>{const d=new Date();const add=(6-d.getDay()+7)%7||7;return isoPlus(d.getDay()===6?0:add)};
 // what P모드 and the 가볍게 시작 form show: app/view/pview.ts (the drawn card and the chosen die stay here)
-const PVIEW=window.JEPI_UI.view.pview, SLOTS=PVIEW.SLOTS, partQuick=PVIEW.partQuick;
+const PVIEW=window.JEPI_UI.view.pview, SLOTS=PVIEW.SLOTS;
 async function quickStart(){
-  const q=draft.q||{}, dest=String(draft.dest||'').trim();
+  const q=FS.draft.q||{}, dest=String(FS.draft.dest||'').trim();
   if(!dest){setSt('st_pack','어디로 갈지 적어 주세요.');return}
-  if(!q.when||(q.when==='pick'&&draft.dateSet===false)){setSt('st_pack','언제 갈지 골라 주세요.');return}
+  if(!q.when||(q.when==='pick'&&FS.draft.dateSet===false)){setSt('st_pack','언제 갈지 골라 주세요.');return}
   if(q.len===''||q.len==null){setSt('st_pack','얼마나 갈지 골라 주세요.');return}
-  if(q.when!=='pick'){draft.startDate=q.when==='today'?isoPlus(0):q.when==='tomorrow'?isoPlus(1):nextSat();}
-  draft.dateSet=true; draft.dateUnknown=false; draft.nightsSet=true;
+  if(q.when!=='pick'){FS.draft.startDate=q.when==='today'?isoPlus(0):q.when==='tomorrow'?isoPlus(1):nextSat();}
+  FS.draft.dateSet=true; FS.draft.dateUnknown=false; FS.draft.nightsSet=true;
   if(q.len==='0'){const sl=SLOTS.find(s=>s[0]===q.slot)||SLOTS[1];let st=sl[2];
     if(q.when==='today'){const n=new Date(),now=n.getHours()*60+n.getMinutes();if(now+30>st)st=Math.min(1320,Math.ceil((now+30)/30)*30)}
-    draft.kind='day'; draft.meet=Object.assign({},draft.meet||{},{time:fmt(st),end:fmt(Math.max(st+180,sl[3]))});}
-  else{draft.kind='trip'; draft.nights=+q.len; draft.bookedFlight=true; draft.bookedStay=true; draft.flightSet=false; draft.staySet=false;}
+    FS.draft.kind='day'; FS.draft.meet=Object.assign({},FS.draft.meet||{},{time:fmt(st),end:fmt(Math.max(st+180,sl[3]))});}
+  else{FS.draft.kind='trip'; FS.draft.nights=+q.len; FS.draft.bookedFlight=true; FS.draft.bookedStay=true; FS.draft.flightSet=false; FS.draft.staySet=false;}
   if(norm(dest)!==norm(PK.pack.city)){
     if(UI.sample){if(!(await genPack(dest,'quickStart')))return}
     else{CUR.custom=[];TRIP.save('custom',CUR.custom);CUR.placed=[];save();loadPack(manualPack(dest));savePack()}
   }
-  draft.dest=PK.pack.city; if(draft.kind==='day'&&!AREAS[draft.meet.area]) draft.meet.area=firstArea();
+  FS.draft.dest=PK.pack.city; if(FS.draft.kind==='day'&&!AREAS[FS.draft.meet.area]) FS.draft.meet.area=firstArea();
   await finishOnb();
 }
 // ---------- P view: the day as a board game (drawn by React: app/screens/PView.tsx) ----------
@@ -682,7 +551,7 @@ function applyPlanData(d){
   CUR.placed=(Array.isArray(d.placed)?d.placed:[]).filter(b=>PM[b.id]).map(b=>({uid:TRIP.uids.next(),id:b.id,day:b.day,start:b.start,dur:b.dur||PM[b.id].dur,mk:Array.isArray(b.mk)?b.mk.filter(m=>MARKS[m]):undefined}));
   CUR.fmarks=d.fmarks&&typeof d.fmarks==='object'?d.fmarks:{}; CUR.wish=Array.isArray(d.wish)?d.wish:[]; CUR.meals=d.meals&&typeof d.meals==='object'?d.meals:{}; CUR.done=d.done&&typeof d.done==='object'?d.done:{};
   TRIP.save('profile',CUR.profile); savePack(); TRIP.save('custom',CUR.custom); TRIP.save('fmarks',CUR.fmarks); TRIP.save('wish',CUR.wish); TRIP.save('meals',CUR.meals); TRIP.save('done',CUR.done);
-  chat=[]; undoSnap=null; UI.aiState=null; UI.selected=null; pSt.draw=null; hVibe=null; hotelRecs={}; routeInfo=null; destRecs=null; destAsked=[];
+  chat=[]; undoSnap=null; UI.aiState=null; UI.selected=null; pSt.draw=null; hVibe=null; hotelRecs={}; routeInfo=null; FS.destRecs=null; FS.destAsked=[];
   buildDays(); UI.day=0; save(); renderAll();
 }
 function openPlan(id){
@@ -816,7 +685,7 @@ function routeDirty(){clearTimeout(rdT);rdT=setTimeout(()=>{
 // ---------- map: app/ui/map.ts (Leaflet, loaded only when opened) ----------
 const MAP=window.JEPI_UI.map, mapState=MAP.state, mapTop=MAP.mapTop, mapTopAct=MAP.mapTopAct, openMap=MAP.openMap, drawMap=MAP.drawMap, renderMapCards=MAP.renderMapCards;
 // ---------- 더보기: trip summary, 준비하기 badge, P-mode short menu ----------
-let moreAll=false, meOpen=null, autoT=0;
+let autoT=0;
 const tripSummary=()=>FORMS.tripSummary(DY.days);   // app/view/forms.ts
 function prepLeft(){let n=0;document.querySelectorAll('#checks .check-group').forEach(g=>{const h=g.querySelector('h3');if(h&&/예약·준비/.test(h.textContent))n+=g.querySelectorAll('input[data-ck]:not(:checked)').length});return n}
 function warnTotal(){let n=0;for(let d=0;d<DY.days.length;d++)n+=analyze(d).items.reduce((a,it)=>a+it.warns.length,0);return n}
@@ -828,7 +697,7 @@ function renderMore(){
   if(b) tripChips.push({text:`예산 1인 ${Math.round(b.total/10000)}만원`});
   const w=warnTotal(), sp=PL.plans.find(x=>x.id===PL.curPlan&&x.shared);
   window.JEPI_UI.mount('more',box,{city:s.city,line:s.line,tripChips,warnCount:w,prepLeft:prepLeft(),
-    full:UI.jp!=='P'||moreAll,showToggle:UI.jp==='P',moreAll,plansCount:PL.plans.length,
+    full:UI.jp!=='P'||FS.moreAll,showToggle:UI.jp==='P',moreAll:FS.moreAll,plansCount:PL.plans.length,
     friendsChip:sp?'👥 '+(((TRIPS&&TRIPS.members[PL.curPlan])||[]).length||'공유 중'):null,
     notifyOn:!!(NOTIFY&&NOTIFY.on),aiOff:!!(STANDALONE&&!UI.sample)});
   tabs({warn:w?String(w):''});
@@ -838,24 +707,23 @@ const meRows=p=>FORMS.meRows(p,{dest:partDest,day:partsDay,homeBox:partHomeBox,p
 // Drawn by React: app/screens/MeRows.tsx. meSetMsg changes only the message (the open form stays as it is).
 let meRev=0, meLast=null;
 function renderMeRows(){
-  if(!draft) draft=clone(CUR.profile); fixProfile(draft);
-  const rows=meRows(draft), op=rows.find(r=>r[0]===meOpen);
-  meLast={rows:rows.map(([id,k,v])=>({id,label:k,valueHTML:v})),open:op?meOpen:null,body:op?op[3]():[],msg:autoMsg||'',dayCourse:CUR.profile.kind==='day',rev:++meRev};
+  if(!FS.draft) FS.draft=clone(CUR.profile); fixProfile(FS.draft);
+  const rows=meRows(FS.draft), op=rows.find(r=>r[0]===FS.meOpen);
+  meLast={rows:rows.map(([id,k,v])=>({id,label:k,valueHTML:v})),open:op?FS.meOpen:null,body:op?op[3]():[],msg:FS.autoMsg||'',dayCourse:CUR.profile.kind==='day',rev:++meRev};
   window.JEPI_UI.mount('me',$('#meBox'),meLast);
 }
 function meSetBudgetHint(h){if(!meLast||!$('#meBox'))return;meLast=Object.assign({},meLast,{body:meLast.body.map(x=>x.f==='budget'?Object.assign({},x,{hint:h}):x)});window.JEPI_UI.mount('me',$('#meBox'),meLast)}
 function meSetMsg(m){if(!meLast||!$('#meBox')){return}meLast=Object.assign({},meLast,{msg:m});window.JEPI_UI.mount('me',$('#meBox'),meLast)}
-let autoMsg='';
-function autoSave(){clearTimeout(autoT);autoT=setTimeout(()=>{if(!draft||!$('#onb').hidden)return;
-  const prevDest=CUR.profile.dest;commitProfile(draft);if(prevDest!==CUR.profile.dest)draft.dest=CUR.profile.dest;
-  autoMsg='✓ 자동 저장됨 · 일정표에 바로 반영돼요';renderAll();meSetMsg(autoMsg)},500)}
+function autoSave(){clearTimeout(autoT);autoT=setTimeout(()=>{if(!FS.draft||!$('#onb').hidden)return;
+  const prevDest=CUR.profile.dest;commitProfile(FS.draft);if(prevDest!==CUR.profile.dest)FS.draft.dest=CUR.profile.dest;
+  FS.autoMsg='✓ 자동 저장됨 · 일정표에 바로 반영돼요';renderAll();meSetMsg(FS.autoMsg)},500)}
 // taste: style rows + keywords + wishes (carried into new plans). The style rows are drawn by React: app/screens/TasteStyle.tsx
 const TASTE_KEYS=['pace','social','breakfast','style'];
 function carryTaste(from,to){TASTE_KEYS.forEach(k=>{if(from&&from[k]!==undefined)to[k]=clone(from[k])})}
 let tasteRev=0;
-function renderTasteStyle(){const el=$('#tasteStyle');if(!el)return;if(!draft)draft=clone(CUR.profile);fixProfile(draft);const p=draft;
+function renderTasteStyle(){const el=$('#tasteStyle');if(!el)return;if(!FS.draft)FS.draft=clone(CUR.profile);fixProfile(FS.draft);const p=FS.draft;
   window.JEPI_UI.mount('tasteStyle',el,{purpose:p.purpose??'',pace:p.pace,solo:p.party.type==='solo',social:p.social,breakfast:p.breakfast,
-    rows:STYLE_ROWS,style:clone(p.style||{}),open:styleOpen,msg:autoMsg||'',rev:++tasteRev})}
+    rows:STYLE_ROWS,style:clone(p.style||{}),open:FS.styleOpen,msg:FS.autoMsg||'',rev:++tasteRev})}
 
 // ---------- settings ----------
 let themePref=LS.get('jepi.theme','light');
@@ -1065,10 +933,9 @@ function mypView(){const u=JD.myplaces.ui;return {places:MYP.map(x=>({id:x.id,na
 // ---------- 오가는 길 → 출발지 (집, 내 장소). The 🎲 sheet itself: app/flow/dice.ts ----------
 // trip departure from 집 (내 장소)
 const KR_AIR={gmp:['김포공항 국제선',37.5583,126.7906],icn1:['인천공항 T1',37.4492,126.4510],icn2:['인천공항 T2',37.4602,126.4407]};
-let homeMsg='';
 // 오가는 길 → 출발지 (drawn by React: TripForms.tsx HomeBox)
 function partHomeBox(p){if(p.mode==='car')return null;const h=mypOf('home');
-  return {f:'homeBox',hasHome:!!(h&&h.ll),addr:(h&&h.addr)||'',using:!!p.home.ll,kakao:KEYS.kakao?Object.entries(KR_AIR).map(([k,a])=>[k,a[0]]):[],msg:homeMsg}}
+  return {f:'homeBox',hasHome:!!(h&&h.ll),addr:(h&&h.addr)||'',using:!!p.home.ll,kakao:KEYS.kakao?Object.entries(KR_AIR).map(([k,a])=>[k,a[0]]):[],msg:FS.homeMsg}}
 // ---------- 🎲 뭐 하지 → 📌 이 코스 저장: a new 하루 코스 plan (the rolling itself: app/flow/dice.ts) ----------
 function catOfItem(x){if(x.type==='meal'||x.type==='cafe')return 'food';if(x.type==='night')return 'night';const f=x.full+' '+x.name;
   return /미술|갤러리|전시|박물관/.test(f)?'art':/서점|쇼핑|상가|백화점|시장/.test(f)?'shop':/공연|콘서트|라이브|영화/.test(f)?'music':'walk'}
@@ -1263,7 +1130,7 @@ RENDER.connect({
   fabDodge:()=>fabDodge(), panels:()=>Object.keys(PANELS), diceCloseAnim:()=>diceCloseAnim(),
   touchPlan:()=>touchPlan(), renderMeta:()=>renderMeta(), renderNudges:()=>renderNudges(), renderChat:()=>renderChat(), renderExt:()=>renderExt(), renderLook:()=>renderLook(),
 });
-const setZoom=RENDER.setZoom, renderBudget=RENDER.renderBudget, drawTrayTop=RENDER.drawTrayTop, trayAct=RENDER.trayAct, renderTray=RENDER.renderTray, ckInfo=RENDER.ckInfo, tabs=RENDER.tabs, renderTabs=RENDER.renderTabs, drawBanner=RENDER.drawBanner, renderAI=RENDER.renderAI, renderPref=RENDER.renderPref, saveKw=RENDER.saveKw, renderAll=RENDER.renderAll;
+const setZoom=RENDER.setZoom, drawTrayTop=RENDER.drawTrayTop, trayAct=RENDER.trayAct, renderTray=RENDER.renderTray, ckInfo=RENDER.ckInfo, tabs=RENDER.tabs, renderTabs=RENDER.renderTabs, drawBanner=RENDER.drawBanner, renderAI=RENDER.renderAI, renderPref=RENDER.renderPref, saveKw=RENDER.saveKw, renderAll=RENDER.renderAll;
 // ---------- actions ----------
 // putting a place in the 일정표, and the block sheet: app/flow/render.ts
 const place=RENDER.place, openSheet=RENDER.openSheet, closeSheet=RENDER.closeSheet;
@@ -1317,7 +1184,7 @@ function showCoach(i){
 const maybeCoach=()=>{if(!store.get('gp.coach',0)&&$('#onb').hidden&&!helperOpen()) setTimeout(()=>showCoach(0),400)};
 // ---------- events ----------
 // open a tab (the bottom tabs, and any button with data-tab: 더보기 rows, back buttons …)
-function goTab(name){UI.tab=name;autoMsg='';if(UI.tab==='me'){draft=clone(CUR.profile);meOpen=null;renderMe()}if(UI.tab==='pref'){draft=clone(CUR.profile);renderTasteStyle()}if(UI.tab==='plans'){snapshotCurrent();showText=false;renderPlans()}if(UI.tab==='settings'){keyEdit=null;renderSettings()}if(UI.tab==='more')renderMore();if(PANELS[UI.tab])PANELS[UI.tab].render({opened:true});renderTabs();if(UI.tab==='map')openMap();else mapState.on=false;window.scrollTo({top:0});}
+function goTab(name){UI.tab=name;FS.autoMsg='';if(UI.tab==='me'){FS.draft=clone(CUR.profile);FS.meOpen=null;renderMe()}if(UI.tab==='pref'){FS.draft=clone(CUR.profile);renderTasteStyle()}if(UI.tab==='plans'){snapshotCurrent();showText=false;renderPlans()}if(UI.tab==='settings'){keyEdit=null;renderSettings()}if(UI.tab==='more')renderMore();if(PANELS[UI.tab])PANELS[UI.tab].render({opened:true});renderTabs();if(UI.tab==='map')openMap();else mapState.on=false;window.scrollTo({top:0});}
 document.addEventListener('click',e=>{
   const t=e.target.closest('button,input,label'); if(!t) return;
   if(t.dataset.tab){if(!t.closest('.tabs'))goTab(t.dataset.tab);return}
@@ -1328,7 +1195,7 @@ document.addEventListener('click',e=>{
   if(t.dataset.close&&t.closest('#sheet')){closeSheet();return}
 });
 document.addEventListener('change',e=>{
-  if(e.target.id==='dateUnknown'&&draft){draft.dateUnknown=e.target.checked;if(draft.dateUnknown){draft.startDate=isoPlus(30);draft.dateSet=true}else draft.dateSet=false;rerenderForm();return}
+  if(e.target.id==='dateUnknown'&&FS.draft){FS.draft.dateUnknown=e.target.checked;if(FS.draft.dateUnknown){FS.draft.startDate=isoPlus(30);FS.draft.dateSet=true}else FS.draft.dateSet=false;rerenderForm();return}
 });
 $('#sheetBg').addEventListener('click',e=>{if(e.target.id==='sheetBg')closeSheet()});
 document.addEventListener('submit',e=>{const f=e.target;
@@ -1348,7 +1215,7 @@ function fixWarns(){const ws=[];DY.days.forEach((_,d)=>analyze(d).items.forEach(
 function moreAct(id){
   if(id==='nbOpen'){openNotebook();return}
   if(id==='lookOpen'){openLook();return}
-  if(id==='moreAll'){moreAll=!moreAll;renderMore();return}
+  if(id==='moreAll'){FS.moreAll=!FS.moreAll;renderMore();return}
 }
 // What was pressed in the "더 정확한 일정을 위해 알려 주세요" box (ChatLog.tsx Nudges: a button id, or ✕ with its row)
 function nudgeAct(n,v){

@@ -1917,5 +1917,24 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'flow: forms (app/flow/forms.ts): 처음 설정 J/P → the right start, typing fills the draft, saving keeps it, a booked event row',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.waitForTimeout(300);
+      await p.click('#onbBody [data-pickjp="P"]'); await p.waitForTimeout(250);
+      ok(await p.evaluate(() => window.JEPI_UI.flow.forms.fs.draft.startMode) === 'pq' && await vis(p, '#onbBody [data-q="when"]'), 'P: the quick start form (가볍게 시작)');
+      await p.click('#onbPrev').catch(() => {}); await p.ctx.close();
+      const q = await device(b, S); await q.click('[data-w="new"]'); await q.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(q); await q.waitForTimeout(300);
+      await q.click('.tabs [data-tab="more"]'); await q.click('#moreBox [data-tab="me"]'); await q.waitForTimeout(250);
+      await q.click('[data-meopen="ev"]'); await q.waitForTimeout(200);
+      const n0 = await q.evaluate(() => window.JEPI_UI.flow.forms.fs.draft.events.length);
+      await q.evaluate(() => window.JEPI_UI.flow.forms.formAct('addev')); await q.waitForTimeout(200);
+      ok(await q.evaluate(() => window.JEPI_UI.flow.forms.fs.draft.events.length) === n0 + 1, 'formAct addev: one more booked event in the draft');
+      await q.evaluate(() => window.JEPI_UI.flow.forms.formAct('meSave')); await q.waitForTimeout(300);
+      ok(await q.evaluate(() => window.JEPI_DATA.trip.cur.profile.events.length) === n0 + 1, '저장: the trip has it');
+      ok(q.errs.length === 0, 'no page errors ' + q.errs.join(' | '));
+      await q.ctx.close();
+    }
   }
 ];

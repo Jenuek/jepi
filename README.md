@@ -115,6 +115,7 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 | 화면 그리기 (일정표·장소 탭·준비하기·아래 탭·배너·AI 상자·블록 시트, renderAll) | `app/flow/render.ts` (예전 코드는 `340-render.js`의 이름들로 불러요) |
 | 일정표에서 누른 것 (블록 시트·빈 시간·날짜 버튼·끌어 놓기·준비하기·AI 상자·키워드), 하루 요약 칩, 날짜 제목, 손글씨 메모 | `app/flow/schedule.ts` |
 | 🎲 시트와 P모드 보드에서 일어나는 일 (굴리기·주변 찾기·코스 짜기·이걸로) | `app/flow/dice.ts` (보이는 값은 `app/view/dice.ts`·`pview.ts`) |
+| 처음 설정·이번 여행·취향 폼에서 일어나는 일 (입력·버튼·단계·저장·예약 붙여 넣기)과 폼이 고치는 값 | `app/flow/forms.ts` (예전 코드는 `FS.draft` …) |
 | 화면에 보일 값 만들기 (일정표·장소 탭·블록 시트·예약 도우미·이번 여행 칸·🎲·P모드 보드) | `app/view/day.ts`·`tray.ts`·`sheet.ts`·`helper.ts`·`forms.ts`·`dice.ts`·`pview.ts` (예전 코드는 `JEPI_UI.view`) |
 | 데모(오사카 3박 4일) 데이터 | `app/data/demo-osaka.ts` |
 | 여행지 장소 목록(지역·장소·비용·태그), 여행지 열기, AI 답 확인 | `app/data/places.ts` (도쿄 예시 데이터 `app/data/tokyo.ts`) |

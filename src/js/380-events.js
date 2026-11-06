@@ -1,6 +1,6 @@
 // ---------- events ----------
 // open a tab (the bottom tabs, and any button with data-tab: 더보기 rows, back buttons …)
-function goTab(name){UI.tab=name;autoMsg='';if(UI.tab==='me'){draft=clone(CUR.profile);meOpen=null;renderMe()}if(UI.tab==='pref'){draft=clone(CUR.profile);renderTasteStyle()}if(UI.tab==='plans'){snapshotCurrent();showText=false;renderPlans()}if(UI.tab==='settings'){keyEdit=null;renderSettings()}if(UI.tab==='more')renderMore();if(PANELS[UI.tab])PANELS[UI.tab].render({opened:true});renderTabs();if(UI.tab==='map')openMap();else mapState.on=false;window.scrollTo({top:0});}
+function goTab(name){UI.tab=name;FS.autoMsg='';if(UI.tab==='me'){FS.draft=clone(CUR.profile);FS.meOpen=null;renderMe()}if(UI.tab==='pref'){FS.draft=clone(CUR.profile);renderTasteStyle()}if(UI.tab==='plans'){snapshotCurrent();showText=false;renderPlans()}if(UI.tab==='settings'){keyEdit=null;renderSettings()}if(UI.tab==='more')renderMore();if(PANELS[UI.tab])PANELS[UI.tab].render({opened:true});renderTabs();if(UI.tab==='map')openMap();else mapState.on=false;window.scrollTo({top:0});}
 document.addEventListener('click',e=>{
   const t=e.target.closest('button,input,label'); if(!t) return;
   if(t.dataset.tab){if(!t.closest('.tabs'))goTab(t.dataset.tab);return}
@@ -11,7 +11,7 @@ document.addEventListener('click',e=>{
   if(t.dataset.close&&t.closest('#sheet')){closeSheet();return}
 });
 document.addEventListener('change',e=>{
-  if(e.target.id==='dateUnknown'&&draft){draft.dateUnknown=e.target.checked;if(draft.dateUnknown){draft.startDate=isoPlus(30);draft.dateSet=true}else draft.dateSet=false;rerenderForm();return}
+  if(e.target.id==='dateUnknown'&&FS.draft){FS.draft.dateUnknown=e.target.checked;if(FS.draft.dateUnknown){FS.draft.startDate=isoPlus(30);FS.draft.dateSet=true}else FS.draft.dateSet=false;rerenderForm();return}
 });
 $('#sheetBg').addEventListener('click',e=>{if(e.target.id==='sheetBg')closeSheet()});
 document.addEventListener('submit',e=>{const f=e.target;
@@ -31,7 +31,7 @@ function fixWarns(){const ws=[];DY.days.forEach((_,d)=>analyze(d).items.forEach(
 function moreAct(id){
   if(id==='nbOpen'){openNotebook();return}
   if(id==='lookOpen'){openLook();return}
-  if(id==='moreAll'){moreAll=!moreAll;renderMore();return}
+  if(id==='moreAll'){FS.moreAll=!FS.moreAll;renderMore();return}
 }
 // What was pressed in the "더 정확한 일정을 위해 알려 주세요" box (ChatLog.tsx Nudges: a button id, or ✕ with its row)
 function nudgeAct(n,v){

@@ -15,3 +15,5 @@ const TV=JD.traveler;
 
 // where the person is in the app (app/ui/state.ts): UI.day, UI.tab, UI.cat, UI.group, UI.zoneOpen, UI.selected, UI.aiState, UI.sample, UI.jp, UI.resetArm
 const UI=window.JEPI_UI.ui;
+// what the forms are editing (app/flow/forms.ts): FS.draft, FS.onbStep, FS.talk, FS.destRecs, FS.meOpen …
+const FS=window.JEPI_UI.flow.forms.fs;
