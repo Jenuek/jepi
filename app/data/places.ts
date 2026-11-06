@@ -31,6 +31,8 @@ export const MUST = { ...T.MUST };
 export const P: Place[] = T.P.slice();
 export const PM: Record<string, Place> = Object.fromEntries(P.map(p => [p.id, p]));
 export const STATIC_CHECKS = T.STATIC_CHECKS.slice();
+/** keywords anyone can pick (취향 키워드, 여행지 찾기 chips) */
+export const GENERIC_KW: string[] = ['사색·고요함','대자연 풍경','오로라·별','휴양·쉼','드라이브','맛집','카페','혼밥','술집','데이트','아이와 함께','테마파크','체험','야경','산책','공원','미술관','박물관','역사','건축','쇼핑','빈티지','시장','음악','라이브','서점','사진','자연','스파·온천','액티비티','현지 문화'];
 /** the open destination */
 export const state = { pack: null as Pack | null };
 

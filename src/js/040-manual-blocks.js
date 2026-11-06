@@ -7,7 +7,7 @@ function openCustom(editId,startAt,opts){
   // drawn by React: app/screens/CustomSheet.tsx (the same props again with dup while a new name is typed: 388-dedup.js)
   customLast={edit:editId||'',dayLabel:`Day ${UI.day+1} (${DY.days[UI.day].date})`,name:c.name||'',area:c.area,cat:c.cat,dur:c.dur,cost:c.cost??'',memo:c.memo||'',tags:c.tags||'',drop:!!c.drop,
     share:RS.status==='on'&&!PK.pack.manual?!!c.share:null,start:fmt(st),areas:optsOf(AREAS),cats:Object.entries(CATS),durs:[15,30,45,60,90,120,150,180,240].map(m=>[m,durTxt(m)]),
-    currency:String(PK.pack.currency),dup:null,card:!!(opts&&opts.card),rev:++sheetRev};
+    currency:String(PK.pack.currency),dup:null,card:!!(opts&&opts.card),rev:RENDER.nextSheetRev()};
   window.JEPI_UI.mount('custom',$('#sheet'),customLast);
   $('#sheet').dataset.uid=''; $('#sheetBg').hidden=false; setTimeout(()=>{const x=$('#cfName');x&&x.focus()},0);
 }

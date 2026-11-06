@@ -1,5 +1,5 @@
 // ---------- destination pack: everything that depends on where the trip goes ----------
-const GENERIC_KW=['사색·고요함','대자연 풍경','오로라·별','휴양·쉼','드라이브','맛집','카페','혼밥','술집','데이트','아이와 함께','테마파크','체험','야경','산책','공원','미술관','박물관','역사','건축','쇼핑','빈티지','시장','음악','라이브','서점','사진','자연','스파·온천','액티비티','현지 문화'];
+const GENERIC_KW=PLC.GENERIC_KW;   // app/data/places.ts
 // The destination's places and the lists made from them (AREAS, PM …), loading one (loadPack) and checking what the AI
 // sends (cleanPack / cleanPlace) live in app/data/places.ts; the open destination is PK.pack.
 PK.pack=null;

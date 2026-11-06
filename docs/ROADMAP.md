@@ -70,6 +70,7 @@
   - [x] P모드 보드 값(`app/view/pview.ts`: 그날 칸·다녀옴 도장·? 칸·닫힌 날·뽑은 카드·주사위 6개, 가볍게 시작 칸). 뽑은 카드와 고른 주사위는 예전 코드가 넘겨줌. 비교·점검 모두 같음.
   - [x] 예전 코드 정리 1: 아무도 쓰지 않는 이름(옮기고 남은 별칭 약 80개) 지움. 빌드가 이제 **어디에도 정의되지 않은 이름**을 쓰면 멈춰요(`tools/legacy.mjs` checkUndefined, 파일·줄을 알려 줌).
   - [x] 예전 코드 정리 2: 화면 위치 값(열린 날·탭·장소 필터·고른 장소·AI 연결·J/P·초기화 확인)을 `app/ui/state.ts`로 옮김. 예전 코드는 `UI.day`, `UI.tab` …으로 읽고 바꿔요(295곳, 범위 분석 도구로 바꿈). 리액트 쪽도 같은 값을 바로 읽을 수 있어요.
+  - [x] 예전 코드 정리 3: 화면 그리기(`340-render.js` 전부, `350-actions.js`)를 `app/flow/render.ts`로 옮김: 일정표·장소 탭·준비하기·아래 탭·배너·AI 상자·취향 키워드·블록 시트/빈 시간 시트, renderAll. 아직 예전 코드에 있는 것(헤더·하루 요약·P모드·찾기·대화…)은 시작할 때 `RENDER.connect({...})`로 넘겨줘요(옮기면 그 줄을 지워요). `GENERIC_KW`는 `app/data/places.ts`로.
   - [ ] 예전 코드 정리 — 남은 `src/js`(약 184KB)를 하는 일별로 묶어 차례로 `app/flow/*.ts`로 옮겨요. 각 묶음은 화면 그리기(render*) → 버튼 흐름(*Act) 순서로.
     1. 일정표 그리기·고치기: `340-render.js`(renderAll·renderTimeline·renderTray…), `350-actions.js`, `380-events.js`(blockAct·gridAct·dropped…), `382-tidy.js`, `389-titles.js`, `389b-memo.js`
     2. 🎲·P모드 흐름: `160`·`170`·`280`·`290`(굴리기·코스 짜기·저장)

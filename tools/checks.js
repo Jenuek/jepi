@@ -1848,5 +1848,28 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'flow: drawing the trip (app/flow/render.ts): time spacing redraws the grid, a place goes in, the sheet opens and closes, tabs follow UI.tab',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      const h60 = await p.$eval('#grid', e => e.offsetHeight);
+      await p.evaluate(() => window.JEPI_UI.flow.render.setZoom(100)); await p.waitForTimeout(200);
+      const h100 = await p.$eval('#grid', e => e.offsetHeight);
+      ok(h100 > h60 && await p.evaluate(() => localStorage.getItem('gp.zoom')) === '100', `100px an hour: the grid grows (${h60} → ${h100}) and it is remembered`);
+      await p.evaluate(() => window.JEPI_UI.flow.render.setZoom(60));
+      const n0 = await p.$$eval('#grid .blk', e => e.length);
+      const uid = await p.evaluate(() => { const R = window.JEPI_UI.flow.render, T = window.JEPI_DATA.trip, used = new Set(T.cur.placed.map(b => b.id));
+        const id = window.JEPI_DATA.places.P.find(x => !used.has(x.id) && !x.drop && x.cat !== 'trip').id; R.place(id, 1200); R.renderAll(); return T.cur.placed.find(b => b.id === id && b.start === 1200 && b.day === 0).uid });
+      ok((await p.$$eval('#grid .blk', e => e.length)) === n0 + 1, 'place() then renderAll(): one more block on the grid');
+      await p.evaluate(u => window.JEPI_UI.flow.render.openSheet(u), uid); await p.waitForTimeout(200);
+      ok(await vis(p, '#sheetBg') && await p.$eval('#sheet', e => e.dataset.uid) === uid, 'openSheet shows that block');
+      await p.evaluate(() => window.JEPI_UI.flow.render.closeSheet()); await p.waitForTimeout(300);
+      ok(!(await vis(p, '#sheetBg')), 'closeSheet hides it');
+      await p.evaluate(() => { window.JEPI_UI.ui.tab = 'check'; window.JEPI_UI.flow.render.renderTabs() }); await p.waitForTimeout(200);
+      ok(await p.evaluate(() => document.body.dataset.tab) === 'more' && await vis(p, '#side-check'), 'UI.tab = check: 더보기 group, 준비하기 panel shown');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];
