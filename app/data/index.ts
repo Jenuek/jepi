@@ -23,6 +23,7 @@ import * as ops from './ops';
 import * as days from './days';
 import * as marks from './marks';
 import * as season from './season';
+import * as weather from './weather';
 import * as check from './check';
 import * as traveler from './traveler';
 import * as asks from './asks';
@@ -68,6 +69,8 @@ export const data = {
   marks,
   /** this trip's season and what it means for places */
   season,
+  /** 날씨 (Open-Meteo): 예보·평년, 기기에 저장 */
+  weather,
   /** the day check with travel, fares and opening hours */
   check,
   /** the traveler as the AI is told about them; money text */

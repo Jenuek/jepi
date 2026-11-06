@@ -1,0 +1,29 @@
+/* 날씨: 날짜 버튼 안의 아이콘·기온, 고른 날의 날씨 줄(누르면 펼침). app/screens/Weather.tsx */
+.day-btn .wx-chip{display:block;font-style:normal;font-family:var(--f-mono);font-size:11px;margin-top:2px;white-space:nowrap;color:var(--muted)}
+.day-btn .wx-chip i{font-style:normal;margin-right:3px}
+.day-btn .wx-chip.normal{opacity:.7}
+.day-btn .wx-chip.rainy{color:#2a6fb0;font-weight:600}
+.day-btn[aria-pressed="true"] .wx-chip,.day-btn[aria-pressed="true"] .wx-chip.rainy{color:var(--paper);opacity:.95}
+#wxBar:empty{display:none}
+.wx-bar{margin:0 0 8px}
+.wx-head{display:flex;align-items:center;gap:8px;width:100%;text-align:left;font:inherit;font-size:13px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 12px;min-height:40px}
+.wx-bar.open .wx-head{border-color:var(--theme,var(--accent));border-bottom-left-radius:0;border-bottom-right-radius:0}
+.wx-ic{font-size:18px;line-height:1}
+.wx-main{flex:1;min-width:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.wx-main b{font-weight:600}
+.wx-rain{color:#2a6fb0;font-weight:600;font-size:12.5px}
+.wx-tag{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:0 7px}
+.wx-more{font-size:12px;color:var(--muted)}
+.wx-ar{color:var(--muted);transition:transform .2s}
+.wx-bar.open .wx-ar{transform:rotate(180deg)}
+.wx-detail{background:var(--surface);border:1px solid var(--theme,var(--accent));border-top:0;border-radius:0 0 12px 12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;font-size:12.5px}
+.wx-detail p{margin:0}
+.wx-hours{display:flex;justify-content:space-between;gap:4px;font-size:11px;color:var(--muted)}
+.wx-hours span{text-align:center;flex:1}
+.wx-hours i{display:block;font-style:normal;font-size:16px;line-height:1.4}
+.wx-meta{color:var(--muted)}
+.wx-meta b{color:var(--ink);font-weight:500}
+.wx-src{font-size:10.5px;color:var(--muted);opacity:.8}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .wx-rain,:root:not([data-theme="light"]) .day-btn .wx-chip.rainy{color:#7ab8ea}}
+:root[data-theme="dark"] .wx-rain,:root[data-theme="dark"] .day-btn .wx-chip.rainy{color:#7ab8ea}
+@media (prefers-reduced-motion:reduce){.wx-ar{transition:none}}

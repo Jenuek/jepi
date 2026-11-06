@@ -108,7 +108,7 @@ async function device(b, S, opts = {}) {
   await ctx.route(/places\.googleapis\.com/, r => { S.places = (S.places || 0) + 1; const q = JSON.parse(r.request().postData()); const c = q.locationBias.circle.center;
     const day = d => ({ open: { day: d, hour: 10, minute: 0 }, close: { day: d, hour: 18, minute: 0 } });
     r.fulfill({ contentType: 'application/json', body: JSON.stringify({ places: [{ displayName: { text: q.textQuery }, location: c, businessStatus: 'OPERATIONAL', regularOpeningHours: { periods: [1, 2, 3, 4, 5, 6].map(day) } }] }) }) });
-  await ctx.route(/routes\.googleapis\.com|dapi\.kakao\.com|api\.anthropic\.com|generativelanguage/, r => r.fulfill({ status: 503, body: '{}' }));
+  await ctx.route(/routes\.googleapis\.com|dapi\.kakao\.com|api\.anthropic\.com|generativelanguage|open-meteo\.com/, r => r.fulfill({ status: 503, body: '{}' }));
   const p = await ctx.newPage(); p.errs = [];
   p.on('pageerror', e => p.errs.push(e.message));
   await p.goto(BASE + (opts.q || ''));

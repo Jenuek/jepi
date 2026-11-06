@@ -8,6 +8,7 @@ import * as check from '../data/check';
 import * as recs from '../data/recs';
 import * as marks from '../data/marks';
 import * as storage from '../data/storage';
+import * as weather from '../data/weather';
 import { syncSoon } from '../data/sync';
 import { state as DY, dayStart } from '../data/days';
 import { fmt } from '../logic/time';
@@ -52,7 +53,12 @@ let gridRev = 0, trayRev = 0, checksRev = 0, sheetRev = 0, aiBoxRev = 0;
 /** the next sheet redraw number (a new number = draw it fresh) */
 export const nextSheetRev = (): number => ++sheetRev;
 
-export function renderDays(): void { mount('days', $('#days'), dayView.dayButtons(ui.day)) }
+export function renderDays(): void {
+  mount('days', $('#days'), dayView.dayButtons(ui.day));
+  // 날씨: 값은 app/data/weather.ts가 받아 오고 화면(Weather.tsx)이 스스로 그려요. 여기서는 날짜만 알려 줘요.
+  void weather.want(DY.days.map(D => D.iso));
+  mount('wxBar', $('#wxBar'), { iso: (DY.days[ui.day] || { iso: '' }).iso || '' });
+}
 /** time spacing: 60 or 100 px an hour */
 export function setZoom(h: number, quiet?: boolean): void {
   h = h === 100 ? 100 : 60; document.documentElement.style.setProperty('--hour', h + 'px');
@@ -108,7 +114,7 @@ export function renderChecks(): void {
   L.dock({ fixHidden: !(warnRows.length && ui.sample), fixText: `🛠 경고 ${warnRows.length}개 해결` });
   // drawn by React: app/screens/Checks.tsx
   mount('checks', $('#checks'), { ai: !!ui.sample, warns: warnRows.map(r => ({ d: r.d, uid: String(r.uid), t: r.t })), prep: prepRows.map(r => ckInfo(r.id, r.t, `Day ${r.d + 1} · ${r.s}`)),
-    season: L.seasonInfo(), all: (places.STATIC_CHECKS as any[]).map(s => ckInfo(s.id, s.t)), resetArm: !!ui.resetArm, rev: ++checksRev });
+    season: L.seasonInfo(), all: (places.STATIC_CHECKS as any[]).map(s => ckInfo(s.id, s.t)), wx: { isos: DY.days.map(D => D.iso), done: { ...trip.cur.done } }, resetArm: !!ui.resetArm, rev: ++checksRev });
 }
 // the bottom tabs are drawn by React (app/screens/Bars.tsx); tabs({…}) changes some of it and draws again
 let tabsView: any = { shown: 'timeline', warn: '' };
