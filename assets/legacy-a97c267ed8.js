@@ -1802,7 +1802,7 @@ CUR.fmarks=TRIP.load('fmarks',{}); diceLog=store.get('gp.dice',[]); if(!Array.is
 CUR.done=TRIP.load('done',{});
 DY.homeMin=60;
 CUR.kws=TRIP.kws.load(); if(!Array.isArray(CUR.kws)) CUR.kws=DEFAULT_KW.slice();
-const matchKw=id=>{const set=new Set(CUR.kws.map(norm));return tagsOf(id).filter(t=>set.has(norm(t)))};
+const matchKw=id=>window.JEPI_UI.view.tray.matchKw(id);   // the traveler's keywords a place carries (app/view/tray.ts)
 CUR.meals=TRIP.load('meals',{}); if(!CUR.meals||typeof CUR.meals!=='object') CUR.meals={};
 const mealOf=JD.check.mealOf;   // app/data/check.ts
 let day=0, tab='timeline', cat='all', selected=null, aiState=null, sample=null, group='zone', zoneOpen={}, resetArm=false;
@@ -1845,12 +1845,6 @@ function renderTimeline(){
 const dayCost=JD.check.dayCost;   // app/data/check.ts
 function renderBudget(){const B=VIEW.day.budget(day);window.JEPI_UI.mount('budgetSum',$('#budgetSum'),B.sum);window.JEPI_UI.mount('budget',$('#budget'),B.box)}
 const segs=VIEW.day.segs;   // a line of text with bold / coloured parts (DayTop.tsx Line)
-function dayRefs(){
-  const refs=dayItems(day).map(i=>({id:i.id,name:i.stay?`${i.area} 숙소`:i.name,ll:i.ll}));
-  if(day>0) refs.push({name:`${DY.locArea[DY.days[day].startLoc]} 숙소`,ll:DY.loc[DY.days[day].startLoc].ll});
-  return refs;
-}
-function nearestRef(p,refs){let best=null;for(const r of refs){if(r.id===p.id)continue;const d=km(p.ll,r.ll);if(!best||d<best.d)best={d,r}}return best}
 // the top of the 장소 tab is drawn by React (app/screens/Tops.tsx); #filters and #cards inside it get their own screens
 function drawTrayTop(){window.JEPI_UI.mount('trayTop',$('#trayTopMount'),{moreHidden:!sample||!!PK.pack.manual,rec:REC.statusText(PK.pack.city||''),group})}
 // pressed in the 장소 tab's top
@@ -1860,88 +1854,17 @@ function trayAct(n,v){
   else if(n==='more')openFind({where:'city',into:'list',q:v,autorun:true})
 }
 function renderTray(){
-  recsMaybe();
-  const wd=DY.days[day].wd, openOnly=$('#openOnly').checked;
-  drawTrayTop();
-  const cats=Object.entries(CATS);
-  window.JEPI_UI.mount('trayFilters',$('#filters'),{chips:[['all','전체'],['wish','♥'],...(P.some(p=>p.season)?[['season','🗓 시즌']]:[]),...(RS.status!=='off'?[['users','👍']]:[]),['must','★']],cats,cat,rev:++trayRev});
-  const used=new Set(CUR.placed.map(b=>b.id));
-  const inCat=P.filter(p=>!(cat==='all'&&p.drop)&&(cat==='all'||(cat==='wish'?isWish(p.id):cat==='season'?!!p.season:cat==='must'?!!MUST[p.id]:cat==='users'?(recOf(p)>0||p.shared):p.cat===cat))&&(!openOnly||(!closedOn(p,wd)&&!outOfSeason(p,DY.days[day].iso))));
-  const list=inCat.filter(p=>!used.has(p.id));
-  const nHidden=inCat.length-list.length;
-  // drawn by React: app/screens/Tray.tsx
-  const pmode=jp==='P'?{count:CUR.wish.filter(id=>PM[id]&&!used.has(id)).length,ai:!!sample}:null;
-  const show=(empty,groups)=>window.JEPI_UI.mount('trayCards',$('#cards'),{dups:dupInfo(),hidden:nHidden,empty,groups,pmode,rev:++trayRev});
-  if(!list.length&&jp==='P'&&!P.length){show(sample?'아직 장소가 없어요. 위의 "AI에게 추천받기"로 후보를 받아 보세요.':'아직 장소가 없어요. 위의 "직접 적어 담기"로 가고 싶은 곳을 적어 보세요.',[]);return}
-  if(!list.length){show(P.length?'이 조건에서 남은 후보지가 없어요.':sample&&!PK.pack.manual?'아직 장소 후보가 없어요. 위에서 AI로 찾아보세요.':'장소 후보가 없어요. 타임라인의 "+ 직접 만들기"로 블록을 만들어 쓰세요.',[]);return}
-  const refs=dayRefs();
-  let rows=list.map(p=>({p,near:nearestRef(p,refs)}));
-  const card=x=>cardInfo(x.p,wd,used,x.near);
-  const fresh=rows.filter(x=>FRESH.has(x.p.id)); rows=rows.filter(x=>!FRESH.has(x.p.id));
-  const freshG=fresh.length?[{kind:'fresh',name:'✨ 방금 찾은 곳',near:true,note:'AI가 새로 찾았어요',cards:fresh.map(card)}]:[];
-  if(group==='pop'){ // people's 👍 first (all travelers), then friends' 가고 싶어요, then my ♥
-    const fw=p=>curShared()?wantsOf(p.id).length:0;
-    rows.sort((a,b)=>recOf(b.p)-recOf(a.p)||fw(b.p)-fw(a.p)||isWish(b.p.id)-isWish(a.p.id)||a.near.d-b.near.d);
-    show(null,[...freshG,{kind:'list',cards:rows.map(card)}]);return}
-  if(group==='list'){
-    rows.sort((a,b)=>isWish(b.p.id)-isWish(a.p.id)||(!!b.p.season)-(!!a.p.season)||(!!MUST[b.p.id])-(!!MUST[a.p.id])||recOf(b.p)-recOf(a.p)||matchKw(b.p.id).length-matchKw(a.p.id).length||a.near.d-b.near.d);
-    show(null,[...freshG,{kind:'list',cards:rows.map(card)}]);return}
-  const zones={}; rows.forEach(x=>{const z=ZONE_OF[x.p.id]||'outer';(zones[z]=zones[z]||[]).push(x)});
-  const order=Object.entries(zones).map(([z,arr])=>{arr.sort((a,b)=>a.near.d-b.near.d);return {z,arr,d:arr[0].near.d}}).sort((a,b)=>a.d-b.d);
-  show(null,[...freshG,...order.map((g,i)=>{
-    const open=zoneOpen[g.z]??(i<2); const n=g.arr[0].near, t=travel(n.r.ll,g.arr[0].p.ll);
-    return {kind:'zone',zone:g.z,name:ZONES[g.z],open,near:i===0,note:i===0?'오늘 일정과 가장 가까워요':`가장 가까운 일정에서 ${t?`${t.mode} 약 ${t.min}분`:'바로'}`,cards:g.arr.map(card)}})]);
+  recsMaybe(); drawTrayTop();
+  // drawn by React: app/screens/Tray.tsx (its props: app/view/tray.ts)
+  const V=VIEW.tray.tray({day,cat,group,zoneOpen,openOnly:$('#openOnly').checked,selected,pmode:jp==='P',ai:!!sample,manual:!!PK.pack.manual,
+    fresh:FRESH,shared:!!curShared(),dups:dupInfo(),extras:p=>extras(CARD_EXTRAS,p)});
+  window.JEPI_UI.mount('trayFilters',$('#filters'),{...V.filters,rev:++trayRev});
+  window.JEPI_UI.mount('trayCards',$('#cards'),{...V.cards,rev:++trayRev});
 }
 let trayRev=0;
-// one place card (drawn by React: Tray.tsx Card)
-function cardInfo(p,wd,used,near){
-    const h=hoursFor(p,wd), off=closedOn(p,wd), oos=outOfSeason(p,DY.days[day].iso), mk=matchKw(p.id), T=(c,t)=>({c,t});
-    let dist=''; if(near){const t=travel(near.r.ll,p.ll);dist=`${near.r.name}에서 ${t?`${t.mode} 약 ${t.min}분`:'바로 옆'}`}
-    const key=off?T('tag w',`${WD[wd]} 휴관`):oos?T('tag w','이 날은 기간 아님'):p.season?T('tag r',`🗓 ${p.season}`):mustOf(p.id)?T('tag r','★ 추천'):mk.length?T('tag kwt',`#${mk[0]}`):null;
-    const det=[p.shared||p.fromUsers?T('tag usr',p.userMade?'여행자가 올린 곳':'여행자 추천'):null,
-      mustOf(p.id)?T('tag r',`★ ${mustOf(p.id)}`):null,...mk.map(k=>T('tag kwt',`#${k}`)),
-      T('tag mono',costOf(p.id)[0]?yen(costOf(p.id)[0]):'무료'),
-      h?T('tag mono',`${fmt(h[0])}–${fmt(h[1])}`):T('tag','언제든'),
-      p.closed&&p.closed.length?T('tag',`${p.closed.map(w=>WD[w]).join('·')} 휴관`):null,
-      p.season&&p.dates?T('tag r',`🗓 ${mdTxt(p.dates[0])||''}~${mdTxt(p.dates[1])||''}`):null,
-      p.best&&p.best!=='any'?T('tag',`${BEST_KO[p.best]}에 좋아요`):null,
-      p.check?T('tag',`준비: ${p.check}`):null,
-      p.gone?T('tag r','폐업했을 수 있어요'):p.hsrc==='google'?T('tag ok','영업시간 확인됨'):p.verify==='영업시간'&&p.ll&&inKR(p.ll)?T('tag','영업시간 추정'):p.verify?T('tag',`확인 필요: ${p.verify}`):null].filter(Boolean);
-    return {id:String(p.id),name:String(p.name),sub:`${p.area} · ${p.note}`,cat:String(p.cat),sel:selected===p.id,off:!!(off||oos),dist,wish:!!isWish(p.id),
-      vote:RS.status!=='off'?{on:!!iRec(p),n:recOf(p),locked:false}:null,extras:extras(CARD_EXTRAS,p),dur:p.dur,key,det};
-}
+// an empty time in the 일정표 was tapped: places that fit there (drawn by React: BlockSheet.tsx FillSheet; props: app/view/tray.ts)
 function openFill(t){
-  const D=DY.days[day], wd=D.wd, {items}=analyze(day);
-  const prev=items.filter(i=>i.end<=t).pop()||null;
-  const next=items.find(i=>i.start>t)||null;
-  const pLl=prev?prev.ll:DY.loc[D.startLoc].ll, pName=prev?(prev.stay?`${prev.area} 숙소`:prev.name):`${DY.locArea[D.startLoc]} 숙소`;
-  const gS=prev?prev.end:(day===0?arrEnd():480), gE=next?next.start:1440, len=Math.max(0,gE-gS);
-  const tm=(a,b)=>(travel(a,b)||{min:0}).min;
-  const base=next?tm(pLl,next.ll):0;
-  const used=new Set(CUR.placed.map(b=>b.id));
-  const carrying=prev?!!prev.carryAfter:false;
-  const rows=P.filter(p=>!used.has(p.id)).map(p=>{
-    const tin=tm(pLl,p.ll), tout=next?tm(p.ll,next.ll):0, h=hoursFor(p,wd);
-    let start=Math.ceil(Math.max(t,gS+tin)/15)*15; if(h&&start<h[0]) start=Math.ceil(h[0]/15)*15;
-    const end=start+p.dur; let why='';
-    if(carrying&&!p.drop&&!['walk','trip'].includes(p.cat)) why='짐을 맡긴 뒤에 가능';
-    else if(!carrying&&p.drop) why='들고 있는 짐이 없어요';
-    else if(closedOn(p,wd)) why=`${WD[wd]}요일 휴관`;
-    else if(h&&end>h[1]) why=`영업 ${fmt(h[0])}–${fmt(h[1])}`;
-    else if(end+tout>gE) why='시간이 모자라요';
-    return {p,tin,tout,start,extra:tin+tout-base-(carrying&&p.drop?1000:0),why};
-  });
-  rows.forEach(r=>{r.mk=matchKw(r.p.id);r.score=Math.min(r.mk.length,4)*10+(MUST[r.p.id]?15:0)-r.extra*0.6});
-  const fitAll=rows.filter(r=>!r.why).sort((a,b)=>b.score-a.score||a.start-b.start);
-  const fit=fitAll.slice(0,7); const rest=fitAll.slice(7);
-  if(rest.length){const r=rest[Math.floor(Math.random()*rest.length)];r.random=true;fit.push(r)}
-  const dim=rows.filter(r=>r.why).sort((a,b)=>a.extra-b.extra).slice(0,4);
-  // drawn by React: app/screens/BlockSheet.tsx FillSheet
-  const row=r=>({id:String(r.p.id),cat:String(r.p.cat),name:String(r.p.name),random:!!r.random,star:!!MUST[r.p.id],kws:(r.mk||[]).map(String),mustNote:'',
-    line:[`${r.p.area} · ${r.p.dur}분 · ${costOf(r.p.id)[0]?yen(costOf(r.p.id)[0]):'무료'} · 앞 일정에서 ${r.tin?`약 ${r.tin}분`:'바로'}${next?` · 다음 일정까지 ${r.tout?`약 ${r.tout}분`:'바로'}`:''}`],
-    act:r.why?{k:'why',t:r.why}:{k:'fill',start:r.start,time:fmt(r.start)}});
-  window.JEPI_UI.mount('fill',$('#sheet'),{rev:++sheetRev,title:`${fmt(gS)}–${fmt(gE)} 비어 있음`,when:`${durTxt(len)} · 앞: ${pName}${next?` · 뒤: ${next.stay?`${next.area} 숙소`:next.name}`:''}`,
-    carrying,t,tapped:fmt(t),fit:fit.map(row),dim:dim.map(row)});
+  window.JEPI_UI.mount('fill',$('#sheet'),{rev:++sheetRev,...VIEW.tray.fill(day,t)});
   $('#sheet').dataset.uid=''; $('#sheetBg').hidden=false;
   setTimeout(()=>{const b=$('#sheet button');b&&b.focus()},0);
 }

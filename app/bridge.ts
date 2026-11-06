@@ -41,6 +41,7 @@ import { connectHost, type AppHost } from './ui/host';
 import * as map from './ui/map';
 import * as drag from './ui/drag';
 import * as dayView from './view/day';
+import * as trayView from './view/tray';
 import { liveOf, type LiveHandle } from './ui/live';
 
 // Every screen React owns, with the props the old code must pass.
@@ -155,7 +156,7 @@ export interface JepiUI {
   /** drag & drop onto the 일정표: app/ui/drag.ts */
   drag: typeof drag;
   /** what each screen shows, worked out from the trip (app/view/*.ts) */
-  view: { day: typeof dayView };
+  view: { day: typeof dayView; tray: typeof trayView };
 }
 
 declare global {
@@ -173,7 +174,7 @@ export function installBridge(): void {
     connectHost,
     map,
     drag,
-    view: { day: dayView },
+    view: { day: dayView, tray: trayView },
     mount(name, el, props) {
       let cur = roots.get(el);
       if (!cur || cur.host.parentNode !== el || cur.name !== name) {

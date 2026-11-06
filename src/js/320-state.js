@@ -10,7 +10,7 @@ CUR.fmarks=TRIP.load('fmarks',{}); diceLog=store.get('gp.dice',[]); if(!Array.is
 CUR.done=TRIP.load('done',{});
 DY.homeMin=60;
 CUR.kws=TRIP.kws.load(); if(!Array.isArray(CUR.kws)) CUR.kws=DEFAULT_KW.slice();
-const matchKw=id=>{const set=new Set(CUR.kws.map(norm));return tagsOf(id).filter(t=>set.has(norm(t)))};
+const matchKw=id=>window.JEPI_UI.view.tray.matchKw(id);   // the traveler's keywords a place carries (app/view/tray.ts)
 CUR.meals=TRIP.load('meals',{}); if(!CUR.meals||typeof CUR.meals!=='object') CUR.meals={};
 const mealOf=JD.check.mealOf;   // app/data/check.ts
 let day=0, tab='timeline', cat='all', selected=null, aiState=null, sample=null, group='zone', zoneOpen={}, resetArm=false;
