@@ -1811,5 +1811,27 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'view: P모드 board values (app/view/pview.ts): closed before its day, the board with ? squares, a drawn card, 가볍게 시작 form',
+    async run({ b, S, device, ok, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      const r = await p.evaluate(() => {
+        const V = window.JEPI_UI.view.pview, days = window.JEPI_DATA.days.state.days, t = new Date(), today = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+        const d = days.findIndex(x => x.iso > today), pSt = { mood: 'calm', draw: null };
+        const shut = V.board(d, pSt, { ahead: false, demo: false, ai: false }), open = V.board(d, pSt, { ahead: true, demo: false, ai: false });
+        const g = V.pGaps(d)[0], cand = { p: { id: 'x', cat: 'walk', name: '산책길', note: '' }, arr: 600, dur: 60, tm: 8, mode: '도보' };
+        const drawn = V.board(d, { mood: 'calm', draw: { day: d, gi: 0, g, mood: 'calm', seen: [], cand, left: 2, rolling: false } }, { ahead: true, demo: false, ai: false });
+        const pr = { dest: '부산', party: { type: 'solo' } }, q = V.partQuick(pr, true);
+        return { d, shut: shut.mode, until: shut.closed && shut.closed.until, open: open.mode, ends: open.squares.length ? open.squares[open.squares.length - 1].k : '', q: open.squares.filter(x => x.k === 'q').length,
+          canRoll: open.canRoll, calm: open.dice.find(x => x.on).k, drawn: drawn.mode, card: drawn.draw.card && drawn.draw.card.when, die: drawn.draw.n, qf: q.f, qlen: q.len, set: !!pr.q, slots: q.slots.length };
+      });
+      ok(r.d >= 0 && r.shut === 'closed' && r.until > 0, 'a future day is closed until its morning ' + JSON.stringify(r));
+      ok(r.open === 'board' && r.ends === 'end' && r.q > 0 && r.canRoll && r.calm === 'calm', '미리 열기: the board ends with 하루 끝, has ? squares, the chosen die is on');
+      ok(r.drawn === 'draw' && r.card === '10시쯤 도착' && r.die === 3, 'a drawn card: its time and the die face');
+      ok(r.qf === 'quick' && r.qlen === '0' && r.set && r.slots === 4, '가볍게 시작 (하루 코스): length 0, four start times');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];
