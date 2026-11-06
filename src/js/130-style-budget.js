@@ -9,7 +9,6 @@ const walkKm=()=>JD.check.walkKm();   // app/data/check.ts
 const budgetParts=TV.budgetParts;   // app/data/traveler.ts
 const roomCap=TV.roomCap;   // app/data/traveler.ts
 // 이번 여행 → 예산 (drawn by React: TripForms.tsx Budget). The hint under it follows what is typed (meSetBudgetHint).
-function partBudget(p){return {f:'budget',man:p.budgetMan||'',trip:p.tripMan||'',local:p.localMan||'',hint:budgetHintTxt(p)}}
-function budgetHintTxt(p){const b=budgetParts(p);return b?`교통·숙박 약 ${won(b.trip)} · 현지 경비 하루 약 ${won(b.daily)}로 계산해요.`:'총예산만 넣으면 교통·숙박 60%, 현지 경비 40%로 나눠요.'}
+const partBudget=FORMS.budget, budgetHintTxt=FORMS.budgetHint;   // app/view/forms.ts
 const budgetEn=TV.budgetEn;   // app/data/traveler.ts
 

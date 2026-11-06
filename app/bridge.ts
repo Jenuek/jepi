@@ -42,6 +42,7 @@ import * as map from './ui/map';
 import * as drag from './ui/drag';
 import * as dayView from './view/day';
 import * as trayView from './view/tray';
+import * as formsView from './view/forms';
 import * as sheetView from './view/sheet';
 import * as helperView from './view/helper';
 import { liveOf, type LiveHandle } from './ui/live';
@@ -158,7 +159,7 @@ export interface JepiUI {
   /** drag & drop onto the 일정표: app/ui/drag.ts */
   drag: typeof drag;
   /** what each screen shows, worked out from the trip (app/view/*.ts) */
-  view: { day: typeof dayView; tray: typeof trayView; sheet: typeof sheetView; helper: typeof helperView };
+  view: { day: typeof dayView; tray: typeof trayView; sheet: typeof sheetView; helper: typeof helperView; forms: typeof formsView };
 }
 
 declare global {
@@ -176,7 +177,7 @@ export function installBridge(): void {
     connectHost,
     map,
     drag,
-    view: { day: dayView, tray: trayView, sheet: sheetView, helper: helperView },
+    view: { day: dayView, tray: trayView, sheet: sheetView, helper: helperView, forms: formsView },
     mount(name, el, props) {
       let cur = roots.get(el);
       if (!cur || cur.host.parentNode !== el || cur.name !== name) {

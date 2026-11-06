@@ -4,7 +4,7 @@ const TALK_OPEN={q:'요즘 어떤 마음이 들어서 여행을 떠올리게 됐
 let talk=null;
 function talkReset(){talk={msgs:[{role:'a',text:TALK_OPEN.q}],options:TALK_OPEN.o.slice(),n:0,busy:false,summary:null}}
 // 처음 설정 parts drawn by React (app/screens/OnbBody.tsx)
-const partBanner=(p,next)=>({f:'banner',purpose:p.purpose||'',next});
+const partBanner=FORMS.banner;   // app/view/forms.ts
 function partJP(){return {f:'jp',keyBox:!!(STANDALONE&&!sample),keyHelpHTML:KEY_HELP.anthropic,importBox:!inClaude()}}
 // drawn by React: app/screens/OnbTalk.tsx
 function partTalk(p){

@@ -82,23 +82,17 @@ function setPath(o,path,v){const ks=path.split('.');for(let i=0;i<ks.length-1;i+
 // drawn by React: TripForms.tsx PasteBox. The last message stays across redraws (pasteMsg) until another row opens.
 let pasteMsg={};
 const pasteBox=(kind,hint)=>({kind,hint,ai:!!sample,msg:pasteMsg[kind]||''});
+const partFlight=p=>FORMS.flight(p,pasteBox('flight','예약 메일이나 e티켓 내용을 붙여 넣으면 AI가 위 칸을 채워요.'));
+const partStay=p=>FORMS.stay(p,pasteBox('stay','숙소 예약 확인 내용을 붙여 넣으면 이름, 동네, 체크인·체크아웃을 채워요.'));
 const pasteSay=(kind,t)=>{pasteMsg[kind]=t;setSt('st_'+kind,t)};
 // 더보기 → 이번 여행 forms are drawn by React (app/screens/TripForms.tsx): these build what each form shows.
-const optsOf=o=>Object.entries(o).map(([k,v])=>[k,Array.isArray(v)?v[0]:v.name]);
-function datesInfo(p){const ds=p.dateSet!==false, ns=p.nightsSet!==false;return {start:ds&&!p.dateUnknown?String(p.startDate??''):'',unknown:!!p.dateUnknown,nights:ns?p.nights:null,maxN:MAX_N}}
-function partParty(p){const q=p.party;return {f:'party',type:q.type,adults:q.adults,kids:q.kids}}
-function partTrip(p){return {f:'trip',bookedFlight:p.bookedFlight!==false,bookedStay:p.bookedStay!==false,dates:datesInfo(p)}}
-function partFlight(p){return {f:'flight',mode:p.mode,word:MODE_WORD[p.mode],notBooked:p.bookedFlight===false,out:clone(p.out),back:clone(p.back),local:p.local,airports:optsOf(AIRPORTS),
-  paste:pasteBox('flight','예약 메일이나 e티켓 내용을 붙여 넣으면 AI가 위 칸을 채워요.')}}
-function partStay(p){const n=nightsOf(p);return {f:'stay',helper:p.bookedStay===false,stays:clone(p.stays),areas:optsOf(AREAS),nights:Array.from({length:n},(_,k)=>`${k+1}박째 (${mdOf(p,k)} 밤)`),
-  paste:pasteBox('stay','숙소 예약 확인 내용을 붙여 넣으면 이름, 동네, 체크인·체크아웃을 채워요.')}}
-function partHome(p){const h=p.home;return {f:'home',mode:p.mode,word:MODE_WORD[p.mode],area:h.area,min:h.min,fare:h.fare,byMin:h.byMin,byMinOpts:[60,90,120,150,180].map(m=>[m,'출발 '+durTxt(m)+' 전'])}}
-function partEvents(p){const n=nightsOf(p);return {f:'events',events:clone(p.events),areas:optsOf(AREAS),days:Array.from({length:n+1},(_,k)=>`Day ${k+1} (${mdOf(p,k)})`)}}
+// what each form part shows: app/view/forms.ts
+const FORMS=window.JEPI_UI.view.forms;
+const optsOf=FORMS.optsOf, datesInfo=FORMS.datesInfo, partParty=FORMS.party, partTrip=FORMS.tripPart, partHome=FORMS.home, partEvents=FORMS.events;
 const radioRow=(path,val,opts)=>`<div class="radio">${opts.map(([v,l])=>`<button type="button" data-radio="${path}" data-val="${v}" aria-pressed="${String(val)===String(v)}">${l}</button>`).join('')}</div>`;
 function datesReady(p){return p.dateSet!==false&&p.nightsSet!==false}
 function needDates(){setSt('st_dates','여행 날짜와 기간을 먼저 골라 주세요. 모르면 "날짜는 아직 몰라요"를 눌러 주세요.');const d=document.getElementById('datesSec');if(d)d.scrollIntoView({block:'center'})}
 const isoPlus=n=>{const d=new Date();d.setDate(d.getDate()+n);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
-const heads2=q=>Math.max(1,(+q.adults||1)+(+q.kids||0));
 const ONB=[
   {t:'어디로, 언제, 누구와 떠나나요?',s:'세 가지만 알려 주면 바로 일정표를 만들어요. 교통편, 숙소, 취향은 필요할 때 물어볼게요.',f:p=>!p.jpPicked?[partJP()]:!p.startMode?[{f:'chooser',ai:!!sample}]:p.startMode==='pq'?[partQuick(p,false)]:p.startMode==='talk'?[partTalk(p)]:p.startMode==='day'?[partQuick(p,true)]
     :p.destMode==='find'?[...(p.fromTalk?[partBanner(p,'날짜·기간·예산을 확인하고 아래 "AI로 여행지 추천받기"를 눌러 주세요.')]:[]),{f:'dates',dates:datesInfo(p)},partDest(p)]
@@ -378,12 +372,7 @@ async function onbAdvance(){
   if(onbStep<ONB.length-1){onbStep++;renderOnb()} else await finishOnb();
 }
 // 여행지 (drawn by React: TripForms.tsx Dest). Not decided yet → the finder (OnbFinder.tsx).
-function partDest(p){
-  if(p.destMode==='find') return partFinder(p);
-  const ready=PK.pack&&norm(PK.pack.city)===norm(p.dest||'');
-  return {f:'dest',dest:p.dest??'',ai:!!sample,ready:ready?`${PK.pack.city} 준비됨 · 동네 ${Object.keys(AREAS).length}곳 · 장소 ${P.length}곳`:'',
-    rate:ready&&PK.pack.currency!=='KRW'?{cur:PK.pack.currency,val:+PLC.rate().toFixed(4)}:null};
-}
+const partDest=p=>p.destMode==='find'?partFinder(p):FORMS.dest(p,!!sample);   // app/view/forms.ts
 
 // ---------- demo trip: a generic first-timer's Osaka, 3 nights / 4 days ----------
 // Used only by "데모 둘러보기" (see 381-welcome-demo.js). No personal taste in here on purpose.
@@ -588,8 +577,7 @@ const walkKm=()=>JD.check.walkKm();   // app/data/check.ts
 const budgetParts=TV.budgetParts;   // app/data/traveler.ts
 const roomCap=TV.roomCap;   // app/data/traveler.ts
 // 이번 여행 → 예산 (drawn by React: TripForms.tsx Budget). The hint under it follows what is typed (meSetBudgetHint).
-function partBudget(p){return {f:'budget',man:p.budgetMan||'',trip:p.tripMan||'',local:p.localMan||'',hint:budgetHintTxt(p)}}
-function budgetHintTxt(p){const b=budgetParts(p);return b?`교통·숙박 약 ${won(b.trip)} · 현지 경비 하루 약 ${won(b.daily)}로 계산해요.`:'총예산만 넣으면 교통·숙박 60%, 현지 경비 40%로 나눠요.'}
+const partBudget=FORMS.budget, budgetHintTxt=FORMS.budgetHint;   // app/view/forms.ts
 const budgetEn=TV.budgetEn;   // app/data/traveler.ts
 
 // ---------- finding the trip's direction through a short conversation (only the summary is kept) ----------
@@ -598,7 +586,7 @@ const TALK_OPEN={q:'요즘 어떤 마음이 들어서 여행을 떠올리게 됐
 let talk=null;
 function talkReset(){talk={msgs:[{role:'a',text:TALK_OPEN.q}],options:TALK_OPEN.o.slice(),n:0,busy:false,summary:null}}
 // 처음 설정 parts drawn by React (app/screens/OnbBody.tsx)
-const partBanner=(p,next)=>({f:'banner',purpose:p.purpose||'',next});
+const partBanner=FORMS.banner;   // app/view/forms.ts
 function partJP(){return {f:'jp',keyBox:!!(STANDALONE&&!sample),keyHelpHTML:KEY_HELP.anthropic,importBox:!inClaude()}}
 // drawn by React: app/screens/OnbTalk.tsx
 function partTalk(p){
@@ -1043,13 +1031,7 @@ const MAP=window.JEPI_UI.map, mapState=MAP.state, mapTop=MAP.mapTop, mapTopAct=M
   drawMap=MAP.drawMap, renderMapCards=MAP.renderMapCards, locateMe=MAP.locateMe;
 // ---------- 더보기: trip summary, 준비하기 badge, P-mode short menu ----------
 let moreAll=false, meOpen=null, autoT=0;
-function tripSummary(){
-  const pr=CUR.profile, n=nightsOf(pr), D0=DY.days[0]||{}, Dn=DY.days[DY.days.length-1]||{};
-  const md=iso=>iso?`${+iso.slice(5,7)}/${+iso.slice(8,10)}`:'';
-  const dates=pr.kind==='day'?md(D0.iso):pr.dateUnknown?'날짜 미정':`${md(D0.iso)}(${WD[D0.wd]}) – ${md(Dn.iso)}(${WD[Dn.wd]})`;
-  const who=pr.party.type==='solo'?'혼자':pr.party.type==='couple'?'둘이서':`${heads2(pr.party)}명`;
-  return {city:PK.pack.city||'여행지 미정',line:pr.kind==='day'?`${dates} · 하루 코스 · ${who}`:`${dates} · ${n}박 · ${who}`};
-}
+const tripSummary=()=>FORMS.tripSummary(DY.days);   // app/view/forms.ts
 function prepLeft(){let n=0;document.querySelectorAll('#checks .check-group').forEach(g=>{const h=g.querySelector('h3');if(h&&/예약·준비/.test(h.textContent))n+=g.querySelectorAll('input[data-ck]:not(:checked)').length});return n}
 function warnTotal(){let n=0;for(let d=0;d<DY.days.length;d++)n+=analyze(d).items.reduce((a,it)=>a+it.warns.length,0);return n}
 // The menu itself is drawn by React: app/screens/MoreMenu.tsx. Here: the numbers it shows.
@@ -1066,24 +1048,7 @@ function renderMore(){
   tabs({warn:w?String(w):''});
 }
 // 이번 여행: one row per topic, opens only that part, saves on change
-function meRows(p){
-  const md=(k)=>mdOf(p,k), n=nightsOf(p);
-  const flightTxt=p.kind==='day'?'':p.bookedFlight===false?'<span class="wtxt">아직 안 정했어요</span>':(p.flightSet?`<span class="mono">가는 편 ${esc(p.out.dep||'')} → ${esc(p.out.arr||'')}</span><small class="mono">오는 편 ${esc(p.back.dep||'')} → ${esc(p.back.arr||'')}</small>`:'시간을 넣어 주세요');
-  const stayTxt=p.bookedStay===false?'<span class="wtxt">아직 안 정했어요</span>':esc(p.stays.map(s=>s.name||'숙소').join(', '));
-  const b=budgetParts&&budgetParts(p);
-  const who=p.party.type==='solo'?'혼자':p.party.type==='couple'?'연인·부부':p.party.type==='family'?`가족 ${heads2(p.party)}명`:`친구 ${heads2(p.party)}명`;
-  if(p.kind==='day') return [
-    ['day','코스',`${esc(PK.pack.city)} · ${esc(md(0))}`,()=>partsDay(p)],
-    ['who','누구와',who,()=>[partParty(p)]],
-    ['bud','예산',b?`1인 ${Math.round(b.total/10000)}만원`:'정하지 않음',()=>[partBudget(p)]]];
-  return [
-    ['when','언제·어디',`${esc(PK.pack.city||p.dest||'미정')} · ${p.dateUnknown?'날짜 미정':`${esc(md(0))}–${esc(md(n))}`} (${n}박)`,()=>[partDest(p),partTrip(p)]],
-    ['who','누구와',who,()=>[partParty(p)]],
-    ['way','오가는 길',flightTxt,()=>[partFlight(p),partHomeBox(p),partHome(p)].filter(Boolean)],
-    ['stay','숙소',stayTxt,()=>[partStay(p)]],
-    ['bud','예산',b?`1인 ${Math.round(b.total/10000)}만원 <small>· 현지 하루 ${won(b.daily)}</small>`:'정하지 않음',()=>[partBudget(p)]],
-    ['ev','예약한 일정',p.events.length?`${p.events.length}개`:'없음',()=>[partEvents(p)]]];
-}
+const meRows=p=>FORMS.meRows(p,{dest:partDest,day:partsDay,homeBox:partHomeBox,paste:pasteBox});   // app/view/forms.ts
 // Drawn by React: app/screens/MeRows.tsx. meSetMsg changes only the message (the open form stays as it is).
 let meRev=0, meLast=null;
 function renderMeRows(){

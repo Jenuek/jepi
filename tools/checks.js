@@ -1764,5 +1764,25 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'view: 이번 여행 form values (app/view/forms.ts): rows, 예산 hint, trip line, 숙소 nights',
+    async run({ b, S, device, ok, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      const r = await p.evaluate(() => {
+        const F = window.JEPI_UI.view.forms, pr = JSON.parse(JSON.stringify(window.JEPI_DATA.trip.cur.profile));
+        pr.budgetMan = 100; pr.party = { type: 'friends', adults: 3, kids: 0 };
+        const X = { dest: () => ({ f: 'dest' }), day: () => [{ f: 'day' }], homeBox: () => null, paste: (kind, hint) => ({ kind, hint }) };
+        const rows = F.meRows(pr, X), way = rows.find(x => x[0] === 'way')[3](), st = rows.find(x => x[0] === 'stay')[3]()[0];
+        return { ids: rows.map(x => x[0]).join(','), who: rows.find(x => x[0] === 'who')[2], bud: rows.find(x => x[0] === 'bud')[2], way: way.map(x => x.f).join(','),
+          paste: way[0].paste.kind, nights: st.nights.length, hint: F.budgetHint(pr), none: F.budgetHint({ ...pr, budgetMan: 0 }), sum: F.tripSummary(window.JEPI_DATA.days.state.days) };
+      });
+      ok(r.ids === 'when,who,way,stay,bud,ev' && r.who === '친구 3명' && r.bud.startsWith('1인 100만원'), 'rows: ids, 누구와, 예산 ' + JSON.stringify(r));
+      ok(r.way === 'flight,home' && r.paste === 'flight' && r.nights >= 1, '오가는 길 parts (empty 집 box left out), the paste box comes from the old code, a night per row');
+      ok(r.hint.includes('교통·숙박 약') && r.none.startsWith('총예산만 넣으면'), '예산 hint with and without a total');
+      ok(r.sum.city === '오사카' && /박 · /.test(r.sum.line), 'trip line: ' + JSON.stringify(r.sum));
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];

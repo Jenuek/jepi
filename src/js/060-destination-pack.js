@@ -64,10 +64,5 @@ async function onbAdvance(){
   if(onbStep<ONB.length-1){onbStep++;renderOnb()} else await finishOnb();
 }
 // 여행지 (drawn by React: TripForms.tsx Dest). Not decided yet → the finder (OnbFinder.tsx).
-function partDest(p){
-  if(p.destMode==='find') return partFinder(p);
-  const ready=PK.pack&&norm(PK.pack.city)===norm(p.dest||'');
-  return {f:'dest',dest:p.dest??'',ai:!!sample,ready:ready?`${PK.pack.city} 준비됨 · 동네 ${Object.keys(AREAS).length}곳 · 장소 ${P.length}곳`:'',
-    rate:ready&&PK.pack.currency!=='KRW'?{cur:PK.pack.currency,val:+PLC.rate().toFixed(4)}:null};
-}
+const partDest=p=>p.destMode==='find'?partFinder(p):FORMS.dest(p,!!sample);   // app/view/forms.ts
 
