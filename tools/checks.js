@@ -86,6 +86,127 @@ module.exports = [
   },
 
   {
+    name: '장소 찾기: Google 검색 결과가 먼저(이름·주소·위치만), 고른 곳만 장소 목록에, AI는 그 아래 버튼, 영업시간은 장소 ID로, 설정에 검색 횟수',
+    async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
+      const p = await device(b, S, { ls: { 'jepi.keys': { gmaps: 'AIzaTEST' } } });
+      await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      const pack = () => p.evaluate(() => JSON.parse(localStorage.getItem('gp.pack')).places);
+      const n0 = (await pack()).length, s0 = S.placeSearch || 0;
+      await p.evaluate(() => window.__jepi.openFind({ into: 'list', where: 'city' })); await p.waitForTimeout(150);
+      ok(await vis(p, '#findAi') && (await p.getAttribute('#findQ', 'placeholder')).includes('이름'), 'with a Google key: search is the main button, AI is a second button');
+      await p.fill('#findQ', '이치란'); await p.click('#findGo'); await p.waitForTimeout(600);
+      ok((await p.$$('#findSrch .cp')).length === 2 && (await p.textContent('#findSrch')).includes('이치란 본점') && (await p.textContent('#findSrch')).includes('일본 이치란 1-2-3'), 'two results with name and address');
+      const row = await p.$$eval('#findSrch .cp:first-child button', e => e.map(x => x.textContent));
+      ok(row.length === 3 && row[0].startsWith('일정에 넣기') && row[1] === '장소에만' && row[2] === '안 함', 'each result has 일정에 넣기 / 장소에만 / 안 함 ' + row);
+      const ys = await p.evaluate(() => [document.querySelector('#findSrch').getBoundingClientRect().top, document.querySelector('#findAi').getBoundingClientRect().top]);
+      ok(ys[0] < ys[1], 'results come before the AI button');
+      const ls = S.lastSearch;
+      ok(S.placeSearch - s0 === 1 && ls.q.textQuery === '이치란' && !/regularOpeningHours|rating|photos|reviews/.test(ls.mask) && /places\.id/.test(ls.mask) && ls.q.locationBias.circle.radius <= 50000, 'asks Google only for id, name, address, location, biased to the trip: ' + ls.mask);
+      ok((await pack()).length === n0, 'nothing is added until one is chosen');
+      await p.click('[data-findsr="0:list"]'); await p.waitForTimeout(200);
+      let all = await pack(); const one = all.find(x => x.gid === 'ChIJ_이치란_1');
+      ok(all.length === n0 + 1 && one && one.name === '이치란 본점' && one.addr.includes('이치란 1-2-3') && one.verify === '영업시간' && one.always, 'the chosen one is a place with its Google id and address');
+      const area = await p.evaluate(() => { const A = window.JEPI_DATA.places.AREAS; const q = JSON.parse(localStorage.getItem('gp.pack')).places.find(x => x.gid === 'ChIJ_이치란_1'); const d = (k) => Math.hypot(A[k][1] - q.ll[0], A[k][2] - q.ll[1]); const best = Object.keys(A).sort((a, b) => d(a) - d(b))[0]; return { q: q.area, best: A[best][0] } });
+      ok(area.q === area.best, 'the area is the nearest one (' + area.q + ')');
+      await p.click('[data-findsr="1:skip"]'); await p.waitForTimeout(150);
+      ok((await pack()).length === n0 + 1 && (await p.textContent('#findSrch')).includes('넣지 않았어요'), '안 함 adds nothing');
+      // the same search again knows the place is already there
+      await p.fill('#findQ', '이치란'); await p.click('#findGo'); await p.waitForTimeout(500);
+      ok((await p.textContent('#findSrch')).includes('이미 장소 목록에 있는'), 'the same Google place is recognised as already there');
+      await p.click('[data-findsr="0:list"]'); await p.waitForTimeout(150);
+      ok((await pack()).length === n0 + 1, 'choosing it again does not make a second one');
+      // 일정에 넣기 into an empty time
+      await p.evaluate(() => window.__jepi.openFind({ when: 'gap', into: 'sched' })); await p.waitForTimeout(150);
+      await p.fill('#findQ', '라멘집'); await p.click('#findGo'); await p.waitForTimeout(500);
+      await p.click('[data-findsr="0:sched"]'); await p.waitForTimeout(400);
+      all = await pack(); const ramen = all.find(x => x.gid === 'ChIJ_라멘집_1');
+      ok(ramen && (await p.textContent('#findSrch')).includes('에 넣었어요') && await p.evaluate(id => JSON.parse(localStorage.getItem('gp.placed3')).some(x => x.id === id), ramen.id), '일정에 넣기 puts it in the day');
+      // opening hours: looked up by the Google place id, not by name
+      await p.evaluate(() => window.JEPI_DATA.hours.sweep()); await p.waitForTimeout(1500);
+      ok((S.placeGet || []).includes('ChIJ_라멘집_1'), 'opening hours asked by place id ' + JSON.stringify(S.placeGet));
+      const hr = (await pack()).find(x => x.gid === 'ChIJ_라멘집_1');
+      ok(hr && hr.hsrc === 'google' && hr.hours && hr.hours[0] === 600 && hr.hours[1] === 1080, 'the place has real hours now ' + JSON.stringify(hr && hr.hours));
+      // settings
+      await p.click('#sheet [data-close]').catch(() => { }); await openSettings(p);
+      const used = await p.evaluate(() => JSON.parse(localStorage.getItem('jepi.placeUse')).n);
+      ok(used === S.placeSearch - s0 && (await p.textContent('#placeUse')).includes(`${used}회`), '설정 shows this month\'s search count (' + used + ')');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: '장소 찾기: 국내 여행은 카카오 키워드 검색, 키가 없으면 예전처럼 AI로만',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S);
+      let q = null;
+      await p.route(/dapi\.kakao\.com/, r => { const u = new URL(r.request().url()); q = Object.fromEntries(u.searchParams);
+        r.fulfill({ contentType: 'application/json', body: JSON.stringify({ documents: [{ id: '777', place_name: '성수 카페', road_address_name: '서울 성동구 성수이로 1', address_name: '서울 성동구 성수동 1', x: '127.056', y: '37.544' }] }) }) });
+      await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      // pretend this trip is in Seoul
+      await p.evaluate(() => { const A = window.JEPI_DATA.places.AREAS; for (const k of Object.keys(A)) A[k] = [A[k][0], 37.5665, 126.978] });
+      await p.evaluate(() => window.__jepi.openFind({ into: 'list', where: 'city' })); await p.waitForTimeout(150);
+      ok(!(await vis(p, '#findAi')) && (await p.getAttribute('#findQ', 'placeholder')).includes('비워 두면'), 'no key at all: the old AI-only 찾기');
+      await p.evaluate(() => { const k = JSON.parse(localStorage.getItem('jepi.keys') || '{}'); k.kakao = '0123456789abcdef0123456789abcdef'; localStorage.setItem('jepi.keys', JSON.stringify(k)); window.JEPI_DATA.keys.load() });
+      await p.evaluate(() => window.__jepi.openFind({ into: 'list', where: 'city' })); await p.waitForTimeout(150);
+      await p.fill('#findQ', '성수 카페'); await p.click('#findGo'); await p.waitForTimeout(500);
+      ok(q && q.query === '성수 카페' && q.x && q.y && +q.radius > 0, 'Kakao keyword search near the trip ' + JSON.stringify(q));
+      ok((await p.textContent('#findSrch')).includes('성수 카페') && (await p.textContent('#findSrch')).includes('성수이로 1') && (await p.textContent('.hint:has-text("카카오 지도")')).length > 0, 'Kakao result with address');
+      await p.click('[data-findsr="0:list"]'); await p.waitForTimeout(200);
+      const x = await p.evaluate(() => JSON.parse(localStorage.getItem('gp.pack')).places.find(q => q.gid === 'k777'));
+      ok(x && x.name === '성수 카페' && !x.verify && Math.abs(x.ll[0] - 37.544) < 1e-6, 'saved with a Kakao id (k777), no Google hours lookup for it ' + JSON.stringify(x && x.gid));
+      ok(await p.evaluate(() => (localStorage.getItem('jepi.placeUse') || '') === '') , 'Kakao searches are not counted as Google searches');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: '직접 만들기: 위치 찾기로 좌표·주소 저장, 동네는 가장 가까운 곳으로, 안 고르면 예전처럼',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S, { ls: { 'jepi.keys': { gmaps: 'AIzaTEST' } } });
+      await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      await p.evaluate(() => window.__jepi.openCustom()); await p.waitForTimeout(200);
+      ok(await vis(p, '#cfLoc') && await vis(p, '#cfLocGo'), '위치 찾기 box is in the form');
+      const far = await p.evaluate(() => { const A = window.JEPI_DATA.places.AREAS, ks = Object.keys(A); return { k: ks[ks.length - 1], first: ks[0] } });
+      await p.fill('#cfName', ''); await p.fill('#cfLoc', '우메다'); await p.click('#cfLocGo'); await p.waitForTimeout(500);
+      ok((await p.$$('#cfLocHits button')).length === 2 && (await p.textContent('#cfLocHits')).includes('우메다 본점'), 'results to choose from');
+      await p.click('#cfLocHits [data-locpick="1"]'); await p.waitForTimeout(150);
+      const st = await p.evaluate(() => ({ lat: +document.getElementById('cfLat').value, gid: document.getElementById('cfGid').value, addr: document.getElementById('cfAddr').value, name: document.getElementById('cfName').value, area: document.getElementById('cfArea').value, shown: document.getElementById('cfLocSet').textContent, msg: document.getElementById('cfLocMsg').textContent }));
+      ok(st.gid === 'ChIJ_우메다_2' && st.addr.includes('우메다 4-5-6') && st.lat > 30 && st.name === '우메다 지점' && st.shown.includes('우메다 4-5-6') && st.msg.includes('동네는'), 'the pick sets position, address and id, and fills the empty name ' + JSON.stringify(st));
+      const near = await p.evaluate(() => { const A = window.JEPI_DATA.places.AREAS, ll = [+document.getElementById('cfLat').value, +document.getElementById('cfLng').value]; return Object.keys(A).sort((a, b) => Math.hypot(A[a][1] - ll[0], A[a][2] - ll[1]) - Math.hypot(A[b][1] - ll[0], A[b][2] - ll[1]))[0] });
+      ok(st.area === near, 'the 동네 select moved to the nearest area (' + st.area + ')');
+      await p.fill('#cfMemo', '메모'); await p.click('#customForm button[type="submit"]'); await p.waitForTimeout(400);
+      const c = await p.evaluate(() => JSON.parse(localStorage.getItem('gp.custom')).find(x => x.gid === 'ChIJ_우메다_2'));
+      ok(c && c.name === '우메다 지점' && c.ll && c.addr.includes('우메다 4-5-6') && c.area === near, 'the made block keeps position, address and id ' + JSON.stringify(c));
+      const pl = await p.evaluate(id => { const q = window.JEPI_DATA.places.PM[id]; return q && { ll: q.ll, gid: q.gid }; }, c.id);
+      ok(pl && pl.ll[0] === c.ll[0] && pl.gid === 'ChIJ_우메다_2', 'the place uses the found position (not the area centre)');
+      // without a pick: old behaviour (area centre, no id)
+      await p.evaluate(() => window.__jepi.openCustom()); await p.waitForTimeout(200);
+      await p.fill('#cfName', '그냥 만든 곳'); await p.click('#customForm button[type="submit"]'); await p.waitForTimeout(400);
+      const d = await p.evaluate(() => JSON.parse(localStorage.getItem('gp.custom')).find(x => x.name === '그냥 만든 곳'));
+      ok(d && !d.ll && !d.gid, 'no pick: no position saved, like before');
+      // no key at all: tells how to get it
+      const q = await device(b, S); await q.click('[data-w="new"]'); await q.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(q);
+      await q.evaluate(() => window.__jepi.openCustom()); await q.waitForTimeout(200);
+      ok(!(await vis(q, '#cfLoc')) && (await q.textContent('#cfLocBox')).includes('연결하면'), 'no key: explains what is needed');
+      ok(p.errs.length + q.errs.length === 0, 'no page errors ' + p.errs.concat(q.errs).join(' | '));
+      await p.ctx.close(); await q.ctx.close();
+    }
+  },
+  {
+    name: '같은 장소 묶기는 장소 ID를 먼저 봐요 (같은 ID = 같은 곳, 다른 ID = 다른 곳, ID 없으면 이름·거리)',
+    async run({ b, S, device, ok, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      const r = await p.evaluate(() => { const sp = window.JEPI_DATA.logic.places.samePlace, ll = [34.69, 135.5];
+        return [sp({ id: 'a', name: '이치란', gid: 'X', ll }, { id: 'b', name: '완전 다른 이름', gid: 'X', ll: [35, 136] }),
+          sp({ id: 'a', name: '이치란 본점', gid: 'X', ll }, { id: 'b', name: '이치란 본점', gid: 'Y', ll }),
+          sp({ id: 'a', name: '이치란 본점', ll }, { id: 'b', name: '이치란 본점', ll }),
+          sp({ id: 'a', name: '이치란 본점', gid: 'X', ll }, { id: 'b', name: '이치란 본점', ll })] });
+      ok(r[0] === true && r[1] === false && r[2] === true && r[3] === true, 'same id = same; different id = different; one without id falls back to name and distance ' + r);
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
     name: 'two friends share one trip: invite, merge edits on different days, 가고 싶어요',
     async run({ b, S, device, ok, vis, skipCoach, openSettings }) {
       const signup = async (p, em) => { await openSettings(p); await p.click('[data-sbmode="join"]'); await p.fill('#sbEmail', em); await p.fill('#sbPw', 'pass123'); await p.fill('#sbPw2', 'pass123'); await p.click('#sbGo'); await p.waitForTimeout(1800) };

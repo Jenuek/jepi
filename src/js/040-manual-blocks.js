@@ -7,13 +7,16 @@ function openCustom(editId,startAt,opts){
   // drawn by React: app/screens/CustomSheet.tsx (the same props again with dup while a new name is typed: 388-dedup.js)
   customLast={edit:editId||'',dayLabel:`Day ${UI.day+1} (${DY.days[UI.day].date})`,name:c.name||'',area:c.area,cat:c.cat,dur:c.dur,cost:c.cost??'',memo:c.memo||'',tags:c.tags||'',drop:!!c.drop,
     share:RS.status==='on'&&!PK.pack.manual?!!c.share:null,start:fmt(st),areas:optsOf(AREAS),cats:Object.entries(CATS),durs:[15,30,45,60,90,120,150,180,240].map(m=>[m,durTxt(m)]),
-    currency:String(PK.pack.currency),dup:null,card:!!(opts&&opts.card),rev:RENDER.nextSheetRev()};
+    currency:String(PK.pack.currency),dup:null,card:!!(opts&&opts.card),rev:RENDER.nextSheetRev(),
+    loc:c.ll?{ll:c.ll,addr:String(c.addr||''),gid:String(c.gid||'')}:null};
   window.JEPI_UI.mount('custom',$('#sheet'),customLast);
   $('#sheet').dataset.uid=''; $('#sheetBg').hidden=false; setTimeout(()=>{const x=$('#cfName');x&&x.focus()},0);
 }
 function saveCustomForm(f){
   const editId=f.dataset.edit;
-  const c={id:editId||('c'+Date.now().toString(36)),name:$('#cfName').value.trim()||'직접 만든 블록',area:$('#cfArea').value,cat:$('#cfCat').value,dur:+$('#cfDur').value||60,cost:Math.max(0,+$('#cfCost').value||0),memo:$('#cfMemo').value.trim(),tags:$('#cfTags').value.trim(),drop:$('#cfDrop').checked,share:!!($('#cfShare')&&$('#cfShare').checked)};
+  // 위치 찾기(CustomSheet.tsx)에서 고른 곳: 좌표·주소·장소 ID. 안 골랐으면 동네 중심(ll 없음)
+  const lat=parseFloat($('#cfLat').value), lng=parseFloat($('#cfLng').value), found=Number.isFinite(lat)&&Number.isFinite(lng)&&(lat||lng);
+  const c={id:editId||('c'+Date.now().toString(36)),ll:found?[lat,lng]:undefined,addr:found?$('#cfAddr').value:undefined,gid:found&&$('#cfGid').value?$('#cfGid').value:undefined,name:$('#cfName').value.trim()||'직접 만든 블록',area:$('#cfArea').value,cat:$('#cfCat').value,dur:+$('#cfDur').value||60,cost:Math.max(0,+$('#cfCost').value||0),memo:$('#cfMemo').value.trim(),tags:$('#cfTags').value.trim(),drop:$('#cfDrop').checked,share:!!($('#cfShare')&&$('#cfShare').checked)};
   TRIP.customs.put(c); addCustomToData(c);
   const asCard=f.dataset.card==='1';
   if(asCard){if(!isWish(c.id))toggleWish(c.id);showToast('내 카드에 담았어요')}

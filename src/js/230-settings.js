@@ -16,7 +16,7 @@ let settingsRev=0;
 // AI·지도 연결 is drawn by React: app/screens/AiKeysSection.tsx. Only the masked keys go there.
 function settingsAI(){return {standalone:!!STANDALONE,editing:keyEdit,hasGemini:!!KEYS.gemini,routesOk:+routeStats.ok||0,
   models:{heavy:MODELS.heavy,light:MODELS.light,gemini:MODELS.gemini},
-  hours:KEYS.gmaps?{use:+hoursUse(),cap:HOURS_CAP,off:JD.hours.state.off||''}:null,
+  hours:KEYS.gmaps?{use:+hoursUse(),cap:HOURS_CAP,off:JD.hours.state.off||'',search:JD.gplaces.used()}:null,
   keys:Object.keys(KEY_DEF).map(k=>{const d=KEY_DEF[k];return {k,name:d.name,sub:d.sub,ph:d.ph,masked:KEYS[k]?maskKey(KEYS[k]):'',bad:isBad(k),msg:keyMsg[k]||'',helpHTML:KEY_HELP[k]}})}}
 // What was pressed in 설정 (SettingsScreen.tsx / AiKeysSection.tsx tell: its name and value; a typed key comes as v2)
 function settingsAct(n,v,v2){

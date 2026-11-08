@@ -93,7 +93,7 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 | 🎲 DICE 시트, 지도 아래 카드 | 화면 `app/screens/Dice.tsx` (리액트), 값은 `280-dice-eat.js`(뭐 먹지·diceMount)·`290-dice-do.js`(뭐 하지)·`160-modes-roll.js`(일정 빈 시간)·`210-map.js`(지도는 Leaflet 그대로) |
 | 준비하기 (일정 경고·준비할 것·이 시기 여행 팁·초기화) | 화면 `app/screens/Checks.tsx` (리액트), 값은 `app/flow/render.ts`의 `renderChecks`, 시즌 팁 `app/flow/helper.ts` |
 | 일정 화면 요약 줄(이동·비용·확인할 것·빈 시간) | `382-tidy.js` |
-| 장소 찾기 화면 (모든 "찾기" 버튼이 여기로) | 화면 `app/screens/FindSheet.tsx` (리액트), 동작 `385-find.js` |
+| 장소 찾기 화면 (모든 "찾기" 버튼이 여기로) | 화면 `app/screens/FindSheet.tsx` (리액트), 동작 `385-find.js`, 장소 검색(Google·카카오) `app/data/gplaces.ts` |
 | 같은 장소 묶기, 직접 추가할 때 기존 장소 제안 | `388-dedup.js` (장소 탭의 카드는 `Tray.tsx`) |
 | 날짜별 제목 바꾸기 | `389-titles.js` |
 | 여행 꾸미기(테마 색·커버·스타일·손글씨 글꼴), 접히는 헤더, 아래 탭 | 꾸미기 시트 `app/screens/LookSheet.tsx` (리액트), 동작 `389a-look.js`, 스타일 `17-look.css` |

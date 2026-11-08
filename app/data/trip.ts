@@ -24,6 +24,8 @@ export interface Block {
 export interface CustomPlace {
   id: string; name: string; area: string; cat: string; dur: number; cost: number;
   memo: string; tags: string; drop: boolean; share?: boolean; ll?: [number, number];
+  /** 위치 찾기로 고른 곳의 주소와 구글(카카오 "k…") 장소 ID */
+  addr?: string; gid?: string;
 }
 
 /** The trip facts the traveler entered (dest, dates, party, stays, …). Large and still shaped by the old code. */
