@@ -105,9 +105,21 @@ async function device(b, S, opts = {}) {
   await ctx.route(/leaflet\.min\.(js|css)/, r => { const b = leaf(r.request().url().endsWith('.css') ? 'leaflet.css' : 'leaflet.js'); b ? r.fulfill({ body: b }) : r.abort() });
   await ctx.route(/basemaps\.cartocdn\.com|tile\.openstreetmap/, r => r.fulfill({ status: 204 }));
   await ctx.route(/supabase\.co/, S.handler);
-  await ctx.route(/places\.googleapis\.com/, r => { S.places = (S.places || 0) + 1; const q = JSON.parse(r.request().postData()); const c = q.locationBias.circle.center;
+  await ctx.route(/places\.googleapis\.com/, r => { const req = r.request(), mask = req.headers()['x-goog-fieldmask'] || '';
     const day = d => ({ open: { day: d, hour: 10, minute: 0 }, close: { day: d, hour: 18, minute: 0 } });
-    r.fulfill({ contentType: 'application/json', body: JSON.stringify({ places: [{ displayName: { text: q.textQuery }, location: c, businessStatus: 'OPERATIONAL', regularOpeningHours: { periods: [1, 2, 3, 4, 5, 6].map(day) } }] }) }) });
+    const J = o => r.fulfill({ contentType: 'application/json', body: JSON.stringify(o) });
+    // 장소 ID로 조회 (영업시간)
+    if (req.method() === 'GET') { S.places = (S.places || 0) + 1; S.placeGet = (S.placeGet || []).concat(decodeURIComponent(new URL(req.url()).pathname.split('/').pop())); return J({ id: 'x', businessStatus: 'OPERATIONAL', regularOpeningHours: { periods: [1, 2, 3, 4, 5, 6].map(day) } }) }
+    const q = JSON.parse(req.postData()), c = q.locationBias.circle.center;
+    // 장소 검색 (이름·주소·위치·ID만): 결과 두 곳
+    if (!/regularOpeningHours/.test(mask)) {
+      S.placeSearch = (S.placeSearch || 0) + 1; S.lastSearch = { q, mask };
+      const at = (dl, dg) => ({ latitude: c.latitude + dl, longitude: c.longitude + dg });
+      return J({ places: [{ id: 'ChIJ_' + q.textQuery + '_1', displayName: { text: q.textQuery + ' 본점' }, formattedAddress: '일본 ' + q.textQuery + ' 1-2-3', location: at(0.002, 0.001) },
+        { id: 'ChIJ_' + q.textQuery + '_2', displayName: { text: q.textQuery + ' 지점' }, formattedAddress: '일본 ' + q.textQuery + ' 4-5-6', location: at(-0.002, -0.001) }] });
+    }
+    S.places = (S.places || 0) + 1;
+    J({ places: [{ id: 'ChIJ_hours_' + q.textQuery, displayName: { text: q.textQuery }, location: c, businessStatus: 'OPERATIONAL', regularOpeningHours: { periods: [1, 2, 3, 4, 5, 6].map(day) } }] }) });
   await ctx.route(/routes\.googleapis\.com|dapi\.kakao\.com|api\.anthropic\.com|generativelanguage|open-meteo\.com/, r => r.fulfill({ status: 503, body: '{}' }));
   const p = await ctx.newPage(); p.errs = [];
   p.on('pageerror', e => p.errs.push(e.message));

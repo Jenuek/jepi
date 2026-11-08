@@ -12,6 +12,7 @@ import * as ai from './ai';
 import * as alerts from './alerts';
 import * as hours from './hours';
 import * as kakao from './kakao';
+import * as gplaces from './gplaces';
 import * as myplaces from './myplaces';
 import * as routes from './routes';
 import * as account from './account';
@@ -47,6 +48,8 @@ export const data = {
   hours,
   /** Kakao places / addresses, and this device's location */
   kakao,
+  /** 장소 검색 (Google 텍스트 검색 · 카카오 키워드 검색) */
+  gplaces,
   /** 내 장소 (집·회사·…) */
   myplaces,
   /** real routes (Google, abroad) */

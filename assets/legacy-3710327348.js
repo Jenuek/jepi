@@ -86,13 +86,16 @@ function openCustom(editId,startAt,opts){
   // drawn by React: app/screens/CustomSheet.tsx (the same props again with dup while a new name is typed: 388-dedup.js)
   customLast={edit:editId||'',dayLabel:`Day ${UI.day+1} (${DY.days[UI.day].date})`,name:c.name||'',area:c.area,cat:c.cat,dur:c.dur,cost:c.cost??'',memo:c.memo||'',tags:c.tags||'',drop:!!c.drop,
     share:RS.status==='on'&&!PK.pack.manual?!!c.share:null,start:fmt(st),areas:optsOf(AREAS),cats:Object.entries(CATS),durs:[15,30,45,60,90,120,150,180,240].map(m=>[m,durTxt(m)]),
-    currency:String(PK.pack.currency),dup:null,card:!!(opts&&opts.card),rev:RENDER.nextSheetRev()};
+    currency:String(PK.pack.currency),dup:null,card:!!(opts&&opts.card),rev:RENDER.nextSheetRev(),
+    loc:c.ll?{ll:c.ll,addr:String(c.addr||''),gid:String(c.gid||'')}:null};
   window.JEPI_UI.mount('custom',$('#sheet'),customLast);
   $('#sheet').dataset.uid=''; $('#sheetBg').hidden=false; setTimeout(()=>{const x=$('#cfName');x&&x.focus()},0);
 }
 function saveCustomForm(f){
   const editId=f.dataset.edit;
-  const c={id:editId||('c'+Date.now().toString(36)),name:$('#cfName').value.trim()||'직접 만든 블록',area:$('#cfArea').value,cat:$('#cfCat').value,dur:+$('#cfDur').value||60,cost:Math.max(0,+$('#cfCost').value||0),memo:$('#cfMemo').value.trim(),tags:$('#cfTags').value.trim(),drop:$('#cfDrop').checked,share:!!($('#cfShare')&&$('#cfShare').checked)};
+  // 위치 찾기(CustomSheet.tsx)에서 고른 곳: 좌표·주소·장소 ID. 안 골랐으면 동네 중심(ll 없음)
+  const lat=parseFloat($('#cfLat').value), lng=parseFloat($('#cfLng').value), found=Number.isFinite(lat)&&Number.isFinite(lng)&&(lat||lng);
+  const c={id:editId||('c'+Date.now().toString(36)),ll:found?[lat,lng]:undefined,addr:found?$('#cfAddr').value:undefined,gid:found&&$('#cfGid').value?$('#cfGid').value:undefined,name:$('#cfName').value.trim()||'직접 만든 블록',area:$('#cfArea').value,cat:$('#cfCat').value,dur:+$('#cfDur').value||60,cost:Math.max(0,+$('#cfCost').value||0),memo:$('#cfMemo').value.trim(),tags:$('#cfTags').value.trim(),drop:$('#cfDrop').checked,share:!!($('#cfShare')&&$('#cfShare').checked)};
   TRIP.customs.put(c); addCustomToData(c);
   const asCard=f.dataset.card==='1';
   if(asCard){if(!isWish(c.id))toggleWish(c.id);showToast('내 카드에 담았어요')}
@@ -466,7 +469,7 @@ let settingsRev=0;
 // AI·지도 연결 is drawn by React: app/screens/AiKeysSection.tsx. Only the masked keys go there.
 function settingsAI(){return {standalone:!!STANDALONE,editing:keyEdit,hasGemini:!!KEYS.gemini,routesOk:+routeStats.ok||0,
   models:{heavy:MODELS.heavy,light:MODELS.light,gemini:MODELS.gemini},
-  hours:KEYS.gmaps?{use:+hoursUse(),cap:HOURS_CAP,off:JD.hours.state.off||''}:null,
+  hours:KEYS.gmaps?{use:+hoursUse(),cap:HOURS_CAP,off:JD.hours.state.off||'',search:JD.gplaces.used()}:null,
   keys:Object.keys(KEY_DEF).map(k=>{const d=KEY_DEF[k];return {k,name:d.name,sub:d.sub,ph:d.ph,masked:KEYS[k]?maskKey(KEYS[k]):'',bad:isBad(k),msg:keyMsg[k]||'',helpHTML:KEY_HELP[k]}})}}
 // What was pressed in 설정 (SettingsScreen.tsx / AiKeysSection.tsx tell: its name and value; a typed key comes as v2)
 function settingsAct(n,v,v2){
@@ -960,6 +963,8 @@ const sumAct=SCHED.sumAct;   // app/flow/schedule.ts
 const HOURS_CAP=JD.hours.CAP, hoursUse=add=>JD.hours.used(add), hoursSweep=()=>JD.hours.sweep();
 JD.hours.connectHours({placesOnSchedule:()=>[...new Set(CUR.placed.map(b=>b.id))].map(id=>PM[id]).filter(Boolean),googleKey:()=>KEYS.gmaps||'',keyBad:()=>isBad('gmaps'),
   demo:()=>!!DEMO.on,inKorea:ll=>inKR(ll),city:()=>PK.pack.city||'',changed(){savePack();TRIP.customs.saved();renderAll();touchPlan()}});
+// 장소 검색 (app/data/gplaces.ts): 어느 키로 찾을지만 여기서 알려 줘요
+JD.gplaces.connectGPlaces({googleKey:()=>KEYS.gmaps||'',googleBad:()=>isBad('gmaps'),kakaoKey:()=>KEYS.kakao||'',kakaoBad:()=>isBad('kakao')});
 // ---------- 친구와 함께: shared trips, invite links, 가고 싶어요 ----------
 // A shared trip keeps its plan in jepi_trips (one row, `rev` goes up by one on every save).
 // Each device remembers the last server version it saw (`base`). When two people change the
@@ -1051,10 +1056,10 @@ PANELS.friends={render(opts){
 //   어디 (near today's plan / one area / whole city) · 언제 (a free gap / any time) · 넣을 곳 (schedule / list only)
 // Results always come back with the same three choices as chat: 일정에 넣기 / 장소에만 / 안 함.
 // Chat and 🎲 DICE keep their own way of asking; only how results are kept is shared.
-let FIND={where:'near',area:'',when:'any',gap:null,into:'list',q:'',busy:false,res:[],ctl:null,cursor:null};
+let FIND={where:'near',area:'',when:'any',gap:null,into:'list',q:'',busy:false,res:[],ctl:null,cursor:null,hits:[],sbusy:false};
 function findAreaOfDay(){const it=analyze(UI.day).items.find(i=>!i.stay&&i.area);return it?it.area:''}
 function openFind(o){
-  FIND=Object.assign({where:'near',area:firstArea(),when:'any',gap:null,into:'list',q:'',busy:false,res:[],ctl:null,cursor:null},o||{});
+  FIND=Object.assign({where:'near',area:firstArea(),when:'any',gap:null,into:'list',q:'',busy:false,res:[],ctl:null,cursor:null,hits:[],sbusy:false},o||{});
   if(FIND.when==='gap'&&!FIND.gap){const g=gapsOf(UI.day)[0];if(g)FIND.gap=g;else FIND.when='any'}
   renderFind(); $('#sheet').dataset.uid=''; $('#sheetBg').hidden=false;
   if(o&&o.autorun) runFind();
@@ -1070,7 +1075,10 @@ function findMount(){
     areas:Object.entries(AREAS).map(([k,v])=>({k,label:String(v[0])})),when:F.when,gaps:gaps.map(gv),gap:F.gap?gv(F.gap):null,into:F.into,q:F.q||'',busy:!!F.busy,mine:UI.jp==='P',
     rows:F.res.map(r=>{const p=PM[r.id];if(!p)return null;
       const meta=[p.area,CATS[p.cat]||'',p.hours&&!p.always?`${fmt(p.hours[0])}–${fmt(p.hours[1])}`:''].filter(Boolean).join(' · ');
-      return {id:r.id,name:String(p.name),meta,note:p.note?String(p.note):'',c:r.c||'',txt:r.txt||''}}).filter(Boolean),rev:findRev});
+      return {id:r.id,name:String(p.name),meta,note:p.note?String(p.note):'',c:r.c||'',txt:r.txt||''}}).filter(Boolean),
+    // 장소 검색(Google/카카오)이 되면 결과를 AI보다 먼저 보여 줘요. 키가 없으면 null → 예전처럼 AI로만
+    search:JD.gplaces.provider()?{provider:JD.gplaces.provider(),busy:!!F.sbusy,rows:F.hits.map((h,i)=>({id:String(i),name:String(h.name),meta:String(h.addr||''),
+      note:!h.c&&JD.gplaces.existing(h)?'이미 장소 목록에 있는 곳이에요':'',c:h.c||'',txt:h.txt||''}))}:null,rev:findRev});
 }
 function findFocus(){
   const F=FIND, parts=[];
@@ -1092,6 +1100,18 @@ async function runFind(){
   if($('#findForm')){renderFind(); if(!n) setSt('findSt','새로 찾은 곳이 없어요. 찾는 말을 바꿔 보세요.'); else setSt('findSt',`${n}곳을 찾았어요. 장소 탭 "✨ 방금 찾은 곳"에도 모여 있어요.`)}
   renderTray();
 }
+// 장소 검색: 이름·주소로 먼저 찾아서 결과를 보여 줘요 (AI는 그 아래 버튼으로)
+function findCenter(){const F=FIND, a=F.where==='area'&&AREAS[F.area]; return a?{center:[a[1],a[2]],radius:5000}:{center:PLC.cityLL(),radius:30000}}
+async function runSearch(){
+  if(FIND.sbusy||FIND.busy) return;
+  if(!FIND.q){renderFind();setSt('findSt','찾을 장소 이름이나 주소를 적어 주세요.');return}
+  FIND.sbusy=true; FIND.hits=[]; renderFind(); setSt('findSt','찾는 중…');
+  let hits=[],err='';
+  try{hits=await JD.gplaces.search(FIND.q,findCenter())}catch(e){err=errText(e,'장소를 찾지 못했어요')}
+  FIND.sbusy=false; FIND.hits=hits.map(h=>Object.assign({c:'',txt:''},h));
+  if(!$('#findForm')) return;
+  renderFind(); setSt('findSt',err||(hits.length?`${hits.length}곳을 찾았어요. 고르면 장소 목록에 들어가요.`:'찾지 못했어요. 이름이나 주소를 다르게 적어 보세요.'));
+}
 function findDrop(id){ // 안 함: the place was only just found, so take it off the list again
   const k=PK.pack.places.findIndex(x=>x.id===id); if(k>=0){PK.pack.places.splice(k,1);savePack()}
   const i=P.findIndex(x=>x.id===id); if(i>=0)P.splice(i,1); delete PM[id]; FRESH.delete(id);
@@ -1104,16 +1124,26 @@ function findAct(n,v,typed){
   if(n==='gap'){const [a,b]=String(v).split('-').map(Number);openFind({when:'gap',gap:[a,b],into:'sched'});return}
   if(n==='area'){FIND.area=v;return}
   if(n==='gapsel'){FIND.gap=String(v).split('-').map(Number);return}
-  if(n==='submit'){FIND.q=String(typed||'').trim();runFind();return}
-  if(n==='r'){const [id,act]=String(v).split(':'), r=FIND.res.find(x=>x.id===id), p=PM[id]; if(!r||!p) return;
-    if(act==='skip'){findDrop(id);r.c='skip';r.txt='넣지 않았어요'}
-    else if(act==='list'){r.c='list';if(UI.jp==='P'){if(!isWish(id))toggleWish(id);r.txt='내 카드에 담았어요'}else r.txt='장소 목록에 넣었어요'}
-    else if(FIND.when==='gap'&&FIND.gap){
-      const st=Math.max(FIND.cursor||FIND.gap[0],FIND.gap[0]), rr=repairOps([{op:'add',day:UI.day,id,start:fmt(st),dur:p.dur}]);
-      applyOpsCore(rr.ops); save(); FIND.cursor=parse(rr.ops[0].start)+p.dur+20;
-      r.c='sched'; r.txt=`${rr.ops[0].start}에 넣었어요${rr.warns.length?` · 확인할 것 ${rr.warns.length}`:''}`; renderAll();
-    } else {UI.selected=id;r.c='pick';r.txt='일정표에서 넣을 시간을 탭하세요';closeSheet();UI.tab='timeline';renderAll();return}
-    findRowsUpdate(); renderTray(); return}
+  if(n==='submit'){FIND.q=String(typed||'').trim(); if(JD.gplaces.provider()) runSearch(); else runFind(); return}
+  if(n==='ai'){FIND.q=String(typed||'').trim();runFind();return}
+  if(n==='sr'){const [k,act]=String(v).split(':'), h=FIND.hits[+k]; if(!h||h.c) return;
+    if(act==='skip'){h.c='skip';h.txt='넣지 않았어요';findRowsUpdate();return}
+    const had=JD.gplaces.existing(h), pl=JD.gplaces.addFound(h); if(!pl) return;   // 고른 곳만 장소 목록에 만들어요
+    h.id=pl.id; findPlace(h,pl.id,act,had?'이미 있던 곳을 ':''); return}
+  if(n==='r'){const [id,act]=String(v).split(':'), r=FIND.res.find(x=>x.id===id); if(!r||!PM[id]) return;
+    if(act==='skip'){findDrop(id);r.c='skip';r.txt='넣지 않았어요';findRowsUpdate();renderTray();return}
+    findPlace(r,id,act,''); return}
+}
+// 고른 곳을 장소 목록에만 / 일정에 넣기 (AI 결과와 장소 검색 결과가 같이 써요). r: 줄(c·txt를 채워요)
+function findPlace(r,id,act,pre){
+  const p=PM[id];
+  if(act==='list'){r.c='list';if(UI.jp==='P'){if(!isWish(id))toggleWish(id);r.txt=pre+'내 카드에 담았어요'}else r.txt=pre+'장소 목록에 넣었어요'}
+  else if(FIND.when==='gap'&&FIND.gap){
+    const st=Math.max(FIND.cursor||FIND.gap[0],FIND.gap[0]), rr=repairOps([{op:'add',day:UI.day,id,start:fmt(st),dur:p.dur}]);
+    applyOpsCore(rr.ops); save(); FIND.cursor=parse(rr.ops[0].start)+p.dur+20;
+    r.c='sched'; r.txt=`${pre}${rr.ops[0].start}에 넣었어요${rr.warns.length?` · 확인할 것 ${rr.warns.length}`:''}`; renderAll();
+  } else {UI.selected=id;r.c='pick';r.txt='일정표에서 넣을 시간을 탭하세요';closeSheet();UI.tab='timeline';renderAll();return}
+  findRowsUpdate(); renderTray();
 }
 // ---------- 알림: push notifications while travelling ----------
 // The server / device side and the settings live in app/data/alerts.ts, which reminders and time zones in
