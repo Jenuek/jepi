@@ -45,11 +45,11 @@ export async function genPack(dest?: any, btn?: any){
   }catch(e: any){setSt('st_pack',e&&e.code==='cancelled'?'2분 안에 답을 받지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.':errText(e,'여행지를 준비하지 못했어요')+(e&&e.code?` (${e.code})`:''));return false}
   finally{clearTimeout(to);fs.onbBusy=false; setBusy(false)}
 }
-export async function morePlaces(n?: any, stId?: any, focus?: any, signal?: any){
+export async function morePlaces(n?: any, stId?: any, focus?: any, signal?: any, quick?: boolean){
   if(!ui.sample) return 0;
-  progStart(stId,n>15?(CUR.kws.length?'고른 취향에 맞는 장소 후보를 찾는 중이에요 (보통 1~2분)':`${PK.pack.city}에서 가 볼 만한 곳을 골고루 찾는 중이에요 (보통 1~2분)`):'장소를 찾는 중이에요 (보통 30초~1분)',stId==='moreSt'?['moreBtn']:[],'찾는 중…');
+  progStart(stId,n>15?(CUR.kws.length?'고른 취향에 맞는 장소 후보를 찾는 중이에요 (보통 1~2분)':`${PK.pack.city}에서 가 볼 만한 곳을 골고루 찾는 중이에요 (보통 1~2분)`):quick?'AI가 찾는 중이에요 (보통 10~30초)':'장소를 찾는 중이에요 (보통 30초~1분)',stId==='moreSt'?['moreBtn']:[],'찾는 중…');
   try{
-    const ids=await asks.morePlaces(ui.sample,n,focus,signal), added=ids.length;   // app/data/asks.ts
+    const ids=await asks.morePlaces(ui.sample,n,focus,signal,quick), added=ids.length;   // app/data/asks.ts
     L.fresh().clear(); ids.forEach((id: any)=>L.fresh().add(id)); setSt(stId,added?`새 장소 ${added}곳을 찾았어요. 장소 탭 맨 위 "✨ 방금 찾은 곳"에 모아 뒀어요.`:'이미 있는 곳과 겹쳐서 새로 추가할 장소가 없었어요. 찾는 말을 바꿔 보세요 (예: 현지인 맛집, 조용한 카페).'); return added;
   }catch(e: any){setSt(stId,e&&e.code==='cancelled'?'멈췄어요. 장소 블록 탭에서 언제든 다시 찾을 수 있어요.':errText(e,'장소를 찾지 못했어요'));return 0}
 }
