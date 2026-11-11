@@ -22,7 +22,7 @@ import * as R from './render';
 /** what the old code still does */
 export interface Legacy {
   /** ask the AI for n more places (focus: what kind); resolves with how many came */
-  morePlaces(n: number, statusId: string, focus: string, signal?: AbortSignal): Promise<number>;
+  morePlaces(n: number, statusId: string, focus: string, signal?: AbortSignal, quick?: boolean): Promise<number>;
   /** the places the AI just found (✨) */
   fresh(): Set<string>;
   setSt(id: string, text: string): void;
@@ -94,10 +94,25 @@ export function diceFix(force?: any){
   R.closeSheet(); R.renderAll();
 }
 function renderDiceDo(top?: any){if($('#sheet').dataset.uid!=='dice')return;diceMount(DICEV.plan(diceState(),top))}
+// "🔎 AI가 새로 찾아서 굴리기". On 뭐 먹지 it looks for places to eat for that meal, near where the traveler will be
+// (the block before the free time), with the quick model; then it rolls with the meal settings, so a new place can come up.
 async function diceAI(){
+  const forEat=dice.tab==='eat';
+  if(forEat){
+    dice.lunch=true; dice.meal=eat.meal; dice.walk=eat.walk; dice.mood='any';
+    if(!mealGap()){renderDice();return}   // no free time at that meal: asking the AI would not help
+  }
+  const g=DICEV.diceGaps(ui.day)[dice.gapI], D=DYs.days[ui.day]||{}, sl=(DYs.loc as any)[D.startLoc]||{};
+  const from=g&&g.prev?{name:g.prev.name||g.prev.locName||'',ll:g.prev.ll}:{name:sl.name||'',ll:sl.ll};
+  const at=from.ll?` near ${from.name} (lat ${(+from.ll[0]).toFixed(4)}, lng ${(+from.ll[1]).toFixed(4)})`:'';
+  const mealTxt=dice.meal==='dinner'?'저녁':'점심', eatMood=eat.mood!=='any'?', '+((NB.EAT_MOODS.find((m: any)=>m[0]===eat.mood)||[])[1]||''):'';
   const mood=(DICEV.DICE_MOODS.find((m: any)=>m[0]===dice.mood)||[])[1]||'';
-  const focus=dice.lunch?`${dice.meal==='dinner'?'저녁':'점심'} 식사 (걸어서 ${dice.walk}분 안${eat.mood!=='any'?', '+((NB.EAT_MOODS.find((m: any)=>m[0]===eat.mood)||[])[1]||''):''})`:dice.mood==='any'?'지금 빈 시간에 하기 좋은 곳':`지금 기분: ${mood}`;
-  const n=await L.morePlaces(8,'st_dice',focus); if(n){dice.fresh=[...L.fresh()]; diceRoll(false)}
+  const focus=forEat?`${mealTxt} 식사할 식당 (cat food, open at ${mealTxt==='저녁'?'18:00-20:00':'11:30-14:00'}), within ${dice.walk} minutes walk${at}${eatMood}`
+    :dice.mood==='any'?'지금 빈 시간에 하기 좋은 곳':`지금 기분: ${mood}`;
+  dice.msg=''; dice.pick=null; renderDice();
+  const n=await L.morePlaces(forEat?6:8,'st_dice',focus,undefined,forEat); if(!n) return;   // the status line says why
+  dice.fresh=[...L.fresh()]; dice.rolls=0; diceRoll(false);
+  if(!dice.pick) {dice.msg=forEat?`AI가 ${n}곳을 새로 찾았지만 걸어서 ${dice.walk}분 안에 ${mealTxt} 시간에 열린 곳이 없어요. 걷는 시간을 늘려 다시 굴려 보세요.`:`AI가 ${n}곳을 새로 찾았지만 이 빈 시간에 맞는 곳이 없어요.`; renderDice()}
 }
 
 
@@ -126,12 +141,19 @@ async function eatOrigin(){
   eat.where=x.name; return x.ll;
 }
 const nbLook=()=>({kakao:!!keys.list.kakao,ai:ui.sample});
+const MEAL_WIN: Record<string, [number, number, string]> = { lunch: [690, 840, '점심 시간(11:30~14:00)'], dinner: [1050, 1260, '저녁 시간(17:30~21:00)'] };
+/** on the trip's day: the free time with at least 30 minutes of the meal in it (sets dice.gapI), or false with a message */
+function mealGap(){
+  const w=MEAL_WIN[eat.meal==='dinner'?'dinner':'lunch'], gs=DICEV.diceGaps(ui.day);
+  const gi=gs.findIndex((g: any)=>Math.min(g.e,w[1])-Math.max(g.s,w[0])>=30);
+  if(gi<0){dice.pick=null;dice.msg=`이 날은 ${w[2]}에 빈 시간이 없어요. 일정에서 식사 자리를 비우거나 "📍 주변"으로 찾아보세요.`;return false}
+  dice.gapI=gi; return true;
+}
 async function eatRoll(again?: any){
   if(eat.busy) return;
   if(eat.base==='plan'){
     dice.lunch=true; dice.meal=eat.meal; dice.walk=eat.walk; dice.mood='any';
-    const gs=DICEV.diceGaps(ui.day), mw=eat.meal==='dinner'?[1050,1260]:[690,840];
-    const gi=gs.findIndex((g: any)=>g.e>mw[0]&&g.s<mw[1]); if(gi>=0) dice.gapI=gi;
+    if(!mealGap()){renderDice();return}
     if(again&&dice.rolls>=3) return; diceRoll(!!again); return;
   }
   if(again&&eat.rolls>=3) return;
