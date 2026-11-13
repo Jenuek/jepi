@@ -128,7 +128,7 @@ Coordinates must be accurate WGS84 to 4 decimals.`;
 
 /** 장소 더 찾기: n more places for this traveler (focus: what they asked for); new ones join the destination.
  *  Returns the ids added (places already there, by name or as the same place, are skipped). */
-export async function morePlaces(ai: Asker, n: number, focus: string, signal?: AbortSignal): Promise<string[]> {
+export async function morePlaces(ai: Asker, n: number, focus: string, signal?: AbortSignal, quick?: boolean): Promise<string[]> {
   const { P } = places, DY = days.state;
   const areaList = areaKeys();
   const prompt=`Suggest ${n} real, currently operating places in ${PK.pack.city}${PK.pack.country?', '+PK.pack.country:''} for this traveler.
@@ -139,7 +139,8 @@ Who is traveling matters most for the choice of places.
 Area keys: ${areaList}
 Do not repeat these: ${P.map(p=>p.name).slice(0,150).join(', ')||'(none)'}
 Reply with only JSON: {"places":[{"name":"Korean name","local":"name in local language for map search","area":"area key","cat":"food|music|art|walk|shop|night|trip","lat":0.0000,"lng":0.0000,"dur":typical minutes,"open":"HH:MM-HH:MM or null if always open (24:00 for midnight)","closed":[weekday numbers, 0=Sunday],"cost":typical spend per person in ${PK.pack.currency},"costNote":"short Korean","tags":["2-5 short Korean keywords; reuse the traveler's keywords when they apply"],"note":"one Korean sentence: what it is and why go","must":"short Korean reason if it is a highlight for this traveler, else empty","drop":false,"cash":true only if the place mostly accepts cash only,"best":"morning|day|sunset|evening|night|any: when this place is best visited","check":"short Korean note if a booking or ticket is needed, else empty"}]}`;
-  const r = await ai.json(prompt, { cache: false, signal }); const added: string[] = [];
+  // quick: a few places for one meal (🎲 뭐 먹지) — the light model answers in seconds
+  const r = await ai.json(prompt, { cache: false, signal, modelTier: quick ? 'quick' : undefined }); const added: string[] = [];
   list(r && r.places).slice(0, n + 5).forEach(x => {
     const pl = places.cleanPlace(x);
     if (pl && !P.some(p => norm(p.name) === norm(pl.name) || (p.local && pl.local && norm(p.local) === norm(pl.local))) && !P.find(p => !p.shared && samePlace(p, pl))) { PK.pack.places.push(pl); places.addPackPlace(pl); added.push(pl.id) }

@@ -1200,6 +1200,36 @@ module.exports = [
     }
   },
   {
+    name: '🎲 뭐 먹지 · 여행 날 "AI가 새로 찾아서 굴리기": asks for places to eat near the free time (quick), then rolls a meal; no free time at lunch → says so without asking',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); const asked = [];
+      await p.route(/api\.anthropic\.com/, r => { const q = JSON.parse(r.request().postData() || '{}'); asked.push({ model: q.model, text: JSON.stringify(q.messages || '') });
+        const places = [1, 2, 3, 4, 5, 6].map(i => ({ name: '테스트 식당 ' + i, local: 'Test Diner ' + i, area: 'namba', cat: 'food', lat: 34.6655 + i * 0.0007, lng: 135.5012 + i * 0.0004, dur: 60, open: '10:00-22:00', note: '맛있어요', tags: ['라멘'] }));
+        r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content: [{ type: 'text', text: JSON.stringify({ places }) }] }) }) });
+      await p.click('[data-w="new"]'); await p.waitForTimeout(250);
+      if (await p.$('#onbKey_anthropic')) { await p.fill('#onbKey_anthropic', 'sk-ant-test-key'); await p.click('#onbBody [data-onbkey="anthropic"]'); await p.waitForTimeout(300) }
+      await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      const at = async n => { const md = (await p.textContent(`[data-day="${n}"]`)).match(/(\d+)\/(\d+)/); return new Date(new Date().getFullYear() + (+md[1] < new Date().getMonth() + 1 ? 1 : 0), +md[1] - 1, +md[2], 11, 40) };
+      const d2 = await at(1), d4 = await at(3);
+      await p.clock.install({ time: d2 }); await p.reload(); await p.waitForTimeout(3400); await skipCoach(p);
+      const openEat = async () => { await p.click('.dice-fab'); await p.waitForTimeout(500); if (await p.$('#sheet [data-dicetab="eat"]')) { await p.click('#sheet [data-dicetab="eat"]'); await p.waitForTimeout(300) } };
+      await openEat();
+      ok(await vis(p, '#sheet #diceAI'), 'on a trip day 뭐 먹지 shows "AI가 새로 찾아서 굴리기"');
+      await p.click('#sheet #diceAI'); await p.waitForTimeout(800);
+      ok(asked.length === 0 && (await p.textContent('#sheet')).includes('점심 시간(11:30~14:00)에 빈 시간이 없어요'), 'Day 2 has lunch planned already: it says so, no AI call');
+      await p.click('#sheet [data-close]').catch(() => { }); await p.waitForTimeout(300);
+      await p.clock.setSystemTime(d4); await p.reload(); await p.waitForTimeout(3400); await skipCoach(p);
+      await openEat(); await p.click('#sheet #diceAI'); await p.waitForTimeout(2000);
+      const q = asked[0] || { text: '', model: '' };
+      ok(q.text.includes('점심 식사할 식당') && q.text.includes('within 10 minutes walk') && q.text.includes('lat '), 'Day 4: asks for places to eat for lunch, near where you will be ' + q.text.slice(0, 0));
+      ok(/haiku/i.test(q.model) || asked.length === 1, 'one quick request ' + q.model);
+      const sheet = await p.textContent('#sheet');
+      ok(sheet.includes('테스트 식당') && sheet.includes('이걸로! 일정에 넣기'), 'a newly found place to eat comes up at once');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
     name: 'AI: a busy server (529) or a broken reply is tried again; a wrong key is not; the message says why',
     async run({ b, S, device, ok, vis, skipCoach }) {
       const p = await device(b, S); let calls = 0, mode = 'busy2';
