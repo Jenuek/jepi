@@ -36,7 +36,7 @@ function joinFromUrl(){
   const code=new URLSearchParams(location.search).get('join'); if(!code) return false;
   history.replaceState(null,'',location.pathname); LS.set('jepi.joinCode',code);
   if(syncOn()){joinPending();return true}
-  welcomeView='join';renderWelcome();$('#welcome').hidden=false;return true;
+  WELC.openJoin();return true;
 }
 async function joinPending(){
   const code=LS.get('jepi.joinCode',''); if(!code||!syncOn()) return false;

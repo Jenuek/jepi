@@ -56,6 +56,6 @@ function importAll(v){
   if(Array.isArray(v.kw)&&v.kw.length){CUR.kws=[...new Set([...CUR.kws,...v.kw])];saveKw&&saveKw()}
   PL.plans.sort((a,b)=>(b.updated||0)-(a.updated||0)); savePlans();
   const target=PL.plans.find(p=>p.id===v.cur)||PL.plans[0]; if(target&&target.id!==PL.curPlan){PL.curPlan='';openPlan(target.id)}
-  planMsg=`계획 ${n}개를 불러왔어요.`; renderPlans(); return true;
+  PS.msg=`계획 ${n}개를 불러왔어요.`; renderPlans(); return true;
 }
 

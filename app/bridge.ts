@@ -53,6 +53,10 @@ import * as formsFlow from './flow/forms';
 import * as destFlow from './flow/destination';
 import * as chatFlow from './flow/chat';
 import * as helperFlow from './flow/helper';
+import * as plansFlow from './flow/plans';
+import * as shareFlow from './flow/share';
+import * as courseFlow from './flow/course';
+import * as welcomeFlow from './flow/welcome';
 import * as status from './ui/status';
 import * as sheetView from './view/sheet';
 import * as helperView from './view/helper';
@@ -174,7 +178,7 @@ export interface JepiUI {
   /** what each screen shows, worked out from the trip (app/view/*.ts) */
   view: { day: typeof dayView; tray: typeof trayView; sheet: typeof sheetView; helper: typeof helperView; forms: typeof formsView; dice: typeof diceView; pview: typeof pviewView };
   /** what happens in the app, moved out of the old code (app/flow/*.ts) */
-  flow: { render: typeof render; schedule: typeof schedule; dice: typeof diceFlow; forms: typeof formsFlow; destination: typeof destFlow; chat: typeof chatFlow; helper: typeof helperFlow };
+  flow: { render: typeof render; schedule: typeof schedule; dice: typeof diceFlow; forms: typeof formsFlow; destination: typeof destFlow; chat: typeof chatFlow; helper: typeof helperFlow; plans: typeof plansFlow; share: typeof shareFlow; course: typeof courseFlow; welcome: typeof welcomeFlow };
   /** status lines and busy buttons, error words (app/ui/status.ts) */
   status: typeof status;
 }
@@ -196,7 +200,7 @@ export function installBridge(): void {
     ui,
     drag,
     view: { day: dayView, tray: trayView, sheet: sheetView, helper: helperView, forms: formsView, dice: diceView, pview: pviewView },
-    flow: { render, schedule, dice: diceFlow, forms: formsFlow, destination: destFlow, chat: chatFlow, helper: helperFlow },
+    flow: { render, schedule, dice: diceFlow, forms: formsFlow, destination: destFlow, chat: chatFlow, helper: helperFlow, plans: plansFlow, share: shareFlow, course: courseFlow, welcome: welcomeFlow },
     status,
     mount(name, el, props) {
       let cur = roots.get(el);

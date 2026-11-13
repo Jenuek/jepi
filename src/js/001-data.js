@@ -21,3 +21,5 @@ const FS=window.JEPI_UI.flow.forms.fs;
 const CS=window.JEPI_UI.flow.chat.cs;
 // 예약 도우미's state (app/flow/helper.ts): HS.step, HS.vibe, HS.hotelRecs, HS.routeInfo, HS.slotPicked …
 const HS=window.JEPI_UI.flow.helper.hs;
+// 내 계획's state (app/flow/plans.ts): PS.msg, PS.delArm, PS.renaming, PS.showText
+const PS=window.JEPI_UI.flow.plans.ps;

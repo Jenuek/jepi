@@ -78,6 +78,8 @@
   - [x] 예전 코드 정리 7: 여행지 준비(genPack)·장소 더 찾기(morePlaces)·처음 설정의 다음(onbAdvance)·여행지 찾기·이야기하면서 정하기를 `app/flow/destination.ts`로, 안내 줄(progStart·progStop·setSt)과 오류 문구(errText)를 `app/ui/status.ts`로 옮김. `120`·`140` 파일은 지움. 옮기기는 이제 `port.py`(이름만 바꾸고 문자열 목록 비교)로 해요.
   - [x] 예전 코드 정리 8: AI 대화(묻기·적용·되돌리기·제안 장소 넣기)와 그 상태(`CS`), 아래 입력창, 알려 주세요 상자, 헤더 여행 한 줄, ✨ 빈 시간 채우기를 `app/flow/chat.ts`로 옮김. `360` 파일은 지움. 첫 화면·데모(`381`)는 계획 묶음(5)에서.
   - [x] 예전 코드 정리 9: 예약 도우미(틀·단계·동네 분위기·숙소 후보·노선·목록 붙여 넣기)와 그 상태(`HS`), 시즌 정보를 `app/flow/helper.ts`로 옮김. `110`·`150` 파일은 지움. AI 묶음(4)에서 남은 건 키·모델 화면 쪽(`190`, 설정 묶음에서).
+  - [x] 예전 코드 정리 10: 내 계획(바꾸기·새로·복사·삭제·이름·백업·카톡용 글)과 그 상태(`PS`)를 `app/flow/plans.ts`, 공유 링크·짧은 알림(showToast)을 `app/flow/share.ts`, 📌 코스 저장을 `app/flow/course.ts`, 첫 화면·데모를 `app/flow/welcome.ts`로 옮김. 새 계획의 기본 프로필(PROFILE_EXAMPLE)은 `app/data/plans.ts`로.
+    - 옮기기 도구가 이제 **함수 안의 같은 이름이 바깥 이름을 가리는지**도 확인해요(코스 저장의 `places` 목록이 장소 모음 이름을 가릴 뻔했어요 — 옮기기 전에 잡음).
   - [ ] 예전 코드 정리 — 남은 `src/js`(약 184KB)를 하는 일별로 묶어 차례로 `app/flow/*.ts`로 옮겨요. 각 묶음은 화면 그리기(render*) → 버튼 흐름(*Act) 순서로.
     1. 일정표 그리기·고치기: `340-render.js`(renderAll·renderTimeline·renderTray…), `350-actions.js`, `380-events.js`(blockAct·gridAct·dropped…), `382-tidy.js`, `389-titles.js`, `389b-memo.js`
     2. 🎲·P모드 흐름: `160`·`170`·`280`·`290`(굴리기·코스 짜기·저장)

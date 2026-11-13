@@ -12,6 +12,8 @@ const CUR = trip.cur as any, PK = places.state as any, DY = days.state, PL = tri
 const clone = <T,>(o: T): T => JSON.parse(JSON.stringify(o));
 
 /** the automatic name: "오사카 3박 4일" (or "… 하루 코스") */
+/** what a new plan's profile starts from (the old Tokyo example, made blank where it is used) */
+export const PROFILE_EXAMPLE: any = {dest:'도쿄',mode:'flight',local:'transit',startDate:'2026-11-07',nights:3,out:{airport:'hnd',dep:'08:15',arr:'10:20',flight:''},back:{airport:'hnd',dep:'19:30',arr:'22:05',flight:''},home:{area:'',min:60,fare:1550,byMin:120},stays:[{name:'시부야 숙소',area:'shibuya',checkin:'15:00',checkout:'11:00',from:0,to:3}],events:[],purpose:'',pace:'slow',social:'some',breakfast:false};
 export function planName(): string { const pr = CUR.profile; if (pr.kind === 'day') return `${PK.pack.city} 하루 코스`; const n = days.nightsOf(pr); return `${PK.pack.city} ${n}박 ${n + 1}일` }
 /** everything the open plan holds, as saved (blocks without their uids) */
 export function planData(): trip.PlanData { return { profile: clone(CUR.profile), pack: PK.pack, placed: trip.slimBlocks(CUR.placed), custom: clone(CUR.custom), fmarks: clone(CUR.fmarks), wish: CUR.wish.slice(), meals: clone(CUR.meals), done: clone(CUR.done) } }

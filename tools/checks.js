@@ -1990,5 +1990,24 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'flow: 내 계획 and share links (app/flow/plans.ts, share.ts): copy, delete asks twice, a link opens as a new plan without the home location',
+    async run({ b, S, device, ok, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      const r = await p.evaluate(async () => {
+        const F = window.JEPI_UI.flow, PL = window.JEPI_DATA.trip.planList; F.plans.snapshotCurrent();
+        const n0 = PL.plans.length, cur = PL.curPlan; F.plans.plansAct('dup', cur); const n1 = PL.plans.length, copy = PL.plans[0].id;
+        F.plans.plansAct('del', copy); const armed = F.plans.ps.delArm === copy && PL.plans.length === n1; F.plans.plansAct('del', copy); const n2 = PL.plans.length;
+        window.JEPI_DATA.trip.cur.profile.home = { area: '집', ll: [37.5, 127], min: 60 };
+        const pd = window.JEPI_DATA.plans.planData(); pd.profile.home = Object.assign({}, pd.profile.home, { area: '' }); delete pd.profile.home.ll;
+        const t = await F.share.packText(JSON.stringify({ n: '테스트', d: pd })); const back = JSON.parse(await F.share.unpackText(t));
+        return { n0, n1, armed, n2, small: t.length < 60000, noHome: !back.d.profile.home.ll, name: back.n };
+      });
+      ok(r.n1 === r.n0 + 1 && r.armed && r.n2 === r.n0, '복사본, then 삭제 asks once more, then deletes ' + JSON.stringify(r));
+      ok(r.small && r.noHome && r.name === '테스트', 'a share link packs the plan and back, without the home location');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];

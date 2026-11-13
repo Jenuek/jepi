@@ -79,7 +79,7 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 |---|---|
 | 일정 계산 (하루 점검·경고·이동 구간·빈 시간), 시간 글자, 거리·이동 시간 어림 | `app/logic/schedule.ts`·`time.ts`·`geo.ts` (예전 코드는 `JD.logic`, 날짜 항목 만들기는 `330-helpers.js`의 dayItems) |
 | 지금 여행의 데이터(`TRIP.cur`: 여행 정보·블록·직접 만든 장소·할 일 표시·♥·간식비·체크·키워드)와 계획 목록(`TRIP.planList`), 바꾸기(블록 넣기·옮기기·빼기·♥·체크…), 저장 이름과 모양 | `app/data/trip.ts` (예전 코드는 `TRIP`, `CUR.…`, `PL.…`) |
-| 첫 화면(새 여행·로그인·데모), 데모 시작/끝 | 화면 `app/screens/Welcome.tsx` (리액트), 동작 `381-welcome-demo.js`, 데모 칸막이 `app/data/demo.ts`, 데모 일정 `066-demo-osaka.js` |
+| 첫 화면(새 여행·로그인·데모), 데모 시작/끝 | 화면 `app/screens/Welcome.tsx` (리액트), 동작 `app/flow/welcome.ts`, 데모 칸막이 `app/data/demo.ts`, 데모 일정 `066-demo-osaka.js` |
 | 일정표 그리기 / 장소 탭 카드·필터 | `340-render.js` / 화면 `app/screens/Tray.tsx` (리액트, 카드에 넣을 값은 `340-render.js`의 `cardInfo`) |
 | 장소 탭 위쪽 / 지도 위쪽 (이 날·전체·내 위치) | 화면 `app/screens/Tops.tsx` (리액트), 값은 `340-render.js`(drawTrayTop·trayAct) / `210-map.js`(mapTop·mapTopAct) |
 | 머리글 (커버·J/P·계획 이름·날짜 제목) | 화면 `app/screens/Hero.tsx` (리액트), 값은 `389a-look.js`의 `hero({…})`, 접히는 움직임은 `heroWatch` |
@@ -120,12 +120,15 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 | 안내 줄 (…하는 중이에요 · N초), 메시지, 오류 문구 | `app/ui/status.ts` |
 | AI 대화(바꿀 내용·적용·되돌리기·제안 장소), 아래 입력창, 알려 주세요 상자, 헤더의 여행 한 줄, ✨ 빈 시간 채우기 | `app/flow/chat.ts` (예전 코드는 `CS.chat` …) |
 | 예약 도우미에서 일어나는 일 (단계·동네 분위기·숙소 후보·노선·목록 붙여 넣기), 시즌 정보 | `app/flow/helper.ts` (예전 코드는 `HS.step` …) |
+| 내 계획에서 일어나는 일 (바꾸기·새로·복사·삭제·이름·백업·카톡용 글) | `app/flow/plans.ts` (예전 코드는 `PS.msg` …) |
+| 공유 링크 (만들기·열기), 아래 짧은 알림 | `app/flow/share.ts` |
+| 📌 이 코스 저장 / 첫 화면·데모 들어가고 나가기 | `app/flow/course.ts` / `app/flow/welcome.ts` |
 | 화면에 보일 값 만들기 (일정표·장소 탭·블록 시트·예약 도우미·이번 여행 칸·🎲·P모드 보드) | `app/view/day.ts`·`tray.ts`·`sheet.ts`·`helper.ts`·`forms.ts`·`dice.ts`·`pview.ts` (예전 코드는 `JEPI_UI.view`) |
 | 데모(오사카 3박 4일) 데이터 | `app/data/demo-osaka.ts` |
 | 여행지 장소 목록(지역·장소·비용·태그), 여행지 열기, AI 답 확인 | `app/data/places.ts` (도쿄 예시 데이터 `app/data/tokyo.ts`) |
 | 일정 바꾸기 목록(AI 채팅·🎲·P모드·장소 찾기): 적용·미리 해 보기·경고 피하기 | `app/data/ops.ts` |
 | 🎲 뭐 먹지 / 뭐 하지 | 주변 찾기·굴리기·코스 짜기 `app/data/nearby.ts`, 시트 상태·버튼 `280-dice-eat.js`, `290-dice-do.js` |
-| 내 계획 목록, 새 계획 | 화면 `app/screens/PlansScreen.tsx` (리액트), 동작 `180-plans.js` |
+| 내 계획 목록, 새 계획 | 화면 `app/screens/PlansScreen.tsx` (리액트), 동작 `app/flow/plans.ts` |
 | 로그인·기기 간 동기화·키 암호화 | 로그인 화면 `310-sync.js`, 무엇을 보내고 어떻게 합칠지 `app/data/sync.ts`, 서버와 대화 `app/data/server.ts`, 암호화 `app/data/vault.ts` |
 | 기기에 저장 (localStorage) | `app/data/storage.ts` (여기로만 읽고 써요) |
 | 친구와 함께 (초대·합치기·가고 싶어요) | 화면 `app/screens/FriendsPanel.tsx` (리액트), 서버 주고받기 `app/data/trips.ts`, 합치기 규칙 `app/data/merge.ts`, 화면 쪽 동작 `384-trips.js` |

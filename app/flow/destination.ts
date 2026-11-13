@@ -53,7 +53,7 @@ export async function morePlaces(n?: any, stId?: any, focus?: any, signal?: any)
     L.fresh().clear(); ids.forEach((id: any)=>L.fresh().add(id)); setSt(stId,added?`새 장소 ${added}곳을 찾았어요. 장소 탭 맨 위 "✨ 방금 찾은 곳"에 모아 뒀어요.`:'이미 있는 곳과 겹쳐서 새로 추가할 장소가 없었어요. 찾는 말을 바꿔 보세요 (예: 현지인 맛집, 조용한 카페).'); return added;
   }catch(e: any){setSt(stId,e&&e.code==='cancelled'?'멈췄어요. 장소 블록 탭에서 언제든 다시 찾을 수 있어요.':errText(e,'장소를 찾지 못했어요'));return 0}
 }
-export function setBusy(b?: any){FF.onbFrame({nextOff:b,prevOff:b||fs.onbStep===0,skipOff:b,exampleOff:b});['genPack','meSave'].forEach((id: any)=>{const e=document.getElementById(id) as any;if(!e)return;const v=b,L=window.JEPI_UI.live(e);if(L)L.disabled(v);else e.disabled=v})}
+export function setBusy(b?: any){FF.onbFrame({nextOff:b,prevOff:b||fs.onbStep===0,skipOff:b,exampleOff:b});['genPack','meSave'].forEach((id: any)=>{const e=document.getElementById(id) as any;if(!e)return;const v=b,LV=window.JEPI_UI.live(e);if(LV)LV.disabled(v);else e.disabled=v})}
 export async function onbAdvance(){
   if(fs.onbBusy) return;
   if(fs.onbStep===0){

@@ -146,7 +146,7 @@ export async function formAct(n?: any, v?: any, o?: any){
     L.setSt('st_pack','요청을 보내는 중이에요…');
     const btn=()=>$('#onb').hidden?$('#genPack'):$('#onb #genPack');
     (async()=>{const inOnb=!$('#onb').hidden;if(await L.genPack(dest)){if(inOnb)renderOnb();else{commitProfile(fs.draft);R.renderAll();renderMe();await L.morePlaces(24,'st_pack','');R.renderAll()}}})()
-      .catch((err: any)=>{fs.onbBusy=false;L.setBusy(false);{const L=window.JEPI_UI.live(btn());if(L)L.label(null)}L.setSt('st_pack','문제가 생겼어요: '+((err&&(err.message||err.code))||err)+' · 다시 눌러 주세요.')});
+      .catch((err: any)=>{fs.onbBusy=false;L.setBusy(false);{const LV=window.JEPI_UI.live(btn());if(LV)LV.label(null)}L.setSt('st_pack','문제가 생겼어요: '+((err&&(err.message||err.code))||err)+' · 다시 눌러 주세요.')});
     return}
   // 고르기 (Radio): style.* opens the style box
   case 'radio': {const path=v;if(path.startsWith('style.'))fs.styleOpen=true;let x=o.val;if(x==='true')x=true;else if(x==='false')x=false;if(fs.draft){setPath(fs.draft,path,x);if(path==='mode')fs.draft.local=x==='car'?'car':'transit';if(path==='party.type'){const q=fs.draft.party;if(x==='couple')q.adults=2;if(x==='friends'&&q.adults<2)q.adults=3;if(x==='family'){if(q.adults<2)q.adults=2;if(!q.kids)q.kids=1;fs.draft.pace='slow'}fixProfile(fs.draft)}rerenderForm()}return}
