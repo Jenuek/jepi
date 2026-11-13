@@ -193,6 +193,23 @@ module.exports = [
     }
   },
   {
+    name: '코인락커: 맡긴 곳에서 짐 찾기를 표시하면 경고가 사라져요 (찾은 짐을 또 맡긴 것으로 세지 않음)',
+    async run({ b, S, device, ok, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
+      const r = await p.evaluate(() => { const D = window.JEPI_DATA, T = D.trip, lk = D.places.cleanPlace({ name: '코인락커', drop: true, cat: 'trip', dur: 15, lat: D.places.P[0].ll[0], lng: D.places.P[0].ll[1] }); D.places.addPackPlace(lk);
+        const a = T.blocks.add({ id: lk.id, day: 1, start: 600, dur: 15 }), c = T.blocks.add({ id: lk.id, day: 1, start: 1020, dur: 15 });
+        const bag = () => [...D.marks.warnings().W.entries()].filter(([k]) => k.startsWith('1:')).flatMap(([, v]) => v).filter(w => /맡긴 짐|찾기 표시/.test(w));
+        const before = bag(); const uids = T.cur.placed.filter(x => x.id === lk.id && x.day === 1).map(x => x.uid);
+        T.toggleMark(uids[uids.length - 1], 'bag-');
+        return { before, after: bag(), n: uids.length };
+      });
+      ok(r && r.n >= 2 && r.before.length >= 1, 'a locker left alone warns that nothing picks the bag up ' + JSON.stringify(r));
+      ok(r && r.after.length === 0, 'marking 짐 찾기 on the same locker later clears the warning ' + JSON.stringify(r && r.after));
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
     name: '같은 장소 묶기는 장소 ID를 먼저 봐요 (같은 ID = 같은 곳, 다른 ID = 다른 곳, ID 없으면 이름·거리)',
     async run({ b, S, device, ok, skipCoach }) {
       const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p);
