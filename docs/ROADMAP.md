@@ -80,6 +80,7 @@
   - [x] 예전 코드 정리 9: 예약 도우미(틀·단계·동네 분위기·숙소 후보·노선·목록 붙여 넣기)와 그 상태(`HS`), 시즌 정보를 `app/flow/helper.ts`로 옮김. `110`·`150` 파일은 지움. AI 묶음(4)에서 남은 건 키·모델 화면 쪽(`190`, 설정 묶음에서).
   - [x] 예전 코드 정리 10: 내 계획(바꾸기·새로·복사·삭제·이름·백업·카톡용 글)과 그 상태(`PS`)를 `app/flow/plans.ts`, 공유 링크·짧은 알림(showToast)을 `app/flow/share.ts`, 📌 코스 저장을 `app/flow/course.ts`, 첫 화면·데모를 `app/flow/welcome.ts`로 옮김. 새 계획의 기본 프로필(PROFILE_EXAMPLE)은 `app/data/plans.ts`로.
     - 옮기기 도구가 이제 **함수 안의 같은 이름이 바깥 이름을 가리는지**도 확인해요(코스 저장의 `places` 목록이 장소 모음 이름을 가릴 뻔했어요 — 옮기기 전에 잡음).
+  - [x] 예전 코드 정리 11: 설정(테마·시간 간격·AI·지도 키 저장/확인/삭제·모델·백업/불러오기·모두 초기화 확인)과 그 상태(`KS`), 동기화 칸이 보일 값과 로그인 링크 돌아오기(syncBoot)를 `app/flow/settings.ts`로 옮김. 동기화·계정 연결(connectSync·connectAccount)과 AI 연결(connectAI)은 아직 예전 코드에서 연결해요(마무리 때).
   - [ ] 예전 코드 정리 — 남은 `src/js`(약 184KB)를 하는 일별로 묶어 차례로 `app/flow/*.ts`로 옮겨요. 각 묶음은 화면 그리기(render*) → 버튼 흐름(*Act) 순서로.
     1. 일정표 그리기·고치기: `340-render.js`(renderAll·renderTimeline·renderTray…), `350-actions.js`, `380-events.js`(blockAct·gridAct·dropped…), `382-tidy.js`, `389-titles.js`, `389b-memo.js`
     2. 🎲·P모드 흐름: `160`·`170`·`280`·`290`(굴리기·코스 짜기·저장)

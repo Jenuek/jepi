@@ -28,6 +28,8 @@ const CS=window.JEPI_UI.flow.chat.cs;
 const HS=window.JEPI_UI.flow.helper.hs;
 // 내 계획's state (app/flow/plans.ts): PS.msg, PS.delArm, PS.renaming, PS.showText
 const PS=window.JEPI_UI.flow.plans.ps;
+// 설정's state (app/flow/settings.ts): KS.msg, KS.bad, KS.who, KS.models, KS.theme, KS.edit
+const KS=window.JEPI_UI.flow.settings.ks;
 // ---------- demo sandbox ----------
 // The sandbox itself (copy aside on entering, put back on leaving or on the next launch) is in app/data/demo.ts
 // and has already run before this script. DEMO.on is true while the demo is open.
@@ -230,7 +232,7 @@ const DICEV=window.JEPI_UI.view.dice;
 // the 🎲 sheet and the P모드 board (rolling, 이걸로, 코스): app/flow/dice.ts — the rolls and choices live there (DFLOW.st)
 const DFLOW=window.JEPI_UI.flow.dice, dice=DFLOW.st.dice, eat=DFLOW.st.eat;
 DFLOW.connect({morePlaces:(n,id,f,sig)=>morePlaces(n,id,f,sig),fresh:()=>FRESH,setSt:(id,t)=>setSt(id,t),toast:m=>showToast(m),renderSettings:()=>renderSettings(),
-  diceOpenAnim:()=>diceOpenAnim(),saveCourse:()=>saveCourse(),keyBad:()=>keyBad,demoOn:()=>!!DEMO.on});
+  diceOpenAnim:()=>diceOpenAnim(),saveCourse:()=>saveCourse(),keyBad:()=>KS.bad,demoOn:()=>!!DEMO.on});
 const openDiceTab=DFLOW.openDiceTab, diceFromUrl=DFLOW.diceFromUrl, diceAct=DFLOW.diceAct, renderPView=DFLOW.renderPView, pPlaceNow=DFLOW.pPlaceNow, pAIRec=DFLOW.pAIRec, pviewAct=DFLOW.pviewAct;
 // ---------- quick start (P, and any one-day course): a few taps ----------
 const nextSat=()=>{const d=new Date();const add=(6-d.getDay()+7)%7||7;return isoPlus(d.getDay()===6?0:add)};
@@ -269,57 +271,21 @@ const savePlans=PLF.savePlans, snapshotCurrent=PLF.snapshotCurrent, touchPlan=PL
 const STANDALONE=!(window.claude&&window.claude.use);
 const LS=JD.storage; // saved data on this device: app/data/storage.ts
 JD.keys.load(); const KEYS=JD.keys.list;   // app/data/keys.ts (the same object, changed in place)
-const KEY_DEF={
-  anthropic:{name:'Claude',sub:'일정 짜기·대화·여행지 준비 (필수)',ph:'sk-ant-...',re:/^sk-ant-/},
-  gemini:{name:'Gemini',sub:'가벼운 작업용 (선택 · 넣으면 비용이 줄어요)',ph:'AIza...',re:/^AIza/},
-  gmaps:{name:'Google 지도',sub:'해외 경로 · 영업시간',ph:'AIza...',re:/^AIza/},
-  kakao:{name:'카카오 지도',sub:'국내 장소·주소 검색 (REST API 키)',ph:'32자리 영문·숫자',re:/^[0-9a-f]{32}$/i}
-};
-const MODELS=Object.assign({heavy:'claude-sonnet-5-5',light:'claude-haiku-5-5',gemini:'gemini-3.6-flash'},LS.get('jepi.models',{})||{});
-let keyMsg={}, keyBad={};
-function saveKeys(quiet){JD.keys.save(quiet);if(!quiet&&typeof syncSoon==='function')syncSoon()}
-const maskKey=k=>k?k.slice(0,6)+'••••••'+k.slice(-4):'';
-function aiErr(code,msg,text){return JD.appError(code,msg,text)}
+// the models used (saved on this device); the key list, testing and saving keys: app/flow/settings.ts
+KS.models=Object.assign({heavy:'claude-sonnet-5-5',light:'claude-haiku-5-5',gemini:'gemini-3.6-flash'},LS.get('jepi.models',{})||{});
+const SETF=window.JEPI_UI.flow.settings;
+const saveKeys=SETF.saveKeys, keysChanged=SETF.keysChanged;
 // The AI connection (calling Claude / Gemini, retries, switching to the other AI) lives in app/data/ai.ts.
-let aiWho='AI';
-JD.ai.connectAI({keys:()=>KEYS,models:()=>MODELS,bad:()=>keyBad,who:n=>{aiWho=n}});
-const callClaude=JD.ai.callClaude, callGemini=JD.ai.callGemini, makeSample=JD.ai.makeSample;
-async function testKey(k){
-  keyMsg[k]='확인 중…'; renderSettings();
-  try{
-    if(k==='anthropic'){await callClaude('Reply with only this JSON: {"ok":true}',MODELS.light);}
-    else if(k==='gemini'){await callGemini('Reply with only this JSON: {"ok":true}');}
-    else if(k==='gmaps'){const v=await fetchRoute({m:'walk',a:[35.6812,139.7671],b:[35.6852,139.7528],pv:'google'});if(!v)throw aiErr('upstream_error','경로를 받지 못했어요');}
-    else if(k==='kakao'){keyMsg[k]=await kakaoDiag();keyBad.kakao=!/^✓/.test(keyMsg[k]);renderSettings();return}
-    keyMsg[k]='✓ 연결됐어요';
-    if(k==='gmaps')keyBad.google=false; else keyBad[k]=false;
-  }catch(e){if(k==='gmaps')keyBad.google=true;else keyBad[k]=true;
-    keyMsg[k]=e.code==='not_granted'?'✕ 키가 맞지 않거나 이 API가 꺼져 있어요. 다시 확인해 주세요.':e.code==='network'?'✕ 응답을 받지 못했어요. 키 제한(웹사이트 주소)과 API 사용 설정을 확인해 주세요.':'✕ '+(e.message||'연결하지 못했어요')}
-  renderSettings();
-}
-
-async function kakaoDiag(){
-  // Kakao gives place search to outside apps, not walking / transit routes: check the search
-  let r;
-  try{r=await fetch('https://dapi.kakao.com/v2/local/search/keyword.json?query='+encodeURIComponent('서울역')+'&size=1',{headers:{Authorization:'KakaoAK '+KEYS.kakao}})}
-  catch(_){return `✕ 카카오가 이 주소(${ORIGIN})의 요청을 막았어요. 카카오 디벨로퍼스 → 내 앱 → 플랫폼 → Web에 ${ORIGIN} 를 정확히(끝에 / 없이) 등록했는지 확인해 주세요. 바꾼 뒤 몇 분 지나 다시 "확인"을 눌러 주세요.`}
-  let j={};try{j=await r.json()}catch(_){}
-  const c=j.code!=null?` (code ${j.code})`:'';
-  if(r.status===401)return `✕ 키가 맞지 않아요. JavaScript 키가 아니라 REST API 키를 넣어 주세요.${c}`;
-  if(r.status===403)return `✕ 이 키로 장소 검색을 쓸 수 없어요. 내 앱 → 제품 설정에서 카카오맵을 ON으로 바꿔 주세요.${c}`;
-  if(!r.ok)return `✕ 카카오 오류 (HTTP ${r.status})${c} ${j.msg||j.message||''}`.trim();
-  return '✓ 장소·주소 검색 연결됨 · 국내 이동 시간은 거리로 어림하고, "안내 시작"은 카카오맵으로 열어요';
-}
-function keysChanged(){saveKeys();keyBad={};if(STANDALONE){UI.sample=makeSample()}renderAll();renderSettings();if(!$('#onb').hidden)renderOnb()}
-
+JD.ai.connectAI({keys:()=>KEYS,models:()=>KS.models,bad:()=>KS.bad,who:n=>{KS.who=n}});
+const makeSample=JD.ai.makeSample;
 const blankPack=PLC.blankPack;   // app/data/places.ts
 // ---------- routes: Google Routes (abroad), cached on this device ----------
 // Asking, the queue and the cache live in app/data/routes.ts; Korea checks and "안내 시작" links in app/logic/geo.ts.
 // Here: the names the rest of the old code uses, and when to redraw after routes arrive.
 const inKR=JD.logic.geo.inKorea, navLink=JD.logic.geo.navLink;
-const routeProvider=(a,b)=>JD.routes.provider(a,b), fetchRoute=j=>JD.routes.fetchRoute(j), routeStats=JD.routes.stats;
-JD.routes.connectRoutes({googleKey:()=>KEYS.gmaps||'',googleBad:()=>!!keyBad.gmaps,arrived:()=>routeDirty(),
-  keyBroken(){keyBad.google=true;keyMsg.gmaps='✕ 키가 맞지 않거나 이 API가 켜져 있지 않아요'}});
+const routeProvider=(a,b)=>JD.routes.provider(a,b);
+JD.routes.connectRoutes({googleKey:()=>KEYS.gmaps||'',googleBad:()=>!!KS.bad.gmaps,arrived:()=>routeDirty(),
+  keyBroken(){KS.bad.google=true;KS.msg.gmaps='✕ 키가 맞지 않거나 이 API가 켜져 있지 않아요'}});
 let rdT=0;
 function routeDirty(){clearTimeout(rdT);rdT=setTimeout(()=>{
   const ae=document.activeElement; if(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)){routeDirty();return}
@@ -370,66 +336,10 @@ function renderTasteStyle(){const el=$('#tasteStyle');if(!el)return;if(!FS.draft
     rows:STYLE_ROWS,style:clone(p.style||{}),open:FS.styleOpen,msg:FS.autoMsg||'',rev:++tasteRev})}
 
 // ---------- settings ----------
-let themePref=LS.get('jepi.theme','light');
-function applyTheme(){const r=document.documentElement;if(themePref==='system')r.removeAttribute('data-theme');else r.setAttribute('data-theme',themePref);
-  const m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content',getComputedStyle(document.body).getPropertyValue('--paper').trim()||'#f2f4f1')}
-const ORIGIN=String(location.origin||'').replace(/[<>"&']/g,'');
-const KEY_HELP={
-  anthropic:`<ol><li><a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>에 로그인해요.</li><li>Billing에서 크레딧을 충전해요 (5달러면 개인 여행에 충분해요).</li><li>API Keys → Create Key → 만든 키를 복사해서 여기에 붙여 넣어요.</li></ol>`,
-  gemini:`<ol><li><a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>에서 Create API key를 눌러요.</li><li>만든 키를 붙여 넣어요. 무료 한도 안에서 가벼운 작업을 맡아요.</li></ol>`,
-  gmaps:`<ol><li><a href="https://console.cloud.google.com/google/maps-apis/start" target="_blank" rel="noopener">Google Cloud 콘솔</a>에서 결제 계정을 연결해요 (무료 한도 안이면 청구되지 않아요).</li><li>API 및 서비스 → 라이브러리에서 <b>Routes API</b>와 <b>Places API (New)</b>를 사용 설정해요 (Places는 영업시간 확인용).</li><li>사용자 인증 정보 → API 키 만들기 → <b>애플리케이션 제한: 웹사이트</b>에 <code>${ORIGIN}/*</code>를 넣고, API 제한은 Routes API와 Places API (New) 두 개만 골라요.</li><li>할당량에서 하루 요청 수 상한(예: 500)을 걸어 두면 안전해요.</li></ol>`,
-  kakao:`<ol><li><a href="https://developers.kakao.com/console/app" target="_blank" rel="noopener">카카오 디벨로퍼스</a>에서 애플리케이션을 추가해요.</li><li>플랫폼 → Web에 <code>${ORIGIN}</code>를 등록해요.</li><li>제품 설정에서 <b>카카오맵</b>을 활성화해요.</li><li>앱 키의 <b>REST API 키</b>를 복사해서 붙여 넣어요.</li></ol>`
-};
-let keyEdit=null;
-const isBad=k=>!!keyBad[k==='gmaps'?'google':k];
-// The frame is drawn by React: app/screens/SettingsScreen.tsx. The parts below are still old HTML.
-let settingsRev=0;
-// AI·지도 연결 is drawn by React: app/screens/AiKeysSection.tsx. Only the masked keys go there.
-function settingsAI(){return {standalone:!!STANDALONE,editing:keyEdit,hasGemini:!!KEYS.gemini,routesOk:+routeStats.ok||0,
-  models:{heavy:MODELS.heavy,light:MODELS.light,gemini:MODELS.gemini},
-  hours:KEYS.gmaps?{use:+hoursUse(),cap:HOURS_CAP,off:JD.hours.state.off||''}:null,
-  keys:Object.keys(KEY_DEF).map(k=>{const d=KEY_DEF[k];return {k,name:d.name,sub:d.sub,ph:d.ph,masked:KEYS[k]?maskKey(KEYS[k]):'',bad:isBad(k),msg:keyMsg[k]||'',helpHTML:KEY_HELP[k]}})}}
-// What was pressed in 설정 (SettingsScreen.tsx / AiKeysSection.tsx tell: its name and value; a typed key comes as v2)
-function settingsAct(n,v,v2){
-  switch(n){
-  case 'theme': themePref=v;LS.set('jepi.theme',themePref);applyTheme();renderSettings();if(mapState.on)drawMap();return;
-  case 'zoom': setZoom(+v);if(UI.tab==='settings')renderSettings();return;
-  case 'keyedit': keyEdit=v;keyMsg[keyEdit]='';renderSettings();return;   // its box opens, with the cursor in it
-  case 'keycancel': keyEdit=null;renderSettings();return;
-  case 'keysave': {const k=v,key=String(v2||'').trim().replace(/\s+/g,'');
-    if(!key){keyMsg[k]='키를 붙여 넣어 주세요.';renderSettings();return}
-    if(KEY_DEF[k].re&&!KEY_DEF[k].re.test(key)){keyMsg[k]=`${KEY_DEF[k].name} 키 형식이 아닌 것 같아요. 그래도 저장했으니 "확인"을 눌러 보세요.`}
-    else keyMsg[k]='';
-    KEYS[k]=key;keyEdit=null;keysChanged();testKey(k);return}
-  case 'keydel': delete KEYS[v];keyMsg[v]='삭제했어요.';keysChanged();return;
-  case 'keytest': testKey(v);return;
-  case 'models': {const m=v2||{};MODELS.heavy=String(m.heavy||'').trim()||'claude-sonnet-5-5';MODELS.light=String(m.light||'').trim()||'claude-haiku-5-5';MODELS.gemini=String(m.gemini||'').trim()||'gemini-3.6-flash';LS.set('jepi.models',{heavy:MODELS.heavy,light:MODELS.light,gemini:MODELS.gemini});keysChanged();return}
-  case 'backup': backupAll();return;
-  case 'wipe': if(!wipeArm){wipeArm=true;renderSettings();return}wipeAll();return;
-  case 'wipecancel': wipeArm=false;renderSettings();return;
-  }
-}
-function renderSettings(){
-  const el=$('#setBox'); if(!el) return;
-  window.JEPI_UI.mount('settings',el,{theme:themePref,zoom:store.get('gp.zoom',60),sync:syncView(),myPlaces:mypView(),ai:settingsAI(),
-    wipeArm:!!wipeArm,host:location.host||'로컬',rev:++settingsRev});
-}
-function backupAll(){
-  snapshotCurrent();
-  const all={jepi:2,at:new Date().toISOString(),cur:PL.curPlan,kw:CUR.kws,plans:PL.plans.map(p=>({meta:p,data:TRIP.plans.get(p.id)})).filter(x=>x.data)};
-  const d=new Date(), nm=`JEPI-백업-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.json`;
-  downloadText(nm,JSON.stringify(all));
-}
-function importAll(v){
-  if(!v||v.jepi!==2||!Array.isArray(v.plans)) return false;
-  snapshotCurrent(); let n=0;
-  v.plans.forEach(x=>{if(!x||!x.meta||!x.data)return;const ex=PL.plans.find(p=>p.id===x.meta.id);TRIP.plans.put(x.meta.id,x.data);if(ex)Object.assign(ex,x.meta);else PL.plans.push(Object.assign({},x.meta));n++});
-  if(Array.isArray(v.kw)&&v.kw.length){CUR.kws=[...new Set([...CUR.kws,...v.kw])];saveKw&&saveKw()}
-  PL.plans.sort((a,b)=>(b.updated||0)-(a.updated||0)); savePlans();
-  const target=PL.plans.find(p=>p.id===v.cur)||PL.plans[0]; if(target&&target.id!==PL.curPlan){PL.curPlan='';openPlan(target.id)}
-  PS.msg=`계획 ${n}개를 불러왔어요.`; renderPlans(); return true;
-}
-
+// the theme (saved on this device); 설정 itself (theme, time spacing, keys, models, backup, 모두 초기화): app/flow/settings.ts
+KS.theme=LS.get('jepi.theme','light');
+SETF.connect({wipeAll:()=>wipeAll(),mypView:()=>mypView()});
+const applyTheme=SETF.applyTheme, KEY_HELP=SETF.KEY_HELP, isBad=SETF.isBad, settingsAct=SETF.settingsAct, renderSettings=SETF.renderSettings, importAll=SETF.importAll;
 // ---------- share link (no server): the plan travels inside the link ----------
 // making and opening share links, and the short message at the bottom (showToast): app/flow/share.ts
 const SHARE=window.JEPI_UI.flow.share;
@@ -491,7 +401,7 @@ document.addEventListener('change',e=>{if(e.target.closest&&e.target.closest('#m
 
 setInterval(()=>{try{const el=document.getElementById('aiSec');if(!el)return;const L=window.JEPI_UI.live(el),put=t=>{if(L)L.text(t);else el.textContent=t};   // AiBox.tsx draws it
   if(!UI.aiState||UI.aiState.status!=='loading'){put('');return}
-  if(!UI.aiState.t0)UI.aiState.t0=Date.now();put(`${aiWho} · ${Math.round((Date.now()-UI.aiState.t0)/1000)}초째`)}catch(_){}},1000);
+  if(!UI.aiState.t0)UI.aiState.t0=Date.now();put(`${KS.who} · ${Math.round((Date.now()-UI.aiState.t0)/1000)}초째`)}catch(_){}},1000);
 
 // ---------- AI-found places, chat folding ----------
 // the places the AI just found (✨ 방금 찾은 곳), folding the chat, the places a chat message suggests: app/flow/chat.ts
@@ -592,15 +502,11 @@ function fabDodge(){
 })();
 // ================= 기기 간 동기화 (Supabase, 본인 계정 데이터만) =================
 const SYNC=JD.server.SYNC;
-const saveSync=JD.server.saveSync;
 // which part of the 동기화 section shows and the last error live in app/data/account.ts (ACC.state)
 const ACC=JD.account;
 const syncOn=JD.server.syncOn;
-function keepSess(j){JD.server.keepSess(j)}
 // any table (or rpc/<name>) in the project, as the logged-in person; rows are limited by RLS on the server
 function sbTable(table,method,q,body,prefer){return JD.server.sbTable(table,method,q,body,prefer)}
-// What to send and how to merge what comes back: app/data/sync.ts. Here: our values, and redrawing after.
-const SYNC_STATUS=JD.sync.status; // .busy (sending or receiving), .keysLocked (server keys locked with another password)
 function syncSoon(ms){JD.sync.syncSoon(ms)}
 function syncNow(){return JD.sync.syncNow()}
 JD.sync.connectSync({
@@ -616,37 +522,15 @@ JD.sync.connectSync({
   async afterPull({changed,curChanged,keysPulled}){
     if(curChanged){const ae=document.activeElement;const editing=(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))||!$('#sheetBg').hidden||!$('#onb').hidden;
       if(!editing){applyPlanData(curChanged);showToast('다른 기기에서 바꾼 내용을 받아왔어요')} }
-    if(keysPulled){keyBad={};if(STANDALONE)UI.sample=makeSample();renderAll();showToast('AI·지도 키도 받아왔어요')}
+    if(keysPulled){KS.bad={};if(STANDALONE)UI.sample=makeSample();renderAll();showToast('AI·지도 키도 받아왔어요')}
     if(changed){renderPlans();renderExt()} if(UI.tab==='settings')renderSettings();
     for(const f of SYNC_AFTER_PULL){try{await f()}catch(e){console.warn(e)}}
   }
 });
-// The section is drawn by React: app/screens/SyncSection.tsx. Here: what it shows.
-function syncView(){
-  const st=ACC.state.step, mode=(!SYNC.url||!SYNC.key||st==='setup')?'setup':!syncOn()?(st==='reset'?'reset':st==='join'?'join':'login'):st==='newpw'?'newpw':'on';
-  return {mode,url:SYNC.url||'',hasKey:!!SYNC.key,email:(mode==='on'&&SYNC.sess.email)||SYNC.email||'',err:ACC.state.err||'',busy:!!SYNC_STATUS.busy,
-    lastAt:SYNC.at||0,vkMissing:!LS.get('jepi.vk',null),keysLocked:!!SYNC_STATUS.keysLocked};
-}
+// what the 동기화 section shows, and a tapped login link coming back: app/flow/settings.ts (syncView, syncBoot)
+const syncView=SETF.syncView, syncBoot=SETF.syncBoot;
 // the section's buttons and forms work by themselves (app/data/account.ts); they ask the old code to redraw and to sync
 ACC.connectAccount({redraw:()=>renderSettings(),toast:m=>showToast(m),syncNow:()=>syncNow()});
-
-// a tapped login link comes back here: ?sb=<config>#access_token=…
-async function syncBoot(){
-  try{
-    const q=new URLSearchParams(location.search), sb=q.get('sb');
-    if(sb){try{const c=JSON.parse(atob(sb));if(c.u&&!SYNC.url)SYNC.url=c.u;if(c.k&&!SYNC.key)SYNC.key=c.k;if(c.e)SYNC.email=c.e;saveSync()}catch(_){}}
-    const h=new URLSearchParams((location.hash||'').replace(/^#/,''));
-    if(h.get('error_description')){ACC.state.err=h.get('error_description').replace(/\+/g,' ');showToast('로그인 링크가 만료됐어요. 다시 받아 주세요.')}
-    if(h.get('access_token')&&SYNC.url&&SYNC.key){
-      const at=h.get('access_token');let user={};
-      try{const r=await fetch(SYNC.url+'/auth/v1/user',{headers:{apikey:SYNC.key,Authorization:'Bearer '+at}});user=await r.json()}catch(_){}
-      keepSess({access_token:at,refresh_token:h.get('refresh_token'),expires_in:+h.get('expires_in')||3600,user});SYNC.sent={};SYNC.lastPull=0;saveSync();ACC.state.step=h.get('type')==='recovery'?'newpw':'';if(ACC.state.step==='newpw'){UI.tab='settings';setTimeout(()=>{renderTabs();renderSettings()},300)}
-      showToast('로그인했어요 · 동기화를 켰어요');
-    }
-    if(sb||h.get('access_token')||h.get('error_description')) history.replaceState(null,'',location.pathname);
-  }catch(_){}
-  setTimeout(syncNow,800);
-}
 
 // ---------- state ----------
 const store=JD.storage; // same as LS (app/data/storage.ts)
@@ -690,16 +574,15 @@ RENDER.connect({
   fabDodge:()=>fabDodge(), panels:()=>Object.keys(PANELS), diceCloseAnim:()=>diceCloseAnim(),
   touchPlan:()=>touchPlan(), renderMeta:()=>renderMeta(), renderNudges:()=>renderNudges(), renderChat:()=>renderChat(), renderExt:()=>renderExt(), renderLook:()=>renderLook(),
 });
-const setZoom=RENDER.setZoom, drawTrayTop=RENDER.drawTrayTop, trayAct=RENDER.trayAct, renderTray=RENDER.renderTray, tabs=RENDER.tabs, renderTabs=RENDER.renderTabs, drawBanner=RENDER.drawBanner, renderAI=RENDER.renderAI, renderPref=RENDER.renderPref, saveKw=RENDER.saveKw, renderAll=RENDER.renderAll;
+const setZoom=RENDER.setZoom, drawTrayTop=RENDER.drawTrayTop, trayAct=RENDER.trayAct, renderTray=RENDER.renderTray, tabs=RENDER.tabs, renderTabs=RENDER.renderTabs, drawBanner=RENDER.drawBanner, renderAI=RENDER.renderAI, renderPref=RENDER.renderPref, renderAll=RENDER.renderAll;
 // ---------- actions ----------
 // putting a place in the 일정표, and the block sheet: app/flow/render.ts
 const place=RENDER.place, openSheet=RENDER.openSheet, closeSheet=RENDER.closeSheet;
 // ---------- start over: wipe everything this browser keeps for the page ----------
-let wipeArm=false;
 function wipeAll(){
   ['profile','pack','placed3','custom','kw','meal2','done','fmarks','wish','coach','dice','jp'].forEach(k=>JD.storage.del('gp.'+k));
   PL.plans.forEach(p=>TRIP.plans.del(p.id)); PL.plans=[]; PL.curPlan='p'+Date.now().toString(36); savePlans();
-  CUR.custom=[]; CUR.placed=[]; CUR.fmarks={}; CUR.wish=[]; CUR.kws=[]; CUR.meals={}; CUR.done={}; CS.chat=[]; CS.undoSnap=null; UI.aiState=null; UI.selected=null; HS.vibe=null; wipeArm=false;
+  CUR.custom=[]; CUR.placed=[]; CUR.fmarks={}; CUR.wish=[]; CUR.kws=[]; CUR.meals={}; CUR.done={}; CS.chat=[]; CS.undoSnap=null; UI.aiState=null; UI.selected=null; HS.vibe=null; KS.wipeArm=false;
   loadPack(blankPack()); savePack();
   CUR.profile=clone(PROFILE_EXAMPLE); Object.assign(CUR.profile,{stays:[{name:'숙소',area:'center',checkin:'15:00',checkout:'11:00',from:0,to:3}],events:[],dest:'',pace:'normal',social:'some',breakfast:true,purpose:'',party:{type:'solo',adults:1,kids:0},flightSet:false,staySet:false,dateSet:false,nightsSet:false,dateUnknown:false,startDate:isoPlus(30)}); CUR.profile.stays[0].name='숙소';
   buildDays(); UI.day=0; UI.tab='timeline'; helperShow(false); closeSheet(); renderAll(); openOnb();
@@ -725,7 +608,7 @@ function showCoach(i){
 const maybeCoach=()=>{if(!store.get('gp.coach',0)&&$('#onb').hidden&&!helperOpen()) setTimeout(()=>showCoach(0),400)};
 // ---------- events ----------
 // open a tab (the bottom tabs, and any button with data-tab: 더보기 rows, back buttons …)
-function goTab(name){UI.tab=name;FS.autoMsg='';if(UI.tab==='me'){FS.draft=clone(CUR.profile);FS.meOpen=null;renderMe()}if(UI.tab==='pref'){FS.draft=clone(CUR.profile);renderTasteStyle()}if(UI.tab==='plans'){snapshotCurrent();PS.showText=false;renderPlans()}if(UI.tab==='settings'){keyEdit=null;renderSettings()}if(UI.tab==='more')renderMore();if(PANELS[UI.tab])PANELS[UI.tab].render({opened:true});renderTabs();if(UI.tab==='map')openMap();else mapState.on=false;window.scrollTo({top:0});}
+function goTab(name){UI.tab=name;FS.autoMsg='';if(UI.tab==='me'){FS.draft=clone(CUR.profile);FS.meOpen=null;renderMe()}if(UI.tab==='pref'){FS.draft=clone(CUR.profile);renderTasteStyle()}if(UI.tab==='plans'){snapshotCurrent();PS.showText=false;renderPlans()}if(UI.tab==='settings'){KS.edit=null;renderSettings()}if(UI.tab==='more')renderMore();if(PANELS[UI.tab])PANELS[UI.tab].render({opened:true});renderTabs();if(UI.tab==='map')openMap();else mapState.on=false;window.scrollTo({top:0});}
 document.addEventListener('click',e=>{
   const t=e.target.closest('button,input,label'); if(!t) return;
   if(t.dataset.tab){if(!t.closest('.tabs'))goTab(t.dataset.tab);return}
@@ -806,7 +689,7 @@ if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__jepi={demoEnte
 const sumAct=SCHED.sumAct;   // app/flow/schedule.ts
 // ---------- 영업시간: real opening hours from Google Places (abroad), AI estimate in Korea ----------
 // The lookups, the 30-day cache and the monthly cap live in app/data/hours.ts (rules: app/logic/hours.ts). Here: the trip side.
-const HOURS_CAP=JD.hours.CAP, hoursUse=add=>JD.hours.used(add), hoursSweep=()=>JD.hours.sweep();
+const hoursSweep=()=>JD.hours.sweep();
 JD.hours.connectHours({placesOnSchedule:()=>[...new Set(CUR.placed.map(b=>b.id))].map(id=>PM[id]).filter(Boolean),googleKey:()=>KEYS.gmaps||'',keyBad:()=>isBad('gmaps'),
   demo:()=>!!DEMO.on,inKorea:ll=>inKR(ll),city:()=>PK.pack.city||'',changed(){savePack();TRIP.customs.saved();renderAll();touchPlan()}});
 // ---------- 친구와 함께: shared trips, invite links, 가고 싶어요 ----------

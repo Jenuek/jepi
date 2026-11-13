@@ -54,5 +54,5 @@ document.addEventListener('change',e=>{if(e.target.closest&&e.target.closest('#m
 
 setInterval(()=>{try{const el=document.getElementById('aiSec');if(!el)return;const L=window.JEPI_UI.live(el),put=t=>{if(L)L.text(t);else el.textContent=t};   // AiBox.tsx draws it
   if(!UI.aiState||UI.aiState.status!=='loading'){put('');return}
-  if(!UI.aiState.t0)UI.aiState.t0=Date.now();put(`${aiWho} · ${Math.round((Date.now()-UI.aiState.t0)/1000)}초째`)}catch(_){}},1000);
+  if(!UI.aiState.t0)UI.aiState.t0=Date.now();put(`${KS.who} · ${Math.round((Date.now()-UI.aiState.t0)/1000)}초째`)}catch(_){}},1000);
 

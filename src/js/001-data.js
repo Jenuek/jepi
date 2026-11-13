@@ -23,3 +23,5 @@ const CS=window.JEPI_UI.flow.chat.cs;
 const HS=window.JEPI_UI.flow.helper.hs;
 // 내 계획's state (app/flow/plans.ts): PS.msg, PS.delArm, PS.renaming, PS.showText
 const PS=window.JEPI_UI.flow.plans.ps;
+// 설정's state (app/flow/settings.ts): KS.msg, KS.bad, KS.who, KS.models, KS.theme, KS.edit
+const KS=window.JEPI_UI.flow.settings.ks;

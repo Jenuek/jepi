@@ -2009,5 +2009,26 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'flow: 설정 (app/flow/settings.ts): theme saved, a key saved masked, a wrong-looking key warned, delete, the 동기화 section says log in',
+    async run({ b, S, device, ok, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      const r = await p.evaluate(() => {
+        const F = window.JEPI_UI.flow.settings; F.settingsAct('theme', 'dark');
+        const theme = document.documentElement.getAttribute('data-theme'), saved = JSON.parse(localStorage.getItem('jepi.theme'));
+        F.settingsAct('keysave', 'kakao', 'not-a-key'); const warn = F.ks.msg.kakao || '', stored = window.JEPI_DATA.keys.list.kakao;
+        const masked = F.settingsAI().keys.find(k => k.k === 'kakao').masked;
+        F.settingsAct('keydel', 'kakao'); const gone = !window.JEPI_DATA.keys.list.kakao;
+        F.settingsAct('theme', 'light');
+        return { theme, saved, warn: warn.length > 0, stored, masked, gone, sync: F.syncView().mode };
+      });
+      ok(r.theme === 'dark' && r.saved === 'dark', '테마: dark, saved on this device');
+      ok(r.stored === 'not-a-key' && r.masked && !r.masked.includes('a-ke') && r.warn, 'a key: saved, only shown masked, a message under it ' + JSON.stringify(r));
+      ok(r.gone, '삭제: the key is gone');
+      ok(['setup', 'login'].includes(r.sync), '동기화 asks to set up / log in when logged out: ' + r.sync);
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];

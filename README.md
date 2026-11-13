@@ -107,7 +107,7 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 | 내 장소, 카카오 장소·주소 검색, 지금 위치 | `app/data/myplaces.ts`, `app/data/kakao.ts` (화면 `MyPlacesSection.tsx`) |
 | 영업시간 확인 (Google Places, 월 900곳 한도) | `app/data/hours.ts`, 모양 바꾸기 `app/logic/hours.ts` (예전 `383-hours.js`는 연결만) |
 | 지도 | `210-map.js` |
-| AI 연결·모델 선택 | 연결(부르기·다시 시도·다른 AI) `app/data/ai.ts`, 이 기기의 키 `app/data/keys.ts`, 키 화면 쪽·모델 `190-keys-ai-router.js`, 빈 시간 채우기·채팅 `app/flow/chat.ts` (화면 `app/screens/ChatLog.tsx`), 빈 시간 추천 상자 `app/screens/AiBox.tsx` |
+| AI 연결·모델 선택 | 연결(부르기·다시 시도·다른 AI) `app/data/ai.ts`, 이 기기의 키 `app/data/keys.ts`, 키 화면 쪽·모델 `app/flow/settings.ts`, 빈 시간 채우기·채팅 `app/flow/chat.ts` (화면 `app/screens/ChatLog.tsx`), 빈 시간 추천 상자 `app/screens/AiBox.tsx` |
 | 그날 점검(경고·이동·요금·영업시간), 할 일 표시 경고, 시즌·좋은 시간대 | `app/data/check.ts`, `app/data/marks.ts`, `app/data/season.ts` (규칙 `app/logic/schedule.ts`) |
 | 여행 날짜·고정 블록(비행·숙소·예약 일정)·하루 항목, 여행 정보 다듬기 | `app/data/days.ts` |
 | 지도 탭(핀·경로 선·카드·내 위치) | `app/ui/map.ts` (Leaflet은 처음 열 때 불러와요) |
@@ -123,17 +123,18 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 | 내 계획에서 일어나는 일 (바꾸기·새로·복사·삭제·이름·백업·카톡용 글) | `app/flow/plans.ts` (예전 코드는 `PS.msg` …) |
 | 공유 링크 (만들기·열기), 아래 짧은 알림 | `app/flow/share.ts` |
 | 📌 이 코스 저장 / 첫 화면·데모 들어가고 나가기 | `app/flow/course.ts` / `app/flow/welcome.ts` |
+| 설정에서 일어나는 일 (테마·시간 간격·키 저장/확인·모델·백업·불러오기), 동기화 칸 값, 로그인 링크 돌아오기 | `app/flow/settings.ts` (예전 코드는 `KS.msg` …) |
 | 화면에 보일 값 만들기 (일정표·장소 탭·블록 시트·예약 도우미·이번 여행 칸·🎲·P모드 보드) | `app/view/day.ts`·`tray.ts`·`sheet.ts`·`helper.ts`·`forms.ts`·`dice.ts`·`pview.ts` (예전 코드는 `JEPI_UI.view`) |
 | 데모(오사카 3박 4일) 데이터 | `app/data/demo-osaka.ts` |
 | 여행지 장소 목록(지역·장소·비용·태그), 여행지 열기, AI 답 확인 | `app/data/places.ts` (도쿄 예시 데이터 `app/data/tokyo.ts`) |
 | 일정 바꾸기 목록(AI 채팅·🎲·P모드·장소 찾기): 적용·미리 해 보기·경고 피하기 | `app/data/ops.ts` |
 | 🎲 뭐 먹지 / 뭐 하지 | 주변 찾기·굴리기·코스 짜기 `app/data/nearby.ts`, 시트 상태·버튼 `280-dice-eat.js`, `290-dice-do.js` |
 | 내 계획 목록, 새 계획 | 화면 `app/screens/PlansScreen.tsx` (리액트), 동작 `app/flow/plans.ts` |
-| 로그인·기기 간 동기화·키 암호화 | 로그인 화면 `310-sync.js`, 무엇을 보내고 어떻게 합칠지 `app/data/sync.ts`, 서버와 대화 `app/data/server.ts`, 암호화 `app/data/vault.ts` |
+| 로그인·기기 간 동기화·키 암호화 | 로그인 칸 값·로그인 링크 `app/flow/settings.ts`(계정 동작 `app/data/account.ts`), 무엇을 보내고 어떻게 합칠지 `app/data/sync.ts`, 서버와 대화 `app/data/server.ts`, 암호화 `app/data/vault.ts` |
 | 기기에 저장 (localStorage) | `app/data/storage.ts` (여기로만 읽고 써요) |
 | 친구와 함께 (초대·합치기·가고 싶어요) | 화면 `app/screens/FriendsPanel.tsx` (리액트), 서버 주고받기 `app/data/trips.ts`, 합치기 규칙 `app/data/merge.ts`, 화면 쪽 동작 `384-trips.js` |
 | 알림 (일정별 🔔, 서버로 예약) | 화면 `app/screens/NotifyPanel.tsx` (리액트), 서버·기기·설정 `app/data/alerts.ts`, 언제 알릴지 `app/logic/alerts.ts`, 일정 쪽 연결 `386-notify.js`, 서버 `supabase/functions/jepi-push` |
-| 더보기 메뉴 / 설정 / 사용 안내 | `app/screens/MoreMenu.tsx` (리액트, 숫자는 `220-more-menu.js`) / `app/screens/SettingsScreen.tsx`+`SyncSection`·`MyPlacesSection`·`AiKeysSection` (리액트, 값과 동작은 `230-settings.js`·`310-sync.js`·`270-my-places.js`·`250-phase-strip.js`) / `app/screens/HelpPanel.tsx` (리액트) |
+| 더보기 메뉴 / 설정 / 사용 안내 | `app/screens/MoreMenu.tsx` (리액트, 숫자는 `220-more-menu.js`) / `app/screens/SettingsScreen.tsx`+`SyncSection`·`MyPlacesSection`·`AiKeysSection` (리액트, 값과 동작은 `app/flow/settings.ts`·`270-my-places.js`·`250-phase-strip.js`) / `app/screens/HelpPanel.tsx` (리액트) |
 | 더보기 → 이번 여행 (줄 목록과 입력 폼) | 줄 `app/screens/MeRows.tsx`, 폼 `app/screens/TripForms.tsx` (리액트: 누구와·예약 상태·기간·오가는 길·출발지·숙소·예약한 일정·예산). 폼에 넣을 값과 줄 목록은 `app/view/forms.ts`, 누르면 일어나는 일은 `app/flow/forms.ts`. 여행지·하루 코스 폼도 리액트 |
 | 처음 설정 (#onb 안의 본문) | 화면 `app/screens/OnbBody.tsx`·`OnbTalk.tsx`(이야기하며 정하기)·`OnbFinder.tsx`(여행지 추천) (리액트), 단계·버튼 `app/flow/forms.ts`(ONB), 여행지 준비·추천·대화 `app/flow/destination.ts`, 가볍게 시작 값 `app/view/pview.ts`, 틀은 `body.html` |
 | 예전 코드가 바꾸는 안내 줄·버튼 (준비하는 중…) | `app/ui/live.tsx` (LiveLine·LiveButton·LiveChip), 예전 쪽 도우미 `app/ui/status.ts`의 setSt·progStart·progStop, setBusy는 `app/flow/destination.ts` |
