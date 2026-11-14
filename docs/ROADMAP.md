@@ -83,6 +83,8 @@
   - [x] 예전 코드 정리 11: 설정(테마·시간 간격·AI·지도 키 저장/확인/삭제·모델·백업/불러오기·모두 초기화 확인)과 그 상태(`KS`), 동기화 칸이 보일 값과 로그인 링크 돌아오기(syncBoot)를 `app/flow/settings.ts`로 옮김. 동기화·계정 연결(connectSync·connectAccount)과 AI 연결(connectAI)은 아직 예전 코드에서 연결해요(마무리 때).
   - [x] 예전 코드 정리 12: 기능이 끼어드는 목록(PANELS·SYNC_AFTER_PUSH/PULL·BLOCK_BADGES·CARD_EXTRAS·SHEET_EXTRAS)을 `app/ui/extras.ts`로, 👍 여행자 추천의 일정 쪽(`app/flow/recs.ts`), 알림의 일정 쪽(`app/flow/notify.ts`), 친구와 함께의 화면 쪽(`app/flow/friends.ts`)을 옮김. 5묶음 끝.
     - 목록에 끼어드는 순서(배지·시트 줄이 보이는 순서)를 지키려고, 파일이 읽힐 때 하던 일은 `init()`로 모아 예전 파일 자리에서 불러요. 옮기기 도구(`port.py`)가 이걸 자동으로 해요.
+  - [x] 예전 코드 정리 13: 장소 찾기·직접 블록 만들기·같은 장소 두 번(입력할 때 잡기, 묶기 제안)을 `app/flow/find.ts`로 옮김.
+    - 빌드가 이제 **앱이 켜질 때 뒤 파일에서 정의하는 이름을 먼저 쓰는 것**도 잡아요(`040`이 `385`의 이름을 먼저 쓸 뻔했어요).
   - [ ] 예전 코드 정리 — 남은 `src/js`(약 184KB)를 하는 일별로 묶어 차례로 `app/flow/*.ts`로 옮겨요. 각 묶음은 화면 그리기(render*) → 버튼 흐름(*Act) 순서로.
     1. 일정표 그리기·고치기: `340-render.js`(renderAll·renderTimeline·renderTray…), `350-actions.js`, `380-events.js`(blockAct·gridAct·dropped…), `382-tidy.js`, `389-titles.js`, `389b-memo.js`
     2. 🎲·P모드 흐름: `160`·`170`·`280`·`290`(굴리기·코스 짜기·저장)

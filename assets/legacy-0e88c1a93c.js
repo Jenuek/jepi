@@ -45,12 +45,11 @@ const WD=['일','월','화','수','목','금','토'];
 DY.loc={};
 // the destination's lists (app/data/places.ts — the same objects, filled again when a destination opens; tokyo.ts until then)
 const PLC=JD.places, PK=PLC.state;
-const AREAS=PLC.AREAS, CATS=PLC.CATS, P=PLC.P, PM=PLC.PM;
+const AREAS=PLC.AREAS, P=PLC.P, PM=PLC.PM;
 DY.locArea={};
 DY.locZone={};
 const dayStart=JD.days.dayStart;   // app/data/days.ts
 DY.gmpBy=360; // when to be at the home airport, from the profile
-const durTxt=JD.logic.time.durTxt;   // app/logic/time.ts
 DY.days=[];
 const DEFAULT_KW=[];
 const norm=JD.logic.places.norm;   // app/logic/places.ts
@@ -75,28 +74,8 @@ FFLOW.connect({partJP:()=>partJP(),partTalk:p=>partTalk(p),partDest:p=>partDest(
 const pasteBox=FFLOW.pasteBox, isoPlus=FFLOW.isoPlus, openOnb=FFLOW.openOnb, onbFrame=FFLOW.onbFrame, onbFrameAct=FFLOW.onbFrameAct, renderOnb=FFLOW.renderOnb, commitProfile=FFLOW.commitProfile, finishOnb=FFLOW.finishOnb, renderMe=FFLOW.renderMe, rerenderForm=FFLOW.rerenderForm, formAct=FFLOW.formAct, onPf=FFLOW.onPf;
 // ---------- blocks the viewer makes by hand ----------
 const addCustomToData=PLC.addCustom;   // app/data/places.ts
-let customLast=null;
-function openCustom(editId,startAt,opts){
-  const c=editId?CUR.custom.find(x=>x.id===editId):{id:'',name:'',area:firstArea(),cat:'walk',dur:60,cost:0,memo:'',drop:false,tags:''}; if(!c) return;
-  const st=startAt!=null?startAt:Math.max(dayStart(UI.day),600);
-  // drawn by React: app/screens/CustomSheet.tsx (the same props again with dup while a new name is typed: 388-dedup.js)
-  customLast={edit:editId||'',dayLabel:`Day ${UI.day+1} (${DY.days[UI.day].date})`,name:c.name||'',area:c.area,cat:c.cat,dur:c.dur,cost:c.cost??'',memo:c.memo||'',tags:c.tags||'',drop:!!c.drop,
-    share:RS.status==='on'&&!PK.pack.manual?!!c.share:null,start:fmt(st),areas:optsOf(AREAS),cats:Object.entries(CATS),durs:[15,30,45,60,90,120,150,180,240].map(m=>[m,durTxt(m)]),
-    currency:String(PK.pack.currency),dup:null,card:!!(opts&&opts.card),rev:RENDER.nextSheetRev()};
-  window.JEPI_UI.mount('custom',$('#sheet'),customLast);
-  $('#sheet').dataset.uid=''; $('#sheetBg').hidden=false; setTimeout(()=>{const x=$('#cfName');x&&x.focus()},0);
-}
-function saveCustomForm(f){
-  const editId=f.dataset.edit;
-  const c={id:editId||('c'+Date.now().toString(36)),name:$('#cfName').value.trim()||'직접 만든 블록',area:$('#cfArea').value,cat:$('#cfCat').value,dur:+$('#cfDur').value||60,cost:Math.max(0,+$('#cfCost').value||0),memo:$('#cfMemo').value.trim(),tags:$('#cfTags').value.trim(),drop:$('#cfDrop').checked,share:!!($('#cfShare')&&$('#cfShare').checked)};
-  TRIP.customs.put(c); addCustomToData(c);
-  const asCard=f.dataset.card==='1';
-  if(asCard){if(!isWish(c.id))toggleWish(c.id);showToast('내 카드에 담았어요')}
-  else if(!editId){const st=parse($('#cfStart').value);TRIP.blocks.add({id:c.id,day:UI.day,start:Math.max(dayStart(UI.day),Math.min(1410,st??600)),dur:c.dur})}
-  {const prev=editId?(CUR.custom.find(x=>x.id===c.id)||{}):{};if(RS.status==='on'&&(c.share||prev.share!==undefined))shareCustom(c,c.share)}
-  closeSheet(); renderAll();
-}
-
+// the 직접 만들기 sheet and saving it: app/flow/find.ts
+const openCustom=window.JEPI_UI.flow.find.openCustom, saveCustomForm=window.JEPI_UI.flow.find.saveCustomForm;
 // ---------- talk to Claude to change the schedule ----------
 // the chat, the dock, the nudges, the header's trip line and ✨ 빈 시간 채우기: app/flow/chat.ts
 const CHAT=window.JEPI_UI.flow.chat;
@@ -129,7 +108,7 @@ const REC=JD.recs, RS=REC.state;
 // how a place becomes a saved entry, other travelers' places joining the list, 👍, sharing a place I made: app/flow/recs.ts
 const RECF=window.JEPI_UI.flow.recs;
 RECF.init();   // refresh everyone's 👍 along with the account sync (at this point, so it runs in the same order as before)
-const SHARED_IDS=RECF.SHARED_IDS, keepShared=RECF.keepShared, rebuildShared=RECF.rebuildShared, toggleRec=RECF.toggleRec, shareCustom=RECF.shareCustom, initRecs=RECF.initRecs, recsMaybe=RECF.recsMaybe;
+const SHARED_IDS=RECF.SHARED_IDS, keepShared=RECF.keepShared, rebuildShared=RECF.rebuildShared, toggleRec=RECF.toggleRec, initRecs=RECF.initRecs, recsMaybe=RECF.recsMaybe;
 // ---------- small to-dos attached to blocks (luggage, waiting lists, pick-ups, rentals, cash, tax refund) ----------
 // marks, their pairs and warnings, and the sheet's 할 일 표시 box: app/data/marks.ts
 const MK=JD.marks, MARKS=MK.MARKS, PAIRS=MK.PAIRS;
@@ -154,10 +133,9 @@ function makePairBlock(uid,T){
 // The changes themselves (apply, try out on a copy, nudge times) live in app/data/ops.ts; it asks here for the day's warnings.
 const OPS=JD.ops;
 OPS.connectOps({dayStart:d=>dayStart(d),days:()=>DY.days.length,items:d=>analyze(d).items,fresh:id=>FRESH.add(id)});
-const applyOpsCore=OPS.apply, repairOps=OPS.repair;
 // ---------- booking helper: wish list → where to stay → flight times → search links ----------
 CUR.wish=[];
-const isWish=id=>TRIP.wish.has(id), toggleWish=id=>TRIP.wish.toggle(id);   // app/data/trip.ts
+const toggleWish=id=>TRIP.wish.toggle(id);   // app/data/trip.ts
 // the 예약 도우미 (frame, steps, AI answers in it): app/flow/helper.ts — its state is HS (app/flow/helper.ts hs)
 const HELP=window.JEPI_UI.flow.helper;
 HELP.connect({maybeCoach:()=>maybeCoach(),renderMe:()=>renderMe()});
@@ -502,13 +480,13 @@ const save=()=>TRIP.blocks.saved();   // saved without uids
 // ---------- helpers ----------
 const $=s=>document.querySelector(s);
 // time text, distances and the day check live in app/logic (JD.logic)
-const fmt=JD.logic.time.fmt, parse=JD.logic.time.parse;
+const fmt=JD.logic.time.fmt;
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 // travel between places, opening hours and the day check: app/data/check.ts
 const CK=JD.check, travel=CK.travel;
 
 const dayItems=JD.days.dayItems;   // app/data/days.ts: fixed blocks + my blocks of a day
-const analyze=CK.analyze, gapsOf=CK.gapsOf;
+const analyze=CK.analyze;
 
 // ---------- render ----------
 // Drawing the 일정표, the 장소 tab, 준비하기, the bottom tabs, the banner, the AI box, 취향 키워드 and the block sheet:
@@ -660,70 +638,9 @@ const curShared=FRND.curShared, joinFromUrl=FRND.joinFromUrl, joinPending=FRND.j
 //   어디 (near today's plan / one area / whole city) · 언제 (a free gap / any time) · 넣을 곳 (schedule / list only)
 // Results always come back with the same three choices as chat: 일정에 넣기 / 장소에만 / 안 함.
 // Chat and 🎲 DICE keep their own way of asking; only how results are kept is shared.
-let FIND={where:'near',area:'',when:'any',gap:null,into:'list',q:'',busy:false,res:[],ctl:null,cursor:null};
-function findAreaOfDay(){const it=analyze(UI.day).items.find(i=>!i.stay&&i.area);return it?it.area:''}
-function openFind(o){
-  FIND=Object.assign({where:'near',area:firstArea(),when:'any',gap:null,into:'list',q:'',busy:false,res:[],ctl:null,cursor:null},o||{});
-  if(FIND.when==='gap'&&!FIND.gap){const g=gapsOf(UI.day)[0];if(g)FIND.gap=g;else FIND.when='any'}
-  renderFind(); $('#sheet').dataset.uid=''; $('#sheetBg').hidden=false;
-  if(o&&o.autorun) runFind();
-}
-// Drawn by React: app/screens/FindSheet.tsx. renderFind = full redraw (boxes and status start fresh, like before);
-// findRowsUpdate = only the results change (what was typed and the status line stay).
-let findRev=0;
-function renderFind(){findRev++;findMount()}
-function findRowsUpdate(){findMount()}
-function findMount(){
-  const F=FIND, gaps=gapsOf(UI.day), gv=g=>({v:`${g[0]}-${g[1]}`,label:`${fmt(g[0])}–${fmt(g[1])}`});
-  window.JEPI_UI.mount('find',$('#sheet'),{dayNo:UI.day+1,date:String(DY.days[UI.day].date),city:String(PK.pack.city||''),where:F.where,area:F.area||'',
-    areas:Object.entries(AREAS).map(([k,v])=>({k,label:String(v[0])})),when:F.when,gaps:gaps.map(gv),gap:F.gap?gv(F.gap):null,into:F.into,q:F.q||'',busy:!!F.busy,mine:UI.jp==='P',
-    rows:F.res.map(r=>{const p=PM[r.id];if(!p)return null;
-      const meta=[p.area,CATS[p.cat]||'',p.hours&&!p.always?`${fmt(p.hours[0])}–${fmt(p.hours[1])}`:''].filter(Boolean).join(' · ');
-      return {id:r.id,name:String(p.name),meta,note:p.note?String(p.note):'',c:r.c||'',txt:r.txt||''}}).filter(Boolean),rev:findRev});
-}
-function findFocus(){
-  const F=FIND, parts=[];
-  if(F.q) parts.push(F.q);
-  if(F.where==='near'){const a=findAreaOfDay();if(a)parts.push(`near ${a} (where the traveler is on Day ${UI.day+1})`)}
-  else if(F.where==='area'&&AREAS[F.area]) parts.push(`only in the ${AREAS[F.area][0]} area`);
-  if(F.when==='gap'&&F.gap) parts.push(`to visit on ${DY.days[UI.day].iso||'Day '+(UI.day+1)} between ${fmt(F.gap[0])} and ${fmt(F.gap[1])}; must be open then and fit within that time`);
-  return parts.join('; ');
-}
-async function runFind(){
-  if(FIND.busy) return;
-  if(!UI.sample){FIND.res=[];renderFind();setSt('findSt','AI가 연결되어 있지 않아요. 더보기 → 설정에서 연결해 주세요.');return}
-  // "fill this gap" with no extra wish keeps the original behaviour: AI picks from the places already on the list
-  if(FIND.into==='sched'&&FIND.when==='gap'&&!FIND.q&&FIND.where==='near'&&P.some(p=>!CUR.placed.some(b=>b.id===p.id))){closeSheet();askAI();return}
-  FIND.busy=true; FIND.res=[]; FIND.cursor=FIND.gap?FIND.gap[0]+15:null; renderFind();
-  const ctl=new AbortController(); FIND.ctl=ctl;
-  const n=await morePlaces(FIND.into==='sched'?5:8,'findSt',findFocus(),ctl.signal).catch(()=>0);
-  FIND.busy=false; FIND.res=[...FRESH].map(id=>({id}));
-  if($('#findForm')){renderFind(); if(!n) setSt('findSt','새로 찾은 곳이 없어요. 찾는 말을 바꿔 보세요.'); else setSt('findSt',`${n}곳을 찾았어요. 장소 탭 "✨ 방금 찾은 곳"에도 모여 있어요.`)}
-  renderTray();
-}
-function findDrop(id){ // 안 함: the place was only just found, so take it off the list again
-  const k=PK.pack.places.findIndex(x=>x.id===id); if(k>=0){PK.pack.places.splice(k,1);savePack()}
-  const i=P.findIndex(x=>x.id===id); if(i>=0)P.splice(i,1); delete PM[id]; FRESH.delete(id);
-}
-// 장소 찾기 sheet (FindSheet.tsx tells: a choice chip "key:value" with what is typed, a result "id:sched|list|skip",
-// the 동네 / 빈 시간 lists, or 찾기); and "찾기" next to an empty time in the day summary (gap "start-end")
-function findAct(n,v,typed){
-  if(n==='chip'){const [k,x]=String(v).split(':');FIND[k]=x;FIND.q=typed!=null?typed||FIND.q:FIND.q;
-    if(k==='when'&&x==='gap'&&!FIND.gap)FIND.gap=gapsOf(UI.day)[0]||null; renderFind();return}
-  if(n==='gap'){const [a,b]=String(v).split('-').map(Number);openFind({when:'gap',gap:[a,b],into:'sched'});return}
-  if(n==='area'){FIND.area=v;return}
-  if(n==='gapsel'){FIND.gap=String(v).split('-').map(Number);return}
-  if(n==='submit'){FIND.q=String(typed||'').trim();runFind();return}
-  if(n==='r'){const [id,act]=String(v).split(':'), r=FIND.res.find(x=>x.id===id), p=PM[id]; if(!r||!p) return;
-    if(act==='skip'){findDrop(id);r.c='skip';r.txt='넣지 않았어요'}
-    else if(act==='list'){r.c='list';if(UI.jp==='P'){if(!isWish(id))toggleWish(id);r.txt='내 카드에 담았어요'}else r.txt='장소 목록에 넣었어요'}
-    else if(FIND.when==='gap'&&FIND.gap){
-      const st=Math.max(FIND.cursor||FIND.gap[0],FIND.gap[0]), rr=repairOps([{op:'add',day:UI.day,id,start:fmt(st),dur:p.dur}]);
-      applyOpsCore(rr.ops); save(); FIND.cursor=parse(rr.ops[0].start)+p.dur+20;
-      r.c='sched'; r.txt=`${rr.ops[0].start}에 넣었어요${rr.warns.length?` · 확인할 것 ${rr.warns.length}`:''}`; renderAll();
-    } else {UI.selected=id;r.c='pick';r.txt='일정표에서 넣을 시간을 탭하세요';closeSheet();UI.tab='timeline';renderAll();return}
-    findRowsUpdate(); renderTray(); return}
-}
+// the sheet, the AI asking and what happens to each result: app/flow/find.ts
+const FINDF=window.JEPI_UI.flow.find;
+const openFind=FINDF.openFind, findAct=FINDF.findAct;
 // ---------- 알림: push notifications while travelling ----------
 // The server / device side and the settings live in app/data/alerts.ts, which reminders and time zones in
 // app/logic/alerts.ts; the trip side (which blocks ring, 🔔 badge and sheet row, the panel): app/flow/notify.ts
@@ -741,52 +658,9 @@ PANELS.help={render(){
 // "Same place" = within 100 m and a similar name (one contains the other, or most letter pairs match).
 // Nothing is merged automatically: a branch of the same chain can sit next door.
 // the rules live in app/logic/places.ts
-const nameSim=JD.logic.places.nameSim, samePlace=JD.logic.places.samePlace;
-const dupOf=pl=>P.find(p=>!p.shared&&samePlace(p,pl))||null;
-
-// --- already doubled: suggest merging at the top of the 장소 tab ---
-const dupNoKey=(a,b)=>[a,b].sort().join('~');
-function dupPairs(){
-  const no=new Set(store.get('gp.dupNo',[])||[]), mine=P.filter(p=>!p.shared), out=[];
-  for(let i=0;i<mine.length&&out.length<3;i++)for(let j=i+1;j<mine.length;j++){
-    const a=mine[i],b=mine[j]; if(samePlace(a,b)&&!no.has(dupNoKey(a.id,b.id))){out.push([a,b]);break}}
-  return out;
-}
-// the "같은 곳 같아요" cards at the top of 장소 (drawn by React: Tray.tsx)
-function dupInfo(){
-  const who=p=>p.custom?'직접 추가':p.by?`${p.by} 추천`:p.ai||FRESH.has(p.id)?'AI가 찾음':'장소 목록';
-  return dupPairs().map(([a,b])=>({a:a.id,b:b.id,why:a.custom||b.custom?'이름이 비슷해요':'위치가 가깝고 이름이 비슷해요',aWho:who(a),aName:a.name,bWho:who(b),bName:b.name}));
-}
-function mergePlaces(aId,bId){
-  let a=PM[aId], b=PM[bId]; if(!a||!b) return;
-  // keep the one already in the schedule, else the one that is not hand-made
-  const inUse=id=>CUR.placed.some(x=>x.id===id);
-  if((inUse(b.id)&&!inUse(a.id))||(a.custom&&!b.custom)){const t=a;a=b;b=t}
-  CUR.placed.forEach(x=>{if(x.id===b.id)x.id=a.id});
-  if(isWish(b.id)&&!isWish(a.id)) toggleWish(a.id); if(isWish(b.id)) toggleWish(b.id);
-  if(b.note&&b.note!==a.note&&!/직접 만든 블록이에요/.test(b.note)) a.note=[a.note,b.note].filter(Boolean).join(' · ').slice(0,300);
-  if(b.by&&!a.by) a.by=b.by;
-  if(b.custom)TRIP.customs.remove(b.id);
-  const k=PK.pack.places.findIndex(x=>x.id===b.id); if(k>=0) PK.pack.places.splice(k,1);
-  const ka=PK.pack.places.find(x=>x.id===a.id); if(ka){ka.note=a.note;if(a.by)ka.by=a.by}
-  savePack();
-  const i=P.findIndex(x=>x.id===b.id); if(i>=0) P.splice(i,1); delete PM[b.id]; FRESH.delete(b.id);
-  save(); renderAll(); showToast(`"${a.name}" 하나로 묶었어요`);
-}
-document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
-  if(t.dataset.dupuse){ // typing a name in "직접 만들기" found a place that is already there → schedule that one instead
-    const p=PM[t.dataset.dupuse]; if(!p) return; const st=$('#cfStart')?parse($('#cfStart').value):null;
-    TRIP.blocks.add({id:p.id,day:UI.day,start:Math.max(dayStart(UI.day),Math.min(1410,st??600)),dur:p.dur});closeSheet();renderAll();showToast(`이미 있는 "${p.name}"을(를) 일정에 넣었어요`);return}
-});
-// --- while typing a new place's name: show places that are already there ---
-document.addEventListener('input',e=>{
-  if(e.target.id!=='cfName'||$('#customForm')?.dataset.edit) return;
-  if(!customLast||!$('#customForm')) return;
-  const q=e.target.value.trim();
-  const hits=q.length<2?[]:P.filter(p=>!p.drop&&(nameSim(p.name,q)>=.5||norm(p.name).includes(norm(q)))).slice(0,4);
-  customLast=Object.assign({},customLast,{dup:hits.map(p=>({id:String(p.id),name:String(p.name),sub:`${p.area||''}${p.shared?' · 여행자 추천':''}${CUR.placed.some(x=>x.id===p.id)?' · 이미 일정에 있어요':''}`}))});
-  window.JEPI_UI.mount('custom',$('#sheet'),customLast);   // same rev: what is typed stays
-});
+// catching it while typing a name, the "같은 곳 같아요" cards and merging: app/flow/find.ts
+FINDF.init();   // the two listeners (use the place already there / places with a similar name), at this point as before
+const dupOf=FINDF.dupOf, dupNoKey=FINDF.dupNoKey, dupInfo=FINDF.dupInfo, mergePlaces=FINDF.mergePlaces;
 // local test hooks (tools/checks.js)
 if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)&&window.__jepi) Object.assign(window.__jepi,{
   dupTest(){const a=P.find(p=>!p.custom&&!p.drop&&!CUR.placed.some(b=>b.id===p.id));const b=Object.assign({},a,{id:'dupx',name:a.name+' 본점'});PK.pack.places.push(b);addPackPlace(b);renderTray();return a.name},

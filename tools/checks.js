@@ -2049,5 +2049,24 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'flow: adding places (app/flow/find.ts): 장소 찾기 opens with its choices, 직접 만들기 makes a block, a doubled place is offered and merged',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      await p.evaluate(() => window.JEPI_UI.flow.find.openFind({ where: 'city', into: 'list' })); await p.waitForTimeout(200);
+      ok(await vis(p, '#findForm'), '장소 찾기 opens');
+      await p.evaluate(() => window.JEPI_UI.flow.render.closeSheet()); await p.waitForTimeout(250);
+      const n0 = await p.evaluate(() => window.JEPI_DATA.trip.cur.placed.length);
+      await p.evaluate(() => window.JEPI_UI.flow.find.openCustom(null, 1200)); await p.waitForTimeout(200);
+      await p.fill('#cfName', '테스트 블록'); await p.evaluate(() => window.JEPI_UI.flow.find.saveCustomForm(document.getElementById('customForm'))); await p.waitForTimeout(250);
+      const made = await p.evaluate(() => { const T = window.JEPI_DATA.trip.cur; const c = T.custom.find(x => x.name === '테스트 블록'); return { c: !!c, n: T.placed.length, inDay: !!(c && T.placed.some(b => b.id === c.id && b.start === 1200)) } });
+      ok(made.c && made.n === n0 + 1 && made.inDay, '직접 만들기: a hand-made place, in the day at 20:00 ' + JSON.stringify(made));
+      const name = await p.evaluate(() => window.__jepi.dupTest());
+      const r = await p.evaluate(() => { const F = window.JEPI_UI.flow.find, d = F.dupInfo(); if (!d.length) return { n: 0 }; F.mergePlaces(d[0].a, d[0].b); return { n: d.length, after: F.dupInfo().length } });
+      ok(r.n >= 1 && r.after === r.n - 1, `"${name}" twice: offered, then merged into one ` + JSON.stringify(r));
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];
