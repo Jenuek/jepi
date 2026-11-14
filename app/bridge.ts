@@ -63,6 +63,8 @@ import * as recsFlow from './flow/recs';
 import * as notifyFlow from './flow/notify';
 import * as friendsFlow from './flow/friends';
 import * as findFlow from './flow/find';
+import * as lookFlow from './flow/look';
+import * as headerFlow from './flow/header';
 import * as status from './ui/status';
 import * as sheetView from './view/sheet';
 import * as helperView from './view/helper';
@@ -186,7 +188,7 @@ export interface JepiUI {
   /** what each screen shows, worked out from the trip (app/view/*.ts) */
   view: { day: typeof dayView; tray: typeof trayView; sheet: typeof sheetView; helper: typeof helperView; forms: typeof formsView; dice: typeof diceView; pview: typeof pviewView };
   /** what happens in the app, moved out of the old code (app/flow/*.ts) */
-  flow: { render: typeof render; schedule: typeof schedule; dice: typeof diceFlow; forms: typeof formsFlow; destination: typeof destFlow; chat: typeof chatFlow; helper: typeof helperFlow; plans: typeof plansFlow; share: typeof shareFlow; course: typeof courseFlow; welcome: typeof welcomeFlow; settings: typeof settingsFlow; recs: typeof recsFlow; notify: typeof notifyFlow; friends: typeof friendsFlow; find: typeof findFlow };
+  flow: { render: typeof render; schedule: typeof schedule; dice: typeof diceFlow; forms: typeof formsFlow; destination: typeof destFlow; chat: typeof chatFlow; helper: typeof helperFlow; plans: typeof plansFlow; share: typeof shareFlow; course: typeof courseFlow; welcome: typeof welcomeFlow; settings: typeof settingsFlow; recs: typeof recsFlow; notify: typeof notifyFlow; friends: typeof friendsFlow; find: typeof findFlow; look: typeof lookFlow; header: typeof headerFlow };
   /** status lines and busy buttons, error words (app/ui/status.ts) */
   status: typeof status;
 }
@@ -209,7 +211,7 @@ export function installBridge(): void {
     extras: extrasUI,
     drag,
     view: { day: dayView, tray: trayView, sheet: sheetView, helper: helperView, forms: formsView, dice: diceView, pview: pviewView },
-    flow: { render, schedule, dice: diceFlow, forms: formsFlow, destination: destFlow, chat: chatFlow, helper: helperFlow, plans: plansFlow, share: shareFlow, course: courseFlow, welcome: welcomeFlow, settings: settingsFlow, recs: recsFlow, notify: notifyFlow, friends: friendsFlow, find: findFlow },
+    flow: { render, schedule, dice: diceFlow, forms: formsFlow, destination: destFlow, chat: chatFlow, helper: helperFlow, plans: plansFlow, share: shareFlow, course: courseFlow, welcome: welcomeFlow, settings: settingsFlow, recs: recsFlow, notify: notifyFlow, friends: friendsFlow, find: findFlow, look: lookFlow, header: headerFlow },
     status,
     mount(name, el, props) {
       let cur = roots.get(el);

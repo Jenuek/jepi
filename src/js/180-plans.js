@@ -6,5 +6,4 @@ const planName=PLANS.planName;   // app/data/plans.ts
 const PLF=window.JEPI_UI.flow.plans;
 PLF.connect({addCustomToData:c=>addCustomToData(c),setJP:(m,q)=>setJP(m,q),carryTaste:(a,b)=>carryTaste(a,b),shareLink:n=>shareLink(n),openShared:()=>openShared(),
   lastLink:()=>SHARE.lastLinkOf(),importAll:v=>importAll(v),standalone:()=>!!STANDALONE,renderPlanBtn:()=>renderPlanBtn()});
-const savePlans=PLF.savePlans, snapshotCurrent=PLF.snapshotCurrent, touchPlan=PLF.touchPlan, applyPlanData=PLF.applyPlanData, openPlan=PLF.openPlan, newPlan=PLF.newPlan,
-  openCode=PLF.openCode, inClaude=PLF.inClaude, downloadText=PLF.downloadText, importBackup=PLF.importBackup, copyText=PLF.copyText, plansAct=PLF.plansAct, renderPlans=PLF.renderPlans;
+const savePlans=PLF.savePlans, snapshotCurrent=PLF.snapshotCurrent, touchPlan=PLF.touchPlan, applyPlanData=PLF.applyPlanData, openPlan=PLF.openPlan, inClaude=PLF.inClaude, importBackup=PLF.importBackup, plansAct=PLF.plansAct, renderPlans=PLF.renderPlans;

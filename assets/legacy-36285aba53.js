@@ -194,8 +194,7 @@ const planName=PLANS.planName;   // app/data/plans.ts
 const PLF=window.JEPI_UI.flow.plans;
 PLF.connect({addCustomToData:c=>addCustomToData(c),setJP:(m,q)=>setJP(m,q),carryTaste:(a,b)=>carryTaste(a,b),shareLink:n=>shareLink(n),openShared:()=>openShared(),
   lastLink:()=>SHARE.lastLinkOf(),importAll:v=>importAll(v),standalone:()=>!!STANDALONE,renderPlanBtn:()=>renderPlanBtn()});
-const savePlans=PLF.savePlans, snapshotCurrent=PLF.snapshotCurrent, touchPlan=PLF.touchPlan, applyPlanData=PLF.applyPlanData, openPlan=PLF.openPlan, newPlan=PLF.newPlan,
-  openCode=PLF.openCode, inClaude=PLF.inClaude, downloadText=PLF.downloadText, importBackup=PLF.importBackup, copyText=PLF.copyText, plansAct=PLF.plansAct, renderPlans=PLF.renderPlans;
+const savePlans=PLF.savePlans, snapshotCurrent=PLF.snapshotCurrent, touchPlan=PLF.touchPlan, applyPlanData=PLF.applyPlanData, openPlan=PLF.openPlan, inClaude=PLF.inClaude, importBackup=PLF.importBackup, plansAct=PLF.plansAct, renderPlans=PLF.renderPlans;
 // ================= JEPI standalone: AI keys, model router, routes, map, panels =================
 const STANDALONE=!(window.claude&&window.claude.use);
 const LS=JD.storage; // saved data on this device: app/data/storage.ts
@@ -356,79 +355,10 @@ const COURSE=window.JEPI_UI.flow.course;
 COURSE.connect({carryTaste:(a,b)=>carryTaste(a,b)});
 const saveCourse=COURSE.saveCourse;
 // ================= intro: sky, slogan, gentle motion =================
-function introRun(){const el=document.getElementById('intro');if(!el)return;
-  const calm=matchMedia('(prefers-reduced-motion:reduce)').matches, hold=calm?1300:2300;
-  const end=()=>{if(el.classList.contains('out'))return;el.classList.add('out');setTimeout(()=>el.remove(),700)};
-  el.addEventListener('click',end); setTimeout(end,hold);}
-
-// ---------- header plan switcher (drop-down) ----------
-// drawn by React: app/screens/PlanMenu.tsx
-let planMenuRev=0;
-function planMenuInfo(){
-  const list=PL.plans.slice().sort((a,b)=>(a.id===PL.curPlan?-1:b.id===PL.curPlan?1:(b.updated||0)-(a.updated||0)));
-  return {rev:++planMenuRev,plans:list.map(p=>({id:String(p.id),cur:p.id===PL.curPlan,past:!!pmPast(p),color:String(pmLook(p).color),coverSVG:pmPast(p)?'':coverSVG(pmLook(p).cover,150,90),
-    dday:pmDday(p),name:String(p.name||'이름 없는 계획'),sub:`${p.dates||''}${p.blocks?` · 블록 ${p.blocks}개`:''}`}))};
-}
-function planMenu(open){const m=document.getElementById('planMenu'),b=document.getElementById('planBtn');if(!m||!b)return;
-  if(open){snapshotCurrent();window.JEPI_UI.mount('planMenu',m,planMenuInfo());m.style.top=Math.round(b.getBoundingClientRect().bottom+6)+'px';m.hidden=false;hero({planOpen:true});const f=m.querySelector('.pm-item.cur,.pm-item');if(f)f.focus({preventScroll:true})}
-  else{m.hidden=true;hero({planOpen:false})}}
-document.addEventListener('click',e=>{
-  if(e.target.closest('#planBtn'))return;   // the button toggles the menu itself (heroAct)
-  const m=document.getElementById('planMenu'); if(!m||m.hidden)return;
-  if(!e.target.closest('#planMenu'))planMenu(false);   // a tap outside closes it
-},true);
-// an item in the plan menu (PlanMenu.tsx tells: open a plan, + 새 계획, 계획 관리·공유)
-function planMenuAct(n,v){planMenu(false);
-  if(n==='open'){if(v!==PL.curPlan){openPlan(v);showToast('계획을 바꿨어요')}return}
-  if(n==='new'){newPlan();return}
-  UI.tab='plans';snapshotCurrent();PS.showText=false;renderPlans();renderTabs()}
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){const m=document.getElementById('planMenu');if(m&&!m.hidden){planMenu(false);document.getElementById('planBtn').focus()}}});
-
-// ---------- DICE motion: rolls while the page scrolls, opens out of the die ----------
-const calmMotion=()=>matchMedia('(prefers-reduced-motion:reduce)').matches;
-(function(){let raf=0,stopT=0;const fab=()=>document.getElementById('diceFab');
-  addEventListener('scroll',()=>{if(calmMotion())return;const f=fab();if(!f)return;f.classList.add('rolling');
-    if(!raf)raf=requestAnimationFrame(()=>{raf=0;const y=scrollY,c=f.querySelector('.cube');if(!c)return;
-      c.style.transform=`rotateX(${(-22+y*0.8).toFixed(0)}deg) rotateY(${(32+y*0.55).toFixed(0)}deg) rotateZ(${(y*0.2).toFixed(0)}deg)`});
-    clearTimeout(stopT);stopT=setTimeout(()=>f.classList.remove('rolling'),150)},{passive:true});
-})();
-function diceOpenAnim(){
-  const f=document.getElementById('diceFab'),sh=document.getElementById('sheet'),bg=document.getElementById('sheetBg');
-  if(!f||!sh||calmMotion()||!f.getClientRects().length)return;
-  const a=f.getBoundingClientRect(),b=sh.getBoundingClientRect();
-  sh.style.setProperty('--fx',Math.round(a.left+a.width/2-(b.left+b.width/2))+'px');sh.style.setProperty('--fy',Math.round(a.top+a.height/2-(b.top+b.height/2))+'px');
-  sh.classList.remove('pop','unpop');bg.classList.remove('bg-out');void sh.offsetWidth;sh.classList.add('pop');bg.classList.add('bg-in');
-  f.classList.remove('tap');void f.offsetWidth;f.classList.add('tap');
-}
-function diceCloseAnim(){
-  const f=document.getElementById('diceFab'),sh=document.getElementById('sheet'),bg=document.getElementById('sheetBg');
-  if(!sh||sh.dataset.uid!=='dice'||calmMotion()||!f||!f.getClientRects().length||bg.hidden||sh.classList.contains('unpop'))return false;
-  const a=f.getBoundingClientRect(),b=sh.getBoundingClientRect();
-  sh.style.setProperty('--fx',Math.round(a.left+a.width/2-(b.left+b.width/2))+'px');sh.style.setProperty('--fy',Math.round(a.top+a.height/2-(b.top+b.height/2))+'px');
-  sh.classList.remove('pop');sh.classList.add('unpop');bg.classList.remove('bg-in');bg.classList.add('bg-out');
-  setTimeout(()=>{bg.hidden=true;sh.classList.remove('unpop');bg.classList.remove('bg-out')},260);return true;
-}
-
-
-// postcard look for each trip in the menu: its own theme colour, cover and D-day
-function pmProfile(p){return p.id===PL.curPlan?CUR.profile:((TRIP.plans.get(p.id)||{}).profile||{})}
-function pmLook(p){return Object.assign({color:'#2448c9',cover:'city'},pmProfile(p).look||{})}
-function pmPast(p){const pr=pmProfile(p);if(!pr.startDate||pr.dateUnknown)return false;const e=new Date(pr.startDate+'T00:00:00');e.setDate(e.getDate()+(pr.kind==='day'?0:(+pr.nights||0)));return e<new Date(new Date().toDateString())}
-function pmDday(p){const pr=pmProfile(p);if(!pr.startDate||pr.dateUnknown||pmPast(p))return '';const n=Math.round((new Date(pr.startDate+'T00:00:00')-new Date(new Date().toDateString()))/864e5);return n>0?'D-'+n:n===0?'D-DAY':'여행 중'}   // the D-day label (PlanMenu.tsx)
-
-// ---------- the floating 🎲 is there on every tab; in P 모드 it steps aside while the board's own dice is on screen ----------
-// (the board's roll button, the rolling die, 내 카드) — so two dice never compete; scrolled past or on another tab, it comes back.
-function fabDodge(){
-  // what is really visible: below the folded header bar, above the chat box and the tab bar at the bottom
-  let top=0,bot=innerHeight;['#miniBar'].forEach(q=>{const e=document.querySelector(q);if(e&&document.body.classList.contains('mini')){const r=e.getBoundingClientRect();if(r.height)top=Math.max(top,r.bottom)}});
-  ['#chat','.tabs'].forEach(q=>{const e=document.querySelector(q);if(e){const r=e.getBoundingClientRect();if(r.height&&r.top>innerHeight/2)bot=Math.min(bot,r.top)}});
-  const on=[...document.querySelectorAll('#pview .proll,#pview .pspin,#pview .mcard')].some(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.bottom>top+24&&r.top<bot-24});
-  document.body.classList.toggle('fab-dodge',on);
-}
-(function(){let raf=0;const later=()=>{if(!raf)raf=requestAnimationFrame(()=>{raf=0;fabDodge()})};
-  addEventListener('scroll',later,{passive:true}); addEventListener('resize',later);
-  const pv=document.getElementById('pview'); if(pv&&window.MutationObserver) new MutationObserver(later).observe(pv,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden']});
-})();
+// the intro, the header's plan menu, the 🎲 button's motion and keeping it out of the P board's way: app/flow/header.ts
+const HEAD=window.JEPI_UI.flow.header;
+HEAD.init();   // the menu's tap-outside / Esc listeners and the scroll watchers start here, as before
+const introRun=HEAD.introRun, planMenu=HEAD.planMenu, planMenuAct=HEAD.planMenuAct, diceOpenAnim=HEAD.diceOpenAnim, diceCloseAnim=HEAD.diceCloseAnim, fabDodge=HEAD.fabDodge;
 // ================= 기기 간 동기화 (Supabase, 본인 계정 데이터만) =================
 // which part of the 동기화 section shows and the last error live in app/data/account.ts (ACC.state)
 const ACC=JD.account;
@@ -481,7 +411,6 @@ const save=()=>TRIP.blocks.saved();   // saved without uids
 const $=s=>document.querySelector(s);
 // time text, distances and the day check live in app/logic (JD.logic)
 const fmt=JD.logic.time.fmt;
-const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 // travel between places, opening hours and the day check: app/data/check.ts
 const CK=JD.check, travel=CK.travel;
 
@@ -673,75 +602,14 @@ const dayTitleOf=SCHED.dayTitleOf, titleEditing=SCHED.titleEditing;   // app/flo
 window.JEPI_UI.connectHost({renderAll:()=>renderAll(),closeSheet:()=>closeSheet(),reopenSheet:()=>{const u=$('#sheet').dataset.uid;if(u&&u!=='dice'&&!$('#sheetBg').hidden)openSheet(u)},toast:m=>showToast(m),day:()=>UI.day,autoTitle:d=>String((DY.days[d]||{}).title||''),titleEditing,
   closeNotebook:()=>closeNotebook(),renamePlan:nm=>lookRenamePlan(nm),aiDayTitles:n=>lookAiTitles(n),errText:(e,w)=>errText(e,w),welcomeNew:()=>{closeWelcome();openOnb()},welcomeDemo:()=>demoEnter(),welcomeLoggedIn:()=>welcomeLoggedIn(),dice:(n,v,m)=>diceAct(n,v,m),place:(n,v)=>placeAct(n,v),plans:(n,v,v2)=>plansAct(n,v,v2),helper:(n,v,v2)=>helperAct(n,v,v2),helperFrame:n=>helperFrameAct(n),dock:(n,v)=>dockAct(n,v),tray:(n,v)=>trayAct(n,v),tab:n=>goTab(n),onbFrame:n=>onbFrameAct(n),hero:n=>heroAct(n),miniDay:s=>{const n=UI.day+s;if(n>=0&&n<DY.days.length){UI.day=n;renderAll()}},mapTop:n=>mapTopAct(n),coach:n=>coachAct(n),banner:()=>{UI.selected=null;renderAll()},chat:(n,v)=>chatAct(n,v),pview:(n,v)=>pviewAct(n,v),kw:(n,v)=>kwAct(n,v),grid:(n,v)=>gridAct(n,v),block:(n,v,o)=>blockAct(n,v,o),checks:(n,v,o)=>checksAct(n,v,o),aibox:(n,v)=>aiboxAct(n,v),settings:(n,v,v2)=>settingsAct(n,v,v2),form:(n,v,o)=>formAct(n,v,o),sum:(n,v)=>sumAct(n,v),trip:(a,u,t)=>tripAct(a,u,t),want:p=>wantAct(p),find:(n,v,t)=>findAct(n,v,t),planMenu:(n,v)=>planMenuAct(n,v),more:id=>moreAct(id),mapCard:i=>mapCardAct(i),dropped:(k,id,m)=>dropped(k,id,m),nudge:(n,v)=>nudgeAct(n,v),importFile:f=>importBackup(f,ok=>{if(ok){maybeCoach()}}),shareNotebook:async()=>{await shareLink(true);return PS.msg||'링크를 만들었어요'}});
 // ---------- how a trip looks: theme colour, cover, style, handwriting; folding hero header ----------
-// profile.look = {color, cover:'city'|'sea'|'mountain'|'none'|'photo', photo:dataURL, tagline, style:'color'|'note', hand}
-// Lives in the plan's profile, so it syncs across devices and to friends on a shared trip.
-const LOOK_COLORS=[['#2448c9','코발트'],['#c23b22','노을'],['#0f7a5c','숲'],['#6b2fb3','보라'],['#0e7490','바다'],['#b45309','호박'],['#be185d','체리'],['#2b2a33','먹']];
-const LOOK_HANDS=[['pen','나눔펜','"Nanum Pen Script"'],['gaegu','개구','"Gaegu"'],['melody','하이멜로디','"Hi Melody"']];
-const LOOK_COVERS=[['city','도시'],['sea','바다'],['mountain','산'],['none','없음']];
-const lookOf=()=>Object.assign({color:'#2448c9',pop:'#ffd23f',cover:'city',tagline:'',style:'color',hand:'pen',photo:''},(CUR.profile&&CUR.profile.look)||{});
-function coverSVG(kind,w,h){
-  const k=kind||'city';
-  if(k==='sea') return `<svg viewBox="0 0 200 120" width="${w}" height="${h}" preserveAspectRatio="xMaxYMax meet"><circle cx="150" cy="38" r="18" fill="var(--pop)"/><path d="M0 92 C40 84,80 100,200 86 V120 H0Z" fill="#fff" fill-opacity=".16"/><path d="M0 104 C50 96,110 114,200 100 V120 H0Z" fill="#000" fill-opacity=".18"/></svg>`;
-  if(k==='mountain') return `<svg viewBox="0 0 200 120" width="${w}" height="${h}" preserveAspectRatio="xMaxYMax meet"><circle cx="160" cy="30" r="16" fill="var(--pop)"/><path d="M40 120 L100 50 L130 86 L150 66 L200 120Z" fill="#000" fill-opacity=".2"/><path d="M100 50 L112 64 L88 64Z" fill="#fff" fill-opacity=".7"/></svg>`;
-  if(k==='none'||k==='photo') return '';
-  return `<svg viewBox="0 0 200 120" width="${w}" height="${h}" preserveAspectRatio="xMaxYMax meet"><circle cx="150" cy="34" r="20" fill="var(--pop)" fill-opacity=".9"/><path d="M0 120 V84 H16 V64 H34 V90 H50 V52 H62 L68 44 L74 52 V92 H96 V70 H116 V96 H134 V60 H150 V88 H170 V74 H200 V120Z" fill="#000" fill-opacity=".18"/></svg>`;
-}
-// the header is drawn by React (app/screens/Hero.tsx) from heroView; hero({…}) changes some of it and draws again
-let heroView={artHtml:'',artBg:'',artPhoto:false,jp:'J',planName:'',planOpen:false,meta:'',tag:'',day:'',title:'',sub:'',memo:'',editing:false,slot:false};
-function hero(p){heroView={...heroView,...p};window.JEPI_UI.mount('hero',$('#heroMount'),heroView)}
-// pressed in the header
-function heroAct(n){
-  if(n==='look')openLook();
-  else if(n==='J'||n==='P'){setJP(n);renderAll()}
-  else if(n==='plan')planMenu(document.getElementById('planMenu').hidden);
-  else if(n==='title'){if(!$('#dayTitleIn'))titleEditing(true)}
-}
-function renderLook(){
-  const L=lookOf(), R=document.documentElement.style, note=L.style==='note';
-  R.setProperty('--theme',L.color); R.setProperty('--pop',L.pop);
-  R.setProperty('--f-hand',(LOOK_HANDS.find(x=>x[0]===L.hand)||LOOK_HANDS[0])[2]+', cursive');
-  document.body.classList.toggle('style-note',note);
-  {const photo=L.cover==='photo'&&L.photo, p={
-    artBg:photo?`linear-gradient(rgba(0,0,0,.35),rgba(0,0,0,.45)),url("${L.photo}")`:'',artPhoto:!!photo,
-    artHtml:note?`<div class="stamp"><span>${esc((PK.pack.city||'TRIP').slice(0,8))}</span><b>${esc(((DY.days[0]||{}).date||'').replace(/\s.*/,''))}</b><span>${esc(String(new Date().getFullYear()))}</span></div>`:photo?'':coverSVG(L.cover,190,120),
-    tag:L.tagline||''};
-  if(DY.days[UI.day]){const D=DY.days[UI.day];p.day=note?`CHAPTER ${UI.day+1} · ${D.date} ${WD[D.wd]}`:`DAY ${String(UI.day+1).padStart(2,'0')} · ${D.date} ${WD[D.wd]}`}
-  hero(p)}
-  renderDayMemo(); miniUpdate();
-}
-// --- folding header: the hero scrolls away and a one-line bar takes its place ---
-// (drawn by React: app/screens/Bars.tsx, from miniView; miniBar({…}) changes some of it and draws again)
-let miniView={on:false,day:'',dayHidden:false,title:'',navHidden:false};
-function miniBar(p){miniView={...miniView,...p};window.JEPI_UI.mount('mini',$('#miniMount'),miniView)}
-function miniUpdate(){
-  const D=DY.days[UI.day]; if(!D) return; const onDay=document.body.dataset.tab==='timeline'||!document.body.dataset.tab;
-  miniBar({day:onDay?String(UI.day+1).padStart(2,'0'):'',dayHidden:!onDay,title:onDay?dayTitleOf(UI.day):($('#planName')?$('#planName').textContent:''),navHidden:!onDay||DY.days.length<2});
-}
-function heroWatch(){
-  const hero=$('#hero'); if(!hero) return;
-  let raf=0;
-  const on=()=>{raf=0;const h=hero.offsetHeight||1, y=window.scrollY, t=Math.max(0,Math.min(1,y/Math.max(1,h-64)));
-    hero.style.setProperty('--fold',t.toFixed(3));
-    const mini=y>h-64; if(document.body.classList.contains('mini')!==mini){document.body.classList.toggle('mini',mini);miniBar({on:mini})}};
-  addEventListener('scroll',()=>{if(!raf)raf=requestAnimationFrame(on)},{passive:true}); on();
-}
-document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
-});
-// --- 여행 꾸미기 sheet: drawn by React (app/screens/LookSheet.tsx), which keeps its own draft and saves itself ---
-let lookRev=0;
-function openLook(){
-  const L=lookOf();
-  window.JEPI_UI.mount('look',$('#sheet'),{name:(PL.plans.find(x=>x.id===PL.curPlan)||{}).name||planName(),tagline:L.tagline||'',style:L.style,color:L.color,cover:L.cover,hand:L.hand,photo:L.photo||'',pop:L.pop,
-    colors:LOOK_COLORS,covers:LOOK_COVERS.map(([k,n])=>({k,name:n,svg:coverSVG(k,64,40)})),hands:LOOK_HANDS,
-    days:DY.days.map((D,i)=>({title:((CUR.profile.dayTitles||[])[i])||'',placeholder:String(D.title)})),ai:!!UI.sample,rev:++lookRev});
-  $('#sheet').dataset.uid=''; $('#sheetBg').hidden=false;
-}
-// the question for AI로 지어 보기 (asked by the sheet through the host)
-const lookAiTitles=tripName=>JD.asks.dayTitles(UI.sample,tripName);   // app/data/asks.ts
-function lookRenamePlan(nm){const p=PL.plans.find(x=>x.id===PL.curPlan);if(p&&nm&&nm!==p.name){p.name=nm;p.custom_name=true;savePlans()}}
+// the look, the header and its one-line bar, the 여행 꾸미기 sheet: app/flow/look.ts
+const LOOKF=window.JEPI_UI.flow.look;
+LOOKF.connect({setJP:m=>setJP(m),planMenu:o=>planMenu(o)});
+const hero=LOOKF.hero, lookOf=LOOKF.lookOf, coverSVG=LOOKF.coverSVG, heroAct=LOOKF.heroAct, renderLook=LOOKF.renderLook, miniBar=LOOKF.miniBar,
+  heroWatch=LOOKF.heroWatch, openLook=LOOKF.openLook, lookAiTitles=LOOKF.lookAiTitles, lookRenamePlan=LOOKF.lookRenamePlan;
 // ---------- handwritten memos: one line per block, one line per day ----------
 // The rules live in app/logic/memo.ts; the memo box in a block's sheet saves itself (app/screens/Extras.tsx MemoBox).
-const memoKey=SCHED.memoKey, blockMemoOf=SCHED.blockMemoOf, dayMemoOf=SCHED.dayMemoOf, renderDayMemo=SCHED.renderDayMemo;   // app/flow/schedule.ts
+const memoKey=SCHED.memoKey, blockMemoOf=SCHED.blockMemoOf, dayMemoOf=SCHED.dayMemoOf;   // app/flow/schedule.ts
 SHEET_EXTRAS.push(it=>it&&it.id?{k:'memo',key:memoKey(it,UI.day),value:blockMemoOf(it,UI.day)}:null);   // drawn by React: Extras.tsx
 // ---------- 여행 노트 보기: the whole trip as one notebook (cover + a chapter per day) ----------
 // Read-only. "PDF로 저장" uses the browser's print (print CSS in 17-look.css keeps only the notebook).

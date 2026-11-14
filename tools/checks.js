@@ -2068,5 +2068,20 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'flow: look and header (app/flow/look.ts, header.ts): theme colour applied, 수첩 style, the plan menu opens with postcards and closes on Esc',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      const r = await p.evaluate(() => { const T = window.JEPI_DATA.trip.cur, F = window.JEPI_UI.flow; T.profile.look = { color: '#0f7a5c', style: 'note', cover: 'sea' }; F.look.renderLook();
+        return { theme: document.documentElement.style.getPropertyValue('--theme'), note: document.body.classList.contains('style-note'), day: (document.getElementById('heroDay') || {}).textContent || '' } });
+      ok(r.theme === '#0f7a5c' && r.note && r.day.startsWith('CHAPTER 1'), '꾸미기: theme colour, 수첩 style, chapter title ' + JSON.stringify(r));
+      await p.evaluate(() => { window.JEPI_DATA.trip.cur.profile.look = {}; window.JEPI_UI.flow.look.renderLook(); window.JEPI_UI.flow.header.planMenu(true) }); await p.waitForTimeout(250);
+      ok(await vis(p, '#planMenu') && (await p.$$eval('#planMenu .pm-item', e => e.length)) >= 1, 'the plan menu opens with a postcard per plan');
+      await p.keyboard.press('Escape'); await p.waitForTimeout(200);
+      ok(!(await vis(p, '#planMenu')), 'Esc closes it');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];

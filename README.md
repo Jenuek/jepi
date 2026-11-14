@@ -82,11 +82,11 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 | 첫 화면(새 여행·로그인·데모), 데모 시작/끝 | 화면 `app/screens/Welcome.tsx` (리액트), 동작 `app/flow/welcome.ts`, 데모 칸막이 `app/data/demo.ts`, 데모 일정 `066-demo-osaka.js` |
 | 일정표 그리기 / 장소 탭 카드·필터 | `340-render.js` / 화면 `app/screens/Tray.tsx` (리액트, 카드에 넣을 값은 `340-render.js`의 `cardInfo`) |
 | 장소 탭 위쪽 / 지도 위쪽 (이 날·전체·내 위치) | 화면 `app/screens/Tops.tsx` (리액트), 값은 `340-render.js`(drawTrayTop·trayAct) / `210-map.js`(mapTop·mapTopAct) |
-| 머리글 (커버·J/P·계획 이름·날짜 제목) | 화면 `app/screens/Hero.tsx` (리액트), 값은 `389a-look.js`의 `hero({…})`, 접히는 움직임은 `heroWatch` |
-| 아래 탭 / 접히는 머리글 줄 | 화면 `app/screens/Bars.tsx` (리액트), 값은 `340-render.js`(tabs·renderTabs, 탭 바꾸기는 `380-events.js`의 `goTab`) / `389a-look.js`(miniBar·heroWatch) |
+| 머리글 (커버·J/P·계획 이름·날짜 제목) | 화면 `app/screens/Hero.tsx` (리액트), 값은 `app/flow/look.ts`의 `hero({…})`, 접히는 움직임은 `heroWatch` |
+| 아래 탭 / 접히는 머리글 줄 | 화면 `app/screens/Bars.tsx` (리액트), 값은 `340-render.js`(tabs·renderTabs, 탭 바꾸기는 `380-events.js`의 `goTab`) / `app/flow/look.ts`(miniBar·heroWatch) |
 | 일정표 아래 대화 칸 (접기·칩·메시지 칸) | 화면 `app/screens/Dock.tsx` (리액트), 값은 `app/flow/chat.ts`의 `dock({…})`, 채팅 목록은 `ChatLog.tsx` |
 | 고정 틀 (처음 설정 틀·예약 도우미 틀·처음 안내·장소 고른 뒤 안내 줄) | 화면 `app/screens/Frames.tsx` (리액트), 보여 줄 값은 `app/flow/forms.ts`(onbView)·`app/flow/helper.ts`(helperView)·`370-reset-guide.js`(coachView)·`app/flow/render.ts`(bannerView) |
-| 직접 블록 만들기 / 예약 도우미 / 계획 메뉴 / 여행 단계 띠 | `app/screens/CustomSheet.tsx` (`app/flow/find.ts`, 같은 장소 제안 `app/flow/find.ts`) / `HelperBody.tsx` (`app/flow/helper.ts`) / `PlanMenu.tsx` (`300-intro-header.js`) / `Phase.tsx` (`250-phase-strip.js`) |
+| 직접 블록 만들기 / 예약 도우미 / 계획 메뉴 / 여행 단계 띠 | `app/screens/CustomSheet.tsx` (`app/flow/find.ts`, 같은 장소 제안 `app/flow/find.ts`) / `HelperBody.tsx` (`app/flow/helper.ts`) / `PlanMenu.tsx` (`app/flow/header.ts`) / `Phase.tsx` (`250-phase-strip.js`) |
 | 일정표 시트 (블록 누름·빈 시간 누름) / P모드 보드게임판 | 화면 `app/screens/BlockSheet.tsx` / `PView.tsx` (리액트), 값은 `350-actions.js`(openSheet·altsInfo)·`080-todos.js`(marksInfo)·`340-render.js`(openFill) / `170-quick-start-pview.js`, 모양 `src/css/19-pmode.css` |
 | 일정표 본체 (시간 줄·블록·이동·권역 띠·일몰 선) | 화면 `app/screens/DayGrid.tsx` (리액트), 값은 `340-render.js`의 renderTimeline, 끌어다 놓기 `380-events.js` |
 | 일정표 위쪽 (날짜 버튼·요약 줄·동선·예산) | 화면 `app/screens/DayTop.tsx` (리액트), 값은 `340-render.js`(renderDays·renderBudget·renderRoute)·`382-tidy.js`(요약 줄) |
@@ -96,7 +96,7 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 | 장소 찾기 화면 (모든 "찾기" 버튼이 여기로) | 화면 `app/screens/FindSheet.tsx` (리액트), 동작 `app/flow/find.ts` |
 | 같은 장소 묶기, 직접 추가할 때 기존 장소 제안 | `app/flow/find.ts` (장소 탭의 카드는 `Tray.tsx`) |
 | 날짜별 제목 바꾸기 | `389-titles.js` |
-| 여행 꾸미기(테마 색·커버·스타일·손글씨 글꼴), 접히는 헤더, 아래 탭 | 꾸미기 시트 `app/screens/LookSheet.tsx` (리액트), 동작 `389a-look.js`, 스타일 `17-look.css` |
+| 여행 꾸미기(테마 색·커버·스타일·손글씨 글꼴), 접히는 헤더, 아래 탭 | 꾸미기 시트 `app/screens/LookSheet.tsx` (리액트), 동작 `app/flow/look.ts`, 스타일 `17-look.css` |
 | 누를 때 반응(모든 버튼) | `18-press.css` |
 | 손글씨 메모 (일정 블록별·날짜별) | `389b-memo.js` (블록 시트의 메모 칸은 `app/screens/Extras.tsx`) |
 | 여행 노트 보기 (PDF 저장·링크) | 화면 `app/screens/Notebook.tsx` (리액트), 값 `389c-notebook.js` |
@@ -127,6 +127,7 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 | 기능이 끼어드는 목록 (옆 패널·동기화 뒤 할 일·블록 배지·카드/시트 조각) | `app/ui/extras.ts` (예전 코드는 `PANELS` … 같은 이름) |
 | 👍 여행자 추천 일정 쪽 / 알림 일정 쪽 / 친구와 함께 화면 쪽 | `app/flow/recs.ts` / `app/flow/notify.ts` / `app/flow/friends.ts` |
 | 장소 찾기 / 직접 블록 만들기 / 같은 장소 두 번(잡기·묶기) | `app/flow/find.ts` |
+| 여행 모습·접히는 헤더·한 줄 바·여행 꾸미기 / 시작 화면 하늘·계획 메뉴·🎲 버튼 움직임 | `app/flow/look.ts` / `app/flow/header.ts` |
 | 화면에 보일 값 만들기 (일정표·장소 탭·블록 시트·예약 도우미·이번 여행 칸·🎲·P모드 보드) | `app/view/day.ts`·`tray.ts`·`sheet.ts`·`helper.ts`·`forms.ts`·`dice.ts`·`pview.ts` (예전 코드는 `JEPI_UI.view`) |
 | 데모(오사카 3박 4일) 데이터 | `app/data/demo-osaka.ts` |
 | 여행지 장소 목록(지역·장소·비용·태그), 여행지 열기, AI 답 확인 | `app/data/places.ts` (도쿄 예시 데이터 `app/data/tokyo.ts`) |
