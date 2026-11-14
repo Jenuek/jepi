@@ -37,14 +37,10 @@ const DEMO=JD.demo.DEMO;
 // ---------- extra side panels ----------
 // A feature adds a panel with: PANELS.name={render(){…}}  plus  <div id="side-name" hidden> in body.html.
 // Opening it: any button with data-tab="name". It is shown under the 더보기 tab.
-const PANELS={};
-// Features that ride on the account sync: run after every push / pull (310-sync.js)
-const SYNC_AFTER_PUSH=[], SYNC_AFTER_PULL=[];
-// Little extras drawn by features: on a timeline block, a place card, and the block sheet.
-// Each function returns a piece (or a list of pieces, or nothing); React draws them: app/screens/Extras.tsx
-//   {k:'badge',t,title} {k:'want',pid,on,n,who} {k:'tag',cls,t} {k:'wantRow',want,by} {k:'alert',on,hint} {k:'memo',key,value}
-const BLOCK_BADGES=[], CARD_EXTRAS=[], SHEET_EXTRAS=[];
-const extras=(list,...a)=>list.flatMap(f=>{try{const r=f(...a);return r?[].concat(r):[]}catch(_){return []}});
+// Features that ride on the account sync: run after every push / pull (SYNC_AFTER_PUSH / SYNC_AFTER_PULL).
+// Little extras drawn by features: on a timeline block, a place card, and the block sheet. The lists: app/ui/extras.ts
+const XT=window.JEPI_UI.extras, PANELS=XT.PANELS, SYNC_AFTER_PUSH=XT.SYNC_AFTER_PUSH, SYNC_AFTER_PULL=XT.SYNC_AFTER_PULL,
+  BLOCK_BADGES=XT.BLOCK_BADGES, CARD_EXTRAS=XT.CARD_EXTRAS, SHEET_EXTRAS=XT.SHEET_EXTRAS, extras=XT.extras;
 const WD=['일','월','화','수','목','금','토'];
 DY.loc={};
 // the destination's lists (app/data/places.ts — the same objects, filled again when a destination opens; tokyo.ts until then)
@@ -56,9 +52,7 @@ const dayStart=JD.days.dayStart;   // app/data/days.ts
 DY.gmpBy=360; // when to be at the home airport, from the profile
 const durTxt=JD.logic.time.durTxt;   // app/logic/time.ts
 DY.days=[];
-const costOf=PLC.costOf;
 const DEFAULT_KW=[];
-const tagsOf=PLC.tagsOf;
 const norm=JD.logic.places.norm;   // app/logic/places.ts
 const yen=TV.yen;   // app/data/traveler.ts
 const DEFAULT=[];
@@ -132,53 +126,10 @@ const demoOsaka=JD.demoOsaka.demoOsaka;
 // ---------- 👍 여행자 추천 (app/data/recs.ts: loading, counting, saving on the server) ----------
 // Here: how a place becomes a saved entry, and how other travelers' places join this trip's place list.
 const REC=JD.recs, RS=REC.state;
-const SHARED_IDS=new Set();
-const cityKey=()=>REC.cityKey(PK.pack.city||'');
-const placeKey=p=>REC.placeKey(PK.pack.city||'',p.name);
-function recHash(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(36)}
-function entryOf(p){const h=p.always?null:p.hours;
-  return {k:placeKey(p),city:cityKey(),name:p.name,local:p.local||'',cat:p.cat,area:p.area,lat:+p.ll[0]||0,lng:+p.ll[1]||0,dur:p.dur,
-    open:h?`${fmt(h[0])}-${fmt(h[1])}`:null,closed:p.closed||[],cost:costOf(p.id)[0]||0,note:String(p.note||'').slice(0,160),tags:tagsOf(p.id).slice(0,6),made:!!p.custom,at:Date.now()}}
-function keepShared(){
-  let ch=false;
-  CUR.placed.forEach(b=>{const p=PM[b.id];if(p&&p.shared&&!PK.pack.places.some(x=>x.id===p.id)){const c=Object.assign({},p);delete c.shared;c.fromUsers=true;PK.pack.places.push(c);ch=true}});
-  if(ch) savePack();
-}
-// other travelers' places of this city join the place list (and drop out again when no longer recommended or used)
-function rebuildShared(){
-  const used=new Set(CUR.placed.map(b=>b.id));
-  for(const id of [...SHARED_IDS]){if(used.has(id)||PK.pack.places.some(x=>x.id===id))continue;const i=P.findIndex(p=>p.id===id);if(i>=0)P.splice(i,1);delete PM[id];SHARED_IDS.delete(id)}
-  REC.others(PK.pack.city||'',new Set(P.map(placeKey))).forEach((e,k)=>{const id='s'+recHash(k);if(PM[id])return;
-    const pl=cleanPlace({name:e.name,local:e.local,cat:e.cat,lat:e.lat,lng:e.lng,dur:e.dur,open:e.open,closed:e.closed,cost:e.cost,tags:e.tags,note:e.note||(e.made?'다른 여행자가 직접 올린 장소예요.':'다른 여행자가 추천한 장소예요.')});
-    if(!pl)return; pl.id=id; pl.shared=true; pl.ai=false; pl.userMade=!!e.made; addPackPlace(pl); SHARED_IDS.add(id)});
-}
-async function recsFetch(){ if(await REC.fetchCity(PK.pack.city||'')){rebuildShared();renderTray()} }
-// 👍 on a card or in a block's sheet: counts change right away, then once more when the server has answered
-async function toggleRec(id){
-  const p=PM[id]; if(!p) return;
-  if(RS.status!=='on'){REC.toggle(PK.pack.city||'',entryOf(p));renderTray();return}   // only says "로그인하면 …"
-  const pr=REC.toggle(PK.pack.city||'',entryOf(p)); rebuildShared();
-  renderTray(); if(!$('#sheetBg').hidden&&$('#sheet').dataset.uid)openSheet($('#sheet').dataset.uid);
-  await pr; renderTray();
-}
-// a place I made: shared with other travelers or not (its 공유 box)
-function shareCustom(c,on){
-  if(RS.status!=='on') return;
-  const p=PM[c.id]; if(!p) return; const k=placeKey(p);
-  const rest=RS.mine.filter(e=>e.k!==k), pr=REC.setMine(PK.pack.city||'',on?[...rest,entryOf(p)]:rest);
-  rebuildShared(); pr.then(renderTray);
-}
-function initRecs(){ if(!PK.pack.manual) recsFetch().catch(()=>{}) }
-
-// refresh everyone's 👍 along with the account sync (every minute while open)
-SYNC_AFTER_PULL.push(()=>!PK.pack.manual?recsFetch().catch(()=>{}):null);
-// (re)load when the trip's city changes, or every few minutes while browsing the 장소 tab
-let recCity=null, recAt=0;
-function recsMaybe(){
-  if(PK.pack.manual||!cityKey()) return;
-  if(cityKey()===recCity&&Date.now()-recAt<180000) return;
-  recCity=cityKey(); recAt=Date.now(); recsFetch().catch(()=>{recCity=null});
-}
+// how a place becomes a saved entry, other travelers' places joining the list, 👍, sharing a place I made: app/flow/recs.ts
+const RECF=window.JEPI_UI.flow.recs;
+RECF.init();   // refresh everyone's 👍 along with the account sync (at this point, so it runs in the same order as before)
+const SHARED_IDS=RECF.SHARED_IDS, keepShared=RECF.keepShared, rebuildShared=RECF.rebuildShared, toggleRec=RECF.toggleRec, shareCustom=RECF.shareCustom, initRecs=RECF.initRecs, recsMaybe=RECF.recsMaybe;
 // ---------- small to-dos attached to blocks (luggage, waiting lists, pick-ups, rentals, cash, tax refund) ----------
 // marks, their pairs and warnings, and the sheet's 할 일 표시 box: app/data/marks.ts
 const MK=JD.marks, MARKS=MK.MARKS, PAIRS=MK.PAIRS;
@@ -501,12 +452,9 @@ function fabDodge(){
   const pv=document.getElementById('pview'); if(pv&&window.MutationObserver) new MutationObserver(later).observe(pv,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden']});
 })();
 // ================= 기기 간 동기화 (Supabase, 본인 계정 데이터만) =================
-const SYNC=JD.server.SYNC;
 // which part of the 동기화 section shows and the last error live in app/data/account.ts (ACC.state)
 const ACC=JD.account;
 const syncOn=JD.server.syncOn;
-// any table (or rpc/<name>) in the project, as the logged-in person; rows are limited by RLS on the server
-function sbTable(table,method,q,body,prefer){return JD.server.sbTable(table,method,q,body,prefer)}
 function syncSoon(ms){JD.sync.syncSoon(ms)}
 function syncNow(){return JD.sync.syncNow()}
 JD.sync.connectSync({
@@ -701,83 +649,12 @@ JD.hours.connectHours({placesOnSchedule:()=>[...new Set(CUR.placed.map(b=>b.id))
 // The server side (push / pull / share / invite / join / leave / stop) and the merge rules live in app/data/trips.ts
 // and app/data/merge.ts. Here: the screen side. TRIPS is the same object as JD.trips.state (base, members, marks)
 // plus what the friends panel shows (invite, msg, busy, stopArm).
-var TRIPS=Object.assign(JD.trips.state,{invite:null,msg:'',busy:false,stopArm:false});
-const myName=()=>LS.get('jepi.myName','')||String((SYNC.sess&&SYNC.sess.email)||SYNC.email||'나').split('@')[0];
-const planOf=id=>PL.plans.find(p=>p.id===id);
-const curShared=()=>{const p=planOf(PL.curPlan);return p&&p.shared?p:null};
-// a new version of the open plan: put it in, unless the person is typing or has a sheet open (then the next pull tries again)
-function applyIfOpen(id,data,who){
-  if(id!==PL.curPlan) return true;
-  const ae=document.activeElement, editing=(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))||!$('#sheetBg').hidden||!$('#onb').hidden||UI.selected;
-  if(editing) return false;
-  const d0=UI.day; applyPlanData(data); UI.day=Math.min(d0,Math.max(0,DY.days.length-1)); renderAll();
-  if(who&&who!==myName()) showToast(`${who}님이 일정을 바꿨어요`);
-  return true;
-}
-JD.trips.connectTrips({plans:()=>PL.plans,curPlan:()=>PL.curPlan,savePlans:()=>savePlans(),applyIfOpen,myName,snapshotCurrent:()=>snapshotCurrent(),toast:m=>showToast(m),
-  pulled(listChanged){if(listChanged){renderPlans();renderExt()} if(curShared()) renderAll(); if(UI.tab==='friends') PANELS.friends.render()}});
-const tripPush=id=>JD.trips.push(id), tripsPull=()=>JD.trips.pull(), tripShare=()=>JD.trips.share(), tripInvite=role=>JD.trips.invite(role,location.origin+location.pathname);
-const tripLeave=uid=>JD.trips.leave(uid), tripStop=()=>JD.trips.stop();
-SYNC_AFTER_PUSH.push(async()=>{for(const p of PL.plans.filter(p=>p.shared)) await tripPush(p.id)});
-SYNC_AFTER_PULL.push(tripsPull);
-async function tripJoin(code){
-  const id=await JD.trips.join(code); const p=planOf(id);
-  if(p){PL.curPlan=PL.curPlan===id?'':PL.curPlan;openPlan(id);showToast('여행에 참여했어요')}
-  return id;
-}
-// join link: ?join=CODE
-function joinFromUrl(){
-  const code=new URLSearchParams(location.search).get('join'); if(!code) return false;
-  history.replaceState(null,'',location.pathname); LS.set('jepi.joinCode',code);
-  if(syncOn()){joinPending();return true}
-  WELC.openJoin();return true;
-}
-async function joinPending(){
-  const code=LS.get('jepi.joinCode',''); if(!code||!syncOn()) return false;
-  LS.del('jepi.joinCode');
-  try{await tripJoin(code);return true}catch(e){showToast(/expired|invite/i.test(e.message)?'초대 링크가 만료됐어요. 새 링크를 받아 주세요.':'참여하지 못했어요: '+e.message);return false}
-}
-// ----- 가고 싶어요 (the marks live in app/data/trips.ts) -----
-const wantsOf=pid=>JD.trips.wantsOf(pid), iWant=pid=>JD.trips.iWant(pid);
-const toggleWant=pid=>curShared()?JD.trips.toggleWant(pid,renderTray):Promise.resolve();
-// 가고 싶어요 chip, card tag, sheet row, block badge (drawn by React: app/screens/Extras.tsx)
-function wantChip(pid){
-  const m=wantsOf(pid), on=iWant(pid), who=m.map(x=>x.user_id===SYNC.sess.user?'나':x.name).join(', ');
-  return {k:'want',pid:String(pid),on:!!on,n:m.length,who};
-}
-CARD_EXTRAS.push(p=>curShared()?[wantChip(p.id),...(p.by?[{k:'tag',cls:'tag usr',t:`${p.by===myName()?'내가':p.by+'님'} 추천`}]:[])]:null);
-SHEET_EXTRAS.push(it=>curShared()&&it.kind==='place'?{k:'wantRow',want:wantChip(it.id),by:it.p.by||''}:null);
-BLOCK_BADGES.push(it=>{if(!curShared()||it.kind!=='place')return null;const n=wantsOf(it.id).length;return n?{k:'badge',t:`👍${n}`,title:`가고 싶어요 ${n}`}:null});
-// 👍 가고 싶어요 on a shared trip's place (Extras.tsx)
-async function wantAct(pid){try{await toggleWant(pid)}catch(err){showToast('저장하지 못했어요: '+err.message)}
-  if(!$('#sheetBg').hidden&&$('#sheet').dataset.uid)openSheet($('#sheet').dataset.uid)}
-// 친구와 함께 panel (FriendsPanel.tsx tells: what was pressed, and whose 내보내기 / the typed name)
-async function tripAct(a,uid,typed){
-  if(TRIPS.busy) return; if(a!=='stop') TRIPS.stopArm=false; TRIPS.busy=true; TRIPS.msg=''; PANELS.friends.render();
-  try{
-    if(a==='share'){await tripShare();TRIPS.invite={role:'edit',url:await tripInvite('edit')}}
-    if(a==='invite-edit'||a==='invite-view'){const role=a.slice(7);TRIPS.invite={role,url:await tripInvite(role)}}
-    if(a==='send'&&TRIPS.invite){const txt=`${planOf(PL.curPlan).name} 여행을 같이 짜요 · JEPI`;
-      if(navigator.share){try{await navigator.share({title:'JEPI 여행 초대',text:txt,url:TRIPS.invite.url})}catch(_){}}
-      else{try{await navigator.clipboard.writeText(TRIPS.invite.url);TRIPS.msg='초대 링크를 복사했어요'}catch(_){TRIPS.msg='아래 링크를 길게 눌러 복사해 주세요'}}}
-    if(a==='copy'&&TRIPS.invite){try{await navigator.clipboard.writeText(TRIPS.invite.url);TRIPS.msg='초대 링크를 복사했어요'}catch(_){TRIPS.msg='링크를 길게 눌러 복사해 주세요'}}
-    if(a==='leave') await tripLeave();
-    if(a==='kick') await tripLeave(uid);
-    if(a==='stop'){if(!TRIPS.stopArm){TRIPS.stopArm=true;TRIPS.busy=false;PANELS.friends.render();return}TRIPS.stopArm=false;await tripStop()}
-    if(a==='name'){const v=String(typed||'').trim().slice(0,20);LS.set('jepi.myName',v);
-      if(curShared())await sbTable('jepi_trip_members','PATCH',`?trip_id=eq.${encodeURIComponent(PL.curPlan)}&user_id=eq.${SYNC.sess.user}`,{name:myName()},'return=minimal');TRIPS.msg='이름을 바꿨어요';await tripsPull()}
-  }catch(err){TRIPS.msg='✕ '+err.message}
-  TRIPS.busy=false; PANELS.friends.render(); renderMore();
-}
-// ----- panel -----
-// The panel itself is drawn by React: app/screens/FriendsPanel.tsx
-PANELS.friends={render(opts){
-  const box=$('#friendsBox'); if(!box) return; const p=curShared();
-  if(opts&&opts.opened) TRIPS.stopArm=false; // opening the panel again forgets a first press of 공유 끝내기
-  const mode=DEMO.on?'demo':!syncOn()?'login':!p?'intro':'shared';
-  window.JEPI_UI.mount('friends',box,{mode,planName:(planOf(PL.curPlan)||{}).name||'이 여행',busy:!!TRIPS.busy,msg:TRIPS.msg||'',myName:myName(),
-    members:mode==='shared'?(TRIPS.members[PL.curPlan]||[]):[],me:syncOn()?SYNC.sess.user:'',role:p?p.role||'':'',invite:TRIPS.invite||null,stopArm:!!TRIPS.stopArm});
-}};
+// the screen side (invites, joining, 가고 싶어요, the panel, a friend's new version): app/flow/friends.ts
+const FRND=window.JEPI_UI.flow.friends;
+FRND.connect({renderExt:()=>renderExt(),renderMore:()=>renderMore()});
+FRND.init();   // joins the sync work, the card / sheet / block extras and the panels here, in the same order as before
+var TRIPS=FRND.TRIPS;
+const curShared=FRND.curShared, joinFromUrl=FRND.joinFromUrl, joinPending=FRND.joinPending, wantAct=FRND.wantAct, tripAct=FRND.tripAct;
 // ---------- one place-finding screen, many doors ----------
 // Every "find places" button opens this same sheet with its conditions already picked:
 //   어디 (near today's plan / one area / whole city) · 언제 (a free gap / any time) · 넣을 곳 (schedule / list only)
@@ -849,30 +726,11 @@ function findAct(n,v,typed){
 }
 // ---------- 알림: push notifications while travelling ----------
 // The server / device side and the settings live in app/data/alerts.ts, which reminders and time zones in
-// app/logic/alerts.ts; the panel and the 🔔 row in a block's sheet handle their own buttons. Here: the trip side.
-const AL=JD.alerts;
-var NOTIFY=AL.settings;   // the same object (on, all, lead, depart, morning)
-const pushSupported=AL.pushSupported, isIOS=AL.isIOS, standaloneApp=AL.standaloneApp;
-// which blocks can ring: places and fixed things like check-in / flights, not the night at the hotel
-const alertKey=(it,d)=>`${it.kind==='place'?it.id:it.uid}@${d}`;
-const alertable=it=>!it.stay&&(it.kind==='place'||it.kind==='fixed');
-const alertOn=(it,d)=>AL.isOn(alertKey(it,d));
-const tripTZ=()=>JD.logic.alerts.tripTZ(PK.pack);
-const alertsSoon=ms=>AL.soon(ms);
-AL.connectAlerts({curPlan:()=>PL.curPlan,tz:tripTZ,demo:()=>!!DEMO.on,redraw:()=>{PANELS.notify.render();renderMore();renderAll()},
-  days:()=>DY.days.map((D,d)=>({iso:D.iso||'',rows:D.iso?analyze(d).items.filter(alertable).map(it=>({key:alertKey(it,d),name:String(it.name),start:it.start,end:it.end,locName:it.locName||'',travelIn:it.travelIn||null})):[]}))});
-BLOCK_BADGES.push((it,d)=>alertable(it)&&alertOn(it,d)&&NOTIFY.on?{k:'badge',t:'🔔',title:'알림 켜짐'}:null);
-SHEET_EXTRAS.push((it,d)=>{if(!alertable(it)||DEMO.on)return null;const on=alertOn(it,d);
-  return {k:'alert',key:alertKey(it,d),on:!!on,hint:!NOTIFY.on?'더보기 → 알림에서 이 기기 알림을 켜야 와요':on?(NOTIFY.depart&&it.travelIn?`출발 ${NOTIFY.lead}분 전에 알려 드려요`:`시작 ${NOTIFY.lead}분 전에 알려 드려요`):''}});
-// The panel itself is drawn by React: app/screens/NotifyPanel.tsx
-PANELS.notify={render(){
-  const box=$('#notifyBox'); if(!box) return;
-  const mode=DEMO.on?'demo':!pushSupported()?(isIOS()&&!standaloneApp()?'ios-home':'unsupported'):!syncOn()?'login':'ready';
-  window.JEPI_UI.mount('notify',box,{mode,busy:AL.ui.busy,msg:AL.ui.msg||'',tz:String(tripTZ()),
-    settings:{on:!!NOTIFY.on,all:!!NOTIFY.all,lead:+NOTIFY.lead||10,depart:!!NOTIFY.depart,morning:!!NOTIFY.morning}});
-}};
-// keep the server's list in step with the plan (cheap: only uploads when something changed)
-setInterval(()=>{if(NOTIFY.on&&!document.hidden)alertsSoon(100)},30000);
+// app/logic/alerts.ts; the trip side (which blocks ring, 🔔 badge and sheet row, the panel): app/flow/notify.ts
+const NOTF=window.JEPI_UI.flow.notify;
+NOTF.connect({renderMore:()=>renderMore()});
+NOTF.init();   // the 🔔 badge, the sheet row and the panel join the lists here, in the same order as before
+const NOTIFY=NOTF.NOTIFY;
 // ---------- 사용 안내 (더보기 → 사용 안내) ----------
 // The screen itself is drawn by React: app/screens/HelpPanel.tsx
 PANELS.help={render(){

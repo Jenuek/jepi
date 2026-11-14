@@ -2030,5 +2030,24 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'flow: 👍·알림·친구와 함께 (app/flow/recs.ts, notify.ts, friends.ts): the lists keep their order, a place becomes a 👍 entry, panels are there',
+    async run({ b, S, device, ok, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      const r = await p.evaluate(() => {
+        const X = window.JEPI_UI.extras, F = window.JEPI_UI.flow, T = window.JEPI_DATA.trip, D = window.JEPI_DATA.check;
+        const it = D.analyze(0).items.find(i => i.kind === 'place');
+        const kinds = X.extras(X.SHEET_EXTRAS, it, 0).map(x => x.k);
+        const e = F.recs.entryOf(window.JEPI_DATA.places.PM[it.id]);
+        return { kinds, panels: Object.keys(X.PANELS).sort().join(','), afterPull: X.SYNC_AFTER_PULL.length, afterPush: X.SYNC_AFTER_PUSH.length,
+          entry: { k: e.k.startsWith('오사카|'), name: e.name === it.name }, ringable: F.notify.alertable(it), shared: !!F.friends.curShared() };
+      });
+      ok(r.kinds.join(',') === 'alert,memo', 'a block sheet: 🔔 row, then the memo (same order as before) ' + JSON.stringify(r.kinds));
+      ok(r.panels.includes('friends') && r.panels.includes('notify') && r.afterPull >= 2 && r.afterPush >= 1, 'panels and after-sync work are hooked in ' + JSON.stringify(r));
+      ok(r.entry.k && r.entry.name && r.ringable && !r.shared, 'a place becomes a 👍 entry of this city; it can ring; the trip is not shared');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];

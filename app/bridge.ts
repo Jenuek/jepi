@@ -40,6 +40,7 @@ import { HelperFrame, Coach, Banner, OnbFrame, type HelperFrameProps, type Coach
 import { connectHost, type AppHost } from './ui/host';
 import * as map from './ui/map';
 import { ui } from './ui/state';
+import * as extrasUI from './ui/extras';
 import * as drag from './ui/drag';
 import * as dayView from './view/day';
 import * as trayView from './view/tray';
@@ -58,6 +59,9 @@ import * as shareFlow from './flow/share';
 import * as courseFlow from './flow/course';
 import * as welcomeFlow from './flow/welcome';
 import * as settingsFlow from './flow/settings';
+import * as recsFlow from './flow/recs';
+import * as notifyFlow from './flow/notify';
+import * as friendsFlow from './flow/friends';
 import * as status from './ui/status';
 import * as sheetView from './view/sheet';
 import * as helperView from './view/helper';
@@ -174,12 +178,14 @@ export interface JepiUI {
   map: typeof map;
   /** where the person is in the app: the open day, tab, picked place … (app/ui/state.ts) */
   ui: typeof ui;
+  /** the lists features hook into: side panels, after-sync work, extras on blocks / cards / sheets (app/ui/extras.ts) */
+  extras: typeof extrasUI;
   /** drag & drop onto the 일정표: app/ui/drag.ts */
   drag: typeof drag;
   /** what each screen shows, worked out from the trip (app/view/*.ts) */
   view: { day: typeof dayView; tray: typeof trayView; sheet: typeof sheetView; helper: typeof helperView; forms: typeof formsView; dice: typeof diceView; pview: typeof pviewView };
   /** what happens in the app, moved out of the old code (app/flow/*.ts) */
-  flow: { render: typeof render; schedule: typeof schedule; dice: typeof diceFlow; forms: typeof formsFlow; destination: typeof destFlow; chat: typeof chatFlow; helper: typeof helperFlow; plans: typeof plansFlow; share: typeof shareFlow; course: typeof courseFlow; welcome: typeof welcomeFlow; settings: typeof settingsFlow };
+  flow: { render: typeof render; schedule: typeof schedule; dice: typeof diceFlow; forms: typeof formsFlow; destination: typeof destFlow; chat: typeof chatFlow; helper: typeof helperFlow; plans: typeof plansFlow; share: typeof shareFlow; course: typeof courseFlow; welcome: typeof welcomeFlow; settings: typeof settingsFlow; recs: typeof recsFlow; notify: typeof notifyFlow; friends: typeof friendsFlow };
   /** status lines and busy buttons, error words (app/ui/status.ts) */
   status: typeof status;
 }
@@ -199,9 +205,10 @@ export function installBridge(): void {
     connectHost,
     map,
     ui,
+    extras: extrasUI,
     drag,
     view: { day: dayView, tray: trayView, sheet: sheetView, helper: helperView, forms: formsView, dice: diceView, pview: pviewView },
-    flow: { render, schedule, dice: diceFlow, forms: formsFlow, destination: destFlow, chat: chatFlow, helper: helperFlow, plans: plansFlow, share: shareFlow, course: courseFlow, welcome: welcomeFlow, settings: settingsFlow },
+    flow: { render, schedule, dice: diceFlow, forms: formsFlow, destination: destFlow, chat: chatFlow, helper: helperFlow, plans: plansFlow, share: shareFlow, course: courseFlow, welcome: welcomeFlow, settings: settingsFlow, recs: recsFlow, notify: notifyFlow, friends: friendsFlow },
     status,
     mount(name, el, props) {
       let cur = roots.get(el);

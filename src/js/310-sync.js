@@ -1,10 +1,7 @@
 // ================= 기기 간 동기화 (Supabase, 본인 계정 데이터만) =================
-const SYNC=JD.server.SYNC;
 // which part of the 동기화 section shows and the last error live in app/data/account.ts (ACC.state)
 const ACC=JD.account;
 const syncOn=JD.server.syncOn;
-// any table (or rpc/<name>) in the project, as the logged-in person; rows are limited by RLS on the server
-function sbTable(table,method,q,body,prefer){return JD.server.sbTable(table,method,q,body,prefer)}
 function syncSoon(ms){JD.sync.syncSoon(ms)}
 function syncNow(){return JD.sync.syncNow()}
 JD.sync.connectSync({
