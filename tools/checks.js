@@ -2083,5 +2083,24 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'flow: 단계 띠·노트·안내·더보기 (app/flow/phase.ts, guide.ts, more.ts): the notebook opens and closes, the guide walks and remembers, 더보기 shows the trip',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      await p.evaluate(() => window.JEPI_UI.flow.phase.openNotebook()); await p.waitForTimeout(250);
+      const chapters = await p.$$eval('#notebook .nb-ch, #notebook [class*="chapter"], #notebook h3', e => e.length);
+      ok(await vis(p, '#notebook') && chapters >= 1, '여행 노트 opens with chapters (' + chapters + ')');
+      await p.evaluate(() => window.JEPI_UI.flow.phase.closeNotebook()); await p.waitForTimeout(150);
+      ok(!(await vis(p, '#notebook')), 'and closes');
+      await p.evaluate(() => { localStorage.removeItem('gp.coach'); window.JEPI_UI.flow.guide.showCoach(0) }); await p.waitForTimeout(250);
+      ok(await vis(p, '#coach'), 'the guide opens on step 1');
+      await p.evaluate(() => { const G = window.JEPI_UI.flow.guide; for (let i = 0; i < 4; i++) G.coachAct('next') }); await p.waitForTimeout(250);
+      ok(!(await vis(p, '#coach')) && await p.evaluate(() => localStorage.getItem('gp.coach')) === '1', 'after the last step it closes and is remembered');
+      await p.click('.tabs [data-tab="more"]'); await p.waitForTimeout(250);
+      ok((await p.textContent('#moreBox')).includes('오사카'), '더보기 shows the trip');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];

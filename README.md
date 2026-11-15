@@ -85,8 +85,8 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 | 머리글 (커버·J/P·계획 이름·날짜 제목) | 화면 `app/screens/Hero.tsx` (리액트), 값은 `app/flow/look.ts`의 `hero({…})`, 접히는 움직임은 `heroWatch` |
 | 아래 탭 / 접히는 머리글 줄 | 화면 `app/screens/Bars.tsx` (리액트), 값은 `340-render.js`(tabs·renderTabs, 탭 바꾸기는 `380-events.js`의 `goTab`) / `app/flow/look.ts`(miniBar·heroWatch) |
 | 일정표 아래 대화 칸 (접기·칩·메시지 칸) | 화면 `app/screens/Dock.tsx` (리액트), 값은 `app/flow/chat.ts`의 `dock({…})`, 채팅 목록은 `ChatLog.tsx` |
-| 고정 틀 (처음 설정 틀·예약 도우미 틀·처음 안내·장소 고른 뒤 안내 줄) | 화면 `app/screens/Frames.tsx` (리액트), 보여 줄 값은 `app/flow/forms.ts`(onbView)·`app/flow/helper.ts`(helperView)·`370-reset-guide.js`(coachView)·`app/flow/render.ts`(bannerView) |
-| 직접 블록 만들기 / 예약 도우미 / 계획 메뉴 / 여행 단계 띠 | `app/screens/CustomSheet.tsx` (`app/flow/find.ts`, 같은 장소 제안 `app/flow/find.ts`) / `HelperBody.tsx` (`app/flow/helper.ts`) / `PlanMenu.tsx` (`app/flow/header.ts`) / `Phase.tsx` (`250-phase-strip.js`) |
+| 고정 틀 (처음 설정 틀·예약 도우미 틀·처음 안내·장소 고른 뒤 안내 줄) | 화면 `app/screens/Frames.tsx` (리액트), 보여 줄 값은 `app/flow/forms.ts`(onbView)·`app/flow/helper.ts`(helperView)·`app/flow/guide.ts`(coachView)·`app/flow/render.ts`(bannerView) |
+| 직접 블록 만들기 / 예약 도우미 / 계획 메뉴 / 여행 단계 띠 | `app/screens/CustomSheet.tsx` (`app/flow/find.ts`, 같은 장소 제안 `app/flow/find.ts`) / `HelperBody.tsx` (`app/flow/helper.ts`) / `PlanMenu.tsx` (`app/flow/header.ts`) / `Phase.tsx` (`app/flow/phase.ts`) |
 | 일정표 시트 (블록 누름·빈 시간 누름) / P모드 보드게임판 | 화면 `app/screens/BlockSheet.tsx` / `PView.tsx` (리액트), 값은 `350-actions.js`(openSheet·altsInfo)·`080-todos.js`(marksInfo)·`340-render.js`(openFill) / `170-quick-start-pview.js`, 모양 `src/css/19-pmode.css` |
 | 일정표 본체 (시간 줄·블록·이동·권역 띠·일몰 선) | 화면 `app/screens/DayGrid.tsx` (리액트), 값은 `340-render.js`의 renderTimeline, 끌어다 놓기 `380-events.js` |
 | 일정표 위쪽 (날짜 버튼·요약 줄·동선·예산) | 화면 `app/screens/DayTop.tsx` (리액트), 값은 `340-render.js`(renderDays·renderBudget·renderRoute)·`382-tidy.js`(요약 줄) |
@@ -99,7 +99,7 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 | 여행 꾸미기(테마 색·커버·스타일·손글씨 글꼴), 접히는 헤더, 아래 탭 | 꾸미기 시트 `app/screens/LookSheet.tsx` (리액트), 동작 `app/flow/look.ts`, 스타일 `17-look.css` |
 | 누를 때 반응(모든 버튼) | `18-press.css` |
 | 손글씨 메모 (일정 블록별·날짜별) | `389b-memo.js` (블록 시트의 메모 칸은 `app/screens/Extras.tsx`) |
-| 여행 노트 보기 (PDF 저장·링크) | 화면 `app/screens/Notebook.tsx` (리액트), 값 `389c-notebook.js` |
+| 여행 노트 보기 (PDF 저장·링크) | 화면 `app/screens/Notebook.tsx` (리액트), 값 `app/flow/phase.ts` |
 | 👍 모든 여행자의 추천 (서버 `jepi_recs`), 👍 많은 순 | `app/data/recs.ts` (불러오기·세기·저장), `app/flow/recs.ts` (장소 목록에 넣기) |
 | 블록 누르면 나오는 시트, 옮기기·길이 | `350-actions.js` |
 | 경고 계산(영업시간·이동시간) | 규칙 `app/logic/schedule.ts`, 날짜 항목 만들기 `330-helpers.js` (`analyze`) |
@@ -128,6 +128,7 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 | 👍 여행자 추천 일정 쪽 / 알림 일정 쪽 / 친구와 함께 화면 쪽 | `app/flow/recs.ts` / `app/flow/notify.ts` / `app/flow/friends.ts` |
 | 장소 찾기 / 직접 블록 만들기 / 같은 장소 두 번(잡기·묶기) | `app/flow/find.ts` |
 | 여행 모습·접히는 헤더·한 줄 바·여행 꾸미기 / 시작 화면 하늘·계획 메뉴·🎲 버튼 움직임 | `app/flow/look.ts` / `app/flow/header.ts` |
+| 여행 단계 띠·여행 노트 / 모두 초기화·처음 안내 / 더보기 숫자·이번 여행 줄·자동 저장·취향 스타일 | `app/flow/phase.ts` / `app/flow/guide.ts` / `app/flow/more.ts` |
 | 화면에 보일 값 만들기 (일정표·장소 탭·블록 시트·예약 도우미·이번 여행 칸·🎲·P모드 보드) | `app/view/day.ts`·`tray.ts`·`sheet.ts`·`helper.ts`·`forms.ts`·`dice.ts`·`pview.ts` (예전 코드는 `JEPI_UI.view`) |
 | 데모(오사카 3박 4일) 데이터 | `app/data/demo-osaka.ts` |
 | 여행지 장소 목록(지역·장소·비용·태그), 여행지 열기, AI 답 확인 | `app/data/places.ts` (도쿄 예시 데이터 `app/data/tokyo.ts`) |
@@ -138,11 +139,11 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 | 기기에 저장 (localStorage) | `app/data/storage.ts` (여기로만 읽고 써요) |
 | 친구와 함께 (초대·합치기·가고 싶어요) | 화면 `app/screens/FriendsPanel.tsx` (리액트), 서버 주고받기 `app/data/trips.ts`, 합치기 규칙 `app/data/merge.ts`, 화면 쪽 동작 `app/flow/friends.ts` |
 | 알림 (일정별 🔔, 서버로 예약) | 화면 `app/screens/NotifyPanel.tsx` (리액트), 서버·기기·설정 `app/data/alerts.ts`, 언제 알릴지 `app/logic/alerts.ts`, 일정 쪽 연결 `app/flow/notify.ts`, 서버 `supabase/functions/jepi-push` |
-| 더보기 메뉴 / 설정 / 사용 안내 | `app/screens/MoreMenu.tsx` (리액트, 숫자는 `220-more-menu.js`) / `app/screens/SettingsScreen.tsx`+`SyncSection`·`MyPlacesSection`·`AiKeysSection` (리액트, 값과 동작은 `app/flow/settings.ts`·`270-my-places.js`·`250-phase-strip.js`) / `app/screens/HelpPanel.tsx` (리액트) |
+| 더보기 메뉴 / 설정 / 사용 안내 | `app/screens/MoreMenu.tsx` (리액트, 숫자는 `app/flow/more.ts`) / `app/screens/SettingsScreen.tsx`+`SyncSection`·`MyPlacesSection`·`AiKeysSection` (리액트, 값과 동작은 `app/flow/settings.ts`·`270-my-places.js`·`app/flow/phase.ts`) / `app/screens/HelpPanel.tsx` (리액트) |
 | 더보기 → 이번 여행 (줄 목록과 입력 폼) | 줄 `app/screens/MeRows.tsx`, 폼 `app/screens/TripForms.tsx` (리액트: 누구와·예약 상태·기간·오가는 길·출발지·숙소·예약한 일정·예산). 폼에 넣을 값과 줄 목록은 `app/view/forms.ts`, 누르면 일어나는 일은 `app/flow/forms.ts`. 여행지·하루 코스 폼도 리액트 |
 | 처음 설정 (#onb 안의 본문) | 화면 `app/screens/OnbBody.tsx`·`OnbTalk.tsx`(이야기하며 정하기)·`OnbFinder.tsx`(여행지 추천) (리액트), 단계·버튼 `app/flow/forms.ts`(ONB), 여행지 준비·추천·대화 `app/flow/destination.ts`, 가볍게 시작 값 `app/view/pview.ts`, 틀은 `body.html` |
 | 예전 코드가 바꾸는 안내 줄·버튼 (준비하는 중…) | `app/ui/live.tsx` (LiveLine·LiveButton·LiveChip), 예전 쪽 도우미 `app/ui/status.ts`의 setSt·progStart·progStop, setBusy는 `app/flow/destination.ts` |
-| 취향 탭 → 어떤 여행을 원하나요 (속도·아침·여행 스타일 더) | 화면 `app/screens/TasteStyle.tsx` (리액트), 값은 `220-more-menu.js`의 `renderTasteStyle`, 스타일 항목 `130-style-budget.js`(STYLE_ROWS) |
+| 취향 탭 → 어떤 여행을 원하나요 (속도·아침·여행 스타일 더) | 화면 `app/screens/TasteStyle.tsx` (리액트), 값은 `app/flow/more.ts`의 `renderTasteStyle`, 스타일 항목 `130-style-budget.js`(STYLE_ROWS) |
 
 ### 서버 (Supabase)
 

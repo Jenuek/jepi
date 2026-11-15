@@ -4,4 +4,3 @@
 const NOTF=window.JEPI_UI.flow.notify;
 NOTF.connect({renderMore:()=>renderMore()});
 NOTF.init();   // the 🔔 badge, the sheet row and the panel join the lists here, in the same order as before
-const NOTIFY=NOTF.NOTIFY;

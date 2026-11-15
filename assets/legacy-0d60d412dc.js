@@ -41,7 +41,7 @@ const DEMO=JD.demo.DEMO;
 // Little extras drawn by features: on a timeline block, a place card, and the block sheet. The lists: app/ui/extras.ts
 const XT=window.JEPI_UI.extras, PANELS=XT.PANELS, SYNC_AFTER_PUSH=XT.SYNC_AFTER_PUSH, SYNC_AFTER_PULL=XT.SYNC_AFTER_PULL,
   BLOCK_BADGES=XT.BLOCK_BADGES, CARD_EXTRAS=XT.CARD_EXTRAS, SHEET_EXTRAS=XT.SHEET_EXTRAS, extras=XT.extras;
-const WD=['일','월','화','수','목','금','토'];
+
 DY.loc={};
 // the destination's lists (app/data/places.ts — the same objects, filled again when a destination opens; tokyo.ts until then)
 const PLC=JD.places, PK=PLC.state;
@@ -59,7 +59,7 @@ const DEFAULT=[];
 const PROFILE_EXAMPLE=JD.plans.PROFILE_EXAMPLE;   // app/data/plans.ts
 const clone=o=>JSON.parse(JSON.stringify(o));
 // dates, tidying 여행 정보 and making the days with their fixed blocks: app/data/days.ts (the days themselves: DY.days …)
-const fixProfile=JD.days.fixProfile, buildDays=JD.days.buildDays;
+const buildDays=JD.days.buildDays;
 
 // ---------- forms shared by onboarding and the "내 정보" tab ----------
 // What is typed, 처음 설정's steps, the buttons, saving and reading a pasted booking: app/flow/forms.ts. What it still
@@ -71,7 +71,7 @@ FFLOW.connect({partJP:()=>partJP(),partTalk:p=>partTalk(p),partDest:p=>partDest(
   recommendDest:m=>recommendDest(m),genPack:(d,b)=>genPack(d,b),morePlaces:(n,id,f,sig)=>morePlaces(n,id,f,sig),genSeason:(id,sig)=>genSeason(id,sig),autoSave:()=>autoSave(),
   renderMeRows:()=>renderMeRows(),renderTasteStyle:()=>renderTasteStyle(),meSetMsg:m=>meSetMsg(m),meSetBudgetHint:h=>meSetBudgetHint(h),openHelper:s=>openHelper(s),
   needBooking:()=>needBooking(),maybeCoach:()=>maybeCoach(),onbAdvance:()=>onbAdvance(),demoEnter:()=>demoEnter(),krAir:()=>KR_AIR});
-const pasteBox=FFLOW.pasteBox, isoPlus=FFLOW.isoPlus, openOnb=FFLOW.openOnb, onbFrame=FFLOW.onbFrame, onbFrameAct=FFLOW.onbFrameAct, renderOnb=FFLOW.renderOnb, commitProfile=FFLOW.commitProfile, finishOnb=FFLOW.finishOnb, renderMe=FFLOW.renderMe, rerenderForm=FFLOW.rerenderForm, formAct=FFLOW.formAct, onPf=FFLOW.onPf;
+const isoPlus=FFLOW.isoPlus, openOnb=FFLOW.openOnb, onbFrame=FFLOW.onbFrame, onbFrameAct=FFLOW.onbFrameAct, renderOnb=FFLOW.renderOnb, finishOnb=FFLOW.finishOnb, renderMe=FFLOW.renderMe, rerenderForm=FFLOW.rerenderForm, formAct=FFLOW.formAct, onPf=FFLOW.onPf;
 // ---------- blocks the viewer makes by hand ----------
 const addCustomToData=PLC.addCustom;   // app/data/places.ts
 // the 직접 만들기 sheet and saving it: app/flow/find.ts
@@ -142,10 +142,7 @@ HELP.connect({maybeCoach:()=>maybeCoach(),renderMe:()=>renderMe()});
 const needBooking=HELP.needBooking, helperAct=HELP.helperAct, helperOpen=HELP.helperOpen, helperFrameAct=HELP.helperFrameAct, openHelper=HELP.openHelper,
   closeHelper=HELP.closeHelper, renderHelper=HELP.renderHelper, genSeason=HELP.genSeason, seasonInfo=HELP.seasonInfo, helperShow=HELP.helperShow, drawHelperFrame=HELP.drawHelperFrame;
 // ---------- optional travel style (every item defaults to "doesn't matter") ----------
-const STYLE_ROWS=JD.days.STYLE_ROWS;   // app/data/days.ts
-
 // ---------- optional money budget (per person, in 만원) ----------
-const budgetParts=TV.budgetParts;   // app/data/traveler.ts
 
 // ---------- J / P modes ----------
 function setJP(m,quiet){UI.jp=m==='P'?'P':'J';dock({placeholder:UI.jp==='P'?'뭐 하고 싶어요? 말로 해도 돼요':'AI에게 말로 부탁하기'});document.body.classList.toggle('mode-p',UI.jp==='P');hero({jp:UI.jp});if(!quiet)store.set('gp.jp',UI.jp)}
@@ -187,14 +184,12 @@ async function quickStart(){
 }
 // ---------- P view: the day as a board game (drawn by React: app/screens/PView.tsx) ----------
 // ---------- my plans: several saved plans, account sync, sharing ----------
-const PLANS=JD.plans;   // a plan's name, contents and text: app/data/plans.ts
 PL.plans=[]; PL.curPlan='';
-const planName=PLANS.planName;   // app/data/plans.ts
 // switching, making, copying, deleting, renaming plans; opening one; 카톡용 글, files, backups, share links: app/flow/plans.ts
 const PLF=window.JEPI_UI.flow.plans;
 PLF.connect({addCustomToData:c=>addCustomToData(c),setJP:(m,q)=>setJP(m,q),carryTaste:(a,b)=>carryTaste(a,b),shareLink:n=>shareLink(n),openShared:()=>openShared(),
   lastLink:()=>SHARE.lastLinkOf(),importAll:v=>importAll(v),standalone:()=>!!STANDALONE,renderPlanBtn:()=>renderPlanBtn()});
-const savePlans=PLF.savePlans, snapshotCurrent=PLF.snapshotCurrent, touchPlan=PLF.touchPlan, applyPlanData=PLF.applyPlanData, openPlan=PLF.openPlan, inClaude=PLF.inClaude, importBackup=PLF.importBackup, plansAct=PLF.plansAct, renderPlans=PLF.renderPlans;
+const savePlans=PLF.savePlans, snapshotCurrent=PLF.snapshotCurrent, touchPlan=PLF.touchPlan, applyPlanData=PLF.applyPlanData, inClaude=PLF.inClaude, importBackup=PLF.importBackup, plansAct=PLF.plansAct, renderPlans=PLF.renderPlans;
 // ================= JEPI standalone: AI keys, model router, routes, map, panels =================
 const STANDALONE=!(window.claude&&window.claude.use);
 const LS=JD.storage; // saved data on this device: app/data/storage.ts
@@ -221,48 +216,13 @@ function routeDirty(){clearTimeout(rdT);rdT=setTimeout(()=>{
   renderAll(); if(mapState.on) drawMap();
 },600)}
 // ---------- map: app/ui/map.ts (Leaflet, loaded only when opened) ----------
-const MAP=window.JEPI_UI.map, mapState=MAP.state, mapTop=MAP.mapTop, mapTopAct=MAP.mapTopAct, openMap=MAP.openMap, drawMap=MAP.drawMap, renderMapCards=MAP.renderMapCards;
+const MAP=window.JEPI_UI.map, mapState=MAP.state, mapTop=MAP.mapTop, mapTopAct=MAP.mapTopAct, openMap=MAP.openMap, drawMap=MAP.drawMap;
 // ---------- 더보기: trip summary, 준비하기 badge, P-mode short menu ----------
-let autoT=0;
-const tripSummary=()=>FORMS.tripSummary(DY.days);   // app/view/forms.ts
-function prepLeft(){let n=0;document.querySelectorAll('#checks .check-group').forEach(g=>{const h=g.querySelector('h3');if(h&&/예약·준비/.test(h.textContent))n+=g.querySelectorAll('input[data-ck]:not(:checked)').length});return n}
-function warnTotal(){let n=0;for(let d=0;d<DY.days.length;d++)n+=analyze(d).items.reduce((a,it)=>a+it.warns.length,0);return n}
-// The menu itself is drawn by React: app/screens/MoreMenu.tsx. Here: the numbers it shows.
-function renderMore(){
-  const box=$('#moreBox'); if(!box) return;
-  const s=tripSummary(), pr=CUR.profile, b=budgetParts&&budgetParts(pr);
-  const tripChips=pr.kind==='day'?[]:[pr.bookedFlight===false?{text:'교통편 미정',tone:'warn'}:{text:'교통편 예약됨',tone:'ok'},pr.bookedStay===false?{text:'숙소 미정',tone:'warn'}:{text:'숙소 예약됨',tone:'ok'}];
-  if(b) tripChips.push({text:`예산 1인 ${Math.round(b.total/10000)}만원`});
-  const w=warnTotal(), sp=PL.plans.find(x=>x.id===PL.curPlan&&x.shared);
-  window.JEPI_UI.mount('more',box,{city:s.city,line:s.line,tripChips,warnCount:w,prepLeft:prepLeft(),
-    full:UI.jp!=='P'||FS.moreAll,showToggle:UI.jp==='P',moreAll:FS.moreAll,plansCount:PL.plans.length,
-    friendsChip:sp?'👥 '+(((TRIPS&&TRIPS.members[PL.curPlan])||[]).length||'공유 중'):null,
-    notifyOn:!!(NOTIFY&&NOTIFY.on),aiOff:!!(STANDALONE&&!UI.sample)});
-  tabs({warn:w?String(w):''});
-}
-// 이번 여행: one row per topic, opens only that part, saves on change
-const meRows=p=>FORMS.meRows(p,{dest:partDest,day:partsDay,homeBox:partHomeBox,paste:pasteBox});   // app/view/forms.ts
-// Drawn by React: app/screens/MeRows.tsx. meSetMsg changes only the message (the open form stays as it is).
-let meRev=0, meLast=null;
-function renderMeRows(){
-  if(!FS.draft) FS.draft=clone(CUR.profile); fixProfile(FS.draft);
-  const rows=meRows(FS.draft), op=rows.find(r=>r[0]===FS.meOpen);
-  meLast={rows:rows.map(([id,k,v])=>({id,label:k,valueHTML:v})),open:op?FS.meOpen:null,body:op?op[3]():[],msg:FS.autoMsg||'',dayCourse:CUR.profile.kind==='day',rev:++meRev};
-  window.JEPI_UI.mount('me',$('#meBox'),meLast);
-}
-function meSetBudgetHint(h){if(!meLast||!$('#meBox'))return;meLast=Object.assign({},meLast,{body:meLast.body.map(x=>x.f==='budget'?Object.assign({},x,{hint:h}):x)});window.JEPI_UI.mount('me',$('#meBox'),meLast)}
-function meSetMsg(m){if(!meLast||!$('#meBox')){return}meLast=Object.assign({},meLast,{msg:m});window.JEPI_UI.mount('me',$('#meBox'),meLast)}
-function autoSave(){clearTimeout(autoT);autoT=setTimeout(()=>{if(!FS.draft||!$('#onb').hidden)return;
-  const prevDest=CUR.profile.dest;commitProfile(FS.draft);if(prevDest!==CUR.profile.dest)FS.draft.dest=CUR.profile.dest;
-  FS.autoMsg='✓ 자동 저장됨 · 일정표에 바로 반영돼요';renderAll();meSetMsg(FS.autoMsg)},500)}
-// taste: style rows + keywords + wishes (carried into new plans). The style rows are drawn by React: app/screens/TasteStyle.tsx
-const TASTE_KEYS=['pace','social','breakfast','style'];
-function carryTaste(from,to){TASTE_KEYS.forEach(k=>{if(from&&from[k]!==undefined)to[k]=clone(from[k])})}
-let tasteRev=0;
-function renderTasteStyle(){const el=$('#tasteStyle');if(!el)return;if(!FS.draft)FS.draft=clone(CUR.profile);fixProfile(FS.draft);const p=FS.draft;
-  window.JEPI_UI.mount('tasteStyle',el,{purpose:p.purpose??'',pace:p.pace,solo:p.party.type==='solo',social:p.social,breakfast:p.breakfast,
-    rows:STYLE_ROWS,style:clone(p.style||{}),open:FS.styleOpen,msg:FS.autoMsg||'',rev:++tasteRev})}
-
+// the menu's numbers, 이번 여행's rows and auto-save, 취향's style rows: app/flow/more.ts
+const MORE=window.JEPI_UI.flow.more;
+MORE.connect({partsDay:p=>partsDay(p),partHomeBox:p=>partHomeBox(p)});
+const prepLeft=MORE.prepLeft, warnTotal=MORE.warnTotal, renderMore=MORE.renderMore, renderMeRows=MORE.renderMeRows, meSetBudgetHint=MORE.meSetBudgetHint,
+  meSetMsg=MORE.meSetMsg, autoSave=MORE.autoSave, carryTaste=MORE.carryTaste, renderTasteStyle=MORE.renderTasteStyle;
 // ---------- settings ----------
 // the theme (saved on this device); 설정 itself (theme, time spacing, keys, models, backup, 모두 초기화): app/flow/settings.ts
 KS.theme=LS.get('jepi.theme','light');
@@ -274,63 +234,11 @@ const SHARE=window.JEPI_UI.flow.share;
 SHARE.connect({openNotebook:()=>openNotebook()});
 const shareLink=SHARE.shareLink, openShared=SHARE.openShared, showToast=SHARE.showToast;
 // ---------- phase strip: before / during / after the trip ----------
-const isoOf=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-function todayIdx(){const t=isoOf(new Date());return DY.days.findIndex(D=>D.iso===t)}
-// drawn by React: app/screens/Phase.tsx
-function renderPhase(){
-  const el=$('#phase'); if(!el) return;
-  const pr=CUR.profile, t=isoOf(new Date()), D0=DY.days[0], Dn=DY.days[DY.days.length-1];
-  const show=v=>{window.JEPI_UI.mount('phase',el,v);el.hidden=v.s==='none'};
-  // AI 꺼짐 now lives on the 더보기 → 설정 row only (tidy day screen)
-  if(!D0||!D0.iso||pr.dateUnknown){show({s:'none'});return}
-  const ti=todayIdx();
-  if(ti>=0){
-    const now=new Date(), nm=now.getHours()*60+now.getMinutes();
-    const items=analyze(ti).items.filter(i=>!i.stay||i.start>=nm);
-    const cur=items.find(i=>i.start<=nm&&nm<i.end), nx=items.find(i=>i.start>nm);
-    let next=null;
-    if(nx){const from=cur||[...items].reverse().find(i=>i.end<=nm)||null; const tr=from&&from.ll&&nx.ll?travel(from.ll,nx.ll):null;
-      next={time:fmt(nx.start),name:String(nx.name),travel:tr?`${tr.real?'':'≈'}${tr.mode} ${tr.min}분`:'',nav:from&&from.ll&&nx.ll?navLink(from.ll,nx.ll,tr?tr.mode:'도보',nx.name):''}}
-    show({s:'now',cur:cur?{name:String(cur.name),end:fmt(cur.end)}:null,next,todayDay:UI.day!==ti?ti:null});
-  } else if(D0.iso>t){
-    const dd=Math.round((new Date(D0.iso+'T00:00:00')-new Date(t+'T00:00:00'))/864e5);
-    show({s:'before',dd,warns:warnTotal(),prepLeft:prepLeft(),miss:[pr.kind!=='day'&&pr.bookedFlight===false?'교통편 미정':'',pr.kind!=='day'&&pr.bookedStay===false?'숙소 미정':''].filter(Boolean)});
-  } else if(Dn&&Dn.iso<t) show({s:'after'});
-  else show({s:'none'});
-}
-// open the plan whose dates include today, then today's day, scrolled to now
-function planCovers(id,t){const d=TRIP.plans.get(id);const p=d&&d.profile;if(!p||!p.startDate||p.dateUnknown)return false;
-  const s=new Date(p.startDate+'T00:00:00'),e=new Date(s);e.setDate(e.getDate()+(p.kind==='day'?0:(+p.nights||0)));const x=new Date(t+'T00:00:00');return x>=s&&x<=e}
-function startupFocus(){
-  const t=isoOf(new Date());
-  if(!(DY.days[0]&&DY.days[0].iso&&todayIdx()>=0)){const p=PL.plans.find(p=>p.id!==PL.curPlan&&planCovers(p.id,t));if(p){openPlan(p.id)}}
-  const ti=todayIdx(); if(ti>=0){UI.day=ti;renderAll();
-    setTimeout(()=>{const H=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hour'))||60;const g=$('#grid');if(!g)return;
-      const now=new Date(), nm=now.getHours()*60+now.getMinutes(); const y=g.getBoundingClientRect().top+window.scrollY+Math.max(0,(nm-dayStart(UI.day))/60*H-140);window.scrollTo({top:y})},80)}
-}
-function renderPlanBtn(){const p=PL.plans.find(x=>x.id===PL.curPlan);hero({planName:(p&&p.name)||planName()})}
-const inside=sel=>{const a=document.activeElement;return !!(a&&a.closest&&a.closest(sel))};
-function renderExt(){renderPhase();renderMore();renderPlanBtn();
-  if(UI.tab==='me'&&$('#onb').hidden&&!inside('#meBox'))renderMeRows();
-  if(UI.tab==='pref'&&!inside('#tasteStyle'))renderTasteStyle();
-  if(UI.tab==='settings'&&!inside('#setBox'))renderSettings();
-  if(mapState.on){if(mapState.lastDay!==UI.day){mapState.lastDay=UI.day;drawMap(true)}else renderMapCards()}}
-// events for the new panels (registered before the main handler; returns early only for its own controls)
-document.addEventListener('click',e=>{
-  const t=e.target.closest('button,a,label,input'); if(!t) return;
-  if(t.id==='wishGo'){UI.cat='wish';UI.tab='tray';renderTray();renderTabs();return}
-});
-// a card under the map (MapCards in Dice.tsx): the map moves to that stop
-const mapCardAct=MAP.mapCardAct;   // app/ui/map.ts
-// autosave for 이번 여행 / 취향 panels
-document.addEventListener('change',e=>{if(e.target.closest&&e.target.closest('#meBox,#tasteStyle')&&!e.target.classList.contains('importFile'))autoSave()});
-// onboarding: connect AI right on the first screen
-
-
-setInterval(()=>{try{const el=document.getElementById('aiSec');if(!el)return;const L=window.JEPI_UI.live(el),put=t=>{if(L)L.text(t);else el.textContent=t};   // AiBox.tsx draws it
-  if(!UI.aiState||UI.aiState.status!=='loading'){put('');return}
-  if(!UI.aiState.t0)UI.aiState.t0=Date.now();put(`${KS.who} · ${Math.round((Date.now()-UI.aiState.t0)/1000)}초째`)}catch(_){}},1000);
-
+// the strip, opening today's plan at start-up, redrawing around the schedule, the 여행 노트: app/flow/phase.ts
+const PHASE=window.JEPI_UI.flow.phase;
+PHASE.connect({warnTotal:()=>warnTotal(),prepLeft:()=>prepLeft(),renderMore:()=>renderMore(),renderMeRows:()=>renderMeRows(),renderTasteStyle:()=>renderTasteStyle(),autoSave:()=>autoSave()});
+PHASE.init();   // the ♥ 담은 곳 button, 이번 여행 / 취향 auto-save and the AI box's seconds start here, as before
+const startupFocus=PHASE.startupFocus, renderPlanBtn=PHASE.renderPlanBtn, renderExt=PHASE.renderExt, mapCardAct=PHASE.mapCardAct;
 // ---------- AI-found places, chat folding ----------
 // the places the AI just found (✨ 방금 찾은 곳), folding the chat, the places a chat message suggests: app/flow/chat.ts
 const FRESH=CHAT.fresh;
@@ -433,34 +341,9 @@ const setZoom=RENDER.setZoom, drawTrayTop=RENDER.drawTrayTop, trayAct=RENDER.tra
 // ---------- actions ----------
 // putting a place in the 일정표, and the block sheet: app/flow/render.ts
 const place=RENDER.place, openSheet=RENDER.openSheet, closeSheet=RENDER.closeSheet;
-// ---------- start over: wipe everything this browser keeps for the page ----------
-function wipeAll(){
-  ['profile','pack','placed3','custom','kw','meal2','done','fmarks','wish','coach','dice','jp'].forEach(k=>JD.storage.del('gp.'+k));
-  PL.plans.forEach(p=>TRIP.plans.del(p.id)); PL.plans=[]; PL.curPlan='p'+Date.now().toString(36); savePlans();
-  CUR.custom=[]; CUR.placed=[]; CUR.fmarks={}; CUR.wish=[]; CUR.kws=[]; CUR.meals={}; CUR.done={}; CS.chat=[]; CS.undoSnap=null; UI.aiState=null; UI.selected=null; HS.vibe=null; KS.wipeArm=false;
-  loadPack(blankPack()); savePack();
-  CUR.profile=clone(PROFILE_EXAMPLE); Object.assign(CUR.profile,{stays:[{name:'숙소',area:'center',checkin:'15:00',checkout:'11:00',from:0,to:3}],events:[],dest:'',pace:'normal',social:'some',breakfast:true,purpose:'',party:{type:'solo',adults:1,kids:0},flightSet:false,staySet:false,dateSet:false,nightsSet:false,dateUnknown:false,startDate:isoPlus(30)}); CUR.profile.stays[0].name='숙소';
-  buildDays(); UI.day=0; UI.tab='timeline'; helperShow(false); closeSheet(); renderAll(); openOnb();
-}
-// ---------- first-use guide ----------
-// first-use guide: four steps only; everything else is in 더보기 → 사용 안내 (387-help.js)
-const COACH=[{sel:'#grid',t:'일정표예요. 빈 시간을 누르면 앞뒤 일정과 가까운 장소를 골라 넣을 수 있어요.'},
-  {sel:'#grid .blk',t:'블록을 누르면 시간을 옮기거나, 대안을 보거나, 🔔 알림을 켤 수 있어요.'},
-  {sel:'#diceFab',t:'고민될 땐 🎲. 빈 시간에 할 일이나 오늘 메뉴를 무작위로 골라 줘요.'},
-  {sel:'#chatForm',t:'말로 부탁해도 돼요. 바꿀 내용을 먼저 보여 주고, 확인한 뒤에 적용해요. 자세한 사용법은 더보기 → 사용 안내에 있어요.'}];
-// the bubble is drawn by React (app/screens/Frames.tsx) from coachView
-let coachView={open:false,i:undefined,text:'',step:'',last:false};
-function drawCoach(){window.JEPI_UI.mount('coach',$('#coachMount'),coachView)}
-function coachAct(n){if(n==='next')showCoach(+coachView.i+1);else if(n==='skip')showCoach(COACH.length)}
-function showCoach(i){
-  document.querySelectorAll('.coach-hl').forEach(e=>e.classList.remove('coach-hl'));
-  if(i>=COACH.length){coachView={...coachView,open:false};drawCoach();store.set('gp.coach',1);return}
-  if(!matchMedia('(min-width:900px)').matches&&UI.tab!=='timeline'){UI.tab='timeline';renderTabs()}
-  let el=document.querySelector(COACH[i].sel); if(COACH[i].sel==='#grid'&&UI.jp==='P') el=document.querySelector('#pview'); if(COACH[i].sel==='#grid .blk'&&UI.jp==='P') el=document.querySelector('#pview .sq'); if(!el||!el.offsetParent){showCoach(i+1);return}
-  if(el){el.classList.add('coach-hl');el.scrollIntoView({block:i===0?'start':'center'})}
-  coachView={open:true,i,text:COACH[i].t,step:`${i+1} / ${COACH.length}`,last:i===COACH.length-1}; drawCoach();
-}
-const maybeCoach=()=>{if(!store.get('gp.coach',0)&&$('#onb').hidden&&!helperOpen()) setTimeout(()=>showCoach(0),400)};
+// ---------- start over: wipe everything this browser keeps for the page; the first-use guide: app/flow/guide.ts ----------
+const GUIDE=window.JEPI_UI.flow.guide;
+const wipeAll=GUIDE.wipeAll, drawCoach=GUIDE.drawCoach, coachAct=GUIDE.coachAct, showCoach=GUIDE.showCoach, maybeCoach=GUIDE.maybeCoach;
 // ---------- events ----------
 // open a tab (the bottom tabs, and any button with data-tab: 더보기 rows, back buttons …)
 function goTab(name){UI.tab=name;FS.autoMsg='';if(UI.tab==='me'){FS.draft=clone(CUR.profile);FS.meOpen=null;renderMe()}if(UI.tab==='pref'){FS.draft=clone(CUR.profile);renderTasteStyle()}if(UI.tab==='plans'){snapshotCurrent();PS.showText=false;renderPlans()}if(UI.tab==='settings'){KS.edit=null;renderSettings()}if(UI.tab==='more')renderMore();if(PANELS[UI.tab])PANELS[UI.tab].render({opened:true});renderTabs();if(UI.tab==='map')openMap();else mapState.on=false;window.scrollTo({top:0});}
@@ -576,7 +459,6 @@ const openFind=FINDF.openFind, findAct=FINDF.findAct;
 const NOTF=window.JEPI_UI.flow.notify;
 NOTF.connect({renderMore:()=>renderMore()});
 NOTF.init();   // the 🔔 badge, the sheet row and the panel join the lists here, in the same order as before
-const NOTIFY=NOTF.NOTIFY;
 // ---------- 사용 안내 (더보기 → 사용 안내) ----------
 // The screen itself is drawn by React: app/screens/HelpPanel.tsx
 PANELS.help={render(){
@@ -597,7 +479,7 @@ if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)&&window.__jepi) Object.a
 // ---------- day titles the traveler can rename ----------
 // profile.dayTitles[d] overrides the automatic "Day 1 · 도착" title (rules: app/logic/memo.ts). The ✎ form is React
 // (app/screens/DayTitleForm.tsx, it saves itself); here: the header around it.
-const dayTitleOf=SCHED.dayTitleOf, titleEditing=SCHED.titleEditing;   // app/flow/schedule.ts
+const titleEditing=SCHED.titleEditing;   // app/flow/schedule.ts
 // what React screens may ask of the old code (app/ui/host.ts)
 window.JEPI_UI.connectHost({renderAll:()=>renderAll(),closeSheet:()=>closeSheet(),reopenSheet:()=>{const u=$('#sheet').dataset.uid;if(u&&u!=='dice'&&!$('#sheetBg').hidden)openSheet(u)},toast:m=>showToast(m),day:()=>UI.day,autoTitle:d=>String((DY.days[d]||{}).title||''),titleEditing,
   closeNotebook:()=>closeNotebook(),renamePlan:nm=>lookRenamePlan(nm),aiDayTitles:n=>lookAiTitles(n),errText:(e,w)=>errText(e,w),welcomeNew:()=>{closeWelcome();openOnb()},welcomeDemo:()=>demoEnter(),welcomeLoggedIn:()=>welcomeLoggedIn(),dice:(n,v,m)=>diceAct(n,v,m),place:(n,v)=>placeAct(n,v),plans:(n,v,v2)=>plansAct(n,v,v2),helper:(n,v,v2)=>helperAct(n,v,v2),helperFrame:n=>helperFrameAct(n),dock:(n,v)=>dockAct(n,v),tray:(n,v)=>trayAct(n,v),tab:n=>goTab(n),onbFrame:n=>onbFrameAct(n),hero:n=>heroAct(n),miniDay:s=>{const n=UI.day+s;if(n>=0&&n<DY.days.length){UI.day=n;renderAll()}},mapTop:n=>mapTopAct(n),coach:n=>coachAct(n),banner:()=>{UI.selected=null;renderAll()},chat:(n,v)=>chatAct(n,v),pview:(n,v)=>pviewAct(n,v),kw:(n,v)=>kwAct(n,v),grid:(n,v)=>gridAct(n,v),block:(n,v,o)=>blockAct(n,v,o),checks:(n,v,o)=>checksAct(n,v,o),aibox:(n,v)=>aiboxAct(n,v),settings:(n,v,v2)=>settingsAct(n,v,v2),form:(n,v,o)=>formAct(n,v,o),sum:(n,v)=>sumAct(n,v),trip:(a,u,t)=>tripAct(a,u,t),want:p=>wantAct(p),find:(n,v,t)=>findAct(n,v,t),planMenu:(n,v)=>planMenuAct(n,v),more:id=>moreAct(id),mapCard:i=>mapCardAct(i),dropped:(k,id,m)=>dropped(k,id,m),nudge:(n,v)=>nudgeAct(n,v),importFile:f=>importBackup(f,ok=>{if(ok){maybeCoach()}}),shareNotebook:async()=>{await shareLink(true);return PS.msg||'링크를 만들었어요'}});
@@ -605,38 +487,13 @@ window.JEPI_UI.connectHost({renderAll:()=>renderAll(),closeSheet:()=>closeSheet(
 // the look, the header and its one-line bar, the 여행 꾸미기 sheet: app/flow/look.ts
 const LOOKF=window.JEPI_UI.flow.look;
 LOOKF.connect({setJP:m=>setJP(m),planMenu:o=>planMenu(o)});
-const hero=LOOKF.hero, lookOf=LOOKF.lookOf, coverSVG=LOOKF.coverSVG, heroAct=LOOKF.heroAct, renderLook=LOOKF.renderLook, miniBar=LOOKF.miniBar,
-  heroWatch=LOOKF.heroWatch, openLook=LOOKF.openLook, lookAiTitles=LOOKF.lookAiTitles, lookRenamePlan=LOOKF.lookRenamePlan;
+const hero=LOOKF.hero, heroAct=LOOKF.heroAct, renderLook=LOOKF.renderLook, miniBar=LOOKF.miniBar, heroWatch=LOOKF.heroWatch, openLook=LOOKF.openLook, lookAiTitles=LOOKF.lookAiTitles, lookRenamePlan=LOOKF.lookRenamePlan;
 // ---------- handwritten memos: one line per block, one line per day ----------
 // The rules live in app/logic/memo.ts; the memo box in a block's sheet saves itself (app/screens/Extras.tsx MemoBox).
-const memoKey=SCHED.memoKey, blockMemoOf=SCHED.blockMemoOf, dayMemoOf=SCHED.dayMemoOf;   // app/flow/schedule.ts
+const memoKey=SCHED.memoKey, blockMemoOf=SCHED.blockMemoOf;   // app/flow/schedule.ts
 SHEET_EXTRAS.push(it=>it&&it.id?{k:'memo',key:memoKey(it,UI.day),value:blockMemoOf(it,UI.day)}:null);   // drawn by React: Extras.tsx
-// ---------- 여행 노트 보기: the whole trip as one notebook (cover + a chapter per day) ----------
-// Read-only. "PDF로 저장" uses the browser's print (print CSS in 17-look.css keeps only the notebook).
-// "링크로 보내기" sends the usual share link with &note=1, so the receiver opens straight into the notebook.
-// drawn by React: app/screens/Notebook.tsx
-let notebookRev=0;
-function notebookInfo(){
-  const L=lookOf(), name=(PL.plans.find(x=>x.id===PL.curPlan)||{}).name||planName();
-  const D0=DY.days[0]||{}, Dn=DY.days[DY.days.length-1]||{};
-  const photo=L.cover==='photo'&&L.photo;
-  const cover={photo:photo?String(L.photo):'',svg:photo?'':coverSVG(L.cover,260,156),city:String((PK.pack.city||'TRIP').slice(0,8)),date:String(D0.date||'').replace(/\s.*/,''),name:String(name),
-    line:[D0.date&&Dn.date?`${D0.date} — ${Dn.date}`:'',DY.days.length>1?`${DY.days.length-1}박 ${DY.days.length}일`:'하루',L.tagline].filter(Boolean).join(' · ')};
-  const days=DY.days.map((D,d)=>{
-    const {items,trans}=analyze(d), list=items.filter(i=>!(i.stay&&i!==items[items.length-1]));
-    const rows=list.map((it,k)=>{
-      const prev=k?list[k-1]:null, t=prev?trans.find(x=>x.from>=prev.end-5&&x.from<=it.start):null;
-      return {mv:t?`↓ ${t.mode} ${t.min}분${t.fare?' · '+yen(t.fare):''}`:'',time:fmt(it.start),name:String(it.name),memo:String(blockMemoOf(it,d)||'')}});
-    return {ch:`CHAPTER ${d+1} · ${D.date} ${WD[D.wd]}`,title:String(dayTitleOf(d)),memo:String(dayMemoOf(d)||''),rows};
-  });
-  return {cover,days,rev:++notebookRev};
-}
-function openNotebook(){
-  let nb=$('#notebook'); if(!nb){nb=document.createElement('div');nb.id='notebook';nb.className='notebook';nb.setAttribute('role','dialog');nb.setAttribute('aria-label','여행 노트');document.body.appendChild(nb)}
-  window.JEPI_UI.mount('notebook',nb,notebookInfo()); nb.hidden=false; nb.scrollTop=0; document.body.style.overflow='hidden';
-}
-function closeNotebook(){const nb=$('#notebook');if(nb)nb.hidden=true;document.body.style.overflow=''}
-
+// ---------- 여행 노트 보기: the whole trip as one notebook (cover + a chapter per day): app/flow/phase.ts ----------
+const openNotebook=PHASE.openNotebook, closeNotebook=PHASE.closeNotebook;
 // ---------- start-up: runs after every file above has defined its variables ----------
 if(STANDALONE) UI.sample=makeSample();
 hero({}); onbFrame({}); tabs({}); miniBar({}); dock({}); drawTrayTop(); mapTop({}); drawHelperFrame(); drawCoach(); drawBanner();   // the fixed frames (React)

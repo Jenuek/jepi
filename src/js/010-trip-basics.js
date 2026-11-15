@@ -1,4 +1,4 @@
-const WD=['일','월','화','수','목','금','토'];
+
 DY.loc={};
 // the destination's lists (app/data/places.ts — the same objects, filled again when a destination opens; tokyo.ts until then)
 const PLC=JD.places, PK=PLC.state;
