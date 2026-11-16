@@ -93,7 +93,7 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 | 🎲 DICE 시트, 지도 아래 카드 | 화면 `app/screens/Dice.tsx` (리액트), 값은 `280-dice-eat.js`(뭐 먹지·diceMount)·`290-dice-do.js`(뭐 하지)·`160-modes-roll.js`(일정 빈 시간)·`210-map.js`(지도는 Leaflet 그대로) |
 | 준비하기 (일정 경고·준비할 것·이 시기 여행 팁·초기화) | 화면 `app/screens/Checks.tsx` (리액트), 값은 `app/flow/render.ts`의 `renderChecks`, 시즌 팁 `app/flow/helper.ts` |
 | 일정 화면 요약 줄(이동·비용·확인할 것·빈 시간) | `382-tidy.js` |
-| 장소 찾기 화면 (모든 "찾기" 버튼이 여기로) | 화면 `app/screens/FindSheet.tsx` (리액트), 동작 `app/flow/find.ts` |
+| 장소 찾기 화면 (모든 "찾기" 버튼이 여기로) | 화면 `app/screens/FindSheet.tsx` (리액트), 동작 `app/flow/find.ts`, 장소 검색(Google·카카오) `app/data/gplaces.ts` |
 | 같은 장소 묶기, 직접 추가할 때 기존 장소 제안 | `app/flow/find.ts` (장소 탭의 카드는 `Tray.tsx`) |
 | 날짜별 제목 바꾸기 | `389-titles.js` |
 | 여행 꾸미기(테마 색·커버·스타일·손글씨 글꼴), 접히는 헤더, 아래 탭 | 꾸미기 시트 `app/screens/LookSheet.tsx` (리액트), 동작 `app/flow/look.ts`, 스타일 `17-look.css` |
@@ -109,6 +109,7 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 | 지도 | `210-map.js` |
 | AI 연결·모델 선택 | 연결(부르기·다시 시도·다른 AI) `app/data/ai.ts`, 이 기기의 키 `app/data/keys.ts`, 키 화면 쪽·모델 `app/flow/settings.ts`, 빈 시간 채우기·채팅 `app/flow/chat.ts` (화면 `app/screens/ChatLog.tsx`), 빈 시간 추천 상자 `app/screens/AiBox.tsx` |
 | 그날 점검(경고·이동·요금·영업시간), 할 일 표시 경고, 시즌·좋은 시간대 | `app/data/check.ts`, `app/data/marks.ts`, `app/data/season.ts` (규칙 `app/logic/schedule.ts`) |
+| 🌤 날씨 (날짜 버튼의 아이콘·기온, 누르면 펼치는 날씨 줄, 준비하기의 날씨 칸. Open-Meteo, 키 없음) | `app/data/weather.ts` (받기·16일 안은 예보, 먼 날짜는 지난 3년 평균, 기기에 저장), `app/screens/Weather.tsx`, `src/css/20-weather.css` |
 | 여행 날짜·고정 블록(비행·숙소·예약 일정)·하루 항목, 여행 정보 다듬기 | `app/data/days.ts` |
 | 지도 탭(핀·경로 선·카드·내 위치) | `app/ui/map.ts` (Leaflet은 처음 열 때 불러와요) |
 | 화면 위치 값 (열린 날·탭·고른 장소·AI 연결·J/P) | `app/ui/state.ts` (`app/flow/boot.ts`에서는 `UI.day`, `UI.tab` …) |

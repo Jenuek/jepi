@@ -33,7 +33,7 @@ export interface AiKeysSectionProps {
   /** route parts computed this time */
   routesOk: number;
   /** Google opening hours use this month; null without a Google key */
-  hours: { use: number; cap: number; off: string } | null;
+  hours: { use: number; cap: number; off: string; /** 이번 달 장소 검색(Google) 횟수 */ search: number } | null;
 }
 
 function KeyRow({ r, editing }: { r: KeyRowInfo; editing: boolean }) {
@@ -71,6 +71,7 @@ export function AiKeysSection(p: AiKeysSectionProps) {
     <>
       <div className="mgroup">{p.keys.map(r => <KeyRow key={r.k + (p.editing === r.k ? ':open' : '')} r={r} editing={p.editing === r.k} />)}</div>
       <p className="hint">{`무거운 작업(일정 짜기, 여행지 준비)은 Claude ${m.heavy}, 가벼운 작업(키워드, 예약 내용 읽기)은 ${p.hasGemini ? 'Gemini Flash' : 'Claude ' + m.light}가 맡아요. 경로는 해외는 Google로 계산하고(한 번 계산한 구간은 이 기기에 저장해 다시 부르지 않아요), 국내는 거리로 어림하고 길찾기는 카카오맵으로 열어요${p.routesOk ? ` (이번에 ${p.routesOk}구간 계산)` : ''}.`}</p>
+      {p.hours && <p className="hint" id="placeUse">{`장소 검색: 이번 달 Google에서 ${p.hours.search}회 찾았어요 (이름·주소·위치만 받아요). 국내 여행은 카카오로 찾아요.`}</p>}
       {p.hours && <p className="hint">{`영업시간: 해외 장소는 Google에서 실제 영업시간을 확인해요 (이번 달 ${p.hours.use}/${p.hours.cap}곳, 월 1,000곳까지 무료). 국내 장소는 카카오가 영업시간을 주지 않아 AI 추정이에요.`}{p.hours.off && <>{' '}<b className="wtxt">{p.hours.off}</b></>}</p>}
       <details className="khelp">
         <summary>고급: 모델 이름</summary>

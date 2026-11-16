@@ -3,6 +3,7 @@
 // stay in body.html; the old code still opens/closes them (hidden, the panel's sum-… class) and works out every number.
 import { Fragment } from 'react';
 import { app } from '../ui/host';
+import { WxChip } from './Weather';
 
 /** a line of text with bold/colored parts and links. The old code merges neighbouring text, so each string is one text piece. */
 export type Seg = string | { t: string; tag: 'b' | 'span'; cls?: string; color?: string } | { t: string; tag: 'a'; href: string };
@@ -12,9 +13,9 @@ export const Line = ({ segs }: { segs: Seg[] }) => <>{segs.map((s, i) => typeof 
   : s.tag === 'b' ? <b key={i} className={s.cls} style={s.color ? { color: s.color } : undefined}>{s.t}</b>
   : <span key={i} className={s.cls} style={s.color ? { color: s.color } : undefined}>{s.t}</span>)}</>;
 
-export interface DaysProps { days: { date: string; label: string; on: boolean }[] }
+export interface DaysProps { days: { date: string; label: string; on: boolean; iso?: string }[] }
 export function DayButtons({ days }: DaysProps) {
-  return <>{days.map((d, i) => <button key={i} className="day-btn" data-day={i} aria-pressed={d.on} onClick={() => app().grid('day', String(i))}><b>{d.date}</b><span>{d.label}</span></button>)}</>;
+  return <>{days.map((d, i) => <button key={i} className="day-btn" data-day={i} aria-pressed={d.on} onClick={() => app().grid('day', String(i))}><b>{d.date}</b><span>{d.label}</span>{d.iso && <WxChip iso={d.iso} />}</button>)}</>;
 }
 
 export interface DaySumProps {

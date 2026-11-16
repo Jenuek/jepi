@@ -4,6 +4,7 @@
 import { Fragment } from 'react';
 import { LiveButton, LiveLine } from '../ui/live';
 import { app } from '../ui/host';
+import { WxChecks } from './Weather';
 
 export interface CheckRow { id: string; t: string; sub?: string; on: boolean }
 
@@ -18,6 +19,8 @@ export interface ChecksProps {
     canAsk: boolean;
   };
   all: CheckRow[];
+  /** 날씨 칸에 쓸 날짜들과 지금 체크된 것 */
+  wx?: { isos: string[]; done: Record<string, boolean> };
   resetArm: boolean;
   rev: number;
 }
@@ -42,6 +45,7 @@ export function Checks(p: ChecksProps) {
         <h3>예약·준비</h3>
         {p.prep.length ? p.prep.map(r => <Row key={r.id} r={r} />) : <p className="now-hint">일정에 넣은 블록 중 준비할 게 없어요.</p>}
       </div>
+      {p.wx && <WxChecks isos={p.wx.isos} done={p.wx.done} Row={Row} />}
       <div className="check-group">
         <h3>이 시기 여행 팁</h3>
         {s.got

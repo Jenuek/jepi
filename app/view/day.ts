@@ -16,7 +16,7 @@ const DAY_END = 24 * 60;
 /** the Day buttons (with how many warnings each day has) */
 export function dayButtons(day: number) {
   return { days: days.state.days.map((D, i) => { const n = check.analyze(i).items.reduce((a: number, it: any) => a + it.warns.length, 0);
-    return { date: `${D.date} ${WD[D.wd]}`, label: `Day ${i + 1}${n ? ` · 경고 ${n}` : ''}`, on: i === day } }) };
+    return { date: `${D.date} ${WD[D.wd]}`, label: `Day ${i + 1}${n ? ` · 경고 ${n}` : ''}`, on: i === day, iso: D.iso } }) };
 }
 
 /** what the old code still adds to each block: its badges and its handwritten memo */

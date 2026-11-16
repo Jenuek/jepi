@@ -12,6 +12,7 @@ import * as ai from './ai';
 import * as alerts from './alerts';
 import * as hours from './hours';
 import * as kakao from './kakao';
+import * as gplaces from './gplaces';
 import * as myplaces from './myplaces';
 import * as routes from './routes';
 import * as account from './account';
@@ -23,6 +24,7 @@ import * as ops from './ops';
 import * as days from './days';
 import * as marks from './marks';
 import * as season from './season';
+import * as weather from './weather';
 import * as check from './check';
 import * as traveler from './traveler';
 import * as asks from './asks';
@@ -46,6 +48,8 @@ export const data = {
   hours,
   /** Kakao places / addresses, and this device's location */
   kakao,
+  /** 장소 검색 (Google 텍스트 검색 · 카카오 키워드 검색) */
+  gplaces,
   /** 내 장소 (집·회사·…) */
   myplaces,
   /** real routes (Google, abroad) */
@@ -68,6 +72,8 @@ export const data = {
   marks,
   /** this trip's season and what it means for places */
   season,
+  /** 날씨 (Open-Meteo): 예보·평년, 기기에 저장 */
+  weather,
   /** the day check with travel, fares and opening hours */
   check,
   /** the traveler as the AI is told about them; money text */

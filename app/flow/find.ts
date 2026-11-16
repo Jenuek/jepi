@@ -11,7 +11,8 @@ import { state as DYs, dayStart } from '../data/days';
 import { fmt, parse, durTxt } from '../logic/time';
 import { norm, nameSim, samePlace } from '../logic/places';
 import { ui } from '../ui/state';
-import { setSt } from '../ui/status';
+import { setSt, errText } from '../ui/status';
+import * as gplaces from '../data/gplaces';
 import * as FORMS from '../view/forms';
 import { fresh as FRESH, askAI } from './chat';
 import { morePlaces } from './destination';
@@ -23,10 +24,10 @@ const $ = (s: string) => document.querySelector(s) as any;
 const mount = (name: string, el: Element, props: any) => (window.JEPI_UI.mount as any)(name, el, props);
 const CUR = trip.cur as any, PK = places.state as any, PMx = places.PM as any, P = places.P as any[], AREAS = places.AREAS as any, CATS = places.CATS as any, DY = DYs as any;
 
-let FIND: any={where:'near',area:'',when:'any',gap:null,into:'list',q:'',busy:false,res:[],ctl:null,cursor:null};
+let FIND: any={where:'near',area:'',when:'any',gap:null,into:'list',q:'',busy:false,res:[],ctl:null,cursor:null,hits:[],sbusy:false};
 function findAreaOfDay(){const it=check.analyze(ui.day).items.find((i: any)=>!i.stay&&i.area);return it?it.area:''}
 export function openFind(o?: any){
-  FIND=Object.assign({where:'near',area:places.firstArea(),when:'any',gap:null,into:'list',q:'',busy:false,res:[],ctl:null,cursor:null},o||{});
+  FIND=Object.assign({where:'near',area:places.firstArea(),when:'any',gap:null,into:'list',q:'',busy:false,res:[],ctl:null,cursor:null,hits:[],sbusy:false},o||{});
   if(FIND.when==='gap'&&!FIND.gap){const g=check.gapsOf(ui.day)[0];if(g)FIND.gap=g;else FIND.when='any'}
   renderFind(); $('#sheet').dataset.uid=''; $('#sheetBg').hidden=false;
   if(o&&o.autorun) runFind();
@@ -42,7 +43,10 @@ function findMount(){
     areas:Object.entries(AREAS).map(([k,v]: any)=>({k,label:String(v[0])})),when:F.when,gaps:gaps.map(gv),gap:F.gap?gv(F.gap):null,into:F.into,q:F.q||'',busy:!!F.busy,mine:ui.jp==='P',
     rows:F.res.map((r: any)=>{const p=PMx[r.id];if(!p)return null;
       const meta=[p.area,CATS[p.cat]||'',p.hours&&!p.always?`${fmt(p.hours[0])}–${fmt(p.hours[1])}`:''].filter(Boolean).join(' · ');
-      return {id:r.id,name:String(p.name),meta,note:p.note?String(p.note):'',c:r.c||'',txt:r.txt||''}}).filter(Boolean),rev:findRev});
+      return {id:r.id,name:String(p.name),meta,note:p.note?String(p.note):'',c:r.c||'',txt:r.txt||''}}).filter(Boolean),
+    // 장소 검색(Google/카카오)이 되면 결과를 AI보다 먼저 보여 줘요. 키가 없으면 null → 예전처럼 AI로만
+    search:gplaces.provider()?{provider:gplaces.provider(),busy:!!F.sbusy,rows:F.hits.map((h: any,i: any)=>({id:String(i),name:String(h.name),meta:String(h.addr||''),
+      note:!h.c&&gplaces.existing(h)?'이미 장소 목록에 있는 곳이에요':'',c:h.c||'',txt:h.txt||''}))}:null,rev:findRev});
 }
 function findFocus(){
   const F=FIND, parts=[];
@@ -64,6 +68,18 @@ export async function runFind(){
   if($('#findForm')){renderFind(); if(!n) setSt('findSt','새로 찾은 곳이 없어요. 찾는 말을 바꿔 보세요.'); else setSt('findSt',`${n}곳을 찾았어요. 장소 탭 "✨ 방금 찾은 곳"에도 모여 있어요.`)}
   R.renderTray();
 }
+// 장소 검색: 이름·주소로 먼저 찾아서 결과를 보여 줘요 (AI는 그 아래 버튼으로)
+function findCenter(): any{const F=FIND, a=F.where==='area'&&AREAS[F.area]; return a?{center:[a[1],a[2]],radius:5000}:{center:places.cityLL(),radius:30000}}
+async function runSearch(){
+  if(FIND.sbusy||FIND.busy) return;
+  if(!FIND.q){renderFind();setSt('findSt','찾을 장소 이름이나 주소를 적어 주세요.');return}
+  FIND.sbusy=true; FIND.hits=[]; renderFind(); setSt('findSt','찾는 중…');
+  let hits: any[]=[],err='';
+  try{hits=await gplaces.search(FIND.q,findCenter())}catch(e: any){err=errText(e,'장소를 찾지 못했어요')}
+  FIND.sbusy=false; FIND.hits=hits.map((h: any)=>Object.assign({c:'',txt:''},h));
+  if(!$('#findForm')) return;
+  renderFind(); setSt('findSt',err||(hits.length?`${hits.length}곳을 찾았어요. 고르면 장소 목록에 들어가요.`:'찾지 못했어요. 이름이나 주소를 다르게 적어 보세요.'));
+}
 function findDrop(id?: any){ // 안 함: the place was only just found, so take it off the list again
   const k=PK.pack.places.findIndex((x: any)=>x.id===id); if(k>=0){PK.pack.places.splice(k,1);places.savePack()}
   const i=P.findIndex((x: any)=>x.id===id); if(i>=0)P.splice(i,1); delete PMx[id]; FRESH.delete(id);
@@ -76,16 +92,26 @@ export function findAct(n?: any, v?: any, typed?: any){
   if(n==='gap'){const [a,b]=String(v).split('-').map(Number);openFind({when:'gap',gap:[a,b],into:'sched'});return}
   if(n==='area'){FIND.area=v;return}
   if(n==='gapsel'){FIND.gap=String(v).split('-').map(Number);return}
-  if(n==='submit'){FIND.q=String(typed||'').trim();runFind();return}
-  if(n==='r'){const [id,act]=String(v).split(':'), r=FIND.res.find((x: any)=>x.id===id), p=PMx[id]; if(!r||!p) return;
-    if(act==='skip'){findDrop(id);r.c='skip';r.txt='넣지 않았어요'}
-    else if(act==='list'){r.c='list';if(ui.jp==='P'){if(!trip.wish.has(id))trip.wish.toggle(id);r.txt='내 카드에 담았어요'}else r.txt='장소 목록에 넣었어요'}
-    else if(FIND.when==='gap'&&FIND.gap){
-      const st=Math.max(FIND.cursor||FIND.gap[0],FIND.gap[0]), rr=OPS.repair([{op:'add',day:ui.day,id,start:fmt(st),dur:p.dur}]);
-      OPS.apply(rr.ops); trip.blocks.saved(); FIND.cursor=parse(rr.ops[0].start)+p.dur+20;
-      r.c='sched'; r.txt=`${rr.ops[0].start}에 넣었어요${rr.warns.length?` · 확인할 것 ${rr.warns.length}`:''}`; R.renderAll();
-    } else {ui.selected=id;r.c='pick';r.txt='일정표에서 넣을 시간을 탭하세요';R.closeSheet();ui.tab='timeline';R.renderAll();return}
-    findRowsUpdate(); R.renderTray(); return}
+  if(n==='submit'){FIND.q=String(typed||'').trim(); if(gplaces.provider()) runSearch(); else runFind(); return}
+  if(n==='ai'){FIND.q=String(typed||'').trim();runFind();return}
+  if(n==='sr'){const [k,act]=String(v).split(':'), h=FIND.hits[+k]; if(!h||h.c) return;
+    if(act==='skip'){h.c='skip';h.txt='넣지 않았어요';findRowsUpdate();return}
+    const had=gplaces.existing(h), pl=gplaces.addFound(h); if(!pl) return;   // 고른 곳만 장소 목록에 만들어요
+    h.id=pl.id; findPlace(h,pl.id,act,had?'이미 있던 곳을 ':''); return}
+  if(n==='r'){const [id,act]=String(v).split(':'), r=FIND.res.find((x: any)=>x.id===id); if(!r||!PMx[id]) return;
+    if(act==='skip'){findDrop(id);r.c='skip';r.txt='넣지 않았어요';findRowsUpdate();R.renderTray();return}
+    findPlace(r,id,act,''); return}
+}
+// 고른 곳을 장소 목록에만 / 일정에 넣기 (AI 결과와 장소 검색 결과가 같이 써요). r: 줄(c·txt를 채워요)
+function findPlace(r?: any, id?: any, act?: any, pre?: any){
+  const p=PMx[id];
+  if(act==='list'){r.c='list';if(ui.jp==='P'){if(!trip.wish.has(id))trip.wish.toggle(id);r.txt=pre+'내 카드에 담았어요'}else r.txt=pre+'장소 목록에 넣었어요'}
+  else if(FIND.when==='gap'&&FIND.gap){
+    const st=Math.max(FIND.cursor||FIND.gap[0],FIND.gap[0]), rr=OPS.repair([{op:'add',day:ui.day,id,start:fmt(st),dur:p.dur}]);
+    OPS.apply(rr.ops); trip.blocks.saved(); FIND.cursor=parse(rr.ops[0].start)+p.dur+20;
+    r.c='sched'; r.txt=`${pre}${rr.ops[0].start}에 넣었어요${rr.warns.length?` · 확인할 것 ${rr.warns.length}`:''}`; R.renderAll();
+  } else {ui.selected=id;r.c='pick';r.txt='일정표에서 넣을 시간을 탭하세요';R.closeSheet();ui.tab='timeline';R.renderAll();return}
+  findRowsUpdate(); R.renderTray();
 }
 let customLast: any=null;
 export function openCustom(editId?: any, startAt?: any, opts?: any){
@@ -94,13 +120,16 @@ export function openCustom(editId?: any, startAt?: any, opts?: any){
   // drawn by React: app/screens/CustomSheet.tsx (the same props again with dup while a new name is typed: 388-dedup.js)
   customLast={edit:editId||'',dayLabel:`Day ${ui.day+1} (${DY.days[ui.day].date})`,name:c.name||'',area:c.area,cat:c.cat,dur:c.dur,cost:c.cost??'',memo:c.memo||'',tags:c.tags||'',drop:!!c.drop,
     share:RS.status==='on'&&!PK.pack.manual?!!c.share:null,start:fmt(st),areas:FORMS.optsOf(AREAS),cats:Object.entries(CATS),durs:[15,30,45,60,90,120,150,180,240].map((m: any)=>[m,durTxt(m)]),
-    currency:String(PK.pack.currency),dup:null,card:!!(opts&&opts.card),rev:R.nextSheetRev()};
+    currency:String(PK.pack.currency),dup:null,card:!!(opts&&opts.card),rev:R.nextSheetRev(),
+    loc:c.ll?{ll:c.ll,addr:String(c.addr||''),gid:String(c.gid||'')}:null};
   mount('custom',$('#sheet'),customLast);
   $('#sheet').dataset.uid=''; $('#sheetBg').hidden=false; setTimeout(()=>{const x=$('#cfName');x&&x.focus()},0);
 }
 export function saveCustomForm(f?: any){
   const editId=f.dataset.edit;
-  const c={id:editId||('c'+Date.now().toString(36)),name:$('#cfName').value.trim()||'직접 만든 블록',area:$('#cfArea').value,cat:$('#cfCat').value,dur:+$('#cfDur').value||60,cost:Math.max(0,+$('#cfCost').value||0),memo:$('#cfMemo').value.trim(),tags:$('#cfTags').value.trim(),drop:$('#cfDrop').checked,share:!!($('#cfShare')&&$('#cfShare').checked)};
+  // 위치 찾기(CustomSheet.tsx)에서 고른 곳: 좌표·주소·장소 ID. 안 골랐으면 동네 중심(ll 없음)
+  const lat=parseFloat($('#cfLat').value), lng=parseFloat($('#cfLng').value), found=Number.isFinite(lat)&&Number.isFinite(lng)&&(lat||lng);
+  const c: any={id:editId||('c'+Date.now().toString(36)),ll:found?[lat,lng]:undefined,addr:found?$('#cfAddr').value:undefined,gid:found&&$('#cfGid').value?$('#cfGid').value:undefined,name:$('#cfName').value.trim()||'직접 만든 블록',area:$('#cfArea').value,cat:$('#cfCat').value,dur:+$('#cfDur').value||60,cost:Math.max(0,+$('#cfCost').value||0),memo:$('#cfMemo').value.trim(),tags:$('#cfTags').value.trim(),drop:$('#cfDrop').checked,share:!!($('#cfShare')&&$('#cfShare').checked)};
   trip.customs.put(c); places.addCustom(c);
   const asCard=f.dataset.card==='1';
   if(asCard){if(!trip.wish.has(c.id))trip.wish.toggle(c.id);showToast('내 카드에 담았어요')}

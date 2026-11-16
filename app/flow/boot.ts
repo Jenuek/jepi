@@ -8,6 +8,7 @@ import * as D_days from '../data/days';
 import * as D_demo from '../data/demo';
 import * as D_demoOsaka from '../data/demo-osaka';
 import * as D_hours from '../data/hours';
+import * as D_gplaces from '../data/gplaces';
 import * as D_kakao from '../data/kakao';
 import * as D_keys from '../data/keys';
 import * as D_marks from '../data/marks';
@@ -400,6 +401,8 @@ const sumAct=SCHED.sumAct;   // app/flow/schedule.ts
 const hoursSweep=()=>D_hours.sweep();
 D_hours.connectHours({placesOnSchedule:()=>[...new Set(CUR.placed.map((b: any)=>b.id))].map((id: any)=>PM[id]).filter(Boolean),googleKey:()=>KEYS.gmaps||'',keyBad:()=>isBad('gmaps'),
   demo:()=>!!DEMO.on,inKorea:(ll: any)=>inKR(ll),city:()=>PK.pack.city||'',changed(){savePack();TRIP.customs.saved();renderAll();touchPlan()}});
+// 장소 검색 (app/data/gplaces.ts): 어느 키로 찾을지만 여기서 알려 줘요
+D_gplaces.connectGPlaces({googleKey:()=>KEYS.gmaps||'',googleBad:()=>isBad('gmaps'),kakaoKey:()=>KEYS.kakao||'',kakaoBad:()=>isBad('kakao')});
 
   // ===== 384-trips =====
 // ---------- 친구와 함께: shared trips, invite links, 가고 싶어요 ----------

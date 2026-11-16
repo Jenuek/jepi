@@ -7,6 +7,7 @@ import * as keysData from '../data/keys';
 import * as ai from '../data/ai';
 import * as routes from '../data/routes';
 import * as hours from '../data/hours';
+import * as gplaces from '../data/gplaces';
 import * as server from '../data/server';
 import * as sync from '../data/sync';
 import * as account from '../data/account';
@@ -95,7 +96,7 @@ let settingsRev=0;
 // AI·지도 연결 is drawn by React: app/screens/AiKeysSection.tsx. Only the masked keys go there.
 export function settingsAI(){return {standalone:!!STANDALONE,editing:ks.edit,hasGemini:!!KEYS.gemini,routesOk:+routes.stats.ok||0,
   models:{heavy:ks.models.heavy,light:ks.models.light,gemini:ks.models.gemini},
-  hours:KEYS.gmaps?{use:+hours.used(),cap:hours.CAP,off:hours.state.off||''}:null,
+  hours:KEYS.gmaps?{use:+hours.used(),cap:hours.CAP,off:hours.state.off||'',search:gplaces.used()}:null,
   keys:Object.keys(KEY_DEF).map((k: any)=>{const d=KEY_DEF[k];return {k,name:d.name,sub:d.sub,ph:d.ph,masked:KEYS[k]?maskKey(KEYS[k]):'',bad:isBad(k),msg:ks.msg[k]||'',helpHTML:(KEY_HELP as any)[k]}})}}
 // What was pressed in 설정 (SettingsScreen.tsx / AiKeysSection.tsx tell: its name and value; a typed key comes as v2)
 export function settingsAct(n?: any, v?: any, v2?: any){

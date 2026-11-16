@@ -41,7 +41,9 @@ export function warnings(): { W: Map<string, string[]>; needTax: boolean } {
     if (it.kind === 'place' && it.p.cat === 'shop') shops.push(it);
     if (open.bag.length && it.kind === 'fixed' && (it.uid === 'f7' || /^ci|^co/.test(it.uid))) add(d, it.uid, `${open.bag[0].name}에 맡긴 짐을 먼저 찾아야 해요`);
     for (const T of Object.keys(PAIRS)) {
-      const st = mk.includes(T + '+') || (T === 'bag' && implicitBagDrop(it)), en = mk.includes(T + '-');
+      const en = mk.includes(T + '-');
+      // 코인락커·짐 보관소 블록은 짐을 맡기는 곳이지만, 거기서 "짐 찾기"를 표시한 블록은 맡기는 게 아니라 찾는 거예요 (안 그러면 찾은 짐을 또 맡긴 것으로 세서 경고가 계속 떠요)
+      const st = mk.includes(T + '+') || (T === 'bag' && implicitBagDrop(it) && !en);
       if (en) { const o = open[T].shift();
         if (!o) add(d, it.uid, PAIRS[T].orphan);
         else { if (PAIRS[T].same && km(o.ll, it.ll) > 0.4) add(d, it.uid, `${o.name}과 장소가 달라요 · 맡긴 곳으로 가야 해요`);

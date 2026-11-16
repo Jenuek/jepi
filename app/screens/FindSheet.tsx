@@ -31,6 +31,8 @@ export interface FindSheetProps {
   /** P모드: "장소에만" keeps it as one of 내 카드 */
   mine?: boolean;
   rows: FindRow[];
+  /** 장소 검색(Google/카카오) 결과 — null이면 검색할 키가 없어서 예전처럼 AI로만 찾아요. row.id는 결과 번호, meta는 주소 */
+  search: null | { provider: 'google' | 'kakao' | string; busy: boolean; rows: FindRow[] };
   /** changes on every full redraw: the boxes and the status line start fresh, like before */
   rev: number;
 }
@@ -39,15 +41,16 @@ function Seg({ k, v, cur, label }: { k: string; v: string; cur: string; label: s
   return <button type="button" className="fchip" data-find={`${k}:${v}`} aria-pressed={cur === v} onClick={() => app().find('chip', `${k}:${v}`, (document.getElementById('findQ') as HTMLInputElement | null)?.value ?? null)}>{label}</button>;
 }
 
-function Row({ r, into, slot, mine }: { r: FindRow; into: string; slot: string; mine?: boolean }) {
+function Row({ r, into, slot, mine, kind = 'r' }: { r: FindRow; into: string; slot: string; mine?: boolean; kind?: 'r' | 'sr' }) {
+  const at = kind === 'sr' ? 'data-findsr' : 'data-findr', go = (act: string) => app().find(kind, `${r.id}:${act}`);
   return (
     <div className={'cp' + (r.c === 'skip' ? ' off' : '')}>
       <div className="cp-t"><b>{r.name}</b>{r.meta && <small>{r.meta}</small>}{r.note && <p>{r.note}</p>}</div>
       {r.c ? <span className="cp-st">{r.txt}</span> : (
         <div className="cp-b">
-          <button className={'small-btn' + (into === 'sched' ? ' primary' : '')} type="button" data-findr={`${r.id}:sched`} onClick={() => app().find('r', `${r.id}:sched`)}>{'일정에 넣기 ' + slot}</button>
-          <button className={'small-btn' + (into === 'list' ? ' primary' : '')} type="button" data-findr={`${r.id}:list`} onClick={() => app().find('r', `${r.id}:list`)}>{mine ? '♥ 내 카드에 담기' : '장소에만'}</button>
-          <button className="small-btn" type="button" data-findr={`${r.id}:skip`} onClick={() => app().find('r', `${r.id}:skip`)}>안 함</button>
+          <button className={'small-btn' + (into === 'sched' ? ' primary' : '')} type="button" {...{ [at]: `${r.id}:sched` }} onClick={() => go('sched')}>{'일정에 넣기 ' + slot}</button>
+          <button className={'small-btn' + (into === 'list' ? ' primary' : '')} type="button" {...{ [at]: `${r.id}:list` }} onClick={() => go('list')}>{mine ? '♥ 내 카드에 담기' : '장소에만'}</button>
+          <button className="small-btn" type="button" {...{ [at]: `${r.id}:skip` }} onClick={() => go('skip')}>안 함</button>
         </div>
       )}
     </div>
@@ -84,10 +87,18 @@ export function FindSheet(p: FindSheetProps) {
             <Seg k="into" v="list" cur={p.into} label={p.mine ? '내 카드에' : '장소에만'} />
           </div>
         </div>
-        <input id="findQ" maxLength={60} defaultValue={p.q} placeholder="예) 카페, 비 오는 날 · 비워 두면 알아서" autoComplete="off" />
-        <button className="small-btn primary" type="submit" id="findGo" disabled={p.busy}>{p.busy ? '찾는 중…' : '찾기'}</button>
+        <input id="findQ" maxLength={60} defaultValue={p.q} placeholder={p.search ? '찾을 장소 이름이나 주소 · 예) 이치란 시부야' : '예) 카페, 비 오는 날 · 비워 두면 알아서'} autoComplete="off" />
+        <button className="small-btn primary" type="submit" id="findGo" disabled={p.busy || !!p.search?.busy}>{p.search ? (p.search.busy ? '찾는 중…' : '장소 찾기') : (p.busy ? '찾는 중…' : '찾기')}</button>
       </form>
       <p className="ai-status" id="findSt" key={'st' + p.rev}></p>
+      {p.search && <>
+        <div className="cps" id="findSrch">{p.search.rows.map(r => <Row key={r.id} r={r} into={p.into} slot={slot} mine={p.mine} kind="sr" />)}</div>
+        {p.search.rows.length > 0 && <p className="hint">{p.search.provider === 'kakao' ? '카카오 지도에서 찾았어요.' : 'Google 지도에서 찾았어요. 이름·주소·위치만 가져와요.'}</p>}
+        <div className="find-ai">
+          <p className="hint">찾는 곳이 없거나 분위기로 고르고 싶다면</p>
+          <button className="small-btn" type="button" id="findAi" disabled={p.busy} onClick={() => app().find('ai', '', (document.getElementById('findQ') as HTMLInputElement | null)?.value ?? null)}>{p.busy ? '찾는 중…' : '✨ AI에게 추천받기'}</button>
+        </div>
+      </>}
       <div className="cps" id="findRes">{p.rows.map(r => <Row key={r.id} r={r} into={p.into} slot={slot} mine={p.mine} />)}</div>
       <div className="row"><button className="small-btn" type="button" data-close="1">닫기</button></div>
     </>
