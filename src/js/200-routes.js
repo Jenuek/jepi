@@ -5,9 +5,4 @@ const inKR=JD.logic.geo.inKorea, navLink=JD.logic.geo.navLink;
 const routeProvider=(a,b)=>JD.routes.provider(a,b);
 JD.routes.connectRoutes({googleKey:()=>KEYS.gmaps||'',googleBad:()=>!!KS.bad.gmaps,arrived:()=>routeDirty(),
   keyBroken(){KS.bad.google=true;KS.msg.gmaps='✕ 키가 맞지 않거나 이 API가 켜져 있지 않아요'}});
-let rdT=0;
-function routeDirty(){clearTimeout(rdT);rdT=setTimeout(()=>{
-  const ae=document.activeElement; if(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)){routeDirty();return}
-  if(!$('#onb').hidden||!$('#sheetBg').hidden){routeDirty();return}
-  renderAll(); if(mapState.on) drawMap();
-},600)}
+const routeDirty=PIECES.routeDirty;   // redraw once routes arrive (not while typing or a sheet is open): app/flow/pieces.ts

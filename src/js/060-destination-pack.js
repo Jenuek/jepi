@@ -3,7 +3,7 @@
 // sends (cleanPack / cleanPlace) live in app/data/places.ts; the open destination is PK.pack.
 PK.pack=null;
 const wipe=o=>{for(const k of Object.keys(o)) delete o[k]};
-const firstArea=PLC.firstArea, nearestArea=PLC.nearestArea, addPackPlace=PLC.addPackPlace, loadPack=PLC.loadPack, savePack=PLC.savePack, packFrom=PLC.packFrom, manualPack=PLC.manualPack, cleanPack=PLC.cleanPack, cleanPlace=PLC.cleanPlace;
+const addPackPlace=PLC.addPackPlace, loadPack=PLC.loadPack, savePack=PLC.savePack, packFrom=PLC.packFrom, cleanPack=PLC.cleanPack, cleanPlace=PLC.cleanPlace;
 // after a destination is loaded: other travelers' 👍 places of that city (070-shared-recs.js)
 PLC.connectPlaces(pk=>{if(RS.status!=='off'){SHARED_IDS.clear();rebuildShared()}});
 // status lines ("…하는 중이에요 · 12초 지났어요"), messages and error words: app/ui/status.ts

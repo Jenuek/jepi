@@ -25,3 +25,5 @@ const HS=window.JEPI_UI.flow.helper.hs;
 const PS=window.JEPI_UI.flow.plans.ps;
 // 설정's state (app/flow/settings.ts): KS.msg, KS.bad, KS.who, KS.models, KS.theme, KS.edit
 const KS=window.JEPI_UI.flow.settings.ks;
+// small pieces of the trip screens (J / P, 가볍게 시작, … ): app/flow/pieces.ts
+const PIECES=window.JEPI_UI.flow.pieces;

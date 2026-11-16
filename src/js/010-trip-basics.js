@@ -9,6 +9,5 @@ const dayStart=JD.days.dayStart;   // app/data/days.ts
 DY.gmpBy=360; // when to be at the home airport, from the profile
 DY.days=[];
 const DEFAULT_KW=[];
-const norm=JD.logic.places.norm;   // app/logic/places.ts
 const yen=TV.yen;   // app/data/traveler.ts
 const DEFAULT=[];

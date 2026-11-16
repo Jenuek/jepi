@@ -4,7 +4,7 @@
 // the rules live in app/logic/places.ts
 // catching it while typing a name, the "같은 곳 같아요" cards and merging: app/flow/find.ts
 FINDF.init();   // the two listeners (use the place already there / places with a similar name), at this point as before
-const dupOf=FINDF.dupOf, dupNoKey=FINDF.dupNoKey, dupInfo=FINDF.dupInfo, mergePlaces=FINDF.mergePlaces;
+const dupOf=FINDF.dupOf, dupInfo=FINDF.dupInfo;
 // local test hooks (tools/checks.js)
 if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)&&window.__jepi) Object.assign(window.__jepi,{
   dupTest(){const a=P.find(p=>!p.custom&&!p.drop&&!CUR.placed.some(b=>b.id===p.id));const b=Object.assign({},a,{id:'dupx',name:a.name+' 본점'});PK.pack.places.push(b);addPackPlace(b);renderTray();return a.name},

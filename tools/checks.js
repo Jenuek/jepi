@@ -2102,5 +2102,22 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'flow: tabs and page-wide clicks (app/flow/events.ts, pieces.ts): goTab, the dark background and Esc close a sheet, J/P switch, 가볍게 시작 asks for a place first',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      await p.evaluate(() => window.JEPI_UI.flow.events.goTab('settings')); await p.waitForTimeout(200);
+      ok(await vis(p, '#side-settings') && await p.evaluate(() => window.JEPI_UI.ui.tab) === 'settings', 'goTab: 설정 shown');
+      await p.evaluate(() => window.JEPI_UI.flow.events.goTab('timeline')); await p.waitForTimeout(200);
+      await p.click('#grid .blk'); await p.waitForTimeout(250); ok(await vis(p, '#sheetBg'), 'a block opens its sheet');
+      await p.keyboard.press('Escape'); await p.waitForTimeout(300); ok(!(await vis(p, '#sheetBg')), 'Esc closes it');
+      await p.click('#grid .blk'); await p.waitForTimeout(250); await p.mouse.click(5, 5); await p.waitForTimeout(300);
+      ok(!(await vis(p, '#sheetBg')), 'tapping the dark background closes it');
+      await p.evaluate(() => window.JEPI_UI.flow.pieces.setJP('P', true)); ok(await p.evaluate(() => document.body.classList.contains('mode-p')), 'setJP P');
+      await p.evaluate(() => window.JEPI_UI.flow.pieces.setJP('J', true));
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];

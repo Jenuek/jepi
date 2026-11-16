@@ -87,7 +87,9 @@
     - 빌드가 이제 **앱이 켜질 때 뒤 파일에서 정의하는 이름을 먼저 쓰는 것**도 잡아요(`040`이 `385`의 이름을 먼저 쓸 뻔했어요).
   - [x] 예전 코드 정리 14: 여행 모습(테마·표지·스타일·손글씨)·접히는 헤더·한 줄 바·여행 꾸미기를 `app/flow/look.ts`로, 시작 화면 하늘·헤더 계획 메뉴·🎲 버튼 움직임·P모드에서 비켜 주기를 `app/flow/header.ts`로 옮김.
   - [x] 예전 코드 정리 15: 여행 단계 띠·오늘 계획 열기·일정 주변 다시 그리기·여행 노트를 `app/flow/phase.ts`로, 모두 초기화·처음 안내를 `app/flow/guide.ts`로, 더보기 숫자·이번 여행 줄·자동 저장·취향 스타일을 `app/flow/more.ts`로 옮김. 6묶음에서 남은 건 탭 이동·클릭 처리(`380`), 날짜 제목 연결(`389-titles` connectHost), 앱 시작(`390`) — 마무리 때.
-  - [ ] 예전 코드 정리 — 남은 `src/js`(약 184KB)를 하는 일별로 묶어 차례로 `app/flow/*.ts`로 옮겨요. 각 묶음은 화면 그리기(render*) → 버튼 흐름(*Act) 순서로.
+  - [x] 예전 코드 정리 16: 탭 이동·어디서나 되는 클릭(닫기·Esc·어두운 바탕)·경고 해결·더보기 줄·알려 주세요·장소 카드를 `app/flow/events.ts`로, J/P 바꾸기·하루 코스 칸·가볍게 시작·할 일 마무리 블록·경로 도착 뒤 다시 그리기·내 장소 값·집 출발 칸을 `app/flow/pieces.ts`로 옮김. 이제 `src/js`(약 36KB)에는 연결 줄(이름 받아 쓰기·connect)과 시작 순서(`320` 저장된 여행 읽기, `390` 앱 시작)만 남았어요.
+  - [ ] 마무리: 연결 줄을 걷어내고 시작 순서를 `app/flow/boot.ts`로 옮긴 뒤 `src/js`와 합치기 단계(`tools/legacy.mjs`)를 없애기. (아래 묶음 목록은 끝남)
+  - [x] 예전 코드 정리 — 남은 `src/js`(약 184KB)를 하는 일별로 묶어 차례로 `app/flow/*.ts`로 옮겨요. 각 묶음은 화면 그리기(render*) → 버튼 흐름(*Act) 순서로.
     1. 일정표 그리기·고치기: `340-render.js`(renderAll·renderTimeline·renderTray…), `350-actions.js`, `380-events.js`(blockAct·gridAct·dropped…), `382-tidy.js`, `389-titles.js`, `389b-memo.js`
     2. 🎲·P모드 흐름: `160`·`170`·`280`·`290`(굴리기·코스 짜기·저장)
     3. 처음 설정·이번 여행: `030-forms.js`(formAct·onPf·aiFill·onbAdvance), `060`(genPack·morePlaces·안내 줄), `120`·`140`·`381-welcome-demo.js`
