@@ -2158,6 +2158,148 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'flow: 내 계획 and share links (app/flow/plans.ts, share.ts): copy, delete asks twice, a link opens as a new plan without the home location',
+    async run({ b, S, device, ok, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      const r = await p.evaluate(async () => {
+        const F = window.JEPI_UI.flow, PL = window.JEPI_DATA.trip.planList; F.plans.snapshotCurrent();
+        const n0 = PL.plans.length, cur = PL.curPlan; F.plans.plansAct('dup', cur); const n1 = PL.plans.length, copy = PL.plans[0].id;
+        F.plans.plansAct('del', copy); const armed = F.plans.ps.delArm === copy && PL.plans.length === n1; F.plans.plansAct('del', copy); const n2 = PL.plans.length;
+        window.JEPI_DATA.trip.cur.profile.home = { area: '집', ll: [37.5, 127], min: 60 };
+        const pd = window.JEPI_DATA.plans.planData(); pd.profile.home = Object.assign({}, pd.profile.home, { area: '' }); delete pd.profile.home.ll;
+        const t = await F.share.packText(JSON.stringify({ n: '테스트', d: pd })); const back = JSON.parse(await F.share.unpackText(t));
+        return { n0, n1, armed, n2, small: t.length < 60000, noHome: !back.d.profile.home.ll, name: back.n };
+      });
+      ok(r.n1 === r.n0 + 1 && r.armed && r.n2 === r.n0, '복사본, then 삭제 asks once more, then deletes ' + JSON.stringify(r));
+      ok(r.small && r.noHome && r.name === '테스트', 'a share link packs the plan and back, without the home location');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'flow: 설정 (app/flow/settings.ts): theme saved, a key saved masked, a wrong-looking key warned, delete, the 동기화 section says log in',
+    async run({ b, S, device, ok, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      const r = await p.evaluate(() => {
+        const F = window.JEPI_UI.flow.settings; F.settingsAct('theme', 'dark');
+        const theme = document.documentElement.getAttribute('data-theme'), saved = JSON.parse(localStorage.getItem('jepi.theme'));
+        F.settingsAct('keysave', 'kakao', 'not-a-key'); const warn = F.ks.msg.kakao || '', stored = window.JEPI_DATA.keys.list.kakao;
+        const masked = F.settingsAI().keys.find(k => k.k === 'kakao').masked;
+        F.settingsAct('keydel', 'kakao'); const gone = !window.JEPI_DATA.keys.list.kakao;
+        F.settingsAct('theme', 'light');
+        return { theme, saved, warn: warn.length > 0, stored, masked, gone, sync: F.syncView().mode };
+      });
+      ok(r.theme === 'dark' && r.saved === 'dark', '테마: dark, saved on this device');
+      ok(r.stored === 'not-a-key' && r.masked && !r.masked.includes('a-ke') && r.warn, 'a key: saved, only shown masked, a message under it ' + JSON.stringify(r));
+      ok(r.gone, '삭제: the key is gone');
+      ok(['setup', 'login'].includes(r.sync), '동기화 asks to set up / log in when logged out: ' + r.sync);
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'flow: 👍·알림·친구와 함께 (app/flow/recs.ts, notify.ts, friends.ts): the lists keep their order, a place becomes a 👍 entry, panels are there',
+    async run({ b, S, device, ok, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      const r = await p.evaluate(() => {
+        const X = window.JEPI_UI.extras, F = window.JEPI_UI.flow, T = window.JEPI_DATA.trip, D = window.JEPI_DATA.check;
+        const it = D.analyze(0).items.find(i => i.kind === 'place');
+        const kinds = X.extras(X.SHEET_EXTRAS, it, 0).map(x => x.k);
+        const e = F.recs.entryOf(window.JEPI_DATA.places.PM[it.id]);
+        return { kinds, panels: Object.keys(X.PANELS).sort().join(','), afterPull: X.SYNC_AFTER_PULL.length, afterPush: X.SYNC_AFTER_PUSH.length,
+          entry: { k: e.k.startsWith('오사카|'), name: e.name === it.name }, ringable: F.notify.alertable(it), shared: !!F.friends.curShared() };
+      });
+      ok(r.kinds.join(',') === 'alert,memo', 'a block sheet: 🔔 row, then the memo (same order as before) ' + JSON.stringify(r.kinds));
+      ok(r.panels.includes('friends') && r.panels.includes('notify') && r.afterPull >= 2 && r.afterPush >= 1, 'panels and after-sync work are hooked in ' + JSON.stringify(r));
+      ok(r.entry.k && r.entry.name && r.ringable && !r.shared, 'a place becomes a 👍 entry of this city; it can ring; the trip is not shared');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'flow: adding places (app/flow/find.ts): 장소 찾기 opens with its choices, 직접 만들기 makes a block, a doubled place is offered and merged',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      await p.evaluate(() => window.JEPI_UI.flow.find.openFind({ where: 'city', into: 'list' })); await p.waitForTimeout(200);
+      ok(await vis(p, '#findForm'), '장소 찾기 opens');
+      await p.evaluate(() => window.JEPI_UI.flow.render.closeSheet()); await p.waitForTimeout(250);
+      const n0 = await p.evaluate(() => window.JEPI_DATA.trip.cur.placed.length);
+      await p.evaluate(() => window.JEPI_UI.flow.find.openCustom(null, 1200)); await p.waitForTimeout(200);
+      await p.fill('#cfName', '테스트 블록'); await p.evaluate(() => window.JEPI_UI.flow.find.saveCustomForm(document.getElementById('customForm'))); await p.waitForTimeout(250);
+      const made = await p.evaluate(() => { const T = window.JEPI_DATA.trip.cur; const c = T.custom.find(x => x.name === '테스트 블록'); return { c: !!c, n: T.placed.length, inDay: !!(c && T.placed.some(b => b.id === c.id && b.start === 1200)) } });
+      ok(made.c && made.n === n0 + 1 && made.inDay, '직접 만들기: a hand-made place, in the day at 20:00 ' + JSON.stringify(made));
+      const name = await p.evaluate(() => window.__jepi.dupTest());
+      const r = await p.evaluate(() => { const F = window.JEPI_UI.flow.find, d = F.dupInfo(); if (!d.length) return { n: 0 }; F.mergePlaces(d[0].a, d[0].b); return { n: d.length, after: F.dupInfo().length } });
+      ok(r.n >= 1 && r.after === r.n - 1, `"${name}" twice: offered, then merged into one ` + JSON.stringify(r));
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'flow: look and header (app/flow/look.ts, header.ts): theme colour applied, 수첩 style, the plan menu opens with postcards and closes on Esc',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      const r = await p.evaluate(() => { const T = window.JEPI_DATA.trip.cur, F = window.JEPI_UI.flow; T.profile.look = { color: '#0f7a5c', style: 'note', cover: 'sea' }; F.look.renderLook();
+        return { theme: document.documentElement.style.getPropertyValue('--theme'), note: document.body.classList.contains('style-note'), day: (document.getElementById('heroDay') || {}).textContent || '' } });
+      ok(r.theme === '#0f7a5c' && r.note && r.day.startsWith('CHAPTER 1'), '꾸미기: theme colour, 수첩 style, chapter title ' + JSON.stringify(r));
+      await p.evaluate(() => { window.JEPI_DATA.trip.cur.profile.look = {}; window.JEPI_UI.flow.look.renderLook(); window.JEPI_UI.flow.header.planMenu(true) }); await p.waitForTimeout(250);
+      ok(await vis(p, '#planMenu') && (await p.$$eval('#planMenu .pm-item', e => e.length)) >= 1, 'the plan menu opens with a postcard per plan');
+      await p.keyboard.press('Escape'); await p.waitForTimeout(200);
+      ok(!(await vis(p, '#planMenu')), 'Esc closes it');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'flow: 단계 띠·노트·안내·더보기 (app/flow/phase.ts, guide.ts, more.ts): the notebook opens and closes, the guide walks and remembers, 더보기 shows the trip',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      await p.evaluate(() => window.JEPI_UI.flow.phase.openNotebook()); await p.waitForTimeout(250);
+      const chapters = await p.$$eval('#notebook .nb-ch, #notebook [class*="chapter"], #notebook h3', e => e.length);
+      ok(await vis(p, '#notebook') && chapters >= 1, '여행 노트 opens with chapters (' + chapters + ')');
+      await p.evaluate(() => window.JEPI_UI.flow.phase.closeNotebook()); await p.waitForTimeout(150);
+      ok(!(await vis(p, '#notebook')), 'and closes');
+      await p.evaluate(() => { localStorage.removeItem('gp.coach'); window.JEPI_UI.flow.guide.showCoach(0) }); await p.waitForTimeout(250);
+      ok(await vis(p, '#coach'), 'the guide opens on step 1');
+      await p.evaluate(() => { const G = window.JEPI_UI.flow.guide; for (let i = 0; i < 4; i++) G.coachAct('next') }); await p.waitForTimeout(250);
+      ok(!(await vis(p, '#coach')) && await p.evaluate(() => localStorage.getItem('gp.coach')) === '1', 'after the last step it closes and is remembered');
+      await p.click('.tabs [data-tab="more"]'); await p.waitForTimeout(250);
+      ok((await p.textContent('#moreBox')).includes('오사카'), '더보기 shows the trip');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'flow: tabs and page-wide clicks (app/flow/events.ts, pieces.ts): goTab, the dark background and Esc close a sheet, J/P switch, 가볍게 시작 asks for a place first',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S); await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      await p.evaluate(() => window.JEPI_UI.flow.events.goTab('settings')); await p.waitForTimeout(200);
+      ok(await vis(p, '#side-settings') && await p.evaluate(() => window.JEPI_UI.ui.tab) === 'settings', 'goTab: 설정 shown');
+      await p.evaluate(() => window.JEPI_UI.flow.events.goTab('timeline')); await p.waitForTimeout(200);
+      await p.click('#grid .blk'); await p.waitForTimeout(250); ok(await vis(p, '#sheetBg'), 'a block opens its sheet');
+      await p.keyboard.press('Escape'); await p.waitForTimeout(300); ok(!(await vis(p, '#sheetBg')), 'Esc closes it');
+      await p.click('#grid .blk'); await p.waitForTimeout(250); await p.mouse.click(5, 5); await p.waitForTimeout(300);
+      ok(!(await vis(p, '#sheetBg')), 'tapping the dark background closes it');
+      await p.evaluate(() => window.JEPI_UI.flow.pieces.setJP('P', true)); ok(await p.evaluate(() => document.body.classList.contains('mode-p')), 'setJP P');
+      await p.evaluate(() => window.JEPI_UI.flow.pieces.setJP('J', true));
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
+  },
+  {
+    name: 'start-up (app/flow/boot.ts): one app file and no old script, the first screen, then a trip draws with no page errors',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S);
+      const scripts = await p.$$eval('script[src]', e => e.map(x => x.getAttribute('src')));
+      ok(scripts.length === 1 && /assets\/app-|main\.tsx/.test(scripts[0]) && !scripts.some(x => /legacy/.test(x)), 'only the app file is loaded: ' + scripts.join(', '));
+      ok(await vis(p, '#welcome'), 'a first visit shows the first screen');
+      await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      ok((await p.$$eval('#grid .blk', e => e.length)) > 3 && (await p.textContent('#tripMeta')).includes('오사카'), 'the trip draws');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
   ,
   {

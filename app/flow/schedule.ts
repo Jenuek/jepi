@@ -2,7 +2,6 @@
 // time (fill it or put the picked card there), the day buttons, 간식비, drag & drop, the day's summary chips, 준비하기
 // (tick, go to a warning, reset), the AI box (stop, close, put one in), 취향 키워드, day titles and handwritten memos.
 // (It used to be blockAct / gridAct / checksAct … in src/js/380-events.js, 382-tidy.js, 389-titles.js and 389b-memo.js.)
-// What the old code still does is passed in once with connect() (Legacy).
 import * as trip from '../data/trip';
 import * as places from '../data/places';
 import * as check from '../data/check';
@@ -12,20 +11,13 @@ import * as memo from '../logic/memo';
 import { fmt, durTxt } from '../logic/time';
 import { ui } from '../ui/state';
 import * as R from './render';
+import * as X_dice from './dice';
+import * as X_events from './events';
+import * as X_find from './find';
+import * as X_helper from './helper';
+import * as X_look from './look';
+import * as X_pieces from './pieces';
 
-/** what the old code still does */
-export interface Legacy {
-  hero(p: any): void;
-  /** 🎲 from this empty time */
-  diceFrom(t: number): void;
-  openCustom(id: string | null, start: number | null): void;
-  makePairBlock(uid: string, kind: string): void;
-  genSeason(statusId: string): void;
-  /** hand every warning to the AI chat */
-  fixWarns(): void;
-}
-let L: Legacy;
-export function connect(l: Legacy): void { L = l }
 
 const $ = (s: string) => document.querySelector(s) as HTMLElement;
 const mount = (name: string, el: Element, props: any) => (window.JEPI_UI.mount as any)(name, el, props);
@@ -38,13 +30,13 @@ export function blockAct(n: string, v: string, o?: any): void {
   o = o || {}; const uid = $('#sheet').dataset.uid || '', b = CUR.placed.find((x: any) => x.uid === uid);
   switch (n) {
     case 'fill': R.place(v, +o.start); R.closeSheet(); R.renderAll(); return;          // an empty time: put this place there
-    case 'dicefrom': L.diceFrom(+v); return;
+    case 'dicefrom': X_dice.diceFrom(+v); return;
     case 'totray': R.closeSheet(); ui.tab = 'tray'; R.renderTabs(); return;
-    case 'newcustom': L.openCustom(null, +v); return;
-    case 'editcustom': L.openCustom(v, null); return;
+    case 'newcustom': X_find.openCustom(null, +v); return;
+    case 'editcustom': X_find.openCustom(v, null); return;
     case 'swap': if (b) { trip.blocks.change(uid, { id: v, start: +o.start, dur: +o.dur }); R.renderAll(); R.openSheet(uid) } return;
     case 'mark': trip.toggleMark(uid, v); R.renderAll(); R.openSheet(uid, { marksOpen: true }); return;
-    case 'pairblock': L.makePairBlock(uid, v); return;
+    case 'pairblock': X_pieces.makePairBlock(uid, v); return;
     case 'home': CUR.profile.home.min = Math.max(10, Math.min(240, (+CUR.profile.home.min || 60) + +v)); trip.save('profile', CUR.profile); buildDays(); R.renderAll(); R.openSheet('f0a'); return;
   }
   if (!b) return;
@@ -57,8 +49,8 @@ export function checksAct(n: string, v: string, o?: any): void {
   switch (n) {
     case 'ck': trip.tick(v, !!o); R.renderChecks(); return;
     case 'goto': { const [d, u] = String(v).split('~'); ui.day = +d; ui.tab = 'timeline'; R.renderAll(); R.openSheet(u); return }
-    case 'fix': L.fixWarns(); return;
-    case 'season': L.genSeason('st_season'); return;
+    case 'fix': X_events.fixWarns(); return;
+    case 'season': X_helper.genSeason('st_season'); return;
     case 'reset': if (!ui.resetArm) { ui.resetArm = true; R.renderChecks(); return }
       ui.resetArm = false; CUR.fmarks = {}; trip.save('fmarks', CUR.fmarks); CUR.placed = []; trip.blocks.saved(); R.renderAll(); return;
   }
@@ -125,10 +117,10 @@ export const dayTitleOf = (d: number): string => memo.dayTitle(CUR.profile, d, (
 export const memoKey = (it: any, d: number): string => memo.blockKey(it.id, d);
 export const blockMemoOf = (it: any, d: number): string => memo.blockMemo(CUR.profile, memoKey(it, d));
 export const dayMemoOf = (d: number): string => memo.dayMemo(CUR.profile, d);
-export function renderDayMemo(): void { const m = dayMemoOf(ui.day); L.hero({ memo: m ? `“${m}”` : '' }) }
+export function renderDayMemo(): void { const m = dayMemoOf(ui.day); X_look.hero({ memo: m ? `“${m}”` : '' }) }
 let dayTitleRev = 0;
 /** the ✎ form (DayTitleForm.tsx saves itself); here: the header around it */
 export function titleEditing(on: boolean): void {
-  L.hero({ editing: on, slot: true });
+  X_look.hero({ editing: on, slot: true });
   mount('dayTitle', $('#dayTitleSlot'), { open: on, day: ui.day, title: memo.ownDayTitle(CUR.profile, ui.day), auto: String(D_.days[ui.day].title || ''), memo: dayMemoOf(ui.day), rev: ++dayTitleRev });
 }

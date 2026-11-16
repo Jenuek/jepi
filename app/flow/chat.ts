@@ -1,7 +1,6 @@
 // The AI chat under the 일정표 (asking for changes, applying / undoing them, the places it suggests), the dock around it,
 // the "알려 주세요" nudges, the trip line in the header, and ✨ 빈 시간 채우기. (It used to be src/js/050-chat.js,
-// 260-chat-places.js and 360-ai.js.) The old code reads and changes the chat's state as CS.chat, CS.busy …
-// What the old code still does is passed in once with connect() (Legacy).
+// 260-chat-places.js and 360-ai.js.) The start-up file (boot.ts) reads and changes the chat's state as CS.chat, CS.busy …
 import * as trip from '../data/trip';
 import * as places from '../data/places';
 import * as asks from '../data/asks';
@@ -13,6 +12,13 @@ import { norm } from '../logic/places';
 import { ui } from '../ui/state';
 import { fs } from './forms';
 import * as R from './render';
+import * as X_places from '../data/places';
+import * as X_events from './events';
+import * as X_find from './find';
+import * as X_forms from './forms';
+import * as X_helper from './helper';
+import * as X_look from './look';
+import * as X_phase from './phase';
 export const cs = {
   /** the messages: {role:'user'|'a'|'busy', text, ops, warns, state …} */
   chat: [] as any[],
@@ -27,17 +33,6 @@ export const cs = {
 /** the places the AI just found (✨ 방금 찾은 곳) */
 export const fresh = new Set<string>();
 
-/** what the old code still does */
-export interface Legacy {
-  openFind(o: any): void; fixWarns(): void; openHelper(step: number): void; openCustom(id: string | null, start: number | null): void;
-  /** a hand-made place back in the lists (after 되돌리기) */
-  addCustomToData(c: any): void;
-  hero(p: any): void; renderMe(): void; needBooking(): boolean;
-  /** the same place already in the list, or null */
-  dupOf(p: any): any; renderExt(): void;
-}
-let L: Legacy;
-export function connect(l: Legacy): void { L = l }
 
 const $ = (s: string) => document.querySelector(s) as any;
 const CUR = trip.cur as any, PK = places.state as any, D_ = DYs as any, PMx = places.PM as any;
@@ -52,10 +47,10 @@ export function dock(p?: any){dockView={...dockView,...p};mount('dock',$('#chatM
 // a button / the message was sent in the dock
 export function dockAct(n?: any, v?: any){
   if(n==='fold'){cs.folded=!cs.folded;chatFoldSync()}
-  else if(n==='ai')L.openFind({when:'gap',into:'sched'});
-  else if(n==='fix')L.fixWarns();
-  else if(n==='helper')L.openHelper(0);
-  else if(n==='custom')L.openCustom(null,null);
+  else if(n==='ai')X_find.openFind({when:'gap',into:'sched'});
+  else if(n==='fix')X_events.fixWarns();
+  else if(n==='helper')X_helper.openHelper(0);
+  else if(n==='custom')X_find.openCustom(null,null);
   else if(n==='send'){cs.folded=false;if(v)sendChat(v)}
 }
 export function renderChat(){setTimeout(chatFoldSync,0);
@@ -91,7 +86,7 @@ export function applyChat(i?: any){const m=cs.chat[i]; if(!m||m.state!=='pending
   OPS.apply(m.ops.filter((o: any)=>o.op!=='add_place')); trip.save('fmarks',CUR.fmarks);
   trip.save('custom',CUR.custom); m.state='applied'; trip.blocks.saved(); R.renderAll();
 }
-export function undoChat(i?: any){if(!cs.undoSnap||cs.undoSnap.i!==i) return; CUR.placed=cs.undoSnap.placed; CUR.custom=cs.undoSnap.custom; CUR.fmarks=cs.undoSnap.fmarks||CUR.fmarks; trip.save('fmarks',CUR.fmarks); CUR.custom.forEach(L.addCustomToData); trip.save('custom',CUR.custom); cs.undoSnap=null; cs.chat[i].state='cancelled'; cs.chat[i].text+=' (되돌렸어요)'; trip.blocks.saved(); R.renderAll()}
+export function undoChat(i?: any){if(!cs.undoSnap||cs.undoSnap.i!==i) return; CUR.placed=cs.undoSnap.placed; CUR.custom=cs.undoSnap.custom; CUR.fmarks=cs.undoSnap.fmarks||CUR.fmarks; trip.save('fmarks',CUR.fmarks); CUR.custom.forEach(X_places.addCustom); trip.save('custom',CUR.custom); cs.undoSnap=null; cs.chat[i].state='cancelled'; cs.chat[i].text+=' (되돌렸어요)'; trip.blocks.saved(); R.renderAll()}
 export function renderNudges(){
   const off=CUR.profile.nudgeOff||{}, C: any[]=[];
   if(CUR.profile.kind!=='day'&&!CUR.profile.flightSet&&CUR.profile.bookedFlight!==false&&!off.flight) C.push(['flight','✈️','교통편 시간을 알려 주세요','첫날 출발과 마지막 날 귀국 시간이 정확해져요.',[['nudgeFlightIn','시간 넣기',1],['nudgeFlightNo','아직 예약 전이에요']]]);
@@ -103,8 +98,8 @@ export function renderNudges(){
     rows:C.map(([k,ic,t,d,bs])=>({k,ic,title:d,aria:`${t} 나중에`,label:t.replace(' 알려 주세요','').replace('을','').replace('를',''),
       btns:bs.map(([id,l,pr]: any)=>({id,primary:!!pr,label:pr?l.replace(/ .*/,'')==='시간'?'넣기':l.split(' ')[0]==='숙소'?'넣기':'고르기':'예약 전'}))}))});
 }
-export function goMe(h?: any){ui.tab='me';fs.draft=clone(CUR.profile);L.renderMe();R.renderTabs();setTimeout(()=>{const el=[...document.querySelectorAll('#meBox h3')].find((x: any)=>x.textContent.includes(h));if(el)el.scrollIntoView({block:'start'})},0)}
-export function renderMeta(){if(CUR.profile.kind==='day'){dock({helperHidden:true});L.hero({meta:`${PK.pack.city} · ${(D_.days[0].iso||'').slice(5).replace('-','/')} 하루 코스 · ${CUR.profile.meet.time}–${CUR.profile.meet.end}`});return}if(CUR.profile.dateUnknown){const n=D_.days.length-1;dock({helperHidden:!L.needBooking()});L.hero({meta:`${PK.pack.city} · 날짜 미정 (대략 ${(D_.days[0].iso||'').slice(5).replace('-','/')}부터) · ${n}박 ${n+1}일`});return}dock({helperHidden:!L.needBooking()});const n=D_.days.length-1;L.hero({meta:`${PK.pack.city} · ${(D_.days[0].iso||'').replace(/-/g,'.')} – ${(D_.days[n].iso||'').slice(5).replace('-','.')} · ${n}박 ${n+1}일 · ${apName(CUR.profile.out.airport)}`})}
+export function goMe(h?: any){ui.tab='me';fs.draft=clone(CUR.profile);X_forms.renderMe();R.renderTabs();setTimeout(()=>{const el=[...document.querySelectorAll('#meBox h3')].find((x: any)=>x.textContent.includes(h));if(el)el.scrollIntoView({block:'start'})},0)}
+export function renderMeta(){if(CUR.profile.kind==='day'){dock({helperHidden:true});X_look.hero({meta:`${PK.pack.city} · ${(D_.days[0].iso||'').slice(5).replace('-','/')} 하루 코스 · ${CUR.profile.meet.time}–${CUR.profile.meet.end}`});return}if(CUR.profile.dateUnknown){const n=D_.days.length-1;dock({helperHidden:!X_helper.needBooking()});X_look.hero({meta:`${PK.pack.city} · 날짜 미정 (대략 ${(D_.days[0].iso||'').slice(5).replace('-','/')}부터) · ${n}박 ${n+1}일`});return}dock({helperHidden:!X_helper.needBooking()});const n=D_.days.length-1;X_look.hero({meta:`${PK.pack.city} · ${(D_.days[0].iso||'').replace(/-/g,'.')} – ${(D_.days[n].iso||'').slice(5).replace('-','.')} · ${n}박 ${n+1}일 · ${apName(CUR.profile.out.airport)}`})}
 
 
 export function chatFoldSync(){
@@ -123,7 +118,7 @@ export function placeRows(m?: any){
 }
 function cpEnsure(o?: any){if(o._id&&PMx[o._id])return o._id;
   const pl=places.cleanPlace({name:o.name,local:o.local,area:o.area,cat:o.category,lat:o.lat,lng:o.lng,dur:o.dur,open:o.open,closed:o.closed,cost:o.cost,costNote:o.costNote,tags:o.tags,note:o.note});
-  if(!pl)return null; const ex=places.P.find((p: any)=>norm(p.name)===norm(pl.name))||L.dupOf(pl); if(ex){o._id=ex.id;o._dup=ex.name;return ex.id}
+  if(!pl)return null; const ex=places.P.find((p: any)=>norm(p.name)===norm(pl.name))||X_find.dupOf(pl); if(ex){o._id=ex.id;o._dup=ex.name;return ex.id}
   PK.pack.places.push(pl);places.addPackPlace(pl);fresh.add(pl.id);places.savePack();o._id=pl.id;return pl.id}
 // What was pressed in a chat message (ChatLog.tsx tells: its name and value)
 export function chatAct(n?: any, v?: any){
@@ -138,7 +133,7 @@ function cpAct(v?: any){
   const [i,k,act]=String(v).split(':'), m=cs.chat[+i], o=m&&m.ops&&m.ops[+k]; if(!o)return;
   if(act==='skip'){o._c='skip';o._txt='넣지 않았어요';renderChat();return}
   const id=cpEnsure(o); if(!id){o._c='skip';o._txt='장소 정보를 읽지 못했어요';renderChat();return}
-  if(act==='list'){o._c='list';o._txt=o._dup?`이미 있는 "${o._dup}"와 같은 곳이라 새로 만들지 않았어요`:'장소 목록에 넣었어요 · 장소 탭 맨 위';renderChat();R.renderTray();L.renderExt();return}
+  if(act==='list'){o._c='list';o._txt=o._dup?`이미 있는 "${o._dup}"와 같은 곳이라 새로 만들지 않았어요`:'장소 목록에 넣었어요 · 장소 탭 맨 위';renderChat();R.renderTray();X_phase.renderExt();return}
   const sl=cpSlot(o);
   if(sl&&!CUR.placed.some((b: any)=>b.id===id)){const r=OPS.repair([{op:'add',day:sl.d,id,start:fmt(sl.st),dur:PMx[id].dur}]);
     OPS.apply(r.ops);trip.blocks.saved();o._c='sched';o._txt=`Day ${sl.d+1} ${r.ops[0].start}에 넣었어요${r.warns.length?` · 경고 ${r.warns.length}개`:''}`;ui.day=sl.d;R.renderAll();renderChat();return}

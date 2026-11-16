@@ -4,8 +4,8 @@
   "description": "JEPI — J와 P가 함께 쓰는 여행 플래너 (static PWA)",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
-    "check": "tsc && vite build && node tools/check.js"
+    "build": "tsc && node tools/load-order.mjs && vite build",
+    "check": "tsc && node tools/load-order.mjs && vite build && node tools/check.js"
   },
   "devDependencies": {
     "@types/react": "19.3.0",

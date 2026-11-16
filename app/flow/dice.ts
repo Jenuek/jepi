@@ -1,7 +1,7 @@
 // What happens in the 🎲 sheet and on the P모드 board: 뭐 먹지 (around me, or a meal in the trip), 뭐 하지 (around me, in a
 // 동네, or the trip's free time; one place or a whole course), rolling, 이걸로 (into the schedule / remembered), and the
 // board's dice and cards. The rolls and choices live here (st). (It used to be src/js/160-modes-roll.js, 280-dice-eat.js,
-// 290-dice-do.js, 170-quick-start-pview.js and pviewAct in 380-events.js.) What the old code still does: connect() (Legacy).
+// 290-dice-do.js, 170-quick-start-pview.js and pviewAct in 380-events.js.)
 import * as trip from '../data/trip';
 import * as places from '../data/places';
 import * as storage from '../data/storage';
@@ -18,25 +18,15 @@ import { ui } from '../ui/state';
 import * as DICEV from '../view/dice';
 import * as PVIEW from '../view/pview';
 import * as R from './render';
+import * as X_demo from '../data/demo';
+import * as X_status from '../ui/status';
+import * as X_course from './course';
+import * as X_destination from './destination';
+import * as X_header from './header';
+import * as X_settings from './settings';
+import * as X_share from './share';
+import * as X_chat from './chat';
 
-/** what the old code still does */
-export interface Legacy {
-  /** ask the AI for n more places (focus: what kind); resolves with how many came */
-  morePlaces(n: number, statusId: string, focus: string, signal?: AbortSignal, quick?: boolean): Promise<number>;
-  /** the places the AI just found (✨) */
-  fresh(): Set<string>;
-  setSt(id: string, text: string): void;
-  toast(msg: string): void;
-  renderSettings(): void;
-  diceOpenAnim(): void;
-  /** 📌 이 코스 저장: a new 하루 코스 plan from st.doS.course */
-  saveCourse(): void;
-  /** a map key that did not work */
-  keyBad(): Record<string, any>;
-  demoOn(): boolean;
-}
-let L: Legacy;
-export function connect(l: Legacy): void { L = l }
 
 const $ = (s: string) => document.querySelector(s) as HTMLElement;
 const mount = (name: string, el: Element, props: any) => (window.JEPI_UI.mount as any)(name, el, props);
@@ -110,8 +100,8 @@ async function diceAI(){
   const focus=forEat?`${mealTxt} 식사할 식당 (cat food, open at ${mealTxt==='저녁'?'18:00-20:00':'11:30-14:00'}), within ${dice.walk} minutes walk${at}${eatMood}`
     :dice.mood==='any'?'지금 빈 시간에 하기 좋은 곳':`지금 기분: ${mood}`;
   dice.msg=''; dice.pick=null; renderDice();
-  const n=await L.morePlaces(forEat?6:8,'st_dice',focus,undefined,forEat); if(!n) return;   // the status line says why
-  dice.fresh=[...L.fresh()]; dice.rolls=0; diceRoll(false);
+  const n=await X_destination.morePlaces(forEat?6:8,'st_dice',focus,undefined,forEat); if(!n) return;   // the status line says why
+  dice.fresh=[...X_chat.fresh]; dice.rolls=0; diceRoll(false);
   if(!dice.pick) {dice.msg=forEat?`AI가 ${n}곳을 새로 찾았지만 걸어서 ${dice.walk}분 안에 ${mealTxt} 시간에 열린 곳이 없어요. 걷는 시간을 늘려 다시 굴려 보세요.`:`AI가 ${n}곳을 새로 찾았지만 이 빈 시간에 맞는 곳이 없어요.`; renderDice()}
 }
 
@@ -170,7 +160,7 @@ async function eatRoll(again?: any){
 export function renderEat(){if($('#sheet').dataset.uid!=='dice')return;diceMount(DICEV.eatTab(diceState()))}
 export function openDiceTab(tab?: any, fromT?: any){
   dice.tab=tab; if(tab==='eat'){eatDefaults(); eat.chosen=null} else doDefaults(fromT!=null);
-  openDice(fromT); if(fromT==null) L.diceOpenAnim();
+  openDice(fromT); if(fromT==null) X_header.diceOpenAnim();
 }
 // home-screen shortcut: ./?dice=eat
 export function diceFromUrl(){try{const q=new URLSearchParams(location.search).get('dice');if(q==='eat'||q==='do'){history.replaceState(null,'',location.pathname+location.hash);setTimeout(()=>openDiceTab(q),300)}}catch(_){}}
@@ -188,7 +178,7 @@ async function doOrigin(){
   if(doS.org==='gps'){const ll=await kakao.here(120000);doS.where='지금 위치';return ll}
   const x=mypOf(doS.org);if(!x||!x.ll)throw aerr('noplace','이 장소를 아직 등록하지 않았어요.');doS.where=x.name;return x.ll;
 }
-const doLook=()=>({kakao:!!keys.list.kakao&&!L.keyBad().kakao,ai:ui.sample,mood:doS.mood,areaName:doS.base==='area'&&doS.area?doS.area.name:''});
+const doLook=()=>({kakao:!!keys.list.kakao&&!X_settings.ks.bad.kakao,ai:ui.sample,mood:doS.mood,areaName:doS.base==='area'&&doS.area?doS.area.name:''});
 async function poolFor(type?: any, ll?: any, t?: any){const r=await NB.poolFor(type,ll,t,doLook());doS.src=r.src;return r.list}
 async function doGo(kind?: any, again?: any){
   if(doS.busy) return;
@@ -230,7 +220,7 @@ export async function diceAct(n?: any, v?: any, more?: any){
   // both tabs
   case 'dicetab': if(v==='eat'){dice.tab='eat';eatDefaults();eat.chosen=null}else{dice.tab='do';dice.pick=null;dice.rolls=0;dice.msg='';doDefaults(false)}renderDice();return;
   case 'cond': if(dice.tab==='eat')eat.cond=!!v;else doS.cond=!!v;return;   // the 조건 box opened / closed
-  case 'eatSetPlaces': R.closeSheet();ui.tab='settings';myplaces.ui.edit=null;L.renderSettings();R.renderTabs();return;
+  case 'eatSetPlaces': R.closeSheet();ui.tab='settings';myplaces.ui.edit=null;X_settings.renderSettings();R.renderTabs();return;
   // 일정 빈 시간에서 굴리기 (160-modes-roll.js)
   case 'dicegap': dice.gapI=+v;dice.pick=null;dice.msg='';renderDice();return;
   case 'dicemood': dice.mood=v;dice.pick=null;dice.msg='';renderDice();return;
@@ -264,7 +254,7 @@ export async function diceAct(n?: any, v?: any, more?: any){
   case 'dogo': doGo(v,!!more.again);return;
   case 'doreroll': doReroll(+v);return;
   case 'doPick': if(doS.pick){st.log.push({n:doS.pick.name,d:isoOf(new Date())});st.log=st.log.slice(-60);storage.set('gp.dice',st.log);doS.chosen=doS.pick.name;renderDice()}return;
-  case 'doSave': L.saveCourse();return;
+  case 'doSave': X_course.saveCourse();return;
   }
 }
 
@@ -274,7 +264,7 @@ const pGaps=()=>PVIEW.pGaps(ui.day);
 export function renderPView(){
   const box=$('#pview'); if(!box) return;
   const on=ui.jp==='P'; box.hidden=!on; $('.grid-wrap').hidden=on; if(!on) return;
-  mount('pview',box,{...PVIEW.board(ui.day,pSt,{ahead:pAheadOn(),demo:L.demoOn(),ai:!!ui.sample}),rev:++pviewRev});
+  mount('pview',box,{...PVIEW.board(ui.day,pSt,{ahead:pAheadOn(),demo:!!X_demo.DEMO.on,ai:!!ui.sample}),rev:++pviewRev});
 }
 function pPick(cs?: any){const fw=(c: any)=>c.w*(dice.fresh&&dice.fresh.includes(c.p.id)?8:1); const tot=cs.reduce((a: any,c: any)=>a+fw(c),0); let r=Math.random()*tot, pick=cs[cs.length-1]; for(const c of cs){r-=fw(c);if(r<=0){pick=c;break}} return pick}
 // roll the chosen die for one free time: spin, then show a card
@@ -298,21 +288,21 @@ export function learnFrom(p?: any){const t=places.tagsOf(p.id)[0];if(t)trip.keyw
 export function pYes(){const d=pSt.draw; if(!d||!d.cand) return; const c=d.cand; learnFrom(c.p);
   const r=OPS.repair([{op:'add',day:ui.day,id:c.p.id,start:fmt(c.arr),dur:c.dur}]); OPS.apply(r.ops); trip.blocks.saved();
   st.log.push({n:c.p.name,d:D_.days[ui.day].iso}); st.log=st.log.slice(-60); storage.set('gp.dice',st.log); pSt.draw=null; R.renderAll();}
-export function pKeep(){const d=pSt.draw; if(!d||!d.cand) return; if(!trip.wish.has(d.cand.p.id)) trip.wish.toggle(d.cand.p.id); L.toast('내 카드에 넣었어요'); pRollDo(d.gi)}
+export function pKeep(){const d=pSt.draw; if(!d||!d.cand) return; if(!trip.wish.has(d.cand.p.id)) trip.wish.toggle(d.cand.p.id); X_share.showToast('내 카드에 넣었어요'); pRollDo(d.gi)}
 export function pClose(){clearTimeout(pSpinT); pSt.draw=null; renderPView()}
 export function pMood(k?: any){if(PVIEW.P_DICE.some((v: any)=>v[0]===k)){pSt.mood=k;renderPView()}}
 export function pAhead(){storage.set('gp.pAhead',!pAheadOn()); renderPView()}
-export async function pAI(){const d=pSt.draw; if(!d) return; const n=await L.morePlaces(6,'st_pai',`${PVIEW.partOfDay(d.g.s)} 시간대에 하기 좋은 곳`); if(n){d.seen=[];d.cand=null;pRollDo(d.gi)}}
+export async function pAI(){const d=pSt.draw; if(!d) return; const n=await X_destination.morePlaces(6,'st_pai',`${PVIEW.partOfDay(d.g.s)} 시간대에 하기 좋은 곳`); if(n){d.seen=[];d.cand=null;pRollDo(d.gi)}}
 // P모드 장소 탭 (카드 모으기): ask the AI for places to collect, or put one place straight onto the board's next ? square that fits it
-export async function pAIRec(){const n=await L.morePlaces(8,'st_pairec','');if(n){R.renderTray();L.setSt('st_pairec',`${n}곳을 찾았어요. 아래 "✨ 방금 찾은 곳"에서 ♥ 담기로 모아요.`)}}
+export async function pAIRec(){const n=await X_destination.morePlaces(8,'st_pairec','');if(n){R.renderTray();X_status.setSt('st_pairec',`${n}곳을 찾았어요. 아래 "✨ 방금 찾은 곳"에서 ♥ 담기로 모아요.`)}}
 export function pPlaceNow(id?: any){
   const p=PMx[id]; if(!p) return;
   const m0=dice.mood,l0=dice.lunch; dice.mood='any'; dice.lunch=false;
   let hit=null; for(const g of pGaps()){const c=diceCands(g).find((x: any)=>x.p.id===id);if(c){hit=c;break}}
   dice.mood=m0; dice.lunch=l0;
-  if(!hit){L.toast('이 날 빈 칸에는 맞지 않아요. 내 카드로 담아 두세요.');return}
+  if(!hit){X_share.showToast('이 날 빈 칸에는 맞지 않아요. 내 카드로 담아 두세요.');return}
   const r=OPS.repair([{op:'add',day:ui.day,id,start:fmt(hit.arr),dur:hit.dur}]); OPS.apply(r.ops); trip.blocks.saved();
-  L.toast(`${D_.days[ui.day].date||'이 날'} ${PVIEW.shortFuzzy(hit.arr)}에 넣었어요`); R.renderAll();
+  X_share.showToast(`${D_.days[ui.day].date||'이 날'} ${PVIEW.shortFuzzy(hit.arr)}에 넣었어요`); R.renderAll();
 }
 
 // What was pressed on the P모드 판 (PView.tsx tells: its name and value)
