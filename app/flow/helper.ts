@@ -1,7 +1,6 @@
 // 예약 도우미 (① ♥ places → ② where to stay → ③ flight / train times → ④ booking status), the AI answers in it (동네 분위기,
 // named stays, routes, a pasted list of places), and 시즌 정보 (what is special on these dates). (It used to be
-// src/js/100-booking.js, 110-season.js and 150-lodging.js.) The old code reads its state as HS.step, HS.vibe …
-// What the old code still does is passed in once with connect() (Legacy).
+// src/js/100-booking.js, 110-season.js and 150-lodging.js.) The start-up file (boot.ts) reads its state as HS.step, HS.vibe …
 import * as trip from '../data/trip';
 import * as places from '../data/places';
 import * as asks from '../data/asks';
@@ -14,6 +13,8 @@ import { progStart, progStop, setSt, errText } from '../ui/status';
 import * as HV from '../view/helper';
 import { fs } from './forms';
 import * as R from './render';
+import * as X_forms from './forms';
+import * as X_guide from './guide';
 export const hs = {
   /** the open step (0 … 3) */
   step: 0,
@@ -28,10 +29,6 @@ export const hs = {
   slotPicked: null as string | null,
 };
 
-/** what the old code still does */
-export interface Legacy { maybeCoach(): void; renderMe(): void }
-let L: Legacy;
-export function connect(l: Legacy): void { L = l }
 
 const $ = (s: string) => document.querySelector(s) as any;
 const mount = (name: string, el: Element, props: any) => (window.JEPI_UI.mount as any)(name, el, props);
@@ -65,7 +62,7 @@ export function helperAct(n?: any, v?: any, v2?: any){
   case 'setarea': {const k=v;CUR.profile.stayPicked=k;CUR.profile.stays.forEach((st: any,i: any)=>{if(i===0||CUR.profile.bookedStay===false){st.area=k;if(CUR.profile.bookedStay===false)st.name=`숙소 (미정 · ${places.AREAS[k][0]})`}});trip.save('profile',CUR.profile);buildDays();renderHelper();return}
   case 'slot': {const [a,d]=String(v).split(',').map(Number);setSlot(a,d);return}
   case 'radio': CUR.profile[v]=v2==='true';trip.save('profile',CUR.profile);renderHelper();return;   // ④ 예약 상태
-  case 'toMe': closeHelper();ui.tab='me';fs.draft=clone(CUR.profile);L.renderMe();R.renderTabs();return;
+  case 'toMe': closeHelper();ui.tab='me';fs.draft=clone(CUR.profile);X_forms.renderMe();R.renderTabs();return;
   }
 }
 // the frame (drawn by React: app/screens/Frames.tsx) shows what helperView says; the step itself goes into #helperBody
@@ -80,7 +77,7 @@ export function helperFrameAct(n?: any){
   if(n==='close')closeHelper()
 }
 export function openHelper(step?: any){hs.step=step||0;hs.slotPicked=null;$('#meBox').innerHTML='';helperShow(true);renderHelper()}
-export function closeHelper(){helperShow(false);R.renderAll();L.maybeCoach();if(ui.tab==='me'){fs.draft=clone(CUR.profile);L.renderMe()}}
+export function closeHelper(){helperShow(false);R.renderAll();X_guide.maybeCoach();if(ui.tab==='me'){fs.draft=clone(CUR.profile);X_forms.renderMe()}}
 export const H_STEPS=['가고 싶은 곳 고르기','숙소 동네 정하기','교통편 시간대 정하기','예약하고 일정에 넣기'];
 export function renderHelper(){
   if(!helperView.open) return;

@@ -9,11 +9,10 @@ import { SYNC } from '../data/server';
 import * as FF from './forms';
 import * as PLF from './plans';
 import { showToast } from './share';
+import * as X_state from '../ui/state';
+import * as X_friends from './friends';
+import * as X_phase from './phase';
 
-/** what the old code still does */
-export interface Legacy { joinPending(): Promise<boolean>; firstRun(): boolean; startupFocus(): void }
-let L: Legacy;
-export function connect(l: Legacy): void { L = l }
 
 const $ = (s: string) => document.querySelector(s) as any;
 const mount = (name: string, el: Element, props: any) => (window.JEPI_UI.mount as any)(name, el, props);
@@ -32,10 +31,10 @@ export function renderWelcome(){
 }
 // after logging in on the first screen: a pending invite, else the newest plan that came with the account, else a new trip
 export async function welcomeLoggedIn(){
-  if(storage.get('jepi.joinCode','')){closeWelcome();if(!(await L.joinPending())&&L.firstRun())FF.openOnb();return}
+  if(storage.get('jepi.joinCode','')){closeWelcome();if(!(await X_friends.joinPending())&&X_state.ui.firstRun)FF.openOnb();return}
   const mine=PL.plans.filter((p: any)=>p.id!==PL.curPlan&&trip.plans.get(p.id)).sort((a: any,b: any)=>(b.updated||0)-(a.updated||0));
   closeWelcome();
-  if(mine.length){PL.curPlan='';PLF.openPlan(mine[0].id);L.startupFocus();showToast(`로그인했어요 · 계획 ${mine.length}개를 가져왔어요`)}
+  if(mine.length){PL.curPlan='';PLF.openPlan(mine[0].id);X_phase.startupFocus();showToast(`로그인했어요 · 계획 ${mine.length}개를 가져왔어요`)}
   else{FF.openOnb();showToast('로그인했어요 · 아직 저장된 여행이 없어서 새로 만들어요')}
 }
 // ---------- demo: enter / leave (the sandbox itself is in app/data/demo.ts) ----------

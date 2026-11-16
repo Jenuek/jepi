@@ -8,11 +8,8 @@ import * as FF from './forms';
 import * as R from './render';
 import * as PLF from './plans';
 import { ps } from './plans';
+import * as X_phase from './phase';
 
-/** what the old code still does */
-export interface Legacy { openNotebook(): void }
-let L: Legacy;
-export function connect(l: Legacy): void { L = l }
 
 const PL = trip.planList as any;
 const planName = PLANS.planName, planData = PLANS.planData;
@@ -48,7 +45,7 @@ export async function openShared(){
     PLF.snapshotCurrent(); const nid='p'+Date.now().toString(36);
     trip.plans.put(nid,v.d); PL.plans.unshift({id:nid,name:String(v.n||'공유받은 계획').slice(0,30)+' (공유받음)',custom_name:true,updated:Date.now()});
     PL.curPlan=nid; PLF.savePlans(); FF.onbFrame({open:false}); PLF.applyPlanData(v.d); PLF.snapshotCurrent(); ui.tab='timeline'; R.renderTabs();
-    history.replaceState(null,'',location.pathname); showToast('공유받은 계획을 내 계획에 추가했어요.');if(asNote)setTimeout(()=>L.openNotebook(),400);
+    history.replaceState(null,'',location.pathname); showToast('공유받은 계획을 내 계획에 추가했어요.');if(asNote)setTimeout(()=>X_phase.openNotebook(),400);
   }catch(_: any){history.replaceState(null,'',location.pathname);showToast('공유 링크가 잘렸거나 손상됐어요.')}
 }
 export function showToast(m?: any){const b=document.getElementById('toast');if(!b)return;b.textContent=m;b.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>{b.hidden=true},4000)}

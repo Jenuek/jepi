@@ -1,7 +1,7 @@
 // The strip under the header (before the trip: D-day and what is left to prepare; during: now / next / 안내 시작; after),
 // opening today's plan and day at start-up, redrawing what sits around the schedule (renderExt), and the 여행 노트 (the
 // whole trip as one read-only notebook: a cover and a chapter per day). (It used to be src/js/250-phase-strip.js and
-// 389c-notebook.js.) What the old code still does is passed in once with connect() (Legacy).
+// 389c-notebook.js.)
 import * as trip from '../data/trip';
 import * as places from '../data/places';
 import * as check from '../data/check';
@@ -18,11 +18,8 @@ import { ks } from './settings';
 import * as SETF from './settings';
 import * as PLF from './plans';
 import * as RND from './render';
+import * as X_more from './more';
 
-/** what the old code still does */
-export interface Legacy { warnTotal(): number; prepLeft(): number; renderMore(): void; renderMeRows(): void; renderTasteStyle(): void; autoSave(): void }
-let LG: Legacy;
-export function connect(l: Legacy): void { LG = l }
 
 const $ = (s: string) => document.querySelector(s) as any;
 const mount = (name: string, el: Element, props: any) => (window.JEPI_UI.mount as any)(name, el, props);
@@ -49,7 +46,7 @@ export function renderPhase(){
     show({s:'now',cur:cur?{name:String(cur.name),end:fmt(cur.end)}:null,next,todayDay:ui.day!==ti?ti:null});
   } else if(D0.iso>t){
     const dd=Math.round((+new Date(D0.iso+'T00:00:00')-+new Date(t+'T00:00:00'))/864e5);
-    show({s:'before',dd,warns:LG.warnTotal(),prepLeft:LG.prepLeft(),miss:[pr.kind!=='day'&&pr.bookedFlight===false?'교통편 미정':'',pr.kind!=='day'&&pr.bookedStay===false?'숙소 미정':''].filter(Boolean)});
+    show({s:'before',dd,warns:X_more.warnTotal(),prepLeft:X_more.prepLeft(),miss:[pr.kind!=='day'&&pr.bookedFlight===false?'교통편 미정':'',pr.kind!=='day'&&pr.bookedStay===false?'숙소 미정':''].filter(Boolean)});
   } else if(Dn&&Dn.iso<t) show({s:'after'});
   else show({s:'none'});
 }
@@ -65,15 +62,15 @@ export function startupFocus(){
 }
 export function renderPlanBtn(){const p=PL.plans.find((x: any)=>x.id===PL.curPlan);hero({planName:(p&&p.name)||planName()})}
 const inside=(sel: any)=>{const a=document.activeElement;return !!(a&&a.closest&&a.closest(sel))};
-export function renderExt(){renderPhase();LG.renderMore();renderPlanBtn();
-  if(ui.tab==='me'&&$('#onb').hidden&&!inside('#meBox'))LG.renderMeRows();
-  if(ui.tab==='pref'&&!inside('#tasteStyle'))LG.renderTasteStyle();
+export function renderExt(){renderPhase();X_more.renderMore();renderPlanBtn();
+  if(ui.tab==='me'&&$('#onb').hidden&&!inside('#meBox'))X_more.renderMeRows();
+  if(ui.tab==='pref'&&!inside('#tasteStyle'))X_more.renderTasteStyle();
   if(ui.tab==='settings'&&!inside('#setBox'))SETF.renderSettings();
   if(MAP.state.on){if(MAP.state.lastDay!==ui.day){MAP.state.lastDay=ui.day;MAP.drawMap(true)}else MAP.renderMapCards()}}
 // events for the new panels (registered before the main handler; returns early only for its own controls)
 
 // a card under the map (MapCards in Dice.tsx): the map moves to that stop
-export const mapCardAct=MAP.mapCardAct;   // app/ui/map.ts
+export const mapCardAct=(...a: any[])=>(MAP.mapCardAct as any)(...a);   // app/ui/map.ts
 // autosave for 이번 여행 / 취향 panels
 
 // onboarding: connect AI right on the first screen
@@ -110,7 +107,7 @@ document.addEventListener('click',(e: any)=>{
   const t=e.target.closest('button,a,label,input'); if(!t) return;
   if(t.id==='wishGo'){ui.cat='wish';ui.tab='tray';RND.renderTray();RND.renderTabs();return}
 });
-document.addEventListener('change',(e: any)=>{if(e.target.closest&&e.target.closest('#meBox,#tasteStyle')&&!e.target.classList.contains('importFile'))LG.autoSave()});
+document.addEventListener('change',(e: any)=>{if(e.target.closest&&e.target.closest('#meBox,#tasteStyle')&&!e.target.classList.contains('importFile'))X_more.autoSave()});
 setInterval(()=>{try{const el=document.getElementById('aiSec');if(!el)return;const L=window.JEPI_UI.live(el),put=(t: any)=>{if(L)L.text(t);else el.textContent=t};   // AiBox.tsx draws it
   if(!ui.aiState||ui.aiState.status!=='loading'){put('');return}
   if(!ui.aiState.t0)ui.aiState.t0=Date.now();put(`${ks.who} · ${Math.round((Date.now()-ui.aiState.t0)/1000)}초째`)}catch(_: any){}},1000);

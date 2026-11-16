@@ -24,7 +24,6 @@ import * as RND from './render';
 const $ = (s: string) => document.querySelector(s) as any;
 const CUR = trip.cur as any, PK = places.state as any, AREAS = places.AREAS as any, KEYS = keysData.list as any, MYP = myplaces.list as any[];
 const mypOf = (id: string): any => myplaces.of(id);
-const SLOTS = PVIEW.SLOTS;
 
 export function setJP(m?: any, quiet?: any){ui.jp=m==='P'?'P':'J';dock({placeholder:ui.jp==='P'?'뭐 하고 싶어요? 말로 해도 돼요':'AI에게 말로 부탁하기'});document.body.classList.toggle('mode-p',ui.jp==='P');hero({jp:ui.jp});if(!quiet)storage.set('gp.jp',ui.jp)}
 
@@ -41,7 +40,7 @@ export async function quickStart(){
   if(q.len===''||q.len==null){setSt('st_pack','얼마나 갈지 골라 주세요.');return}
   if(q.when!=='pick'){fs.draft.startDate=q.when==='today'?isoPlus(0):q.when==='tomorrow'?isoPlus(1):nextSat();}
   fs.draft.dateSet=true; fs.draft.dateUnknown=false; fs.draft.nightsSet=true;
-  if(q.len==='0'){const sl=SLOTS.find((s: any)=>s[0]===q.slot)||SLOTS[1];let st=sl[2];
+  if(q.len==='0'){const sl=PVIEW.SLOTS.find((s: any)=>s[0]===q.slot)||PVIEW.SLOTS[1];let st=sl[2];
     if(q.when==='today'){const n=new Date(),now=n.getHours()*60+n.getMinutes();if(now+30>st)st=Math.min(1320,Math.ceil((now+30)/30)*30)}
     fs.draft.kind='day'; fs.draft.meet=Object.assign({},fs.draft.meet||{},{time:fmt(st),end:fmt(Math.max(st+180,sl[3]))});}
   else{fs.draft.kind='trip'; fs.draft.nights=+q.len; fs.draft.bookedFlight=true; fs.draft.bookedStay=true; fs.draft.flightSet=false; fs.draft.staySet=false;}

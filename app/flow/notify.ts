@@ -11,11 +11,8 @@ import { state as DYs } from '../data/days';
 import * as alertLogic from '../logic/alerts';
 import { PANELS, BLOCK_BADGES, SHEET_EXTRAS } from '../ui/extras';
 import * as R from './render';
+import * as X_more from './more';
 
-/** what the old code still does */
-export interface Legacy { renderMore(): void }
-let L: Legacy;
-export function connect(l: Legacy): void { L = l }
 
 const $ = (s: string) => document.querySelector(s) as any;
 const mount = (name: string, el: Element, props: any) => (window.JEPI_UI.mount as any)(name, el, props);
@@ -39,7 +36,7 @@ export const alertsSoon=(ms: any)=>AL.soon(ms);
 
 /** what the old file did when it loaded (it calls this at the same moment, so the order stays) */
 export function init(){
-AL.connectAlerts({curPlan:()=>PL.curPlan,tz:tripTZ,demo:()=>!!DEMO.on,redraw:()=>{PANELS.notify.render();L.renderMore();R.renderAll()},
+AL.connectAlerts({curPlan:()=>PL.curPlan,tz:tripTZ,demo:()=>!!DEMO.on,redraw:()=>{PANELS.notify.render();X_more.renderMore();R.renderAll()},
   days:()=>DY.days.map((D: any,d: any)=>({iso:D.iso||'',rows:D.iso?check.analyze(d).items.filter(alertable).map((it: any)=>({key:alertKey(it,d),name:String(it.name),start:it.start,end:it.end,locName:it.locName||'',travelIn:it.travelIn||null})):[]}))});
 BLOCK_BADGES.push((it: any,d: any)=>alertable(it)&&alertOn(it,d)&&NOTIFY.on?{k:'badge',t:'🔔',title:'알림 켜짐'}:null);
 SHEET_EXTRAS.push((it: any,d: any)=>{if(!alertable(it)||DEMO.on)return null;const on=alertOn(it,d);

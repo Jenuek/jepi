@@ -14,11 +14,9 @@ import * as PLF from './plans';
 import { showToast } from './share';
 import * as WELC from './welcome';
 import * as R from './render';
+import * as X_more from './more';
+import * as X_phase from './phase';
 
-/** what the old code still does */
-export interface Legacy { renderExt(): void; renderMore(): void }
-let L: Legacy;
-export function connect(l: Legacy): void { L = l }
 
 const $ = (s: string) => document.querySelector(s) as any;
 const mount = (name: string, el: Element, props: any) => (window.JEPI_UI.mount as any)(name, el, props);
@@ -90,7 +88,7 @@ export async function tripAct(a?: any, uid?: any, typed?: any){
     if(a==='name'){const v=String(typed||'').trim().slice(0,20);storage.set('jepi.myName',v);
       if(curShared())await sbTable('jepi_trip_members','PATCH',`?trip_id=eq.${encodeURIComponent(PL.curPlan)}&user_id=eq.${SYNC.sess.user}`,{name:myName()},'return=minimal');TRIPS.msg='이름을 바꿨어요';await tripsPull()}
   }catch(err: any){TRIPS.msg='✕ '+err.message}
-  TRIPS.busy=false; PANELS.friends.render(); L.renderMore();
+  TRIPS.busy=false; PANELS.friends.render(); X_more.renderMore();
 }
 // ----- panel -----
 // The panel itself is drawn by React: app/screens/FriendsPanel.tsx
@@ -99,7 +97,7 @@ export async function tripAct(a?: any, uid?: any, typed?: any){
 /** what the old file did when it loaded (it calls this at the same moment, so the order stays) */
 export function init(){
 tripsData.connectTrips({plans:()=>PL.plans,curPlan:()=>PL.curPlan,savePlans:()=>PLF.savePlans(),applyIfOpen,myName,snapshotCurrent:()=>PLF.snapshotCurrent(),toast:(m: any)=>showToast(m),
-  pulled(listChanged){if(listChanged){PLF.renderPlans();L.renderExt()} if(curShared()) R.renderAll(); if(ui.tab==='friends') PANELS.friends.render()}});
+  pulled(listChanged){if(listChanged){PLF.renderPlans();X_phase.renderExt()} if(curShared()) R.renderAll(); if(ui.tab==='friends') PANELS.friends.render()}});
 SYNC_AFTER_PUSH.push(async()=>{for(const p of PL.plans.filter((p: any)=>p.shared)) await tripPush(p.id)});
 SYNC_AFTER_PULL.push(tripsPull);
 CARD_EXTRAS.push((p: any)=>curShared()?[wantChip(p.id),...(p.by?[{k:'tag',cls:'tag usr',t:`${p.by===myName()?'내가':p.by+'님'} 추천`}]:[])]:null);

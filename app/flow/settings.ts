@@ -1,7 +1,6 @@
 // 설정: the theme, time spacing, AI·지도 keys (saving, testing, deleting, the models), a backup of every plan and loading
 // one back, and what the 동기화 section shows; and a tapped login link coming back (syncBoot). (It used to be
-// src/js/190-keys-ai-router.js, 230-settings.js and 310-sync.js.) The old code reads its state as KS.msg, KS.bad …
-// What the old code still does is passed in once with connect() (Legacy).
+// src/js/190-keys-ai-router.js, 230-settings.js and 310-sync.js.) The start-up file (boot.ts) reads its state as KS.msg, KS.bad …
 import * as trip from '../data/trip';
 import * as storage from '../data/storage';
 import * as keysData from '../data/keys';
@@ -19,6 +18,8 @@ import * as PLF from './plans';
 import { ps } from './plans';
 import { showToast } from './share';
 import * as R from './render';
+import * as X_guide from './guide';
+import * as X_pieces from './pieces';
 export const ks = {
   /** a message under each key (확인 중…, ✓ 연결됐어요 …) */
   msg: {} as Record<string, string>,
@@ -36,10 +37,6 @@ export const ks = {
   wipeArm: false,
 };
 
-/** what the old code still does */
-export interface Legacy { wipeAll(): void; mypView(): any }
-let L: Legacy;
-export function connect(l: Legacy): void { L = l }
 
 const $ = (s: string) => document.querySelector(s) as any;
 const mount = (name: string, el: Element, props: any) => (window.JEPI_UI.mount as any)(name, el, props);
@@ -116,13 +113,13 @@ export function settingsAct(n?: any, v?: any, v2?: any){
   case 'keytest': testKey(v);return;
   case 'models': {const m=v2||{};ks.models.heavy=String(m.heavy||'').trim()||'claude-sonnet-5-5';ks.models.light=String(m.light||'').trim()||'claude-haiku-5-5';ks.models.gemini=String(m.gemini||'').trim()||'gemini-3.6-flash';storage.set('jepi.models',{heavy:ks.models.heavy,light:ks.models.light,gemini:ks.models.gemini});keysChanged();return}
   case 'backup': backupAll();return;
-  case 'wipe': if(!ks.wipeArm){ks.wipeArm=true;renderSettings();return}L.wipeAll();return;
+  case 'wipe': if(!ks.wipeArm){ks.wipeArm=true;renderSettings();return}X_guide.wipeAll();return;
   case 'wipecancel': ks.wipeArm=false;renderSettings();return;
   }
 }
 export function renderSettings(){
   const el=$('#setBox'); if(!el) return;
-  mount('settings',el,{theme:ks.theme,zoom:storage.get('gp.zoom',60),sync:syncView(),myPlaces:L.mypView(),ai:settingsAI(),
+  mount('settings',el,{theme:ks.theme,zoom:storage.get('gp.zoom',60),sync:syncView(),myPlaces:X_pieces.mypView(),ai:settingsAI(),
     wipeArm:!!ks.wipeArm,host:location.host||'로컬',rev:++settingsRev});
 }
 export function backupAll(){

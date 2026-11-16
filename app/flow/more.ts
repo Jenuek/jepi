@@ -1,6 +1,6 @@
 // 더보기 (the trip card, its chips, the 준비하기 badge, the P모드 short menu), 이번 여행 (one row per topic, opening only that
 // part, saving a moment after a change), and 취향 (the style rows; taste carried into new plans). (It used to be
-// src/js/220-more-menu.js.) What the old code still does is passed in once with connect() (Legacy).
+// src/js/220-more-menu.js.)
 import * as trip from '../data/trip';
 import * as check from '../data/check';
 import { budgetParts } from '../data/traveler';
@@ -12,11 +12,8 @@ import { partDest } from './destination';
 import { TRIPS } from './friends';
 import { NOTIFY } from './notify';
 import * as RND from './render';
+import * as X_pieces from './pieces';
 
-/** what the old code still does */
-export interface Legacy { partsDay(p: any): any[]; partHomeBox(p: any): any }
-let LG: Legacy;
-export function connect(l: Legacy): void { LG = l }
 
 const $ = (s: string) => document.querySelector(s) as any;
 const mount = (name: string, el: Element, props: any) => (window.JEPI_UI.mount as any)(name, el, props);
@@ -42,7 +39,7 @@ export function renderMore(){
   RND.tabs({warn:w?String(w):''});
 }
 // 이번 여행: one row per topic, opens only that part, saves on change
-export const meRows=(p: any)=>FORMS.meRows(p,{dest:partDest,day:LG.partsDay,homeBox:LG.partHomeBox,paste:pasteBox});   // app/view/forms.ts
+export const meRows=(p: any)=>FORMS.meRows(p,{dest:partDest,day:X_pieces.partsDay,homeBox:X_pieces.partHomeBox,paste:pasteBox});   // app/view/forms.ts
 // Drawn by React: app/screens/MeRows.tsx. meSetMsg changes only the message (the open form stays as it is).
 let meRev=0, meLast: any=null;
 export function renderMeRows(){

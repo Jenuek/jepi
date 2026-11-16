@@ -18,6 +18,8 @@ export const ui = {
   sample: null as any,
   /** J (plan) or P (board game) */
   jp: 'J' as string,
+  /** nothing was saved on this device when the app opened (a first visit) */
+  firstRun: false,
   /** 준비하기 → 초기화 pressed once (asks once more) */
   resetArm: false,
 };

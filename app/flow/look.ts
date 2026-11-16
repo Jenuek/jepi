@@ -11,11 +11,9 @@ import { ui } from '../ui/state';
 import { dayTitleOf, titleEditing, renderDayMemo } from './schedule';
 import * as PLF from './plans';
 import * as RND from './render';
+import * as X_header from './header';
+import * as X_pieces from './pieces';
 
-/** what the old code still does */
-export interface Legacy { setJP(m: string): void; planMenu(open: boolean): void }
-let LG: Legacy;
-export function connect(l: Legacy): void { LG = l }
 
 const $ = (s: string) => document.querySelector(s) as any;
 const mount = (name: string, el: Element, props: any) => (window.JEPI_UI.mount as any)(name, el, props);
@@ -40,8 +38,8 @@ export function hero(p?: any){heroView={...heroView,...p};mount('hero',$('#heroM
 // pressed in the header
 export function heroAct(n?: any){
   if(n==='look')openLook();
-  else if(n==='J'||n==='P'){LG.setJP(n);RND.renderAll()}
-  else if(n==='plan')LG.planMenu((document.getElementById('planMenu') as any).hidden);
+  else if(n==='J'||n==='P'){X_pieces.setJP(n);RND.renderAll()}
+  else if(n==='plan')X_header.planMenu((document.getElementById('planMenu') as any).hidden);
   else if(n==='title'){if(!$('#dayTitleIn'))titleEditing(true)}
 }
 export function renderLook(){

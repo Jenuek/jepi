@@ -1,7 +1,7 @@
 // Getting a destination ready and filling it: the AI prepares a city (genPack), finds more places (morePlaces), 처음 설정's
 // 다음 (onbAdvance, preparing the city first), 여행지 찾기 (the finder and its AI suggestions) and 이야기하면서 정하기 (a
 // short talk with the AI that ends in a direction). (It used to be src/js/060-destination-pack.js, 120-destination-finder.js
-// and 140-direction-chat.js.) What the old code still does is passed in once with connect() (Legacy).
+// and 140-direction-chat.js.)
 import * as trip from '../data/trip';
 import * as places from '../data/places';
 import * as asks from '../data/asks';
@@ -12,19 +12,11 @@ import { progStart, progStop, setSt, errText } from '../ui/status';
 import * as FORMS from '../view/forms';
 import { fs } from './forms';
 import * as FF from './forms';
+import * as X_chat from './chat';
+import * as X_more from './more';
+import * as X_plans from './plans';
+import * as X_settings from './settings';
 
-/** what the old code still does */
-export interface Legacy {
-  /** the places the AI just found (✨) */
-  fresh(): Set<string>;
-  /** forget the AI chat's undo (a new destination) */
-  clearUndo(): void;
-  autoSave(): void;
-  /** key help, running outside Claude */
-  standalone(): boolean; keyHelp(): Record<string, string>; inClaude(): boolean;
-}
-let L: Legacy;
-export function connect(l: Legacy): void { L = l }
 
 const $ = (s: string) => document.querySelector(s) as any;
 const CUR = trip.cur as any, PK = places.state as any;
@@ -38,10 +30,10 @@ export async function genPack(dest?: any, btn?: any){
   try{
     const pk=await asks.destination(ui.sample,dest,ctl.signal);   // app/data/asks.ts
     if(!pk){setSt('st_pack','여행지를 찾지 못했어요. 도시 이름을 조금 더 정확히 적어 주세요.');return false}
-    CUR.custom=[]; trip.save('custom',CUR.custom); CUR.placed=[]; trip.blocks.saved(); L.clearUndo();
+    CUR.custom=[]; trip.save('custom',CUR.custom); CUR.placed=[]; trip.blocks.saved(); (X_chat.cs.undoSnap=null);
     places.loadPack(pk); places.savePack();
     if(fs.draft){fs.draft.dest=pk.city; fs.draft.stays.forEach((s: any)=>{s.area=places.firstArea();if(/시부야/.test(s.name))s.name='숙소'}); fs.draft.events.forEach((e: any)=>e.area=places.firstArea()); fs.draft.out.airport=fs.draft.back.airport=places.firstGw(); if(pk.intl) fs.draft.mode='flight'}
-    if($('#onb').hidden&&fs.draft&&ui.tab==='me')L.autoSave();setSt('st_pack',`${pk.city} 준비 완료 · 동네 ${pk.areas.length}곳 · 공항·역 ${pk.gateways.length}곳`); return true;
+    if($('#onb').hidden&&fs.draft&&ui.tab==='me')X_more.autoSave();setSt('st_pack',`${pk.city} 준비 완료 · 동네 ${pk.areas.length}곳 · 공항·역 ${pk.gateways.length}곳`); return true;
   }catch(e: any){setSt('st_pack',e&&e.code==='cancelled'?'2분 안에 답을 받지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.':errText(e,'여행지를 준비하지 못했어요')+(e&&e.code?` (${e.code})`:''));return false}
   finally{clearTimeout(to);fs.onbBusy=false; setBusy(false)}
 }
@@ -50,7 +42,7 @@ export async function morePlaces(n?: any, stId?: any, focus?: any, signal?: any)
   progStart(stId,n>15?(CUR.kws.length?'고른 취향에 맞는 장소 후보를 찾는 중이에요 (보통 1~2분)':`${PK.pack.city}에서 가 볼 만한 곳을 골고루 찾는 중이에요 (보통 1~2분)`):'장소를 찾는 중이에요 (보통 30초~1분)',stId==='moreSt'?['moreBtn']:[],'찾는 중…');
   try{
     const ids=await asks.morePlaces(ui.sample,n,focus,signal), added=ids.length;   // app/data/asks.ts
-    L.fresh().clear(); ids.forEach((id: any)=>L.fresh().add(id)); setSt(stId,added?`새 장소 ${added}곳을 찾았어요. 장소 탭 맨 위 "✨ 방금 찾은 곳"에 모아 뒀어요.`:'이미 있는 곳과 겹쳐서 새로 추가할 장소가 없었어요. 찾는 말을 바꿔 보세요 (예: 현지인 맛집, 조용한 카페).'); return added;
+    X_chat.fresh.clear(); ids.forEach((id: any)=>X_chat.fresh.add(id)); setSt(stId,added?`새 장소 ${added}곳을 찾았어요. 장소 탭 맨 위 "✨ 방금 찾은 곳"에 모아 뒀어요.`:'이미 있는 곳과 겹쳐서 새로 추가할 장소가 없었어요. 찾는 말을 바꿔 보세요 (예: 현지인 맛집, 조용한 카페).'); return added;
   }catch(e: any){setSt(stId,e&&e.code==='cancelled'?'멈췄어요. 장소 블록 탭에서 언제든 다시 찾을 수 있어요.':errText(e,'장소를 찾지 못했어요'));return 0}
 }
 export function setBusy(b?: any){FF.onbFrame({nextOff:b,prevOff:b||fs.onbStep===0,skipOff:b,exampleOff:b});['genPack','meSave'].forEach((id: any)=>{const e=document.getElementById(id) as any;if(!e)return;const v=b,LV=window.JEPI_UI.live(e);if(LV)LV.disabled(v);else e.disabled=v})}
@@ -96,7 +88,7 @@ export async function recommendDest(mode?: any){
 const TALK_MAX=5;
 const TALK_OPEN={q:'요즘 어떤 마음이 들어서 여행을 떠올리게 됐어요? 막연해도 괜찮아요.',o:['그냥 답답해서 벗어나고 싶어요','지쳐서 푹 쉬고 싶어요','새로운 자극이 필요해요','생각을 정리하고 싶어요']};
 export function talkReset(){fs.talk={msgs:[{role:'a',text:TALK_OPEN.q}],options:TALK_OPEN.o.slice(),n:0,busy:false,summary:null}}
-export function partJP(){return {f:'jp',keyBox:!!(L.standalone()&&!ui.sample),keyHelpHTML:L.keyHelp().anthropic,importBox:!L.inClaude()}}
+export function partJP(){return {f:'jp',keyBox:!!(!((window as any).claude&&(window as any).claude.use)&&!ui.sample),keyHelpHTML:X_settings.KEY_HELP.anthropic,importBox:!X_plans.inClaude()}}
 // drawn by React: app/screens/OnbTalk.tsx
 export function partTalk(p?: any){
   if(!fs.talk) talkReset();

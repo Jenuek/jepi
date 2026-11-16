@@ -38,6 +38,7 @@ supabase/
 vite.config.mjs       ← 빌드 설정: 페이지(src/)와 앱(app/)을 합쳐 index.html + assets/를 만들어요.
 tools/
   page.mjs            ← head.html + css + body.html을 한 페이지로 붙여요.
+  load-order.mjs      ← 파일이 읽힐 때 다른 app 파일의 값을 바로 쓰면 빌드를 멈춰요(서로 가져오는 파일끼리 순서 문제).
   check.js, checks.js ← 자동 점검 (가짜 서버로 첫 화면·데모·동기화·공유·알림·영업시간·사용 안내를 돌려 봐요)
   compare.js, compare/ ← 배포된 버전(main)과 지금 화면이 똑같은지 비교하는 장면들
 ```
@@ -63,6 +64,7 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 ### 꼭 알아야 할 규칙
 
 - `app/flow/boot.ts`는 예전 코드가 하던 대로 **한 함수 안에서 위에서 아래로** 실행돼요. 아래쪽에서 만드는 이름을 위쪽에서 바로 쓰면 타입 검사가 막아요.
+- `app/flow`·`view`·`ui` 파일끼리는 서로 바로 가져와요. 파일 맨 바깥(함수 밖)에서 다른 파일의 값을 읽으면 안 돼요 — 그 파일이 아직 안 읽혔을 수 있어요. `npm run build`가 막아요.
 - 기능이 다른 기능에 끼어들 때는 아래 연결점을 써요.
 
 | 연결점 (`app/ui/extras.ts`) | 쓰는 법 |

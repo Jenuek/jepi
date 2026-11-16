@@ -15,9 +15,9 @@ README의 "무엇이 어디 있나" 표가 파일 지도예요.
 
 ## 구조와 규칙 (자세한 건 README)
 
-- **리액트(React + TypeScript)로 옮기기는 끝났어요**(예전 코드 `src/js`는 지웠어요). 남은 정리(`app/flow/boot.ts`의 연결 줄을 바로 가져오기로 바꾸기)는 `docs/ROADMAP.md`에 있어요. 큰 새 기능은 사용자와 정한 뒤에 해요.
+- **리액트(React + TypeScript)로 옮기기는 끝났어요**(예전 코드 `src/js`는 지웠어요). 큰 새 기능은 사용자와 정한 뒤에 해요.
 - 코드: `app/`. 화면은 `app/screens/*.tsx`에 만들고 `app/bridge.ts`의 `SCREENS`에 등록해요. 그리는 쪽은 `window.JEPI_UI.mount('이름', 요소, props)`. 화면 속 id·class 이름은 바꾸지 않아요(자동 점검이 그 이름으로 확인해요). **리액트 화면 안의 요소를 밖에서 직접 고치면 안 돼요**(`textContent=`, `disabled=`, `innerHTML=` 등) — "한 번 눌렀음"·"작업 중"·"이름 고치는 중" 같은 건 상태값으로 만들어 props로 넘겨요. 어디서나 되는 클릭 처리는 `app/flow/events.ts`예요.
-- 화면에 보일 값은 `app/view/*.ts`, 누르면 일어나는 일·화면 그리기는 `app/flow/*.ts`, 화면 위치 값(열린 날·탭·J/P…)은 `app/ui/state.ts`, 안내 줄·오류 문구는 `app/ui/status.ts`. 기능이 서로를 부를 때 아직 `connect({...})`(Legacy)로 받는 곳이 있어요 — 고칠 때 가능하면 바로 가져오기(import)로 바꿔요.
+- 화면에 보일 값은 `app/view/*.ts`, 누르면 일어나는 일·화면 그리기는 `app/flow/*.ts`, 화면 위치 값(열린 날·탭·J/P…)은 `app/ui/state.ts`, 안내 줄·오류 문구는 `app/ui/status.ts`. 기능끼리는 서로 바로 가져와요(`import`). 파일이 읽힐 때 다른 파일의 값을 바로 쓰지 말고(함수 안에서 쓰기), 앱이 켜질 때 할 일은 `boot.ts`에 넣어요.
 - 데이터(`app/data/`): 기기 저장(`storage.ts`), 서버 연결(`server.ts`), 키 암호화(`vault.ts`), 동기화 엔진(`sync.ts`), 데모 칸막이(`demo.ts`), 데이터 모양(`types.ts`). **localStorage는 `storage.ts`로만** 읽고 써요. 여행 데이터(계획·블록·♥·체크·취향 등)는 그 위의 `trip.ts`로만 저장해요. 키 암호화 설정(`vault.ts`)은 바꾸면 저장된 키를 못 열어요 — 절대 바꾸지 않아요.
 - 앱이 켜질 때 하는 일은 `app/flow/boot.ts`(예전 코드가 하던 순서 그대로, 한 함수 안에서 위에서 아래로). 연결점(PANELS, BLOCK_BADGES·CARD_EXTRAS·SHEET_EXTRAS — HTML 대신 조각 값, SYNC_AFTER_PUSH/PULL)은 `app/ui/extras.ts`.
 - 스타일은 `src/css/NN-*.css`, 화면 뼈대는 `src/html/body.html`.
