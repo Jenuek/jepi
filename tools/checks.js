@@ -2119,5 +2119,18 @@ module.exports = [
       ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
       await p.ctx.close();
     }
+  },
+  {
+    name: 'start-up (app/flow/boot.ts): one app file and no old script, the first screen, then a trip draws with no page errors',
+    async run({ b, S, device, ok, vis, skipCoach }) {
+      const p = await device(b, S);
+      const scripts = await p.$$eval('script[src]', e => e.map(x => x.getAttribute('src')));
+      ok(scripts.length === 1 && /assets\/app-|main\.tsx/.test(scripts[0]) && !scripts.some(x => /legacy/.test(x)), 'only the app file is loaded: ' + scripts.join(', '));
+      ok(await vis(p, '#welcome'), 'a first visit shows the first screen');
+      await p.click('[data-w="new"]'); await p.evaluate(() => window.__jepi.demoLikeTrip()); await skipCoach(p); await p.waitForTimeout(300);
+      ok((await p.$$eval('#grid .blk', e => e.length)) > 3 && (await p.textContent('#tripMeta')).includes('오사카'), 'the trip draws');
+      ok(p.errs.length === 0, 'no page errors ' + p.errs.join(' | '));
+      await p.ctx.close();
+    }
   }
 ];

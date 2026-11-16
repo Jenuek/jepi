@@ -14,29 +14,32 @@ Claude Code로 작업할 때는 `CLAUDE.md`(작업 규칙)와 `docs/ROADMAP.md`(
 
 ### 구조 한눈에
 
-지금은 예전 코드(`src/`)를 리액트(`app/`)로 조금씩 옮기는 중이에요. 둘이 한 페이지에서 같이 돌아가요.
+앱 전체가 리액트 + TypeScript(`app/`)예요. 예전 코드(`src/js`)는 모두 옮기고 지웠어요. `src/`에는 화면 뼈대와 스타일만 남았어요.
 
 ```
 index.html, assets/   ← 빌드 결과물 (직접 고치지 마세요). GitHub Pages가 저장소 맨 위를 그대로 서비스해요.
 sw.js, manifest…      ← 오프라인 캐시 · 푸시 알림 수신 · 홈 화면 앱 설정
-app/                  ← 새 코드 (React + TypeScript)
-  main.tsx            ← 시작점. 예전 코드보다 먼저 실행돼요.
-  bridge.ts           ← 예전 코드가 리액트 화면을 부르는 다리 (window.JEPI_UI.mount)
-  screens/*.tsx       ← 리액트로 옮긴 화면들
+app/                  ← 앱 코드 (React + TypeScript)
+  main.tsx            ← 시작점: 데이터(window.JEPI_DATA) → 화면 다리(window.JEPI_UI) → 앱 시작(flow/boot.ts)
+  bridge.ts           ← 화면 이름 → 리액트 화면 (window.JEPI_UI.mount), 그리고 flow·view·ui를 한데 모아요
+  screens/*.tsx       ← 화면들
+  flow/*.ts           ← 누르면 일어나는 일·화면 그리기 (아래 표). boot.ts = 앱이 켜질 때 하는 일(순서가 중요해요)
+  view/*.ts           ← 화면에 보일 값 만들기
+  ui/*.ts             ← 화면 위치 값(state.ts)·안내 줄(status.ts)·끼어드는 목록(extras.ts)·지도·끌어 놓기
   data/               ← 데이터: 기기 저장·서버 연결·키 암호화·데모 칸막이·데이터 모양(types.ts)
-                         예전 코드는 JD(= window.JEPI_DATA)로 써요 (src/js/001-data.js)
-src/                  ← 예전 코드
+  logic/              ← 계산 규칙 (일정 점검·시간·거리·알림·메모)
+src/
   html/head.html      ← <head> (메타, 폰트, 테마 깜빡임 방지)
   html/body.html      ← 화면 뼈대 (헤더, 일정표, 장소/더보기 패널, 시트, 첫 화면)
   css/NN-*.css        ← 기능별 스타일 (이름 순서대로 붙어요)
-  js/NNN-*.js         ← 기능별 코드 (이름 순서대로 하나의 스크립트로 붙어요)
 supabase/
   schema.sql          ← 서버 테이블·권한(RLS)·예약 작업. SQL 편집기에서 다시 실행해도 안전해요.
   functions/jepi-push ← 알림 보내는 서버 함수 (Verify JWT 끔)
-vite.config.mjs       ← 빌드 설정: src/와 app/을 합쳐 index.html + assets/를 만들어요.
+vite.config.mjs       ← 빌드 설정: 페이지(src/)와 앱(app/)을 합쳐 index.html + assets/를 만들어요.
 tools/
-  legacy.mjs          ← src/js를 하나로 붙여요. 이름 충돌·문법 오류가 있으면 빌드를 멈춰요.
+  page.mjs            ← head.html + css + body.html을 한 페이지로 붙여요.
   check.js, checks.js ← 자동 점검 (가짜 서버로 첫 화면·데모·동기화·공유·알림·영업시간·사용 안내를 돌려 봐요)
+  compare.js, compare/ ← 배포된 버전(main)과 지금 화면이 똑같은지 비교하는 장면들
 ```
 
 ### 고치는 순서
@@ -49,25 +52,20 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 
 `all checks passed`가 나오면 `index.html`, `assets/`와 바꾼 원본 파일을 올리면 돼요.
 
-### 리액트 화면 만들기 (옮기기)
+### 화면·기능 만들기
 
-1. `app/screens/이름.tsx`에 화면을 만들고, 예전 코드에서 받을 값(props)을 타입으로 적어요.
-2. `app/bridge.ts`의 `Screens`와 `SCREENS`에 등록해요.
-3. 예전 코드에서 `window.JEPI_UI.mount('이름', 요소, {…})`로 그려요. 예: `src/js/387-help.js` → `app/screens/HelpPanel.tsx`
-4. id·class 이름은 그대로 둬요. CSS와 자동 점검이 그 이름을 써요.
-5. `tools/checks.js`에 그 화면 점검을 추가해요.
-6. 예전 화면과 똑같은지: `npm run build` 후 `node tools/compare.js tools/compare/<화면>.js` (시나리오를 하나 만들어요. 예: `tools/compare/settings.js`)
+1. 화면은 `app/screens/이름.tsx`에 만들고, 받을 값(props)을 타입으로 적어요. `app/bridge.ts`의 `Screens`와 `SCREENS`에 등록해요.
+2. 화면에 보일 값은 `app/view/*.ts`, 누르면 일어나는 일·그리기는 `app/flow/*.ts`에 둬요. 그리는 쪽은 `window.JEPI_UI.mount('이름', 요소, {…})`.
+3. id·class 이름은 그대로 둬요. CSS와 자동 점검이 그 이름을 써요.
+4. `tools/checks.js`에 점검을 추가해요. 화면이 그대로인지: `npm run build` 후 `node tools/compare.js tools/compare/<화면>.js`.
+5. 앱이 켜질 때 할 일은 `app/flow/boot.ts`에, **예전과 같은 순서 자리에** 넣어요(배지·시트 줄이 보이는 순서가 끼어드는 순서로 정해져요).
 
-### 꼭 알아야 할 규칙 하나
+### 꼭 알아야 할 규칙
 
-(예전 코드) `src/js`의 파일들은 **하나의 함수 안에 이름 순서대로** 붙어요. 그래서
+- `app/flow/boot.ts`는 예전 코드가 하던 대로 **한 함수 안에서 위에서 아래로** 실행돼요. 아래쪽에서 만드는 이름을 위쪽에서 바로 쓰면 타입 검사가 막아요.
+- 기능이 다른 기능에 끼어들 때는 아래 연결점을 써요.
 
-- 앞 번호 파일에서 만든 것은 뒤 번호 파일에서 바로 쓸 수 있어요.
-- 같은 `const`/`let` 이름을 두 파일에 만들면 앱이 멈춰요 → `tools/legacy.mjs`가 미리 잡아서 빌드를 멈춰요.
-- 앱이 켜질 때 실행할 코드는 `390-boot.js`에 넣어요 (모든 파일이 준비된 뒤).
-- 리액트로 옮기는 동안 새 기능은 만들지 않아요. 예전 코드를 고칠 때는 아래 연결점을 써요.
-
-| 연결점 (`app/ui/extras.ts`, 예전 코드는 `007-panels.js`의 같은 이름) | 쓰는 법 |
+| 연결점 (`app/ui/extras.ts`) | 쓰는 법 |
 |---|---|
 | `PANELS.name={render(){…}}` | 더보기 아래 새 화면. `body.html`에 `<div id="side-name" hidden>`을 두고, 버튼에 `data-tab="name"` |
 | `BLOCK_BADGES` / `CARD_EXTRAS` / `SHEET_EXTRAS` | 일정 블록·장소 카드·블록 상세 시트에 작은 표시 추가. HTML이 아니라 조각 값을 돌려줘요(`{k:'badge',…}` 등, 종류는 `app/screens/Extras.tsx`). 설정 화면 섹션은 `SettingsScreen.tsx`에 리액트로 |
@@ -77,8 +75,8 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 
 | 하고 싶은 일 | 파일 |
 |---|---|
-| 일정 계산 (하루 점검·경고·이동 구간·빈 시간), 시간 글자, 거리·이동 시간 어림 | `app/logic/schedule.ts`·`time.ts`·`geo.ts` (예전 코드는 `JD.logic`, 날짜 항목 만들기는 `330-helpers.js`의 dayItems) |
-| 지금 여행의 데이터(`TRIP.cur`: 여행 정보·블록·직접 만든 장소·할 일 표시·♥·간식비·체크·키워드)와 계획 목록(`TRIP.planList`), 바꾸기(블록 넣기·옮기기·빼기·♥·체크…), 저장 이름과 모양 | `app/data/trip.ts` (예전 코드는 `TRIP`, `CUR.…`, `PL.…`) |
+| 일정 계산 (하루 점검·경고·이동 구간·빈 시간), 시간 글자, 거리·이동 시간 어림 | `app/logic/schedule.ts`·`time.ts`·`geo.ts` (`app/flow/boot.ts`에서는 `JD.logic`, 날짜 항목 만들기는 `330-helpers.js`의 dayItems) |
+| 지금 여행의 데이터(`TRIP.cur`: 여행 정보·블록·직접 만든 장소·할 일 표시·♥·간식비·체크·키워드)와 계획 목록(`TRIP.planList`), 바꾸기(블록 넣기·옮기기·빼기·♥·체크…), 저장 이름과 모양 | `app/data/trip.ts` (`app/flow/boot.ts`에서는 `TRIP`, `CUR.…`, `PL.…`) |
 | 첫 화면(새 여행·로그인·데모), 데모 시작/끝 | 화면 `app/screens/Welcome.tsx` (리액트), 동작 `app/flow/welcome.ts`, 데모 칸막이 `app/data/demo.ts`, 데모 일정 `066-demo-osaka.js` |
 | 일정표 그리기 / 장소 탭 카드·필터 | `340-render.js` / 화면 `app/screens/Tray.tsx` (리액트, 카드에 넣을 값은 `340-render.js`의 `cardInfo`) |
 | 장소 탭 위쪽 / 지도 위쪽 (이 날·전체·내 위치) | 화면 `app/screens/Tops.tsx` (리액트), 값은 `340-render.js`(drawTrayTop·trayAct) / `210-map.js`(mapTop·mapTopAct) |
@@ -111,26 +109,26 @@ npm run check          # = 타입 검사 + 빌드 + 자동 점검
 | 그날 점검(경고·이동·요금·영업시간), 할 일 표시 경고, 시즌·좋은 시간대 | `app/data/check.ts`, `app/data/marks.ts`, `app/data/season.ts` (규칙 `app/logic/schedule.ts`) |
 | 여행 날짜·고정 블록(비행·숙소·예약 일정)·하루 항목, 여행 정보 다듬기 | `app/data/days.ts` |
 | 지도 탭(핀·경로 선·카드·내 위치) | `app/ui/map.ts` (Leaflet은 처음 열 때 불러와요) |
-| 화면 위치 값 (열린 날·탭·고른 장소·AI 연결·J/P) | `app/ui/state.ts` (예전 코드는 `UI.day`, `UI.tab` …) |
-| 화면 그리기 (일정표·장소 탭·준비하기·아래 탭·배너·AI 상자·블록 시트, renderAll) | `app/flow/render.ts` (예전 코드는 `340-render.js`의 이름들로 불러요) |
+| 화면 위치 값 (열린 날·탭·고른 장소·AI 연결·J/P) | `app/ui/state.ts` (`app/flow/boot.ts`에서는 `UI.day`, `UI.tab` …) |
+| 화면 그리기 (일정표·장소 탭·준비하기·아래 탭·배너·AI 상자·블록 시트, renderAll) | `app/flow/render.ts` (`app/flow/boot.ts`에서는 `340-render.js`의 이름들로 불러요) |
 | 일정표에서 누른 것 (블록 시트·빈 시간·날짜 버튼·끌어 놓기·준비하기·AI 상자·키워드), 하루 요약 칩, 날짜 제목, 손글씨 메모 | `app/flow/schedule.ts` |
 | 🎲 시트와 P모드 보드에서 일어나는 일 (굴리기·주변 찾기·코스 짜기·이걸로) | `app/flow/dice.ts` (보이는 값은 `app/view/dice.ts`·`pview.ts`) |
-| 처음 설정·이번 여행·취향 폼에서 일어나는 일 (입력·버튼·단계·저장·예약 붙여 넣기)과 폼이 고치는 값 | `app/flow/forms.ts` (예전 코드는 `FS.draft` …) |
+| 처음 설정·이번 여행·취향 폼에서 일어나는 일 (입력·버튼·단계·저장·예약 붙여 넣기)과 폼이 고치는 값 | `app/flow/forms.ts` (`app/flow/boot.ts`에서는 `FS.draft` …) |
 | 여행지 준비·장소 더 찾기·여행지 추천·이야기하면서 정하기 | `app/flow/destination.ts` |
 | 안내 줄 (…하는 중이에요 · N초), 메시지, 오류 문구 | `app/ui/status.ts` |
-| AI 대화(바꿀 내용·적용·되돌리기·제안 장소), 아래 입력창, 알려 주세요 상자, 헤더의 여행 한 줄, ✨ 빈 시간 채우기 | `app/flow/chat.ts` (예전 코드는 `CS.chat` …) |
-| 예약 도우미에서 일어나는 일 (단계·동네 분위기·숙소 후보·노선·목록 붙여 넣기), 시즌 정보 | `app/flow/helper.ts` (예전 코드는 `HS.step` …) |
-| 내 계획에서 일어나는 일 (바꾸기·새로·복사·삭제·이름·백업·카톡용 글) | `app/flow/plans.ts` (예전 코드는 `PS.msg` …) |
+| AI 대화(바꿀 내용·적용·되돌리기·제안 장소), 아래 입력창, 알려 주세요 상자, 헤더의 여행 한 줄, ✨ 빈 시간 채우기 | `app/flow/chat.ts` (`app/flow/boot.ts`에서는 `CS.chat` …) |
+| 예약 도우미에서 일어나는 일 (단계·동네 분위기·숙소 후보·노선·목록 붙여 넣기), 시즌 정보 | `app/flow/helper.ts` (`app/flow/boot.ts`에서는 `HS.step` …) |
+| 내 계획에서 일어나는 일 (바꾸기·새로·복사·삭제·이름·백업·카톡용 글) | `app/flow/plans.ts` (`app/flow/boot.ts`에서는 `PS.msg` …) |
 | 공유 링크 (만들기·열기), 아래 짧은 알림 | `app/flow/share.ts` |
 | 📌 이 코스 저장 / 첫 화면·데모 들어가고 나가기 | `app/flow/course.ts` / `app/flow/welcome.ts` |
-| 설정에서 일어나는 일 (테마·시간 간격·키 저장/확인·모델·백업·불러오기), 동기화 칸 값, 로그인 링크 돌아오기 | `app/flow/settings.ts` (예전 코드는 `KS.msg` …) |
-| 기능이 끼어드는 목록 (옆 패널·동기화 뒤 할 일·블록 배지·카드/시트 조각) | `app/ui/extras.ts` (예전 코드는 `PANELS` … 같은 이름) |
+| 설정에서 일어나는 일 (테마·시간 간격·키 저장/확인·모델·백업·불러오기), 동기화 칸 값, 로그인 링크 돌아오기 | `app/flow/settings.ts` (`app/flow/boot.ts`에서는 `KS.msg` …) |
+| 기능이 끼어드는 목록 (옆 패널·동기화 뒤 할 일·블록 배지·카드/시트 조각) | `app/ui/extras.ts` (`app/flow/boot.ts`에서는 `PANELS` … 같은 이름) |
 | 👍 여행자 추천 일정 쪽 / 알림 일정 쪽 / 친구와 함께 화면 쪽 | `app/flow/recs.ts` / `app/flow/notify.ts` / `app/flow/friends.ts` |
 | 장소 찾기 / 직접 블록 만들기 / 같은 장소 두 번(잡기·묶기) | `app/flow/find.ts` |
 | 여행 모습·접히는 헤더·한 줄 바·여행 꾸미기 / 시작 화면 하늘·계획 메뉴·🎲 버튼 움직임 | `app/flow/look.ts` / `app/flow/header.ts` |
 | 여행 단계 띠·여행 노트 / 모두 초기화·처음 안내 / 더보기 숫자·이번 여행 줄·자동 저장·취향 스타일 | `app/flow/phase.ts` / `app/flow/guide.ts` / `app/flow/more.ts` |
 | 탭 이동·어디서나 되는 클릭·경고 해결·알려 주세요·장소 카드 / J·P 바꾸기·가볍게 시작·할 일 마무리 블록·내 장소 값·집 출발 칸 | `app/flow/events.ts` / `app/flow/pieces.ts` |
-| 화면에 보일 값 만들기 (일정표·장소 탭·블록 시트·예약 도우미·이번 여행 칸·🎲·P모드 보드) | `app/view/day.ts`·`tray.ts`·`sheet.ts`·`helper.ts`·`forms.ts`·`dice.ts`·`pview.ts` (예전 코드는 `JEPI_UI.view`) |
+| 화면에 보일 값 만들기 (일정표·장소 탭·블록 시트·예약 도우미·이번 여행 칸·🎲·P모드 보드) | `app/view/day.ts`·`tray.ts`·`sheet.ts`·`helper.ts`·`forms.ts`·`dice.ts`·`pview.ts` (`app/flow/boot.ts`에서는 `JEPI_UI.view`) |
 | 데모(오사카 3박 4일) 데이터 | `app/data/demo-osaka.ts` |
 | 여행지 장소 목록(지역·장소·비용·태그), 여행지 열기, AI 답 확인 | `app/data/places.ts` (도쿄 예시 데이터 `app/data/tokyo.ts`) |
 | 일정 바꾸기 목록(AI 채팅·🎲·P모드·장소 찾기): 적용·미리 해 보기·경고 피하기 | `app/data/ops.ts` |
